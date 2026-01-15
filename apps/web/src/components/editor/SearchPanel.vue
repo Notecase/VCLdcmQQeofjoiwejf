@@ -126,7 +126,8 @@ function navigateNext() {
   if (matches.value.length === 0) return
   
   currentMatchIndex.value = (currentMatchIndex.value + 1) % matches.value.length
-  emit('navigate', matches.value[currentMatchIndex.value])
+  const match = matches.value[currentMatchIndex.value]
+  if (match) emit('navigate', match)
 }
 
 function navigatePrev() {
@@ -135,7 +136,8 @@ function navigatePrev() {
   currentMatchIndex.value = currentMatchIndex.value <= 0 
     ? matches.value.length - 1 
     : currentMatchIndex.value - 1
-  emit('navigate', matches.value[currentMatchIndex.value])
+  const match = matches.value[currentMatchIndex.value]
+  if (match) emit('navigate', match)
 }
 
 function replaceCurrentMatch() {

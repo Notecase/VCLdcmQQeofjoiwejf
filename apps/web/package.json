@@ -10,10 +10,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.1",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.1",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.5.4",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.39.11",
     "@element-plus/icons-vue": "^2.3.2",
     "@inkdown/ai": "workspace:*",
     "@inkdown/editor": "workspace:*",
     "@inkdown/shared": "workspace:*",
+    "@lezer/highlight": "^1.2.3",
     "@popperjs/core": "^2.11.8",
     "@supabase/supabase-js": "^2.90.1",
     "dayjs": "^1.11.19",

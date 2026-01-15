@@ -55,6 +55,10 @@ export const useEditorStore = defineStore('editor', {
 
     openDocumentIds: (state): string[] => {
       return state.tabs.map(t => t.document.id)
+    },
+
+    tableOfContents: (state): any[] => {
+      return state.toc
     }
   },
 

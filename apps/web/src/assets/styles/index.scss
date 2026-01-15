@@ -1,0 +1,528 @@
+// Global styles for MarkText Web
+
+// CSS Variables (themes)
+:root {
+  // Default (dark) theme
+  --bg-color: #1e1e1e;
+  --editor-bg: #252526;
+  --sidebar-bg: #252526;
+  --text-color: #d4d4d4;
+  --text-color-secondary: #808080;
+  --border-color: #3c3c3c;
+  --primary-color: #0078d4;
+  --primary-hover: #1e90ff;
+  --accent-color: #569cd6;
+  --selection-bg: rgba(0, 120, 212, 0.3);
+  --scrollbar-thumb: #4a4a4a;
+  --scrollbar-track: transparent;
+  --hover-bg: rgba(255, 255, 255, 0.1);
+
+  // Muya-specific CSS variables
+  --editorColor: #d4d4d4;
+  --editorColor10: rgba(212, 212, 212, 0.1);
+  --editorColor30: rgba(212, 212, 212, 0.3);
+  --editorColor50: rgba(212, 212, 212, 0.5);
+  --editorColor80: rgba(212, 212, 212, 0.8);
+  --editorColor04: rgba(212, 212, 212, 0.04);
+  --editorBgColor: #1e1e1e;
+  --floatBgColor: #2d2d30;
+  --floatBorderColor: #454545;
+  --floatShadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --floatHoverColor: rgba(255, 255, 255, 0.08);
+  --themeColor: #0078d4;
+  --highlightColor: rgba(0, 120, 212, 0.3);
+  --selectionColor: rgba(0, 120, 212, 0.3);
+  --iconColor: #cccccc;
+  --deleteColor: #f44336;
+  --maskColor: rgba(0, 0, 0, 0.5);
+  --tableBorderColor: #3c3c3c;
+  --codeBlockBgColor: rgba(0, 0, 0, 0.2);
+  --footnoteBgColor: rgba(0, 120, 212, 0.1);
+}
+
+[data-theme="light"] {
+  --bg-color: #ffffff;
+  --editor-bg: #f5f5f5;
+  --sidebar-bg: #f0f0f0;
+  --text-color: #333333;
+  --text-color-secondary: #666666;
+  --border-color: #e0e0e0;
+  --primary-color: #0078d4;
+  --selection-bg: rgba(0, 120, 212, 0.2);
+  --scrollbar-thumb: #c1c1c1;
+  --hover-bg: rgba(0, 0, 0, 0.05);
+
+  // Muya-specific (light)
+  --editorColor: #333333;
+  --editorColor10: rgba(51, 51, 51, 0.1);
+  --editorColor30: rgba(51, 51, 51, 0.3);
+  --editorColor50: rgba(51, 51, 51, 0.5);
+  --editorColor80: rgba(51, 51, 51, 0.8);
+  --editorColor04: rgba(51, 51, 51, 0.04);
+  --editorBgColor: #ffffff;
+  --floatBgColor: #ffffff;
+  --floatBorderColor: #e0e0e0;
+  --floatShadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --floatHoverColor: rgba(0, 0, 0, 0.05);
+  --themeColor: #0078d4;
+  --iconColor: #555555;
+  --tableBorderColor: #e0e0e0;
+  --codeBlockBgColor: rgba(0, 0, 0, 0.05);
+  --footnoteBgColor: rgba(0, 120, 212, 0.08);
+}
+
+[data-theme="one-dark"] {
+  --bg-color: #282c34;
+  --editor-bg: #21252b;
+  --sidebar-bg: #21252b;
+  --text-color: #abb2bf;
+  --text-color-secondary: #5c6370;
+  --border-color: #3e4451;
+  --primary-color: #61afef;
+  --accent-color: #98c379;
+  --hover-bg: rgba(255, 255, 255, 0.08);
+
+  // Muya-specific (one-dark)
+  --editorColor: #abb2bf;
+  --editorColor10: rgba(171, 178, 191, 0.1);
+  --editorColor30: rgba(171, 178, 191, 0.3);
+  --editorColor50: rgba(171, 178, 191, 0.5);
+  --editorColor80: rgba(171, 178, 191, 0.8);
+  --editorColor04: rgba(171, 178, 191, 0.04);
+  --editorBgColor: #21252b;
+  --floatBgColor: #2c313a;
+  --floatBorderColor: #3e4451;
+  --floatShadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --floatHoverColor: rgba(255, 255, 255, 0.08);
+  --themeColor: #61afef;
+  --iconColor: #abb2bf;
+  --tableBorderColor: #3e4451;
+  --codeBlockBgColor: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="material-dark"] {
+  --bg-color: #212121;
+  --editor-bg: #1e1e1e;
+  --sidebar-bg: #1e1e1e;
+  --text-color: #eeffff;
+  --text-color-secondary: #546e7a;
+  --border-color: #2e2e2e;
+  --primary-color: #82aaff;
+  --accent-color: #c3e88d;
+  --hover-bg: rgba(255, 255, 255, 0.08);
+
+  // Muya-specific (material-dark)
+  --editorColor: #eeffff;
+  --editorColor10: rgba(238, 255, 255, 0.1);
+  --editorColor30: rgba(238, 255, 255, 0.3);
+  --editorColor50: rgba(238, 255, 255, 0.5);
+  --editorColor80: rgba(238, 255, 255, 0.8);
+  --editorColor04: rgba(238, 255, 255, 0.04);
+  --editorBgColor: #1e1e1e;
+  --floatBgColor: #2e2e2e;
+  --floatBorderColor: #3e3e3e;
+  --floatShadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --floatHoverColor: rgba(255, 255, 255, 0.08);
+  --themeColor: #82aaff;
+  --iconColor: #eeffff;
+  --tableBorderColor: #2e2e2e;
+  --codeBlockBgColor: rgba(0, 0, 0, 0.3);
+}
+
+// Reset
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--text-color-secondary);
+  }
+}
+
+// Selection
+::selection {
+  background: var(--selection-bg);
+}
+
+// Links
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Buttons
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+// Element Plus overrides
+.el-button--primary {
+  --el-button-bg-color: var(--primary-color);
+  --el-button-border-color: var(--primary-color);
+}
+
+.el-input__wrapper {
+  background: var(--bg-color);
+  box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.el-input__inner {
+  color: var(--text-color);
+}
+
+// Utility classes
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+// ============================================
+// MUYA FLOAT UI - GLOBAL STYLES
+// These styles apply to Muya menus appended to body
+// (Quick Insert, Format Picker, Table Toolbar, etc.)
+// ============================================
+
+// Float wrapper base styling
+.ag-float-wrapper {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--floatShadow, 0 4px 16px rgba(0, 0, 0, 0.4)) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+// ============================================
+// SAFARI ICON FIX - Disable drop-shadow filter trick
+// Muya uses: left: -20px + filter: drop-shadow(20px 0)
+// Safari doesn't support this, so we position directly
+// ============================================
+
+// Quick Insert Menu icons
+.ag-quick-insert .icon-container {
+  overflow: visible !important;
+}
+
+.ag-quick-insert .icon-container>i.icon {
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+.ag-quick-insert .icon-container>i.icon>i[class^=icon-] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  left: 0 !important;
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+// Format Picker (text selection toolbar) icons
+.ag-format-picker {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--floatShadow, 0 4px 16px rgba(0, 0, 0, 0.4)) !important;
+}
+
+.ag-format-picker .icon-container {
+  overflow: visible !important;
+}
+
+.ag-format-picker .icon-container>i.icon {
+  overflow: visible !important;
+}
+
+.ag-format-picker .icon-container>i.icon>i[class^=icon-],
+.ag-format-picker i.icon>i[class^=icon-] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  left: 0 !important;
+  position: relative !important;
+}
+
+.ag-format-picker button {
+  color: var(--editorColor, #d4d4d4) !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.ag-format-picker button:hover {
+  background: var(--floatHoverColor, rgba(255, 255, 255, 0.1)) !important;
+}
+
+// Front Menu (right-click / paragraph menu)
+.ag-front-menu {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--floatShadow, 0 4px 16px rgba(0, 0, 0, 0.4)) !important;
+}
+
+.ag-front-menu ul li:hover {
+  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.ag-front-menu ul li>span {
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+.ag-front-menu .submenu {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+}
+
+.ag-front-menu .icon-wrapper {
+  overflow: visible !important;
+}
+
+.ag-front-menu .icon-wrapper>i.icon {
+  overflow: visible !important;
+}
+
+.ag-front-menu .icon-wrapper i.icon>i[class^=icon-] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  left: 0 !important;
+  position: relative !important;
+}
+
+// Table Toolbar icons
+.ag-tool-bar {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 4px !important;
+}
+
+.ag-tool-bar ul li {
+  color: var(--iconColor, #ccc) !important;
+}
+
+.ag-tool-bar ul li:hover {
+  background: var(--floatHoverColor, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.ag-tool-bar i.icon {
+  overflow: visible !important;
+}
+
+.ag-tool-bar i.icon>i[class^=icon-] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  left: 0 !important;
+  position: relative !important;
+}
+
+// Container icon (used in various Muya components)
+.ag-container-icon i.icon {
+  overflow: visible !important;
+}
+
+.ag-container-icon i.icon>i[class^=icon-] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  left: 0 !important;
+  position: relative !important;
+}
+
+// Code Picker (language selector)
+.ag-code-picker {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+.ag-code-picker li:hover {
+  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08)) !important;
+}
+
+// Emoji Picker
+.ag-emoji-picker {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+}
+
+// Table Picker (grid selector)
+.ag-table-picker {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+}
+
+.ag-table-picker td {
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+}
+
+.ag-table-picker td.selected {
+  background: var(--themeColor, #0078d4) !important;
+}
+
+// Image Picker/Selector
+.ag-image-picker,
+.ag-image-selector {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+}
+
+.ag-image-picker input,
+.ag-image-selector input {
+  background: var(--editorBgColor, #1e1e1e) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+// Link Tools
+.ag-link-tools {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+}
+
+.ag-link-tools input {
+  background: var(--editorBgColor, #1e1e1e) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+.ag-link-tools button {
+  background: var(--themeColor, #0078d4) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+}
+
+// Tooltip
+.ag-tooltip {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+// ============================================
+// TABLE DRAG HANDLERS (Row/Column insert dots)
+// ============================================
+
+// Row insert handler (2 vertical dots on left)
+.ag-drag-handler.left {
+  border-color: var(--iconColor, #888) !important;
+  opacity: 0.5;
+
+  &::before,
+  &::after {
+    background: var(--iconColor, #888) !important;
+  }
+
+  &:hover {
+    opacity: 1;
+    border-color: var(--themeColor, #0078d4) !important;
+
+    &::before,
+    &::after {
+      background: var(--themeColor, #0078d4) !important;
+    }
+  }
+}
+
+// Column insert handler (2 horizontal dots on bottom)
+.ag-drag-handler.bottom {
+  border-color: var(--iconColor, #888) !important;
+  opacity: 0.5;
+
+  &::before,
+  &::after {
+    background: var(--iconColor, #888) !important;
+  }
+
+  &:hover {
+    opacity: 1;
+    border-color: var(--themeColor, #0078d4) !important;
+
+    &::before,
+    &::after {
+      background: var(--themeColor, #0078d4) !important;
+    }
+  }
+}
+
+// Table bar tools (Insert Row Above/Below, Remove Row menu)
+.ag-table-bar-tools {
+  background: var(--floatBgColor, #2d2d30) !important;
+  border: 1px solid var(--floatBorderColor, #454545) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--floatShadow, 0 4px 16px rgba(0, 0, 0, 0.4)) !important;
+  color: var(--editorColor, #d4d4d4) !important;
+}
+
+.ag-table-bar-tools li.item {
+  color: var(--editorColor, #d4d4d4) !important;
+
+  &:hover {
+    background: var(--floatHoverColor, rgba(255, 255, 255, 0.08)) !important;
+  }
+
+  &[data-label=remove] {
+    color: var(--deleteColor, #f44336) !important;
+
+    &::before {
+      background: var(--floatBorderColor, #454545) !important;
+    }
+  }
+}

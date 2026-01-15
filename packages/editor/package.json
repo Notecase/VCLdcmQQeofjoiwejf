@@ -1,0 +1,35 @@
+{
+  "name": "@inkdown/editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./styles/*": "./src/styles/*"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "dompurify": "^3.3.1",
+    "fuzzaldrin-plus": "^0.6.0",
+    "katex": "^0.16.27",
+    "marked": "^17.0.1",
+    "mermaid": "^11.12.2",
+    "prismjs": "^1.30.0",
+    "snabbdom": "^3.6.3",
+    "snabbdom-to-html": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/fuzzaldrin-plus": "^0.6.5",
+    "@types/prismjs": "^1.26.5",
+    "typescript": "~5.7.0"
+  }
+}

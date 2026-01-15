@@ -1,0 +1,104 @@
+/* ============================================
+ * THEME VARIABLES FOR MUYA EDITOR
+ * These variables are required for Muya to work correctly
+ * They are conditionally applied based on data-theme attribute
+ * ============================================ */
+
+/* DARK THEMES (dark, one-dark, material-dark) */
+:root[data-theme="dark"],
+:root[data-theme="one-dark"],
+:root[data-theme="material-dark"] {
+  /* Theme colors */
+  --themeColor: #409eff;
+  --themeColor90: rgba(64, 158, 255, .9);
+  --themeColor80: rgba(64, 158, 255, .8);
+  --themeColor70: rgba(64, 158, 255, .7);
+  --themeColor60: rgba(64, 158, 255, .6);
+  --themeColor50: rgba(64, 158, 255, .5);
+  --themeColor40: rgba(64, 158, 255, .4);
+  --themeColor30: rgba(64, 158, 255, .3);
+  --themeColor20: rgba(64, 158, 255, .2);
+  --themeColor10: rgba(64, 158, 255, .1);
+
+  /* Editor colors - white/light colors for dark backgrounds */
+  --highlightColor: rgba(102, 177, 255, .6);
+  --selectionColor: rgba(102, 177, 255, .3);
+  --editorColor: rgba(255, 255, 255, .7);
+  --editorColor80: rgba(255, 255, 255, .8);
+  --editorColor60: rgba(255, 255, 255, .6);
+  --editorColor50: rgba(255, 255, 255, .5);
+  --editorColor40: rgba(255, 255, 255, .4);
+  --editorColor30: rgba(255, 255, 255, .3);
+  --editorColor10: rgba(255, 255, 255, .1);
+  --editorColor04: rgba(255, 255, 255, .04);
+  --editorBgColor: #282828;
+  --deleteColor: #409eff;
+
+  /* Icon color - CRITICAL for drag handler dots */
+  --iconColor: rgba(255, 255, 255, .56);
+
+  /* Code block colors */
+  --codeBgColor: #424344;
+  --codeBlockBgColor: #424344;
+  --footnoteBgColor: rgba(66, 67, 68, .3);
+  --inputBgColor: #2f3336;
+
+  /* UI colors */
+  --focusColor: var(--themeColor);
+  --floatFontColor: rgba(255, 255, 255, .7);
+  --floatBgColor: #3f3f3f;
+  --floatHoverColor: rgba(255, 255, 255, .04);
+  --floatBorderColor: rgba(0, 0, 0, .05);
+  --floatShadow: rgba(0, 0, 0, 0.2);
+  --tableBorderColor: #363839;
+}
+
+/* LIGHT THEMES (light, ulysses-light, graphite-light, cadmium-light) */
+:root[data-theme="light"],
+:root[data-theme="ulysses-light"],
+:root[data-theme="graphite-light"],
+:root[data-theme="cadmium-light"] {
+  /* Theme colors */
+  --themeColor: #2196f3;
+  --themeColor90: rgba(33, 150, 243, .9);
+  --themeColor80: rgba(33, 150, 243, .8);
+  --themeColor70: rgba(33, 150, 243, .7);
+  --themeColor60: rgba(33, 150, 243, .6);
+  --themeColor50: rgba(33, 150, 243, .5);
+  --themeColor40: rgba(33, 150, 243, .4);
+  --themeColor30: rgba(33, 150, 243, .3);
+  --themeColor20: rgba(33, 150, 243, .2);
+  --themeColor10: rgba(33, 150, 243, .1);
+
+  /* Editor colors - dark/gray colors for light backgrounds */
+  --highlightColor: rgba(33, 150, 243, .3);
+  --selectionColor: rgba(33, 150, 243, .15);
+  --editorColor: rgba(0, 0, 0, .87);
+  --editorColor80: rgba(0, 0, 0, .8);
+  --editorColor60: rgba(0, 0, 0, .6);
+  --editorColor50: rgba(0, 0, 0, .5);
+  --editorColor40: rgba(0, 0, 0, .4);
+  --editorColor30: rgba(0, 0, 0, .3);
+  --editorColor10: rgba(0, 0, 0, .1);
+  --editorColor04: rgba(0, 0, 0, .04);
+  --editorBgColor: #ffffff;
+  --deleteColor: #f44336;
+
+  /* Icon color - CRITICAL for drag handler dots - darker for light theme */
+  --iconColor: rgba(0, 0, 0, .54);
+
+  /* Code block colors */
+  --codeBgColor: #f5f5f5;
+  --codeBlockBgColor: #f5f5f5;
+  --footnoteBgColor: rgba(0, 0, 0, .05);
+  --inputBgColor: #fafafa;
+
+  /* UI colors */
+  --focusColor: var(--themeColor);
+  --floatFontColor: rgba(0, 0, 0, .87);
+  --floatBgColor: #ffffff;
+  --floatHoverColor: rgba(0, 0, 0, .04);
+  --floatBorderColor: rgba(0, 0, 0, .12);
+  --floatShadow: rgba(0, 0, 0, 0.2);
+  --tableBorderColor: #e0e0e0;
+}

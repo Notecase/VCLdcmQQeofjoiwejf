@@ -89,12 +89,13 @@ function performSearch() {
       let column = 0
       
       for (let i = 0; i < lines.length; i++) {
-        if (pos + lines[i].length >= match.index) {
+        const lineLength = lines[i]?.length ?? 0
+        if (pos + lineLength >= match.index) {
           line = i + 1
           column = match.index - pos
           break
         }
-        pos += lines[i].length + 1 // +1 for newline
+        pos += lineLength + 1 // +1 for newline
       }
       
       matches.value.push({
@@ -112,7 +113,7 @@ function performSearch() {
       }
     }
     
-    if (matches.value.length > 0) {
+    if (matches.value.length > 0 && matches.value[0]) {
       currentMatchIndex.value = 0
       emit('navigate', matches.value[0])
     }

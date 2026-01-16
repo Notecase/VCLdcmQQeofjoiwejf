@@ -13,10 +13,10 @@
     "skipLibCheck": true,
     "allowJs": true,
     "checkJs": false,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "noEmit": true
   },
   "include": [
     "src/**/*"

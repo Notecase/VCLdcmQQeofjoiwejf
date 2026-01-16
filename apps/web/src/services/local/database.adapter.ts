@@ -179,7 +179,8 @@ class LocalQueryBuilder<T> implements IQueryBuilder<T> {
         results.push(record)
       }
 
-      return { data: Array.isArray(data) ? results : results[0], error: null }
+      const resultData = Array.isArray(data) ? results : results[0]
+      return { data: resultData as T | T[], error: null }
     } catch (e) {
       return { data: null, error: { code: 'insert_error', message: String(e) } }
     }

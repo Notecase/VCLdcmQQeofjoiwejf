@@ -6,6 +6,7 @@ import 'element-plus/dist/index.css'
 
 import App from './App.vue'
 import { useAuthStore, usePreferencesStore } from './stores'
+import { initializeServices, isSupabaseConfigured } from './services'
 
 // Import theme variables (must be first to define CSS variables for all themes)
 import './assets/themes/variables.css'
@@ -38,17 +39,51 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
-// Initialize stores before mounting
-const authStore = useAuthStore()
-const preferencesStore = usePreferencesStore()
+/**
+ * Initialize application
+ */
+async function initApp() {
+  // Initialize service provider
+  // Use 'supabase' if configured, otherwise 'local' for offline mode
+  const provider = isSupabaseConfigured ? 'supabase' : 'local'
 
-Promise.all([
-  authStore.initialize(),
-  preferencesStore.load()
-]).then(() => {
+  try {
+    await initializeServices(provider)
+    console.log(`Services initialized with ${provider} provider`)
+  } catch (error) {
+    console.warn('Failed to initialize services, falling back to local:', error)
+    await initializeServices('local')
+  }
+
+  // Initialize stores SEQUENTIALLY
+  // Auth must complete first (preferences might be user-specific)
+  const authStore = useAuthStore()
+  const preferencesStore = usePreferencesStore()
+
+  try {
+    // Auth MUST complete first
+    await authStore.initialize()
+    console.log('Auth initialized:', authStore.isAuthenticated ? 'authenticated' : 'guest')
+  } catch (error) {
+    console.error('Auth initialization failed:', error)
+    // Continue with guest mode
+  }
+
+  try {
+    // Load preferences after auth (can now fetch user-specific preferences)
+    await preferencesStore.load()
+    console.log('Preferences loaded')
+  } catch (error) {
+    console.error('Preferences load failed:', error)
+    // Use defaults
+  }
+
   // Apply theme
   document.documentElement.setAttribute('data-theme', preferencesStore.theme)
 
   // Mount app
   app.mount('#app')
-})
+}
+
+// Start the app
+initApp().catch(console.error)

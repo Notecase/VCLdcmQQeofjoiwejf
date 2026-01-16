@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { useEditorStore, usePreferencesStore } from '@/stores'
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
+import { useEditorStore, usePreferencesStore, useAuthStore } from '@/stores'
+import * as attachmentsService from '@/services/attachments.service'
 
 // Import Muya and plugins
 import Muya from '@/muya/lib'
@@ -33,11 +34,52 @@ import { openExternal } from '@/utils/platform'
 
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
+const authStore = useAuthStore()
 
 const editorRef = ref<HTMLElement>()
 let muyaInstance: any = null
 const autoSaveTimer = ref<ReturnType<typeof setTimeout>>()
 const isEditorReady = ref(false)
+const isUploadingImage = ref(false)
+
+/**
+ * Handle image upload from paste/drop
+ * Returns the URL to use in the editor
+ */
+async function handleImageUpload(file: File): Promise<string> {
+  if (!authStore.user?.id) {
+    console.warn('Cannot upload image: user not authenticated')
+    return URL.createObjectURL(file) // Fallback to local URL
+  }
+
+  isUploadingImage.value = true
+
+  try {
+    const noteId = editorStore.currentDocument?.id
+    const result = await attachmentsService.uploadAttachment(file, authStore.user.id, noteId)
+
+    if (result.error) {
+      console.error('Failed to upload image:', result.error)
+      return URL.createObjectURL(file) // Fallback to local URL
+    }
+
+    const attachment = Array.isArray(result.data) ? result.data[0] : result.data
+    if (attachment) {
+      // Get signed URL for the uploaded image
+      const urlResult = await attachmentsService.getAttachmentUrl(attachment.storage_path)
+      if (urlResult.url) {
+        return urlResult.url
+      }
+    }
+
+    return URL.createObjectURL(file) // Fallback to local URL
+  } catch (error) {
+    console.error('Error uploading image:', error)
+    return URL.createObjectURL(file) // Fallback to local URL
+  } finally {
+    isUploadingImage.value = false
+  }
+}
 
 // Register Muya plugins once
 let pluginsRegistered = false
@@ -50,7 +92,11 @@ function registerPlugins() {
   Muya.use(EmojiPicker)
   Muya.use(ImagePathPicker)
   Muya.use(ImageSelector, {
-    unsplashAccessKey: import.meta.env.VITE_UNSPLASH_ACCESS_KEY || ''
+    unsplashAccessKey: import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '',
+    // Image upload handler for paste/drop
+    imageAction: async (file: File) => {
+      return await handleImageUpload(file)
+    }
   })
   Muya.use(Transformer)
   Muya.use(ImageToolbar)
@@ -103,6 +149,30 @@ function initializeMuya() {
   }
 
   muyaInstance = new Muya(editorRef.value, options)
+
+  // Restore editor state (cursor and scroll position) after initialization
+  const currentDoc = editorStore.currentDocument
+  if (currentDoc?.editor_state) {
+    nextTick(() => {
+      try {
+        // Restore cursor position
+        if (currentDoc.editor_state?.cursor && muyaInstance) {
+          muyaInstance.setCursor(currentDoc.editor_state.cursor)
+        }
+
+        // Restore scroll position
+        if (currentDoc.editor_state?.scroll && muyaInstance) {
+          const container = muyaInstance.container
+          if (container) {
+            container.scrollTop = currentDoc.editor_state.scroll.top || 0
+            container.scrollLeft = currentDoc.editor_state.scroll.left || 0
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to restore editor state:', error)
+      }
+    })
+  }
 
   // Handle content changes
   muyaInstance.on('change', (changes: any) => {
@@ -158,8 +228,8 @@ watch(
   () => editorStore.currentDocument,
   (newDoc, oldDoc) => {
     if (newDoc && muyaInstance && newDoc.id !== oldDoc?.id) {
-      // Switch to new document content
-      muyaInstance.setMarkdown(newDoc.content, newDoc.cursor)
+      // Switch to new document content, restoring cursor position if available
+      muyaInstance.setMarkdown(newDoc.content, newDoc.editor_state?.cursor)
     }
   }
 )
@@ -234,7 +304,7 @@ onUnmounted(() => {
 
 // Expose Muya instance for parent components (e.g., format toolbar)
 const getMuya = () => muyaInstance
-defineExpose({ getMuya, isEditorReady })
+defineExpose({ getMuya, isEditorReady, isUploadingImage })
 </script>
 
 <template>
@@ -271,7 +341,7 @@ defineExpose({ getMuya, isEditorReady })
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--editor-bg);
+  background: transparent;
 }
 
 .muya-editor {
@@ -287,8 +357,8 @@ defineExpose({ getMuya, isEditorReady })
 
 /* Muya editor overrides */
 .muya-editor :deep(.ag-container-block) {
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 100%;
+  width: 100%;
 }
 
 .muya-editor :deep(h1),
@@ -361,7 +431,7 @@ defineExpose({ getMuya, isEditorReady })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--editor-bg);
+  background: var(--editorBgColor);
   gap: 16px;
   color: var(--text-color-secondary);
 }
@@ -436,7 +506,7 @@ defineExpose({ getMuya, isEditorReady })
   border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9em;
-  color: var(--themeColor, #0078d4);
+  color: var(--editorColor);  /* Changed from --themeColor for better contrast */
 }
 
 /* ============================================

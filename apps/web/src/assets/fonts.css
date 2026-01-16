@@ -1,5 +1,11 @@
 /* Font definitions for Inkdown editor */
 
+/* Inter - UI font (Google Fonts CDN) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* JetBrains Mono - Code font (Google Fonts CDN) */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
 /* Open Sans - Editor font */
 @font-face {
   font-family: 'Open Sans';

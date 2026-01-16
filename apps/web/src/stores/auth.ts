@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { auth, supabase } from '@/services'
+import { getAuthService, isServicesInitialized } from '@/services'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -23,15 +23,25 @@ export const useAuthStore = defineStore('auth', {
      */
     async initialize() {
       this.isLoading = true
+
       try {
-        const { data } = await auth.getSession()
-        if (data.session) {
+        // Check if services are initialized
+        if (!isServicesInitialized()) {
+          console.warn('Services not initialized, skipping auth check')
+          this.isLoading = false
+          return
+        }
+
+        const auth = getAuthService()
+        const result = await auth.getSession()
+
+        if (result.data) {
           this.user = {
-            id: data.session.user.id,
-            email: data.session.user.email || '',
-            name: data.session.user.user_metadata?.name,
-            avatar_url: data.session.user.user_metadata?.avatar_url,
-            created_at: data.session.user.created_at
+            id: result.data.user.id,
+            email: result.data.user.email || '',
+            name: result.data.user.user_metadata?.name as string | undefined,
+            avatar_url: result.data.user.user_metadata?.avatar_url as string | undefined,
+            created_at: result.data.user.created_at
           }
           this.isAuthenticated = true
         }
@@ -42,13 +52,23 @@ export const useAuthStore = defineStore('auth', {
       }
 
       // Listen for auth changes
+      this.setupAuthListener()
+    },
+
+    /**
+     * Set up auth state change listener
+     */
+    setupAuthListener() {
+      if (!isServicesInitialized()) return
+
+      const auth = getAuthService()
       auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' && session) {
           this.user = {
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name,
-            avatar_url: session.user.user_metadata?.avatar_url,
+            name: session.user.user_metadata?.name as string | undefined,
+            avatar_url: session.user.user_metadata?.avatar_url as string | undefined,
             created_at: session.user.created_at
           }
           this.isAuthenticated = true
@@ -65,9 +85,14 @@ export const useAuthStore = defineStore('auth', {
     async signUp(email: string, password: string) {
       this.isLoading = true
       this.error = null
+
       try {
-        const { error } = await auth.signUp(email, password)
-        if (error) throw error
+        const auth = getAuthService()
+        const result = await auth.signUp({ email, password })
+
+        if (result.error) {
+          throw new Error(result.error.message)
+        }
       } catch (e: any) {
         this.error = e.message
         throw e
@@ -82,9 +107,14 @@ export const useAuthStore = defineStore('auth', {
     async signIn(email: string, password: string) {
       this.isLoading = true
       this.error = null
+
       try {
-        const { error } = await auth.signIn(email, password)
-        if (error) throw error
+        const auth = getAuthService()
+        const result = await auth.signIn({ email, password })
+
+        if (result.error) {
+          throw new Error(result.error.message)
+        }
       } catch (e: any) {
         this.error = e.message
         throw e
@@ -99,9 +129,14 @@ export const useAuthStore = defineStore('auth', {
     async signInWithOAuth(provider: 'github' | 'google') {
       this.isLoading = true
       this.error = null
+
       try {
-        const { error } = await auth.signInWithOAuth(provider)
-        if (error) throw error
+        const auth = getAuthService()
+        const result = await auth.signInWithOAuth({ provider })
+
+        if (result.error) {
+          throw new Error(result.error.message)
+        }
       } catch (e: any) {
         this.error = e.message
         throw e
@@ -115,7 +150,9 @@ export const useAuthStore = defineStore('auth', {
      */
     async signOut() {
       this.isLoading = true
+
       try {
+        const auth = getAuthService()
         await auth.signOut()
         this.user = null
         this.isAuthenticated = false

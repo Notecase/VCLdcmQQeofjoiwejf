@@ -157,7 +157,7 @@ const groupedCommands = computed(() => {
     if (!groups[cmd.category]) {
       groups[cmd.category] = []
     }
-    groups[cmd.category].push(cmd)
+    groups[cmd.category]!.push(cmd)
   }
   
   return groups
@@ -330,10 +330,10 @@ onUnmounted(() => {
 .command-palette {
   width: 100%;
   max-width: 600px;
-  background: var(--float-bg-color, #2d2d30);
-  border: 1px solid var(--border-color, #3c3c3c);
+  background: var(--floatBgColor, var(--card-bg, #ffffff));
+  border: 1px solid var(--floatBorderColor, var(--border-color, #e0e0e0));
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 16px 48px var(--floatShadow, rgba(0, 0, 0, 0.2));
   overflow: hidden;
   max-height: 60vh;
   display: flex;
@@ -344,7 +344,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color, #3c3c3c);
+  border-bottom: 1px solid var(--floatBorderColor, var(--border-color, #e0e0e0));
   gap: 12px;
 }
 
@@ -358,13 +358,13 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--text-color, #fff);
+  color: var(--floatFontColor, var(--text-color, #333));
   font-size: 16px;
   font-family: inherit;
 }
 
 .palette-input::placeholder {
-  color: var(--text-color-secondary, #666);
+  color: var(--editorColor50, var(--text-color-secondary, #666));
 }
 
 .close-btn {
@@ -381,8 +381,8 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  background: var(--float-hover-color, rgba(255, 255, 255, 0.1));
-  color: var(--text-color, #fff);
+  background: var(--floatHoverColor, rgba(0, 0, 0, 0.06));
+  color: var(--floatFontColor, var(--text-color, #333));
 }
 
 .palette-results {
@@ -412,7 +412,7 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--text-color, #fff);
+  color: var(--floatFontColor, var(--text-color, #333));
   cursor: pointer;
   text-align: left;
   gap: 12px;
@@ -420,11 +420,11 @@ onUnmounted(() => {
 
 .command-item:hover,
 .command-item.selected {
-  background: var(--float-hover-color, rgba(255, 255, 255, 0.1));
+  background: var(--floatHoverColor, rgba(0, 0, 0, 0.06));
 }
 
 .command-item.selected {
-  background: var(--primary-color, #65b9f4);
+  background: var(--themeColor, var(--primary-color, #7C9EF8));
   color: #fff;
 }
 
@@ -436,9 +436,9 @@ onUnmounted(() => {
 .command-shortcut {
   font-size: 11px;
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--editorColor10, rgba(0, 0, 0, 0.08));
   border-radius: 4px;
-  color: var(--text-color-secondary, #888);
+  color: var(--editorColor50, var(--text-color-secondary, #666));
 }
 
 .command-item.selected .command-shortcut {

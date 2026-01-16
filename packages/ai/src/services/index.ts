@@ -1,0 +1,99 @@
+/**
+ * AI Services exports
+ *
+ * This module provides services for embedding, RAG, and chunking.
+ * Full implementations will be added in Phase 1-2.
+ */
+
+// Services (to be implemented)
+// export { EmbeddingService } from './embedding'
+// export { RAGService } from './rag'
+// export { ChunkingService } from './chunking'
+
+/**
+ * Embedding result from the embedding service
+ */
+export interface EmbeddingResult {
+  embedding: number[]
+  model: string
+  tokenCount: number
+  dimensions: number
+}
+
+/**
+ * Text chunk for embedding
+ */
+export interface TextChunk {
+  index: number
+  text: string
+  startPosition: number
+  endPosition: number
+  tokenCount?: number
+}
+
+/**
+ * Chunking options
+ */
+export interface ChunkingOptions {
+  maxTokens?: number
+  overlap?: number
+  splitOnSentences?: boolean
+}
+
+/**
+ * RAG retrieval result
+ */
+export interface RAGResult {
+  noteId: string
+  title: string
+  chunkText: string
+  similarity: number
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * RAG retrieval options
+ */
+export interface RAGOptions {
+  limit?: number
+  threshold?: number
+  projectId?: string
+  noteIds?: string[]
+}
+
+/**
+ * Default chunking configuration
+ */
+export const DEFAULT_CHUNKING_OPTIONS: Required<ChunkingOptions> = {
+  maxTokens: 500,
+  overlap: 50,
+  splitOnSentences: true,
+}
+
+/**
+ * Default RAG configuration
+ */
+export const DEFAULT_RAG_OPTIONS: Required<RAGOptions> = {
+  limit: 5,
+  threshold: 0.7,
+  projectId: undefined as unknown as string,
+  noteIds: [],
+}
+
+/**
+ * Embedding model configurations
+ */
+export const EMBEDDING_MODELS = {
+  'text-embedding-3-large': {
+    provider: 'openai',
+    dimensions: 3072, // Can be reduced to 1536
+    maxInput: 8191,
+  },
+  'text-embedding-3-small': {
+    provider: 'openai',
+    dimensions: 1536,
+    maxInput: 8191,
+  },
+} as const
+
+export type EmbeddingModel = keyof typeof EMBEDDING_MODELS

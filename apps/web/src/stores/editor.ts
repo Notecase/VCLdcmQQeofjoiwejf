@@ -1,10 +1,29 @@
 import { defineStore } from 'pinia'
-import { documentService } from '@/services'
-import type { Document, Tab, WordCount, CursorPosition } from '@/types'
+import * as notesService from '@/services/notes.service'
+import * as subscriptionsService from '@/services/subscriptions.service'
+import { getDatabaseService, isServicesInitialized } from '@/services'
+import { useAuthStore } from './auth'
+import type { Note, EditorState, NoteChangeEvent } from '@inkdown/shared'
 
-interface EditorState {
+// Re-export Note as Document for backward compatibility
+export type Document = Note
+
+interface WordCount {
+  words: number
+  characters: number
+  paragraphs: number
+}
+
+interface Tab {
+  id: string
+  document: Note
+  isSaved: boolean
+  isActive: boolean
+}
+
+interface EditorStoreState {
   // Current active document
-  currentDocument: Document | null
+  currentDocument: Note | null
 
   // All open tabs
   tabs: Tab[]
@@ -13,7 +32,7 @@ interface EditorState {
   activeTabId: string | null
 
   // Document list (sidebar)
-  documents: Document[]
+  documents: Note[]
 
   // Save status
   isSaving: boolean
@@ -28,10 +47,16 @@ interface EditorState {
   // Loading states
   isLoading: boolean
   isLoadingDocuments: boolean
+
+  // Real-time sync
+  isRealtimeSyncEnabled: boolean
 }
 
+// Store unsubscribe function outside state (not reactive)
+let notesUnsubscribe: (() => void) | null = null
+
 export const useEditorStore = defineStore('editor', {
-  state: (): EditorState => ({
+  state: (): EditorStoreState => ({
     currentDocument: null,
     tabs: [],
     activeTabId: null,
@@ -41,7 +66,8 @@ export const useEditorStore = defineStore('editor', {
     wordCount: { words: 0, characters: 0, paragraphs: 0 },
     toc: [],
     isLoading: false,
-    isLoadingDocuments: false
+    isLoadingDocuments: false,
+    isRealtimeSyncEnabled: false
   }),
 
   getters: {
@@ -64,12 +90,41 @@ export const useEditorStore = defineStore('editor', {
 
   actions: {
     /**
-     * Load all documents for the sidebar
+     * Load all notes for the sidebar (includes both general and project notes)
      */
     async loadDocuments() {
       this.isLoadingDocuments = true
+
       try {
-        this.documents = await documentService.list()
+        if (!isServicesInitialized()) {
+          console.warn('Services not initialized, using empty list')
+          this.documents = []
+          return
+        }
+
+        const authStore = useAuthStore()
+
+        if (!authStore.user?.id) {
+          // Not authenticated, load from local storage or empty
+          this.documents = []
+          return
+        }
+
+        // Load ALL notes (general + project notes) for sidebar display
+        const result = await notesService.getNotes(authStore.user.id)
+
+        if (result.error) {
+          console.error('Failed to load notes:', result.error)
+          this.documents = []
+        } else {
+          this.documents = result.data || []
+
+          // Start real-time sync after initial load
+          this.startRealtimeSync()
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error)
+        this.documents = []
       } finally {
         this.isLoadingDocuments = false
       }
@@ -77,18 +132,49 @@ export const useEditorStore = defineStore('editor', {
 
     /**
      * Create a new document and open it
+     * @param projectId - Optional project ID to create the note in (mutually exclusive with parentNoteId)
+     * @param title - Optional title for the note (defaults to 'Untitled')
+     * @param parentNoteId - Optional parent note ID to create as subnote (mutually exclusive with projectId)
      */
-    async createDocument(title: string = 'Untitled') {
-      const doc = await documentService.create({ title, content: '' })
-      this.documents.unshift(doc)
-      this.openDocument(doc)
-      return doc
+    async createDocument(projectId?: string, title: string = 'Untitled', parentNoteId?: string) {
+      const authStore = useAuthStore()
+
+      if (!authStore.user?.id) {
+        console.warn('Cannot create document: user not authenticated')
+        return null
+      }
+
+      try {
+        // Note: project_id and parent_note_id are mutually exclusive
+        const result = await notesService.createNote(authStore.user.id, {
+          title,
+          content: '',
+          project_id: parentNoteId ? undefined : (projectId || undefined),
+          parent_note_id: parentNoteId || undefined
+        })
+
+        if (result.error) {
+          console.error('Failed to create note:', result.error)
+          return null
+        }
+
+        const doc = Array.isArray(result.data) ? result.data[0] : result.data
+        if (doc) {
+          this.documents.unshift(doc as Note)
+          this.openDocument(doc as Note)
+        }
+
+        return doc
+      } catch (error) {
+        console.error('Error creating document:', error)
+        return null
+      }
     },
 
     /**
      * Open a document in a new tab or switch to existing tab
      */
-    openDocument(doc: Document) {
+    openDocument(doc: Note) {
       // Check if already open
       const existingTab = this.tabs.find(t => t.document.id === doc.id)
       if (existingTab) {
@@ -118,11 +204,15 @@ export const useEditorStore = defineStore('editor', {
      */
     async loadDocument(id: string) {
       this.isLoading = true
+
       try {
-        const doc = await documentService.get(id)
-        if (doc) {
-          this.openDocument(doc)
+        const result = await notesService.getNote(id)
+
+        if (result.data && result.data[0]) {
+          this.openDocument(result.data[0])
         }
+      } catch (error) {
+        console.error('Error loading document:', error)
       } finally {
         this.isLoading = false
       }
@@ -140,6 +230,7 @@ export const useEditorStore = defineStore('editor', {
         if (wordCount) {
           this.wordCount = wordCount
           tab.document.word_count = wordCount.words
+          tab.document.character_count = wordCount.characters
         }
       }
 
@@ -151,13 +242,13 @@ export const useEditorStore = defineStore('editor', {
     /**
      * Update cursor position
      */
-    updateCursor(cursor: CursorPosition) {
+    updateCursor(cursor: any) {
       const tab = this.activeTab
-      if (tab) {
-        tab.document.cursor = cursor
+      if (tab && tab.document.editor_state) {
+        tab.document.editor_state.cursor = cursor
       }
-      if (this.currentDocument) {
-        this.currentDocument.cursor = cursor
+      if (this.currentDocument && this.currentDocument.editor_state) {
+        this.currentDocument.editor_state.cursor = cursor
       }
     },
 
@@ -169,13 +260,20 @@ export const useEditorStore = defineStore('editor', {
       if (!tab || tab.isSaved) return
 
       this.isSaving = true
+
       try {
-        await documentService.update(tab.document.id, {
+        const result = await notesService.updateNote(tab.document.id, {
           content: tab.document.content,
           title: tab.document.title,
           word_count: tab.document.word_count,
-          cursor: tab.document.cursor
+          character_count: tab.document.character_count,
+          editor_state: tab.document.editor_state as EditorState
         })
+
+        if (result.error) {
+          console.error('Failed to save note:', result.error)
+          return
+        }
 
         tab.isSaved = true
         this.lastSaved = new Date()
@@ -185,6 +283,8 @@ export const useEditorStore = defineStore('editor', {
         if (docIndex !== -1) {
           this.documents[docIndex] = { ...tab.document }
         }
+      } catch (error) {
+        console.error('Error saving document:', error)
       } finally {
         this.isSaving = false
       }
@@ -232,31 +332,49 @@ export const useEditorStore = defineStore('editor', {
      * Delete a document
      */
     async deleteDocument(id: string) {
-      await documentService.delete(id)
+      try {
+        const result = await notesService.deleteNote(id)
 
-      // Remove from documents list
-      this.documents = this.documents.filter(d => d.id !== id)
+        if (result.error) {
+          console.error('Failed to delete note:', result.error)
+          return
+        }
 
-      // Close tab if open
-      this.closeTab(id)
+        // Remove from documents list
+        this.documents = this.documents.filter(d => d.id !== id)
+
+        // Close tab if open
+        this.closeTab(id)
+      } catch (error) {
+        console.error('Error deleting document:', error)
+      }
     },
 
     /**
      * Rename a document
      */
     async renameDocument(id: string, newTitle: string) {
-      await documentService.update(id, { title: newTitle })
+      try {
+        const result = await notesService.updateNote(id, { title: newTitle })
 
-      // Update in documents list
-      const doc = this.documents.find(d => d.id === id)
-      if (doc) doc.title = newTitle
+        if (result.error) {
+          console.error('Failed to rename note:', result.error)
+          return
+        }
 
-      // Update in tab if open
-      const tab = this.tabs.find(t => t.document.id === id)
-      if (tab) tab.document.title = newTitle
+        // Update in documents list
+        const doc = this.documents.find(d => d.id === id)
+        if (doc) doc.title = newTitle
 
-      if (this.currentDocument?.id === id) {
-        this.currentDocument.title = newTitle
+        // Update in tab if open
+        const tab = this.tabs.find(t => t.document.id === id)
+        if (tab) tab.document.title = newTitle
+
+        if (this.currentDocument?.id === id) {
+          this.currentDocument.title = newTitle
+        }
+      } catch (error) {
+        console.error('Error renaming document:', error)
       }
     },
 
@@ -265,6 +383,92 @@ export const useEditorStore = defineStore('editor', {
      */
     updateToc(toc: any[]) {
       this.toc = toc
+    },
+
+    /**
+     * Start real-time sync for notes
+     */
+    startRealtimeSync() {
+      const authStore = useAuthStore()
+      if (!authStore.user?.id || this.isRealtimeSyncEnabled) return
+
+      notesUnsubscribe = subscriptionsService.subscribeToNotes(
+        authStore.user.id,
+        (event: NoteChangeEvent) => {
+          this.handleNoteChange(event)
+        }
+      )
+
+      this.isRealtimeSyncEnabled = true
+      console.log('Real-time sync started')
+    },
+
+    /**
+     * Stop real-time sync
+     */
+    stopRealtimeSync() {
+      if (notesUnsubscribe) {
+        notesUnsubscribe()
+        notesUnsubscribe = null
+      }
+      this.isRealtimeSyncEnabled = false
+      console.log('Real-time sync stopped')
+    },
+
+    /**
+     * Handle real-time note change events
+     */
+    handleNoteChange(event: NoteChangeEvent) {
+      switch (event.type) {
+        case 'INSERT':
+          if (event.new) {
+            // Add to documents list if not already there
+            const exists = this.documents.find(d => d.id === event.new!.id)
+            if (!exists) {
+              this.documents.unshift(event.new)
+            }
+          }
+          break
+
+        case 'UPDATE':
+          if (event.new) {
+            // Update in documents list
+            const docIndex = this.documents.findIndex(d => d.id === event.new!.id)
+            if (docIndex !== -1) {
+              this.documents[docIndex] = event.new
+            }
+
+            // Update in tabs if open (but not if currently saving to avoid conflicts)
+            if (!this.isSaving) {
+              const tab = this.tabs.find(t => t.document.id === event.new!.id)
+              if (tab) {
+                // Only update if tab is saved (no local changes)
+                if (tab.isSaved) {
+                  tab.document = { ...event.new }
+                }
+              }
+
+              // Update current document if it's the one being changed
+              if (this.currentDocument?.id === event.new.id && this.activeTab?.isSaved) {
+                this.currentDocument = { ...event.new }
+              }
+            }
+          }
+          break
+
+        case 'DELETE':
+          if (event.old) {
+            // Remove from documents list
+            this.documents = this.documents.filter(d => d.id !== event.old!.id)
+
+            // Close tab if open
+            const tab = this.tabs.find(t => t.document.id === event.old!.id)
+            if (tab) {
+              this.closeTab(tab.id)
+            }
+          }
+          break
+      }
     }
   }
 })

@@ -8,17 +8,29 @@
 :root[data-theme="dark"],
 :root[data-theme="one-dark"],
 :root[data-theme="material-dark"] {
+  /* New design colors */
+  --app-bg: #1a1a1e;
+  --card-bg: #242428;
+  --sidebar-bg: #1e1e22;
+  --bg-color: #252525;
+  --primary-color: #7C9EF8;
+  --primary-gradient: linear-gradient(135deg, #7C9EF8 0%, #A78BFA 100%);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --text-color: #E2E8F0;
+  --text-color-secondary: #94A3B8;
+  --border-color: #333338;
+  
   /* Theme colors */
-  --themeColor: #409eff;
-  --themeColor90: rgba(64, 158, 255, .9);
-  --themeColor80: rgba(64, 158, 255, .8);
-  --themeColor70: rgba(64, 158, 255, .7);
-  --themeColor60: rgba(64, 158, 255, .6);
-  --themeColor50: rgba(64, 158, 255, .5);
-  --themeColor40: rgba(64, 158, 255, .4);
-  --themeColor30: rgba(64, 158, 255, .3);
-  --themeColor20: rgba(64, 158, 255, .2);
-  --themeColor10: rgba(64, 158, 255, .1);
+  --themeColor: #7C9EF8;
+  --themeColor90: rgba(124, 158, 248, .9);
+  --themeColor80: rgba(124, 158, 248, .8);
+  --themeColor70: rgba(124, 158, 248, .7);
+  --themeColor60: rgba(124, 158, 248, .6);
+  --themeColor50: rgba(124, 158, 248, .5);
+  --themeColor40: rgba(124, 158, 248, .4);
+  --themeColor30: rgba(124, 158, 248, .3);
+  --themeColor20: rgba(124, 158, 248, .2);
+  --themeColor10: rgba(124, 158, 248, .1);
 
   /* Editor colors - white/light colors for dark backgrounds */
   --highlightColor: rgba(102, 177, 255, .6);
@@ -58,17 +70,29 @@
 :root[data-theme="ulysses-light"],
 :root[data-theme="graphite-light"],
 :root[data-theme="cadmium-light"] {
+  /* New design colors */
+  --app-bg: #F8FAFC;
+  --card-bg: #FFFFFF;
+  --sidebar-bg: #FFFFFF;
+  --bg-color: #f5f5f5;
+  --primary-color: #7C9EF8;
+  --primary-gradient: linear-gradient(135deg, #7C9EF8 0%, #A78BFA 100%);
+  --hover-bg: #F1F5F9;
+  --text-color: #334155;
+  --text-color-secondary: #64748B;
+  --border-color: #E2E8F0;
+  
   /* Theme colors */
-  --themeColor: #2196f3;
-  --themeColor90: rgba(33, 150, 243, .9);
-  --themeColor80: rgba(33, 150, 243, .8);
-  --themeColor70: rgba(33, 150, 243, .7);
-  --themeColor60: rgba(33, 150, 243, .6);
-  --themeColor50: rgba(33, 150, 243, .5);
-  --themeColor40: rgba(33, 150, 243, .4);
-  --themeColor30: rgba(33, 150, 243, .3);
-  --themeColor20: rgba(33, 150, 243, .2);
-  --themeColor10: rgba(33, 150, 243, .1);
+  --themeColor: #7C9EF8;
+  --themeColor90: rgba(124, 158, 248, .9);
+  --themeColor80: rgba(124, 158, 248, .8);
+  --themeColor70: rgba(124, 158, 248, .7);
+  --themeColor60: rgba(124, 158, 248, .6);
+  --themeColor50: rgba(124, 158, 248, .5);
+  --themeColor40: rgba(124, 158, 248, .4);
+  --themeColor30: rgba(124, 158, 248, .3);
+  --themeColor20: rgba(124, 158, 248, .2);
+  --themeColor10: rgba(124, 158, 248, .1);
 
   /* Editor colors - dark/gray colors for light backgrounds */
   --highlightColor: rgba(33, 150, 243, .3);

@@ -1,156 +1,288 @@
 /**
  * AI Tools exports
  *
- * This module provides tool definitions for LangGraph agents.
- * Full implementations will be added in Phase 3.
+ * Complete 26-tool system for LangGraph agents.
+ * 
+ * Tool Categories:
+ * - Core Editing (8): read_block, read_note, edit_block, search_web, create_artifact, create_database, read_memory_file, write_memory_file
+ * - Database (10): db_add_row, db_update_rows, db_delete_rows, db_query_rows, db_aggregate, db_group_by, db_column_stats, db_sort_rows, db_get_schema, db_create_chart_data
+ * - Artifact (6): artifact_modify_html, artifact_modify_css, artifact_modify_js, artifact_parse_structure, artifact_get_css_rules, artifact_validate
+ * - Secretary (7): create_roadmap, save_roadmap, list_memory_files, delete_memory_file, get_roadmap, advance_roadmap_week, get_current_week_tasks
  */
 
 import { z } from 'zod'
 
-// Tools (to be implemented)
-// export { createSearchTool } from './search.tool'
-// export { createNoteTools } from './note.tools'
-// export { createWebTool } from './web.tool'
+// ============================================================================
+// Core Types
+// ============================================================================
+
+export type { ToolContext, ToolResult } from './core.tools'
+
+// ============================================================================
+// Core Editing Tools (8)
+// ============================================================================
+
+export {
+  // Schemas
+  ReadBlockSchema,
+  ReadNoteSchema,
+  EditBlockSchema,
+  SearchWebSchema,
+  CreateArtifactSchema,
+  CreateDatabaseSchema,
+  ReadMemorySchema,
+  WriteMemorySchema,
+  // Types
+  type ReadBlockInput,
+  type ReadNoteInput,
+  type EditBlockInput,
+  type SearchWebInput,
+  type CreateArtifactInput,
+  type CreateDatabaseInput,
+  type ReadMemoryInput,
+  type WriteMemoryInput,
+  // Functions
+  readBlock,
+  readNote,
+  editBlock,
+  searchWeb,
+  createArtifact,
+  createDatabase,
+  readMemory,
+  writeMemory,
+  // Tool definitions
+  coreEditingTools,
+} from './core.tools'
+
+// ============================================================================
+// Database Tools (10)
+// ============================================================================
+
+export {
+  // Schemas
+  DbAddRowSchema,
+  DbUpdateRowsSchema,
+  DbDeleteRowsSchema,
+  DbQueryRowsSchema,
+  DbAggregateSchema,
+  DbGroupBySchema,
+  DbColumnStatsSchema,
+  DbSortRowsSchema,
+  DbGetSchemaSchema,
+  DbCreateChartDataSchema,
+  // Types
+  type DbAddRowInput,
+  type DbUpdateRowsInput,
+  type DbDeleteRowsInput,
+  type DbQueryRowsInput,
+  type DbAggregateInput,
+  type DbGroupByInput,
+  type DbColumnStatsInput,
+  type DbSortRowsInput,
+  type DbGetSchemaInput,
+  type DbCreateChartDataInput,
+  // Functions
+  dbAddRow,
+  dbUpdateRows,
+  dbDeleteRows,
+  dbQueryRows,
+  dbAggregate,
+  dbGroupBy,
+  dbColumnStats,
+  dbSortRows,
+  dbGetSchema,
+  dbCreateChartData,
+  // Tool definitions
+  databaseTools,
+} from './database.tools'
+
+// ============================================================================
+// Artifact Tools (6)
+// ============================================================================
+
+export {
+  // Schemas
+  ArtifactModifyHtmlSchema,
+  ArtifactModifyCssSchema,
+  ArtifactModifyJsSchema,
+  ArtifactParseStructureSchema,
+  ArtifactGetCssRulesSchema,
+  ArtifactValidateSchema,
+  // Types
+  type ArtifactModifyHtmlInput,
+  type ArtifactModifyCssInput,
+  type ArtifactModifyJsInput,
+  type ArtifactParseStructureInput,
+  type ArtifactGetCssRulesInput,
+  type ArtifactValidateInput,
+  // Functions
+  artifactModifyHtml,
+  artifactModifyCss,
+  artifactModifyJs,
+  artifactParseStructure,
+  artifactGetCssRules,
+  artifactValidate,
+  // Tool definitions
+  artifactTools,
+} from './artifact.tools'
+
+// ============================================================================
+// Secretary/Planner Tools (7)
+// ============================================================================
+
+export {
+  // Schemas
+  CreateRoadmapSchema,
+  SaveRoadmapSchema,
+  ListMemoryFilesSchema,
+  DeleteMemorySchema,
+  GetRoadmapSchema,
+  AdvanceRoadmapWeekSchema,
+  GetCurrentWeekTasksSchema,
+  // Types
+  type CreateRoadmapInput,
+  type SaveRoadmapInput,
+  type ListMemoryFilesInput,
+  type DeleteMemoryInput,
+  type GetRoadmapInput,
+  type AdvanceRoadmapWeekInput,
+  type GetCurrentWeekTasksInput,
+  // Functions
+  createRoadmap,
+  saveRoadmap,
+  listMemoryFiles,
+  deleteMemory,
+  getRoadmap,
+  advanceRoadmapWeek,
+  getCurrentWeekTasks,
+  // Tool definitions
+  secretaryTools,
+} from './secretary.tools'
+
+// ============================================================================
+// Combined Tool Registry
+// ============================================================================
+
+import { coreEditingTools } from './core.tools'
+import { databaseTools } from './database.tools'
+import { artifactTools } from './artifact.tools'
+import { secretaryTools } from './secretary.tools'
 
 /**
- * Base tool definition
+ * All 26 tools combined
  */
-export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
-  name: string
-  description: string
-  schema: z.ZodType<TInput>
-  execute: (input: TInput, context: ToolContext) => Promise<TOutput>
-}
-
-/**
- * Context passed to tools during execution
- */
-export interface ToolContext {
-  userId: string
-  supabase: unknown // SupabaseClient
-  config?: Record<string, unknown>
-}
-
-/**
- * Tool execution result
- */
-export interface ToolResult<T = unknown> {
-  success: boolean
-  data?: T
-  error?: string
-}
-
-// =============================================================================
-// Tool Schemas (for validation)
-// =============================================================================
-
-/**
- * Search tool input schema
- */
-export const SearchToolSchema = z.object({
-  query: z.string().describe('The search query'),
-  limit: z.number().optional().describe('Maximum number of results'),
-  projectId: z.string().uuid().optional().describe('Filter by project'),
-})
-
-export type SearchToolInput = z.infer<typeof SearchToolSchema>
-
-/**
- * Note create tool input schema
- */
-export const NoteCreateToolSchema = z.object({
-  title: z.string().describe('Title for the new note'),
-  content: z.string().describe('Content for the new note'),
-  projectId: z.string().uuid().optional().describe('Project to add note to'),
-})
-
-export type NoteCreateToolInput = z.infer<typeof NoteCreateToolSchema>
-
-/**
- * Note update tool input schema
- */
-export const NoteUpdateToolSchema = z.object({
-  noteId: z.string().uuid().describe('ID of the note to update'),
-  title: z.string().optional().describe('New title'),
-  content: z.string().optional().describe('New content'),
-  append: z.boolean().optional().describe('Append to existing content'),
-})
-
-export type NoteUpdateToolInput = z.infer<typeof NoteUpdateToolSchema>
-
-/**
- * Note read tool input schema
- */
-export const NoteReadToolSchema = z.object({
-  noteId: z.string().uuid().describe('ID of the note to read'),
-})
-
-export type NoteReadToolInput = z.infer<typeof NoteReadToolSchema>
-
-/**
- * Web search tool input schema
- */
-export const WebSearchToolSchema = z.object({
-  query: z.string().describe('Web search query'),
-  maxResults: z.number().optional().describe('Maximum results to return'),
-})
-
-export type WebSearchToolInput = z.infer<typeof WebSearchToolSchema>
-
-// =============================================================================
-// Tool Definitions (placeholders)
-// =============================================================================
-
-/**
- * Available tool names
- */
-export const TOOL_NAMES = [
-  'semantic_search',
-  'note_read',
-  'note_create',
-  'note_update',
-  'note_delete',
-  'note_list',
-  'project_list',
-  'web_search',
+export const allTools = [
+  ...coreEditingTools,
+  ...databaseTools,
+  ...artifactTools,
+  ...secretaryTools,
 ] as const
 
-export type ToolName = typeof TOOL_NAMES[number]
+/**
+ * Tool names by category
+ */
+export const toolNames = {
+  core: coreEditingTools.map(t => t.name),
+  database: databaseTools.map(t => t.name),
+  artifact: artifactTools.map(t => t.name),
+  secretary: secretaryTools.map(t => t.name),
+  all: allTools.map(t => t.name),
+} as const
+
+/**
+ * Get tool by name
+ */
+export function getToolByName(name: string) {
+  return allTools.find(t => t.name === name)
+}
+
+/**
+ * Get tools by category
+ */
+export function getToolsByCategory(category: 'core' | 'database' | 'artifact' | 'secretary') {
+  switch (category) {
+    case 'core': return coreEditingTools
+    case 'database': return databaseTools
+    case 'artifact': return artifactTools
+    case 'secretary': return secretaryTools
+  }
+}
+
+// ============================================================================
+// Tool Executor
+// ============================================================================
+
+import { ToolContext, ToolResult } from './core.tools'
+
+/**
+ * Execute a tool by name with input and context
+ */
+export async function executeTool(
+  toolName: string,
+  input: unknown,
+  context: ToolContext
+): Promise<ToolResult> {
+  const tool = getToolByName(toolName)
+
+  if (!tool) {
+    return { success: false, error: `Unknown tool: ${toolName}` }
+  }
+
+  try {
+    // Validate input against schema
+    const validatedInput = tool.schema.parse(input)
+
+    // Execute tool - use type assertion to handle heterogeneous tool signatures
+    const executeFunc = tool.execute as (input: unknown, ctx: ToolContext) => Promise<ToolResult>
+    return await executeFunc(validatedInput, context)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Invalid input: ${err.errors.map(e => e.message).join(', ')}`
+      }
+    }
+    return { success: false, error: String(err) }
+  }
+}
 
 /**
  * Tool metadata for UI display
  */
-export const TOOL_METADATA: Record<ToolName, { label: string; description: string }> = {
-  semantic_search: {
-    label: 'Search Notes',
-    description: 'Search through notes using semantic similarity',
-  },
-  note_read: {
-    label: 'Read Note',
-    description: 'Read the content of a specific note',
-  },
-  note_create: {
-    label: 'Create Note',
-    description: 'Create a new note with title and content',
-  },
-  note_update: {
-    label: 'Update Note',
-    description: 'Update an existing note',
-  },
-  note_delete: {
-    label: 'Delete Note',
-    description: 'Delete a note (soft delete)',
-  },
-  note_list: {
-    label: 'List Notes',
-    description: 'List notes in a project or all notes',
-  },
-  project_list: {
-    label: 'List Projects',
-    description: 'List all projects',
-  },
-  web_search: {
-    label: 'Web Search',
-    description: 'Search the web for information',
-  },
+export const TOOL_METADATA: Record<string, { label: string; description: string; category: string }> = {
+  // Core
+  read_block: { label: 'Read Block', description: 'Read a specific block from a note', category: 'core' },
+  read_note: { label: 'Read Note', description: 'Read entire note with metadata', category: 'core' },
+  edit_block: { label: 'Edit Block', description: 'Edit a block or note content', category: 'core' },
+  search_web: { label: 'Web Search', description: 'Search the web for information', category: 'core' },
+  create_artifact: { label: 'Create Artifact', description: 'Create HTML/CSS/JS visualization', category: 'core' },
+  create_database: { label: 'Create Database', description: 'Create embedded database', category: 'core' },
+  read_memory_file: { label: 'Read Memory', description: 'Read AI memory', category: 'core' },
+  write_memory_file: { label: 'Write Memory', description: 'Write AI memory', category: 'core' },
+  // Database
+  db_add_row: { label: 'Add Row', description: 'Add row to database', category: 'database' },
+  db_update_rows: { label: 'Update Rows', description: 'Update matching rows', category: 'database' },
+  db_delete_rows: { label: 'Delete Rows', description: 'Delete matching rows', category: 'database' },
+  db_query_rows: { label: 'Query Rows', description: 'Query database rows', category: 'database' },
+  db_aggregate: { label: 'Aggregate', description: 'Compute aggregations', category: 'database' },
+  db_group_by: { label: 'Group By', description: 'Group and aggregate', category: 'database' },
+  db_column_stats: { label: 'Column Stats', description: 'Get column statistics', category: 'database' },
+  db_sort_rows: { label: 'Sort Rows', description: 'Sort database rows', category: 'database' },
+  db_get_schema: { label: 'Get Schema', description: 'Get database schema', category: 'database' },
+  db_create_chart_data: { label: 'Chart Data', description: 'Generate chart data', category: 'database' },
+  // Artifact
+  artifact_modify_html: { label: 'Modify HTML', description: 'Modify artifact HTML', category: 'artifact' },
+  artifact_modify_css: { label: 'Modify CSS', description: 'Modify artifact CSS', category: 'artifact' },
+  artifact_modify_js: { label: 'Modify JS', description: 'Modify artifact JavaScript', category: 'artifact' },
+  artifact_parse_structure: { label: 'Parse Structure', description: 'Parse HTML structure', category: 'artifact' },
+  artifact_get_css_rules: { label: 'Get CSS Rules', description: 'Extract CSS rules', category: 'artifact' },
+  artifact_validate: { label: 'Validate', description: 'Validate artifact syntax', category: 'artifact' },
+  // Secretary
+  create_roadmap: { label: 'Create Roadmap', description: 'Create learning roadmap', category: 'secretary' },
+  save_roadmap: { label: 'Save Roadmap', description: 'Save roadmap changes', category: 'secretary' },
+  list_memory_files: { label: 'List Memory', description: 'List all memory types', category: 'secretary' },
+  delete_memory_file: { label: 'Delete Memory', description: 'Delete memory type', category: 'secretary' },
+  get_roadmap: { label: 'Get Roadmap', description: 'Get roadmap details', category: 'secretary' },
+  advance_roadmap_week: { label: 'Advance Week', description: 'Advance to next week', category: 'secretary' },
+  get_current_week_tasks: { label: 'Week Tasks', description: 'Get current week tasks', category: 'secretary' },
 }

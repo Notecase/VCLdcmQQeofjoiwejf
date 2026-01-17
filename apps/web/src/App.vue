@@ -39,9 +39,11 @@ const appClasses = computed(() => ({
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* Zen mode - hide sidebar */
+/* Zen mode - hide sidebar with smooth fade */
 #inkdown-app.zen-mode .sidebar {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 </style>
 

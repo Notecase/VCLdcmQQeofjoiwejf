@@ -289,6 +289,9 @@ importers:
       '@langchain/openai':
         specifier: ^0.3.0
         version: 0.3.17(@langchain/core@0.3.80(@opentelemetry/api@1.9.0)(openai@4.104.0(ws@8.19.0)(zod@3.25.76)))(ws@8.19.0)
+      '@supabase/supabase-js':
+        specifier: ^2.90.1
+        version: 2.90.1
       ai:
         specifier: ^3.4.0
         version: 3.4.33(openai@4.104.0(ws@8.19.0)(zod@3.25.76))(react@19.2.3)(sswr@2.2.0(svelte@5.46.4))(svelte@5.46.4)(vue@3.5.26(typescript@5.7.3))(zod@3.25.76)
@@ -302,6 +305,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.7
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
       typescript:
         specifier: ~5.7.0
         version: 5.7.3

@@ -2,10 +2,9 @@
  * @inkdown/ai - AI Provider and Agent Abstraction
  *
  * This package provides:
- * - AI provider abstraction (OpenAI, Anthropic, Gemini)
+ * - AI provider abstraction (OpenAI, Ollama Cloud, Gemini)
  * - LangGraph-based agents for various tasks
- * - Services for embedding, RAG, and text processing
- * - Tool definitions for agent actions
+ * - Tool definitions for agent actions (26 tools)
  */
 
 // =============================================================================
@@ -21,8 +20,60 @@ export type {
   AIProvider,
 } from './providers/interface'
 
+// Provider implementations
+export {
+  OpenAIProvider,
+  createOpenAIProvider,
+  getDefaultOpenAIProvider,
+} from './providers/openai'
+
+export {
+  OllamaCloudProvider,
+  createOllamaCloudProvider,
+} from './providers/ollama'
+
+export {
+  GeminiProvider,
+  createGeminiProvider,
+} from './providers/gemini'
+
+export {
+  createProvider,
+  getOpenAI,
+  getOllamaCloud,
+  getGemini,
+  getProviderNameForTask,
+  getModelNameForTask,
+} from './providers/factory'
+
+export type { AITaskType, ProviderFactoryConfig } from './providers/factory'
+
 // =============================================================================
-// Agent Types
+// Tool Types and Exports
+// =============================================================================
+
+export type { ToolContext, ToolResult } from './tools/core.tools'
+
+// Tool registry
+export {
+  allTools,
+  toolNames,
+  getToolByName,
+  getToolsByCategory,
+  executeTool,
+  TOOL_METADATA,
+} from './tools'
+
+// Core tool exports
+export {
+  coreEditingTools,
+  databaseTools,
+  artifactTools,
+  secretaryTools,
+} from './tools'
+
+// =============================================================================
+// Agent Types (to be implemented in Phase D)
 // =============================================================================
 
 export type {
@@ -34,7 +85,7 @@ export type {
 } from './agents'
 
 // =============================================================================
-// Service Types
+// Service Types (to be implemented)
 // =============================================================================
 
 export type {
@@ -51,50 +102,3 @@ export {
   DEFAULT_RAG_OPTIONS,
   EMBEDDING_MODELS,
 } from './services'
-
-// =============================================================================
-// Tool Types
-// =============================================================================
-
-export type {
-  ToolDefinition,
-  ToolContext,
-  ToolResult,
-  SearchToolInput,
-  NoteCreateToolInput,
-  NoteUpdateToolInput,
-  NoteReadToolInput,
-  WebSearchToolInput,
-  ToolName,
-} from './tools'
-
-export {
-  SearchToolSchema,
-  NoteCreateToolSchema,
-  NoteUpdateToolSchema,
-  NoteReadToolSchema,
-  WebSearchToolSchema,
-  TOOL_NAMES,
-  TOOL_METADATA,
-} from './tools'
-
-// =============================================================================
-// Re-exports for convenience
-// =============================================================================
-
-// Providers (to be implemented in Phase 1)
-// export { OpenAIProvider } from './providers/openai'
-// export { AnthropicProvider } from './providers/anthropic'
-// export { GeminiProvider } from './providers/gemini'
-// export { createProvider } from './providers/factory'
-
-// Agents (to be implemented in Phase 3)
-// export { createChatAgent } from './agents/chat.agent'
-// export { createNoteAgent } from './agents/note.agent'
-// export { createPlannerAgent } from './agents/planner.agent'
-// export { createCourseAgent } from './agents/course.agent'
-
-// Services (to be implemented in Phase 1-2)
-// export { EmbeddingService } from './services/embedding'
-// export { RAGService } from './services/rag'
-// export { ChunkingService } from './services/chunking'

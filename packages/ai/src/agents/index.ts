@@ -1,17 +1,17 @@
 /**
  * LangGraph Agent exports
  *
- * This module provides AI agents built with LangGraph.
- * Full implementations will be added in Phase 3.
+ * AI agents for Inkdown:
+ * - ChatAgent: Conversational AI with RAG and citations
+ * - NoteAgent: Note manipulation (create, update, organize, summarize, expand)
+ * - SecretaryAgent: Intent classification and task routing (8 intents)
+ * - PlannerAgent: Goal decomposition and task planning
  */
 
-// Agent types (to be implemented in Phase 3)
-// export { createChatAgent } from './chat.agent'
-// export { createNoteAgent } from './note.agent'
-// export { createPlannerAgent } from './planner.agent'
-// export { createCourseAgent } from './course.agent'
+// ============================================================================
+// State Types
+// ============================================================================
 
-// Agent state types
 export interface BaseAgentState {
   messages: Array<{
     role: 'user' | 'assistant' | 'system' | 'tool'
@@ -78,4 +78,138 @@ export interface CourseAgentState extends BaseAgentState {
     moduleIndex: number
     content: string
   }>
+}
+
+// ============================================================================
+// Chat Agent
+// ============================================================================
+
+export {
+  ChatAgent,
+  createChatAgent,
+  ChatAgentInputSchema,
+  type ChatAgentConfig,
+  type ChatAgentInput,
+  type ChatAgentResponse,
+  type ChatMessage,
+  type RetrievedChunk,
+  type Citation,
+} from './chat.agent'
+
+// ============================================================================
+// Note Agent
+// ============================================================================
+
+export {
+  NoteAgent,
+  createNoteAgent,
+  NoteAgentInputSchema,
+  type NoteAgentConfig,
+  type NoteAgentInput,
+  type NoteAgentResponse,
+  type NoteAction,
+} from './note.agent'
+
+// ============================================================================
+// Secretary Agent
+// ============================================================================
+
+export {
+  SecretaryAgent,
+  createSecretaryAgent,
+  SecretaryAgentInputSchema,
+  type SecretaryAgentConfig,
+  type SecretaryAgentInput,
+  type SecretaryAgentResponse,
+  type IntentType,
+  type IntentClassification,
+} from './secretary.agent'
+
+// ============================================================================
+// Planner Agent
+// ============================================================================
+
+export {
+  PlannerAgent,
+  createPlannerAgent,
+  CreatePlanSchema,
+  UpdatePlanSchema,
+  ExecuteStepSchema,
+  type PlannerAgentConfig,
+  type CreatePlanInput,
+  type UpdatePlanInput,
+  type ExecuteStepInput,
+  type PlannerAgentResponse,
+  type Plan,
+  type PlanStep,
+} from './planner.agent'
+
+// ============================================================================
+// Agent Factory
+// ============================================================================
+
+import { SupabaseClient } from '@supabase/supabase-js'
+import { ChatAgent } from './chat.agent'
+import { NoteAgent } from './note.agent'
+import { SecretaryAgent } from './secretary.agent'
+import { PlannerAgent } from './planner.agent'
+
+export type AgentType = 'chat' | 'note' | 'secretary' | 'planner'
+
+export interface AgentConfig {
+  supabase: SupabaseClient
+  userId: string
+  openaiApiKey: string
+  model?: string
+}
+
+/**
+ * Create an agent by type
+ */
+export function createAgent(
+  type: AgentType,
+  config: AgentConfig
+): ChatAgent | NoteAgent | SecretaryAgent | PlannerAgent {
+  switch (type) {
+    case 'chat':
+      return new ChatAgent(config)
+    case 'note':
+      return new NoteAgent(config)
+    case 'secretary':
+      return new SecretaryAgent(config)
+    case 'planner':
+      return new PlannerAgent(config)
+    default:
+      throw new Error(`Unknown agent type: ${type}`)
+  }
+}
+
+/**
+ * Agent metadata for UI
+ */
+export const AGENT_METADATA: Record<AgentType, {
+  name: string
+  description: string
+  capabilities: string[]
+}> = {
+  chat: {
+    name: 'Chat Agent',
+    description: 'Conversational AI with RAG and citations',
+    capabilities: ['chat', 'rag', 'citations', 'context'],
+  },
+  note: {
+    name: 'Note Agent',
+    description: 'Create, update, and organize notes',
+    capabilities: ['create', 'update', 'organize', 'summarize', 'expand'],
+  },
+  secretary: {
+    name: 'Secretary Agent',
+    description: 'Intent classification and task routing',
+    capabilities: ['classify', 'route', 'tools', 'memory'],
+  },
+  planner: {
+    name: 'Planner Agent',
+    description: 'Goal decomposition and task planning',
+    capabilities: ['plan', 'decompose', 'track', 'guide'],
+  },
 }

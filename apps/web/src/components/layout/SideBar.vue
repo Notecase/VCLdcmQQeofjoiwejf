@@ -12,6 +12,7 @@ import {
   CornerDownRight
 } from 'lucide-vue-next'
 import { useEditorStore, useLayoutStore, useProjectStore, useAuthStore, usePreferencesStore } from '@/stores'
+import NavigationDock from '@/components/ui/NavigationDock.vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import TableOfContents from './TableOfContents.vue'
@@ -595,28 +596,29 @@ const tabs = [
 
     <!-- Expanded state -->
     <div class="sidebar-expanded" v-else>
-      <!-- Action buttons (icon only) -->
+      <!-- Navigation Dock (Integrated) -->
+      <NavigationDock />
+
+      <!-- Action buttons with inline search -->
       <div class="quick-actions">
         <button class="quick-action-btn primary" @click="createNewDocument()" title="New Document">
-          <FilePlus :size="18" />
+          <FilePlus :size="14" />
         </button>
         <button class="quick-action-btn" @click="createProject(null)" title="New Project">
-          <FolderPlus :size="18" />
+          <FolderPlus :size="14" />
         </button>
-      </div>
-
-      <!-- Documents Panel -->
-      <div class="panel documents-panel">
-
-        <!-- Search -->
-        <div class="panel-search">
-          <Search :size="14" class="search-icon" />
+        <div class="inline-search">
+          <Search :size="12" class="search-icon" />
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Search..."
           />
         </div>
+      </div>
+
+      <!-- Documents Panel -->
+      <div class="panel documents-panel">
 
         <!-- Tree view -->
         <div class="tree-view">
@@ -1202,20 +1204,32 @@ const tabs = [
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding-top: 0;
+  animation: sidebar-fade-in 0.3s ease;
 }
 
-/* Quick Actions (icon only) */
+@keyframes sidebar-fade-in {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Quick Actions with inline search - no border for unified look */
 .quick-actions {
   display: flex;
-  gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border-color, #333);
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: none;
 }
 
 .quick-action-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1px solid var(--border-color, #333);
   background: var(--bg-color, #252525);
   color: var(--text-color-secondary, #888);
@@ -1223,6 +1237,7 @@ const tabs = [
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -1242,6 +1257,43 @@ const tabs = [
   opacity: 0.9;
   background: var(--primary-color, #7C9EF8);
   color: #FFFFFF;
+}
+
+/* Inline search in quick actions */
+.inline-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-search .search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-color-secondary, #666);
+  pointer-events: none;
+}
+
+.inline-search input {
+  width: 100%;
+  padding: 5px 8px 5px 26px;
+  background: var(--bg-color, #252525);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  color: var(--text-color, #fff);
+  font-size: 12px;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.inline-search input:focus {
+  outline: none;
+  border-color: var(--primary-color, #65b9f4);
+}
+
+.inline-search input::placeholder {
+  color: var(--text-color-secondary, #666);
 }
 
 /* Panels */
@@ -1293,39 +1345,6 @@ const tabs = [
 
 .action-btn.primary:hover {
   background: var(--primary-hover, #4da3e0);
-}
-
-.panel-search {
-  position: relative;
-  padding: 0 12px 12px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 22px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-color-secondary, #666);
-  pointer-events: none;
-}
-
-.panel-search input {
-  width: 100%;
-  padding: 8px 12px 8px 32px;
-  background: var(--bg-color, #252525);
-  border: 1px solid var(--border-color, #333);
-  border-radius: 6px;
-  color: var(--text-color, #fff);
-  font-size: 13px;
-}
-
-.panel-search input:focus {
-  outline: none;
-  border-color: var(--primary-color, #65b9f4);
-}
-
-.panel-search input::placeholder {
-  color: var(--text-color-secondary, #666);
 }
 
 /* Tree View */

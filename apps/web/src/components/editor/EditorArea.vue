@@ -347,7 +347,8 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 .muya-editor {
   flex: 1;
   overflow-y: auto;
-  padding: 40px;
+  overflow-x: hidden;
+  padding: 40px 80px;
   font-family: var(--editor-font-family, 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   font-size: var(--editor-font-size, 16px);
   line-height: var(--editor-line-height, 1.6);

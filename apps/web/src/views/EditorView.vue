@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick, watch } from 'vue'
-import { useEditorStore } from '@/stores'
+import { useEditorStore, useLayoutStore } from '@/stores'
 import { FileText, Plus, X, Clock } from 'lucide-vue-next'
 import SideBar from '@/components/layout/SideBar.vue'
 import EditorArea from '@/components/editor/EditorArea.vue'
+import FormatToolbar from '@/components/editor/FormatToolbar.vue'
 import NoteOutline from '@/components/layout/NoteOutline.vue'
+import AISidebar from '@/components/ai/AISidebar.vue'
 
 const editorStore = useEditorStore()
+const layoutStore = useLayoutStore()
 
 const isReady = ref(false)
 const tabsContainerRef = ref(null)
+const editorAreaRef = ref<InstanceType<typeof EditorArea> | null>(null)
+
+// Get Muya instance from EditorArea
+const muyaInstance = computed(() => editorAreaRef.value?.getMuya?.())
 
 const isSaved = computed(() => editorStore.activeTab?.isSaved ?? true)
 
@@ -63,7 +70,7 @@ onMounted(async () => {
 <template>
   <div class="editor-view">
     <!-- Left Sidebar -->
-    <SideBar v-if="isReady" />
+    <SideBar v-if="isReady && layoutStore.sidebarVisible" />
 
     <!-- Main Content Area -->
     <main class="main-content">
@@ -99,18 +106,28 @@ onMounted(async () => {
             {{ isSaved ? 'Saved' : 'Draft' }}
           </span>
           <span class="word-count">{{ wordCount }}</span>
+          
         </div>
       </div>
 
       <!-- Note Container - Elevated Card -->
       <div class="note-container">
+        <!-- Floating Format Toolbar (positioned relative to note-container) -->
+        <FormatToolbar
+          v-if="isReady && editorStore.currentDocument"
+          :muyaInstance="muyaInstance"
+        />
+
         <!-- Outline Button (on left side of note) -->
         <NoteOutline v-if="isReady && editorStore.currentDocument" />
 
         <!-- Note Content -->
         <div class="note-content">
           <!-- Editor -->
-          <EditorArea v-if="isReady && editorStore.currentDocument" />
+          <EditorArea
+            v-if="isReady && editorStore.currentDocument"
+            ref="editorAreaRef"
+          />
           
           <div v-else-if="!isReady" class="loading-state">
             <div class="loading-spinner"></div>
@@ -119,6 +136,15 @@ onMounted(async () => {
         </div>
       </div>
     </main>
+
+    <!-- AI Sidebar (right panel) -->
+    <Transition name="slide-right">
+      <AISidebar
+        v-if="layoutStore.rightPanelVisible && editorStore.currentDocument"
+        :noteContext="{ id: editorStore.currentDocument.id, title: editorStore.currentDocument.title }"
+      />
+    </Transition>
+
   </div>
 </template>
 
@@ -166,17 +192,20 @@ onMounted(async () => {
   gap: 2px;
   overflow-x: auto;
   scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
 }
 
 .tabs-container::-webkit-scrollbar {
   display: none;
 }
 
+/* Browser-style tabs - equal width distribution */
 .tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -185,7 +214,10 @@ onMounted(async () => {
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  flex: 1 1 0;
+  min-width: 80px;
+  max-width: 220px;
+  overflow: hidden;
 }
 
 .tab:hover {
@@ -204,9 +236,11 @@ onMounted(async () => {
 }
 
 .tab-title {
-  max-width: 120px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tab-unsaved {
@@ -265,14 +299,18 @@ onMounted(async () => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 
-/* Note Content */
+/* Note Content - flex container for EditorArea */
 .note-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 40px 80px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   background: var(--editorBgColor, var(--card-bg, #FFFFFF));
+  min-height: 0;
 }
 
 .meta-item {
@@ -320,6 +358,46 @@ onMounted(async () => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* AI Toggle Button */
+.ai-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-color, #E2E8F0);
+  color: var(--text-color-secondary, #94A3B8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.ai-toggle-btn:hover {
+  background: rgba(124, 158, 248, 0.1);
+  border-color: var(--primary-color, #7C9EF8);
+  color: var(--primary-color, #7C9EF8);
+}
+
+.ai-toggle-btn.active {
+  background: linear-gradient(135deg, rgba(124, 158, 248, 0.15), rgba(167, 139, 250, 0.15));
+  border-color: var(--primary-color, #7C9EF8);
+  color: var(--primary-color, #7C9EF8);
+}
+
+/* Slide right transition for AI Sidebar */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
 /* Responsive adjustments */

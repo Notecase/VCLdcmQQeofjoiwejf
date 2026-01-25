@@ -310,8 +310,9 @@ function closeSidebar() {
 
 /* Sidebar container */
 .ai-sidebar {
-  width: 360px;
+  width: 320px;
   height: 100%;
+  position: relative;
   background: var(--ai-sidebar-bg);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -319,17 +320,32 @@ function closeSidebar() {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Subtle blue gradient overlay */
+.ai-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: var(--ai-gradient-overlay);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Header with glassmorphism */
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--ai-header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  height: 48px;
+  height: 44px;
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-tabs {
@@ -337,7 +353,7 @@ function closeSidebar() {
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 16px;
+  gap: 12px;
   flex: 1;
 }
 
@@ -346,7 +362,7 @@ function closeSidebar() {
   background: none;
   border: none;
   color: var(--ai-tab-color);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   position: relative;
@@ -394,7 +410,9 @@ function closeSidebar() {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 32px 20px 16px;
+  padding: 24px 16px 12px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Agent Tab specific */
@@ -402,7 +420,7 @@ function closeSidebar() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .new-chat-btn {
@@ -455,7 +473,7 @@ function closeSidebar() {
 
 /* Welcome Area */
 .welcome-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .ai-label {
@@ -469,7 +487,7 @@ function closeSidebar() {
 }
 
 .welcome-text {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-color-secondary);
   line-height: 1.5;
   margin-bottom: 10px;
@@ -480,7 +498,7 @@ function closeSidebar() {
   background: var(--ai-card-bg);
   border: 1px solid var(--ai-card-border);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   margin: 12px 0;
   box-shadow: var(--ai-card-shadow);
 }
@@ -553,7 +571,7 @@ function closeSidebar() {
 .recommendations-list {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
 }
 
 .recommendation-card {
@@ -563,14 +581,17 @@ function closeSidebar() {
   background: var(--ai-card-bg);
   border: 1px solid var(--ai-card-border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   text-align: left;
   box-shadow: var(--ai-card-shadow);
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.3s;
 }
 
 .recommendation-card:hover {
   transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(124, 158, 248, 0.15);
 }
 
 .card-header {
@@ -606,7 +627,7 @@ function closeSidebar() {
 }
 
 .card-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-color-secondary);
   line-height: 1.5;
   text-align: left;
@@ -674,8 +695,10 @@ function closeSidebar() {
 
 /* Input Area - Bottom Fixed */
 .ai-input-wrapper {
-  padding: 16px;
+  padding: 12px;
   background: var(--ai-sidebar-bg);
+  position: relative;
+  z-index: 1;
 }
 
 /* Note Context Indicator - Inside input box */
@@ -783,13 +806,15 @@ function closeSidebar() {
 }
 
 .send-cirle-btn.active {
-  background: var(--ai-send-active-bg);
-  color: var(--ai-send-active-color);
+  background: var(--primary-gradient);
+  color: white;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .send-cirle-btn.active:hover {
-  opacity: 0.9;
+  opacity: 0.95;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 /* Loading indicator */

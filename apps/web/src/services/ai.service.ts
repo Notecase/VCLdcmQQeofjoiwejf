@@ -7,7 +7,7 @@
 
 import { useAIStore } from '@/stores/ai'
 
-const API_BASE = '/api/agent'
+const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
 
 // ============================================================================
 // Types

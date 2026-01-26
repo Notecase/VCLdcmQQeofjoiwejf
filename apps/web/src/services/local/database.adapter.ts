@@ -94,8 +94,7 @@ class LocalQueryBuilder<T> implements IQueryBuilder<T> {
   }
 
   or(_filters: string): IQueryBuilder<T> {
-    // Simplified - not fully implemented for local
-    return this
+    throw new Error('or() filter not implemented in local database adapter')
   }
 
   not(column: string, operator: string, value: unknown): IQueryBuilder<T> {

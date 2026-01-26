@@ -5,3 +5,6 @@ export * from './types'
 
 // Utilities
 export * from './utils'
+
+// Error handling
+export * from './errors'

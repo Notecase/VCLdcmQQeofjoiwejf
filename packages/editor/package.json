@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "dompurify": "^3.3.1",

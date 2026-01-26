@@ -1,0 +1,58 @@
+{
+  "name": "@inkdown/muya",
+  "version": "0.0.1",
+  "description": "Muya markdown editor - local fork for Inkdown",
+  "author": "jocs <ransixi@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./assets/*": "./src/assets/*",
+    "./*": {
+      "import": "./src/*",
+      "types": "./src/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.7.4",
+    "dompurify": "^3.3.0",
+    "execall": "^3.0.0",
+    "fast-diff": "^1.3.0",
+    "fuse.js": "^7.1.0",
+    "html-tags": "^5.1.0",
+    "joplin-turndown-plugin-gfm": "^1.0.12",
+    "katex": "^0.16.27",
+    "marked": "^17.0.1",
+    "marked-highlight": "^2.2.3",
+    "mermaid": "^11.12.2",
+    "ot-json1": "^1.0.2",
+    "ot-text-unicode": "^4.0.0",
+    "plantuml-encoder": "^1.4.0",
+    "prismjs": "^1.30.0",
+    "rxjs": "^7.8.2",
+    "snabbdom": "^3.6.3",
+    "snabbdom-to-html": "^7.1.0",
+    "turndown": "^7.2.2",
+    "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.1"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/katex": "^0.16.7",
+    "@types/plantuml-encoder": "^1.4.2",
+    "@types/prismjs": "^1.26.3",
+    "@types/turndown": "^5.0.4",
+    "typescript": "^5.7.0"
+  }
+}

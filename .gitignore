@@ -33,3 +33,6 @@ coverage/
 # Local Supabase
 supabase/.branches/
 supabase/.temp/
+
+# Generated Vue SFC outputs
+**/*.vue.js

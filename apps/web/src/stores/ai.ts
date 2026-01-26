@@ -6,7 +6,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 // ============================================================================
 // Types (ported from Note3)
@@ -112,8 +112,8 @@ export const useAIStore = defineStore('ai', () => {
     // State
     // ---------------------------------------------------------------------------
 
-    // Sessions
-    const sessions = ref<Map<string, ChatSession>>(new Map())
+    // Sessions - using reactive object instead of Map for proper Vue reactivity
+    const sessions = reactive<Record<string, ChatSession>>({})
     const activeSessionId = ref<string | null>(null)
 
     // Current interaction state
@@ -138,7 +138,7 @@ export const useAIStore = defineStore('ai', () => {
 
     const activeSession = computed(() => {
         if (!activeSessionId.value) return null
-        return sessions.value.get(activeSessionId.value) || null
+        return sessions[activeSessionId.value] || null
     })
 
     const isProcessing = computed(() =>
@@ -177,7 +177,7 @@ export const useAIStore = defineStore('ai', () => {
             updatedAt: new Date(),
         }
 
-        sessions.value.set(id, session)
+        sessions[id] = session
         activeSessionId.value = id
         return session
     }
@@ -186,9 +186,9 @@ export const useAIStore = defineStore('ai', () => {
         sessionId?: string,
         config?: Parameters<typeof createSession>[0]
     ): ChatSession {
-        if (sessionId && sessions.value.has(sessionId)) {
+        if (sessionId && sessionId in sessions) {
             activeSessionId.value = sessionId
-            return sessions.value.get(sessionId)!
+            return sessions[sessionId]
         }
         return createSession(config || {})
     }
@@ -202,7 +202,7 @@ export const useAIStore = defineStore('ai', () => {
     }
 
     function deleteSession(sessionId: string) {
-        sessions.value.delete(sessionId)
+        delete sessions[sessionId]
         if (activeSessionId.value === sessionId) {
             activeSessionId.value = null
         }
@@ -213,7 +213,7 @@ export const useAIStore = defineStore('ai', () => {
     // ---------------------------------------------------------------------------
 
     function addMessage(sessionId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>): ChatMessage {
-        const session = sessions.value.get(sessionId)
+        const session = sessions[sessionId]
         if (!session) throw new Error(`Session ${sessionId} not found`)
 
         const newMessage: ChatMessage = {
@@ -228,7 +228,7 @@ export const useAIStore = defineStore('ai', () => {
     }
 
     function appendToLastMessage(sessionId: string, textDelta: string) {
-        const session = sessions.value.get(sessionId)
+        const session = sessions[sessionId]
         if (!session) return
 
         const lastMessage = session.messages[session.messages.length - 1]
@@ -238,7 +238,7 @@ export const useAIStore = defineStore('ai', () => {
     }
 
     function updateMessage(sessionId: string, messageId: string, updates: Partial<ChatMessage>) {
-        const session = sessions.value.get(sessionId)
+        const session = sessions[sessionId]
         if (!session) return
 
         const message = session.messages.find(m => m.id === messageId)
@@ -370,7 +370,10 @@ export const useAIStore = defineStore('ai', () => {
     // ---------------------------------------------------------------------------
 
     function reset() {
-        sessions.value.clear()
+        // Clear all sessions by deleting each key
+        for (const key of Object.keys(sessions)) {
+            delete sessions[key]
+        }
         activeSessionId.value = null
         status.value = 'idle'
         currentAgentType.value = null

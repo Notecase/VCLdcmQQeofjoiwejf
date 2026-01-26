@@ -17,12 +17,6 @@ const agent = new Hono()
 agent.use('*', authMiddleware)
 
 /**
- * Available agent types
- */
-const AgentTypes = ['chat', 'note', 'secretary', 'planner', 'course'] as const
-type AgentType = typeof AgentTypes[number]
-
-/**
  * Generic agent request schema
  */
 const AgentRequestSchema = z.object({
@@ -96,7 +90,7 @@ agent.post(
 
     const agent = new SecretaryAgent({
       supabase: auth.supabase,
-      userId: auth.user.id,
+      userId: auth.userId,
       openaiApiKey,
     })
 
@@ -161,7 +155,7 @@ agent.post(
 
     const chatAgent = new ChatAgent({
       supabase: auth.supabase,
-      userId: auth.user.id,
+      userId: auth.userId,
       openaiApiKey,
     })
 
@@ -177,6 +171,7 @@ agent.post(
             message: body.input,
             context: body.context,
             includeRag: true,
+            maxChunks: 5,
           })
 
           for await (const chunk of generator) {
@@ -196,6 +191,7 @@ agent.post(
       message: body.input,
       context: body.context,
       includeRag: true,
+      maxChunks: 5,
     })
 
     return c.json(result)
@@ -226,7 +222,7 @@ agent.post(
 
     const noteAgent = new NoteAgent({
       supabase: auth.supabase,
-      userId: auth.user.id,
+      userId: auth.userId,
       openaiApiKey,
     })
 
@@ -288,7 +284,7 @@ agent.post(
 
     const plannerAgent = new PlannerAgent({
       supabase: auth.supabase,
-      userId: auth.user.id,
+      userId: auth.userId,
       openaiApiKey,
     })
 
@@ -299,7 +295,7 @@ agent.post(
             goal: body.goal,
             context: body.context,
             constraints: body.constraints,
-            maxSteps: body.maxSteps,
+            maxSteps: body.maxSteps ?? 10,
           })
 
           for await (const chunk of generator) {
@@ -319,7 +315,7 @@ agent.post(
       goal: body.goal,
       context: body.context,
       constraints: body.constraints,
-      maxSteps: body.maxSteps,
+      maxSteps: body.maxSteps ?? 10,
     })
 
     return c.json(result)
@@ -350,7 +346,7 @@ agent.post(
 
     const plannerAgent = new PlannerAgent({
       supabase: auth.supabase,
-      userId: auth.user.id,
+      userId: auth.userId,
       openaiApiKey,
     })
 

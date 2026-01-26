@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
+    "build:typecheck": "vue-tsc -b && vite build",
+    "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "lint": "eslint src/"
   },
@@ -20,6 +22,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@inkdown/ai": "workspace:*",
     "@inkdown/editor": "workspace:*",
+    "@inkdown/muya": "workspace:*",
     "@inkdown/shared": "workspace:*",
     "@lezer/highlight": "^1.2.3",
     "@popperjs/core": "^2.11.8",

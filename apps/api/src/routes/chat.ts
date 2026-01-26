@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
@@ -39,52 +38,13 @@ chat.post(
   '/',
   zValidator('json', ChatRequestSchema),
   async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+    requireAuth(c) // Validate auth
 
-    // For now, return a placeholder response
-    // Full implementation in Phase 1 with LangGraph
-
-    if (body.stream) {
-      return streamSSE(c, async (stream) => {
-        // Placeholder streaming response
-        const chunks = [
-          'Hello! ',
-          'I am the Inkdown AI assistant. ',
-          'This is a placeholder response. ',
-          'Full AI integration coming in Phase 1.',
-        ]
-
-        for (const chunk of chunks) {
-          await stream.writeSSE({
-            data: JSON.stringify({
-              type: 'text-delta',
-              textDelta: chunk,
-            }),
-          })
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: 'finish',
-            finishReason: 'stop',
-          }),
-        })
-      })
-    }
-
-    // Non-streaming response
+    // Placeholder - not yet implemented
     return c.json({
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Hello! I am the Inkdown AI assistant. This is a placeholder response. Full AI integration coming in Phase 1.',
-      model: body.model || 'placeholder',
-      usage: {
-        inputTokens: 0,
-        outputTokens: 0,
-      },
-    })
+      error: 'Not Implemented',
+      message: 'Chat endpoint not yet implemented. Full AI integration coming in Phase 1.',
+    }, 501)
   }
 )
 

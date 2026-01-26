@@ -1,0 +1,34 @@
+# Build outputs
+dist/
+.next/
+.turbo/
+coverage/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Generated files
+*.d.ts
+*.vue.js
+pnpm-lock.yaml
+
+# IDE
+.idea/
+.vscode/
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+
+# Static assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot

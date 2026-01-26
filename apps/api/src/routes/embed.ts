@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
-import { getServiceClient } from '../lib/supabase'
 
 const embed = new Hono()
 
@@ -35,20 +34,13 @@ embed.post(
   '/text',
   zValidator('json', EmbedTextSchema),
   async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+    requireAuth(c) // Validate auth
 
-    // TODO: Phase 1 - Use OpenAI to generate embedding
-    // For now, return placeholder
-
+    // Placeholder - not yet implemented
     return c.json({
-      text: body.text.substring(0, 100) + '...',
-      embedding: null, // Will be number[] in Phase 1
-      dimensions: 1536,
-      model: 'text-embedding-3-large',
-      tokenCount: Math.ceil(body.text.length / 4), // Approximate
-      message: 'Embedding generation will be implemented in Phase 1',
-    })
+      error: 'Not Implemented',
+      message: 'Embedding generation not yet implemented. Full AI integration coming in Phase 1.',
+    }, 501)
   }
 )
 

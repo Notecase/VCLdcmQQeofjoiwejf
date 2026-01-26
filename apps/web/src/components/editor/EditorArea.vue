@@ -19,8 +19,8 @@ import FootnoteTool from '@/muya/lib/ui/footnoteTool'
 import TableBarTools from '@/muya/lib/ui/tableTools'
 import FrontMenu from '@/muya/lib/ui/frontMenu'
 
-// Import Muya styles
-import '@/muya/lib/assets/styles/index.css'
+// Import Muya styles directly from the package
+import '@inkdown/muya/assets/styles/index.css'
 import '@/muya/themes/default.css'
 
 // Import KaTeX CSS for math rendering

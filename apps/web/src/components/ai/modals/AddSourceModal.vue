@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global HTMLInputElement, File, URL, Event */
 /**
  * AddSourceModal - Modal for adding sources
  *
@@ -184,8 +185,8 @@ function switchTab(tab: TabType) {
             ref="fileInput"
             type="file"
             :accept="activeTab === 'pdf' ? '.pdf' : '.txt,.md,.csv,.json'"
-            @change="handleFileSelect"
             hidden
+            @change="handleFileSelect"
           />
 
           <div

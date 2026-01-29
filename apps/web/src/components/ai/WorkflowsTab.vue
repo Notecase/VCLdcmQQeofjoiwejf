@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global console, setTimeout, confirm */
 /**
  * WorkflowsTab - Sources & Quick Actions
  *
@@ -25,8 +26,6 @@ import {
   GitCompare,
   HelpCircle,
   AlertTriangle,
-  Quote,
-  Clock,
   Lightbulb,
   Eye,
   Save,
@@ -356,8 +355,8 @@ onMounted(async () => {
   <div class="workflows-tab">
     <!-- No Note Selected -->
     <div
-      class="context-indicator"
       v-if="!activeNote"
+      class="context-indicator"
     >
       <span class="radio-dot"></span>
       <span>Select a note to manage sources</span>
@@ -380,8 +379,8 @@ onMounted(async () => {
 
         <!-- Source Type Buttons -->
         <div
-          class="source-types"
           v-if="sources.length === 0"
+          class="source-types"
         >
           <button
             class="type-btn"
@@ -415,8 +414,8 @@ onMounted(async () => {
 
         <!-- Sources List -->
         <div
-          class="sources-list"
           v-if="sources.length > 0"
+          class="sources-list"
         >
           <SourceCard
             v-for="source in sources"
@@ -429,8 +428,8 @@ onMounted(async () => {
 
         <!-- Sources Summary -->
         <div
-          class="sources-summary"
           v-if="hasReadySources"
+          class="sources-summary"
         >
           <span>{{ readySources.length }} source{{ readySources.length !== 1 ? 's' : '' }}</span>
           <span class="dot">•</span>
@@ -440,22 +439,22 @@ onMounted(async () => {
 
       <!-- Divider -->
       <div
-        class="divider"
         v-if="hasReadySources"
+        class="divider"
       ></div>
 
       <!-- Quick Actions Section -->
       <section
-        class="section actions-section"
         v-if="hasReadySources"
+        class="section actions-section"
       >
         <h3 class="section-title">Quick Actions</h3>
         <p class="section-desc">One-click workflows using your sources</p>
 
         <!-- Action Progress -->
         <div
-          class="action-progress"
           v-if="actionProgress"
+          class="action-progress"
         >
           <div class="progress-info">
             <Loader2
@@ -501,14 +500,14 @@ onMounted(async () => {
 
       <!-- Divider -->
       <div
-        class="divider"
         v-if="hasReadySources"
+        class="divider"
       ></div>
 
       <!-- AI Integration Hint -->
       <section
-        class="section hint-section"
         v-if="hasReadySources"
+        class="section hint-section"
       >
         <div class="hint-card">
           <Lightbulb
@@ -605,8 +604,8 @@ onMounted(async () => {
         <template v-else-if="(resultData as any).type === 'summary'">
           <div class="result-text">{{ (resultData as any).content }}</div>
           <div
-            class="result-section"
             v-if="(resultData as any).keyPoints?.length"
+            class="result-section"
           >
             <h4>Key Points</h4>
             <ul>
@@ -631,8 +630,8 @@ onMounted(async () => {
               <h4 class="term-name">{{ term.term }}</h4>
               <p class="term-definition">{{ term.definition }}</p>
               <p
-                class="term-source"
                 v-if="term.sources?.[0]?.title"
+                class="term-source"
               >
                 From: {{ term.sources[0].title }}
               </p>
@@ -643,8 +642,8 @@ onMounted(async () => {
         <!-- Comparison Result -->
         <template v-else-if="(resultData as any).type === 'comparison'">
           <div
-            class="comparison-section"
             v-if="(resultData as any).agreements?.length"
+            class="comparison-section"
           >
             <h4>Agreements</h4>
             <div
@@ -657,8 +656,8 @@ onMounted(async () => {
             </div>
           </div>
           <div
-            class="comparison-section"
             v-if="(resultData as any).differences?.length"
+            class="comparison-section"
           >
             <h4>Differences</h4>
             <div

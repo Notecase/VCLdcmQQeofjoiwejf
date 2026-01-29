@@ -58,17 +58,6 @@ const statusIcon = computed(() => {
 
 const statusClass = computed(() => props.source.status)
 
-const typeLabel = computed(() => {
-  const labels: Record<SourceType, string> = {
-    pdf: 'PDF',
-    link: 'Link',
-    file: 'File',
-    text: 'Text',
-    youtube: 'YouTube',
-  }
-  return labels[props.source.type] || 'Unknown'
-})
-
 const subtitle = computed(() => {
   const parts: string[] = []
 
@@ -114,8 +103,8 @@ function handleDelete() {
       :class="statusClass"
     >
       <component
-        v-if="statusIcon"
         :is="statusIcon"
+        v-if="statusIcon"
         :size="14"
         :class="{ spin: source.status === 'processing' }"
       />
@@ -124,16 +113,16 @@ function handleDelete() {
     <div class="source-actions">
       <button
         class="action-btn view-btn"
-        @click="handleView"
         title="View content"
         :disabled="source.status !== 'ready'"
+        @click="handleView"
       >
         <Eye :size="14" />
       </button>
       <button
         class="action-btn delete-btn"
-        @click="handleDelete"
         title="Remove source"
+        @click="handleDelete"
       >
         <Trash2 :size="14" />
       </button>

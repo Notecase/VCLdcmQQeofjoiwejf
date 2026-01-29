@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* global console, setTimeout, confirm */
 /**
  * WorkflowsTab - Sources & Quick Actions
  *

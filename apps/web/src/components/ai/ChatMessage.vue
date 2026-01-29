@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* global window */
 /**
  * Chat Message Component
  * Renders a single message with markdown and action buttons

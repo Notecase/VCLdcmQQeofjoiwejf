@@ -10,7 +10,6 @@
  * Phase 3.4 Implementation
  */
 
-/* global SVGSVGElement, MouseEvent, WheelEvent */
 import { ref, computed, type PropType } from 'vue'
 import type { Mindmap, MindmapNode } from '@/services/recommendation.service'
 

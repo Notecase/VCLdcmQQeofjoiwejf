@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* global setTimeout, confirm, document */
 /**
  * LearningResourcesTab - Saved Learning Resources
  *

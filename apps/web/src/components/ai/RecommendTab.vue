@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* global setInterval, clearInterval, setTimeout, console, fetch, AbortSignal */
 /**
  * RecommendTab - AI-powered recommendations panel
  *

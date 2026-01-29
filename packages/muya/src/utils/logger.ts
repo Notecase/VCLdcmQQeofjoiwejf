@@ -8,10 +8,8 @@ type Ilogger = Record<TLevel, (...args: string[]) => void>
 function debug(method: TLevel, ...args: unknown[]) {
   if (
     levels.indexOf(method) <= levels.indexOf(level) &&
-    // eslint-disable-next-line node/prefer-global/process
     process.env.NODE_ENV !== 'production'
   ) {
-    // eslint-disable-next-line no-console
     console[method](...args)
   }
 }

@@ -25,7 +25,7 @@ export function matchString(text: string, value: string, options: ISearchOption)
     SEARCH_REG = new RegExp(regStr, flag)
 
     return execAll(SEARCH_REG, text)
-  } catch (err) {
+  } catch (_err) {
     return []
   }
 }

@@ -130,7 +130,6 @@ class ParagraphContent extends Format {
     event.preventDefault()
     event.stopPropagation()
 
-    // eslint-disable-next-line regexp/no-super-linear-backtracking
     const TABLE_BLOCK_REG = /^\|.*?(\\*)\|.*?(\\*)\|/
     const MATH_BLOCK_REG = /^\$\$/
     const { text } = this
@@ -627,7 +626,7 @@ class ParagraphContent extends Format {
     })
     let result = null
 
-    // eslint-disable-next-line complexity
+     
     const walkTokens = (ts: Token[]) => {
       for (const token of ts) {
         const { type, range } = token

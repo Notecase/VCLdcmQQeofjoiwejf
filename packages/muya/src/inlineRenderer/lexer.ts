@@ -1,5 +1,5 @@
-/* eslint-disable complexity */
-/* eslint-disable max-lines-per-function */
+ 
+ 
 import type { BeginRules, InlineRules } from './rules'
 import type { ITokenizerFacOptions, ITokenizerOptions, Labels, Token } from './types'
 import { isLengthEven, union } from '../utils'
@@ -484,7 +484,7 @@ function tokenizerFac(
     if (
       htmlTo &&
       !disallowedHtmlTag.test(htmlTo[3]) &&
-      // eslint-disable-next-line no-cond-assign
+       
       (attrs = getAttributes(htmlTo[0]))
     ) {
       const tag = htmlTo[3]

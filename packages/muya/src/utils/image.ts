@@ -77,7 +77,7 @@ export async function loadImage(
   if (detectContentType) {
     const isImage = await checkImageContentType(url)
     if (!isImage)
-      // eslint-disable-next-line prefer-promise-reject-errors
+       
       return Promise.reject('not an image.')
   }
 
@@ -112,7 +112,7 @@ export async function checkImageContentType(url: string) {
     }
 
     return false
-  } catch (err) {
+  } catch (_err) {
     return false
   }
 }

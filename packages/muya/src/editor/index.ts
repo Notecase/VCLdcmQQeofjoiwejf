@@ -184,10 +184,10 @@ export class Editor {
           } else {
             if (subDoc === undefined) {
               // TODO: handler typeof d === 'string'
-              typeof d === 'number' && container.find(d).remove('api')
+              if (typeof d === 'number') container.find(d).remove('api')
               subDoc = container
             } else {
-              typeof d === 'number' && container.find(d).replaceWith(subDoc, 'api')
+              if (typeof d === 'number') container.find(d).replaceWith(subDoc, 'api')
               subDoc = container
             }
           }

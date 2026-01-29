@@ -501,7 +501,7 @@ class Format extends Content {
     const isInInlineMath = !!this._checkCursorInTokenType(textContent, start.offset, 'inline_math')
     const isInInlineCode = !!this._checkCursorInTokenType(textContent, start.offset, 'inline_code')
 
-    let { needRender, text } = this.autoPair(
+    const { needRender: autoPairNeedRender, text } = this.autoPair(
       event,
       textContent,
       start,
@@ -511,6 +511,7 @@ class Format extends Content {
       'format'
     )
 
+    let needRender = autoPairNeedRender
     if (this._checkNotSameToken(this.text, text)) needRender = true
 
     this.text = text

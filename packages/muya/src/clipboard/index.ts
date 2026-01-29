@@ -445,11 +445,11 @@ class Clipboard {
       this.scrollPage.append(newParagraphBlock, 'user')
       cursorBlock = newParagraphBlock.firstContentInDescendant()
 
-      cursorBlock && cursorBlock.setCursor(0, 0, true)
+      if (cursorBlock) cursorBlock.setCursor(0, 0, true)
     }
   }
 
-  // eslint-disable-next-line complexity
+   
   async pasteHandler(event: ClipboardEvent): Promise<void> {
     event.preventDefault()
     event.stopPropagation()

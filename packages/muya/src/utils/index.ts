@@ -95,7 +95,7 @@ export function throttle(func: any, wait = 50) {
     const now = Date.now()
     const remaining = wait - (now - previous)
 
-    // eslint-disable-next-line ts/no-this-alias
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     context = this
     // eslint-disable-next-line prefer-rest-params
     args = arguments

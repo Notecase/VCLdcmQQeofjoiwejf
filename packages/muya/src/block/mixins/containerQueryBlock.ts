@@ -1,4 +1,4 @@
-/* eslint-disable ts/no-unsafe-declaration-merging */
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
 import type Content from '../base/content'
 import type Parent from '../base/parent'
 import type { TBlockPath } from '../types'

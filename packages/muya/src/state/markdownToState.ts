@@ -32,7 +32,7 @@ export class MarkdownToState {
     return this._convertMarkdownToState(markdown)
   }
 
-  // eslint-disable-next-line max-lines-per-function, complexity
+   
   private _convertMarkdownToState(markdown: string): TState[] {
     const {
       footnote = false,
@@ -55,7 +55,7 @@ export class MarkdownToState {
     let value
     const parentList: TState[][] = [states]
 
-    // eslint-disable-next-line no-cond-assign
+     
     while ((token = tokens.shift())) {
       switch (token.type) {
         // Marks the end of the children's traversal and a return to the previous level

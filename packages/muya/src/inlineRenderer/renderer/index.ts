@@ -1,4 +1,4 @@
-/* eslint-disable ts/no-unsafe-declaration-merging */
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
 import type { VNode } from 'snabbdom'
 import type Format from '../../block/base/format'
 import type { Muya } from '../../index'
@@ -76,6 +76,7 @@ const inlineSyntaxRenderer = {
 
 type InlineSyntaxRender = typeof inlineSyntaxRenderer
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Renderer extends InlineSyntaxRender {}
 
 @methodMixins(inlineSyntaxRenderer)

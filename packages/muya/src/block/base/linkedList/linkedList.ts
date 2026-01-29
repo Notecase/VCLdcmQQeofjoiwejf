@@ -26,7 +26,7 @@ export class LinkedList<T extends ILinkedNode> {
     const it = this.iterator()
     let data = null
 
-    // eslint-disable-next-line no-cond-assign
+     
     while ((data = it.next()).done !== true) {
       const { value } = data
       if (value === node) return true

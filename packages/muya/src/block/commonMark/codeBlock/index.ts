@@ -54,7 +54,7 @@ class CodeBlock extends Parent {
       operateClassName(this.domNode!, 'add', 'mu-fenced-code')
     }
 
-    !!value &&
+    if (value) {
       loadLanguage(value)
         .then((infoList) => {
           if (!Array.isArray(infoList)) return
@@ -69,6 +69,7 @@ class CodeBlock extends Parent {
           // if no parameter provided, will cause error.
           debug.warn(err)
         })
+    }
   }
 
   override get path(): TBlockPath {

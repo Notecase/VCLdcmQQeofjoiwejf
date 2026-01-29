@@ -28,7 +28,7 @@ export async function getPageTitle(url: string) {
       return ''
     }
     return ''
-  } catch (err) {
+  } catch (_err) {
     return ''
   }
 }

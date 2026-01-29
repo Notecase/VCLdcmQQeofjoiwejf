@@ -1,4 +1,4 @@
-// eslint-disable-next-line ts/ban-ts-comment
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 
 import { h, patch } from '../../utils/snabbdom'

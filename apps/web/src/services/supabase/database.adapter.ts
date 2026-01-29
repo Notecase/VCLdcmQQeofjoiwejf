@@ -11,7 +11,7 @@ import type {
   UpdateOptions,
   RealtimeSubscription,
   RealtimeEvent,
-  RealtimeCallback
+  RealtimeCallback,
 } from '../providers'
 
 /**
@@ -23,12 +23,12 @@ function toDbError(error: unknown): { code: string; message: string; details?: s
     return {
       code: err.code || 'UNKNOWN_ERROR',
       message: err.message,
-      details: err.details || err.hint
+      details: err.details || err.hint,
     }
   }
   return {
     code: 'UNKNOWN_ERROR',
-    message: String(error)
+    message: String(error),
   }
 }
 
@@ -118,7 +118,7 @@ class SupabaseQueryBuilder<T> implements IQueryBuilder<T> {
         case 'order':
           query = query.order(filter.column, {
             ascending: filter.options?.ascending ?? true,
-            nullsFirst: filter.options?.nullsFirst ?? false
+            nullsFirst: filter.options?.nullsFirst ?? false,
           })
           break
         case 'limit':
@@ -216,9 +216,7 @@ class SupabaseQueryBuilder<T> implements IQueryBuilder<T> {
   offset(count: number): IQueryBuilder<T> {
     // Calculate upper bound based on limit
     // If limit is set, use it; otherwise default to 1000
-    const upperBound = this.limitCount
-      ? count + this.limitCount - 1
-      : count + 999
+    const upperBound = this.limitCount ? count + this.limitCount - 1 : count + 999
     this.filters.push({ type: 'range', from: count, to: upperBound })
     return this
   }
@@ -238,7 +236,10 @@ class SupabaseQueryBuilder<T> implements IQueryBuilder<T> {
     return this
   }
 
-  async insert(data: Partial<T> | Partial<T>[], options?: InsertOptions): Promise<DatabaseResult<T | T[]>> {
+  async insert(
+    data: Partial<T> | Partial<T>[],
+    options?: InsertOptions
+  ): Promise<DatabaseResult<T | T[]>> {
     try {
       let query: any = supabase.from(this.tableName).insert(data)
 
@@ -308,10 +309,13 @@ class SupabaseQueryBuilder<T> implements IQueryBuilder<T> {
     }
   }
 
-  async upsert(data: Partial<T> | Partial<T>[], options?: InsertOptions): Promise<DatabaseResult<T | T[]>> {
+  async upsert(
+    data: Partial<T> | Partial<T>[],
+    options?: InsertOptions
+  ): Promise<DatabaseResult<T | T[]>> {
     try {
       let query: any = supabase.from(this.tableName).upsert(data, {
-        onConflict: options?.onConflict?.columns.join(',')
+        onConflict: options?.onConflict?.columns.join(','),
       })
 
       if (options?.returning !== false) {
@@ -349,7 +353,7 @@ class SupabaseQueryBuilder<T> implements IQueryBuilder<T> {
         if (error) {
           return { data: null, error: toDbError(error) }
         }
-        return { data: data ? [data] as T[] : [], error: null }
+        return { data: data ? ([data] as T[]) : [], error: null }
       }
 
       const { data, error, count } = await query
@@ -404,7 +408,7 @@ class SupabaseDatabaseProvider implements IDatabaseProvider {
           event: event === '*' ? '*' : event,
           schema: 'public',
           table,
-          filter: filter ? `${filter.column}=eq.${filter.value}` : undefined
+          filter: filter ? `${filter.column}=eq.${filter.value}` : undefined,
         },
         (payload: any) => {
           callback({
@@ -413,7 +417,7 @@ class SupabaseDatabaseProvider implements IDatabaseProvider {
             old: payload.old as T | null,
             schema: payload.schema,
             table: payload.table,
-            commit_timestamp: payload.commit_timestamp
+            commit_timestamp: payload.commit_timestamp,
           })
         }
       )
@@ -422,7 +426,7 @@ class SupabaseDatabaseProvider implements IDatabaseProvider {
     return {
       unsubscribe: () => {
         supabase.removeChannel(channel)
-      }
+      },
     }
   }
 }

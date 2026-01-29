@@ -13,16 +13,12 @@ export function getServiceClient(): SupabaseClient {
       throw new Error('Supabase URL and service key are required')
     }
 
-    serviceClient = createClient(
-      config.supabase.url,
-      config.supabase.serviceKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    )
+    serviceClient = createClient(config.supabase.url, config.supabase.serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
   }
 
   return serviceClient
@@ -37,21 +33,17 @@ export function createUserClient(accessToken: string): SupabaseClient {
     throw new Error('Supabase URL and anon key are required')
   }
 
-  return createClient(
-    config.supabase.url,
-    config.supabase.anonKey,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+  return createClient(config.supabase.url, config.supabase.anonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  )
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }
 
 /**
@@ -65,7 +57,10 @@ export async function verifyToken(accessToken: string): Promise<{
   try {
     const client = getServiceClient()
 
-    const { data: { user }, error } = await client.auth.getUser(accessToken)
+    const {
+      data: { user },
+      error,
+    } = await client.auth.getUser(accessToken)
 
     if (error || !user) {
       return null

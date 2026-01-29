@@ -85,7 +85,7 @@ async function handleImageUpload(file: File): Promise<string> {
 let pluginsRegistered = false
 function registerPlugins() {
   if (pluginsRegistered) return
-  
+
   Muya.use(TablePicker)
   Muya.use(QuickInsert)
   Muya.use(CodePicker)
@@ -96,7 +96,7 @@ function registerPlugins() {
     // Image upload handler for paste/drop
     imageAction: async (file: File) => {
       return await handleImageUpload(file)
-    }
+    },
   })
   Muya.use(Transformer)
   Muya.use(ImageToolbar)
@@ -105,11 +105,11 @@ function registerPlugins() {
   Muya.use(LinkTools, {
     jumpClick: (linkInfo: { href: string }) => {
       openExternal(linkInfo.href)
-    }
+    },
   })
   Muya.use(FootnoteTool)
   Muya.use(TableBarTools)
-  
+
   pluginsRegistered = true
 }
 
@@ -142,10 +142,10 @@ function initializeMuya() {
     vegaTheme: preferencesStore.theme.includes('dark') ? 'dark' : 'latimes',
     sequenceTheme: preferencesStore.sequenceTheme,
     // Enable math and extended markdown features
-    superSubScript: true,  // Enable superscript/subscript syntax
-    footnote: true,        // Enable footnote syntax
-    isGitlabCompatibilityEnabled: true,  // Enable GitLab-flavored markdown
-    disableHtml: false     // Allow HTML for math rendering
+    superSubScript: true, // Enable superscript/subscript syntax
+    footnote: true, // Enable footnote syntax
+    isGitlabCompatibilityEnabled: true, // Enable GitLab-flavored markdown
+    disableHtml: false, // Allow HTML for math rendering
   }
 
   muyaInstance = new Muya(editorRef.value, options)
@@ -177,12 +177,12 @@ function initializeMuya() {
   // Handle content changes
   muyaInstance.on('change', (changes: any) => {
     const { markdown, wordCount: wc, cursor, toc } = changes
-    
+
     // Update store
     editorStore.updateContent(markdown, {
       words: wc?.word || 0,
       characters: wc?.character || 0,
-      paragraphs: wc?.paragraph || 0
+      paragraphs: wc?.paragraph || 0,
     })
 
     if (cursor) {
@@ -197,7 +197,7 @@ function initializeMuya() {
     if (autoSaveTimer.value) {
       clearTimeout(autoSaveTimer.value)
     }
-    
+
     if (preferencesStore.autoSave) {
       autoSaveTimer.value = setTimeout(() => {
         editorStore.saveDocument()
@@ -207,9 +207,10 @@ function initializeMuya() {
 
   // Handle link clicks
   muyaInstance.on('format-click', ({ event, formatType, data }: any) => {
-    const ctrlOrMeta = (navigator.platform.includes('Mac') && event.metaKey) || 
-                       (!navigator.platform.includes('Mac') && event.ctrlKey)
-    
+    const ctrlOrMeta =
+      (navigator.platform.includes('Mac') && event.metaKey) ||
+      (!navigator.platform.includes('Mac') && event.ctrlKey)
+
     if (formatType === 'link' && ctrlOrMeta && data?.href) {
       openExternal(data.href)
     }
@@ -235,29 +236,47 @@ watch(
 )
 
 // Watch for preference changes
-watch(() => preferencesStore.focus, (value) => {
-  muyaInstance?.setFocusMode(value)
-})
+watch(
+  () => preferencesStore.focus,
+  (value) => {
+    muyaInstance?.setFocusMode(value)
+  }
+)
 
-watch(() => preferencesStore.fontSize, (value) => {
-  muyaInstance?.setFont({ fontSize: value })
-})
+watch(
+  () => preferencesStore.fontSize,
+  (value) => {
+    muyaInstance?.setFont({ fontSize: value })
+  }
+)
 
-watch(() => preferencesStore.lineHeight, (value) => {
-  muyaInstance?.setFont({ lineHeight: value })
-})
+watch(
+  () => preferencesStore.lineHeight,
+  (value) => {
+    muyaInstance?.setFont({ lineHeight: value })
+  }
+)
 
-watch(() => preferencesStore.tabSize, (value) => {
-  muyaInstance?.setTabSize(value)
-})
+watch(
+  () => preferencesStore.tabSize,
+  (value) => {
+    muyaInstance?.setTabSize(value)
+  }
+)
 
-watch(() => preferencesStore.theme, (value) => {
-  const isDark = value.includes('dark')
-  muyaInstance?.setOptions({
-    mermaidTheme: isDark ? 'dark' : 'default',
-    vegaTheme: isDark ? 'dark' : 'latimes'
-  }, true)
-})
+watch(
+  () => preferencesStore.theme,
+  (value) => {
+    const isDark = value.includes('dark')
+    muyaInstance?.setOptions(
+      {
+        mermaidTheme: isDark ? 'dark' : 'default',
+        vegaTheme: isDark ? 'dark' : 'latimes',
+      },
+      true
+    )
+  }
+)
 
 // Keyboard shortcuts
 function handleKeydown(event: KeyboardEvent) {
@@ -266,15 +285,18 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     editorStore.saveDocument()
   }
-  
+
   // Undo: Cmd/Ctrl + Z
   if ((event.metaKey || event.ctrlKey) && event.key === 'z' && !event.shiftKey) {
     event.preventDefault()
     muyaInstance?.undo()
   }
-  
+
   // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
-  if ((event.metaKey || event.ctrlKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+  if (
+    (event.metaKey || event.ctrlKey) &&
+    (event.key === 'y' || (event.key === 'z' && event.shiftKey))
+  ) {
     event.preventDefault()
     muyaInstance?.redo()
   }
@@ -287,11 +309,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
-  
+
   if (autoSaveTimer.value) {
     clearTimeout(autoSaveTimer.value)
   }
-  
+
   if (muyaInstance) {
     try {
       muyaInstance.destroy()
@@ -308,27 +330,30 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 </script>
 
 <template>
-  <div 
+  <div
     class="editor-area"
     :class="{
       'typewriter-mode': preferencesStore.typewriter,
       'focus-mode': preferencesStore.focus,
-      'source-mode': preferencesStore.sourceCode
+      'source-mode': preferencesStore.sourceCode,
     }"
     :style="{
       '--editor-font-size': `${preferencesStore.fontSize}px`,
-      '--editor-line-height': preferencesStore.lineHeight
+      '--editor-line-height': preferencesStore.lineHeight,
     }"
   >
     <!-- Muya Editor Container -->
-    <div 
+    <div
       ref="editorRef"
       class="muya-editor"
       :dir="preferencesStore.textDirection"
     ></div>
-    
+
     <!-- Loading state -->
-    <div v-if="!isEditorReady" class="editor-loading">
+    <div
+      v-if="!isEditorReady"
+      class="editor-loading"
+    >
       <div class="loading-spinner"></div>
       <p>Initializing editor...</p>
     </div>
@@ -349,7 +374,14 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   overflow-y: auto;
   overflow-x: hidden;
   padding: 40px 80px;
-  font-family: var(--editor-font-family, 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  font-family: var(
+    --editor-font-family,
+    'Open Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif
+  );
   font-size: var(--editor-font-size, 16px);
   line-height: var(--editor-line-height, 1.6);
   color: var(--text-color);
@@ -374,9 +406,15 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   margin-bottom: 0.5em;
 }
 
-.muya-editor :deep(h1) { font-size: 2em; }
-.muya-editor :deep(h2) { font-size: 1.5em; }
-.muya-editor :deep(h3) { font-size: 1.25em; }
+.muya-editor :deep(h1) {
+  font-size: 2em;
+}
+.muya-editor :deep(h2) {
+  font-size: 1.5em;
+}
+.muya-editor :deep(h3) {
+  font-size: 1.25em;
+}
 
 .muya-editor :deep(p) {
   margin-bottom: 1em;
@@ -447,7 +485,9 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================
@@ -507,7 +547,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9em;
-  color: var(--editorColor);  /* Changed from --themeColor for better contrast */
+  color: var(--editorColor); /* Changed from --themeColor for better contrast */
 }
 
 /* ============================================
@@ -515,7 +555,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * ============================================ */
 
 /* Block math container - minimal styling */
-.muya-editor :deep(figure[data-role="MULTIPLEMATH"]) {
+.muya-editor :deep(figure[data-role='MULTIPLEMATH']) {
   margin: 16px 0;
   padding: 0;
   background: transparent;
@@ -613,11 +653,11 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * DIAGRAMS - visual containers
  * ============================================ */
 
-.muya-editor :deep(figure[data-role="MERMAID"]),
-.muya-editor :deep(figure[data-role="FLOWCHART"]),
-.muya-editor :deep(figure[data-role="SEQUENCE"]),
-.muya-editor :deep(figure[data-role="VEGA-LITE"]),
-.muya-editor :deep(figure[data-role="PLANTUML"]) {
+.muya-editor :deep(figure[data-role='MERMAID']),
+.muya-editor :deep(figure[data-role='FLOWCHART']),
+.muya-editor :deep(figure[data-role='SEQUENCE']),
+.muya-editor :deep(figure[data-role='VEGA-LITE']),
+.muya-editor :deep(figure[data-role='PLANTUML']) {
   margin: 24px 0;
   padding: 20px;
   background: rgba(100, 100, 100, 0.08);
@@ -652,7 +692,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   margin-left: -1.2em;
 }
 
-.muya-editor :deep(li.ag-task-list-item > input[type="checkbox"]) {
+.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']) {
   margin-right: 8px;
   cursor: pointer;
 }
@@ -742,7 +782,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Icon content - position it directly, no filter */
-.muya-editor :deep(.ag-front-icon i.icon > i[class^=icon-]) {
+.muya-editor :deep(.ag-front-icon i.icon > i[class^='icon-']) {
   filter: none !important;
   -webkit-filter: none !important;
   left: 0 !important;
@@ -753,10 +793,10 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Same fix for all other Muya icons */
-.muya-editor :deep(i.icon > i[class^=icon-]),
-:deep(.ag-front-menu i.icon > i[class^=icon-]),
-:deep(.ag-tool-bar i.icon > i[class^=icon-]),
-:deep(.ag-container-icon i.icon > i[class^=icon-]) {
+.muya-editor :deep(i.icon > i[class^='icon-']),
+:deep(.ag-front-menu i.icon > i[class^='icon-']),
+:deep(.ag-tool-bar i.icon > i[class^='icon-']),
+:deep(.ag-container-icon i.icon > i[class^='icon-']) {
   filter: none !important;
   -webkit-filter: none !important;
   left: 0 !important;
@@ -819,7 +859,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Hide the actual input - Muya uses ::before/::after */
-.muya-editor :deep(li.ag-task-list-item > input[type="checkbox"]) {
+.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']) {
   -webkit-appearance: none;
   appearance: none;
   position: absolute;
@@ -833,13 +873,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* OVERRIDE ::before - Make it SQUARE (not circle) */
-.muya-editor :deep(li.ag-task-list-item > input[type="checkbox"]::before) {
+.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']::before) {
   content: '' !important;
   width: 18px !important;
   height: 18px !important;
   display: inline-block !important;
   border: 2px solid var(--editorColor50, rgba(128, 128, 128, 0.5)) !important;
-  border-radius: 3px !important;  /* SQUARE with slight rounding, NOT 50% circle */
+  border-radius: 3px !important; /* SQUARE with slight rounding, NOT 50% circle */
   background-color: var(--editorBgColor, #1e1e1e) !important;
   position: absolute !important;
   top: -2px !important;
@@ -849,7 +889,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Hover state */
-.muya-editor :deep(li.ag-task-list-item > input[type="checkbox"]:hover::before) {
+.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']:hover::before) {
   border-color: #6b8a73 !important;
 }
 
@@ -861,7 +901,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Checkmark styling */
-.muya-editor :deep(li.ag-task-list-item > input[type="checkbox"]::after) {
+.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']::after) {
   content: '' !important;
   transform: rotate(-45deg) scale(0) !important;
   width: 8px !important;
@@ -901,9 +941,9 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 /* Let Muya's ::before pseudo-element handle borders - no direct cell borders */
 .muya-editor :deep(table th),
 .muya-editor :deep(table td) {
-  padding: 6px 13px;  /* Match MarkText padding */
+  padding: 6px 13px; /* Match MarkText padding */
   text-align: left;
-  position: relative;  /* Required for ::before border system */
+  position: relative; /* Required for ::before border system */
   /* NO border property - Muya uses ::before for borders */
 }
 
@@ -956,7 +996,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* CRITICAL: Fix the filter trick that breaks Safari */
-:deep(.ag-quick-insert .icon-container > i.icon > i[class^=icon-]) {
+:deep(.ag-quick-insert .icon-container > i.icon > i[class^='icon-']) {
   filter: none !important;
   -webkit-filter: none !important;
   left: 0 !important;
@@ -969,9 +1009,9 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Same fix for ALL Muya components using this icon pattern */
-:deep(.icon-container > i.icon > i[class^=icon-]),
-:deep(.ag-tool-bar .icon-container > i.icon > i[class^=icon-]),
-:deep(.ag-front-menu .icon-wrapper > i.icon > i[class^=icon-]) {
+:deep(.icon-container > i.icon > i[class^='icon-']),
+:deep(.ag-tool-bar .icon-container > i.icon > i[class^='icon-']),
+:deep(.ag-front-menu .icon-wrapper > i.icon > i[class^='icon-']) {
   filter: none !important;
   -webkit-filter: none !important;
   left: 0 !important;

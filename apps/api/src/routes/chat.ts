@@ -34,19 +34,18 @@ const ChatRequestSchema = z.object({
  *
  * Supports streaming (SSE) and non-streaming responses
  */
-chat.post(
-  '/',
-  zValidator('json', ChatRequestSchema),
-  async (c) => {
-    requireAuth(c) // Validate auth
+chat.post('/', zValidator('json', ChatRequestSchema), async (c) => {
+  requireAuth(c) // Validate auth
 
-    // Placeholder - not yet implemented
-    return c.json({
+  // Placeholder - not yet implemented
+  return c.json(
+    {
       error: 'Not Implemented',
       message: 'Chat endpoint not yet implemented. Full AI integration coming in Phase 1.',
-    }, 501)
-  }
-)
+    },
+    501
+  )
+})
 
 /**
  * List chat sessions
@@ -108,12 +107,15 @@ chat.get('/sessions/:sessionId', async (c) => {
  */
 chat.post(
   '/sessions',
-  zValidator('json', z.object({
-    title: z.string().optional(),
-    contextNoteIds: z.array(z.string().uuid()).optional(),
-    contextProjectId: z.string().uuid().optional(),
-    agentType: z.string().optional(),
-  })),
+  zValidator(
+    'json',
+    z.object({
+      title: z.string().optional(),
+      contextNoteIds: z.array(z.string().uuid()).optional(),
+      contextProjectId: z.string().uuid().optional(),
+      agentType: z.string().optional(),
+    })
+  ),
   async (c) => {
     const auth = requireAuth(c)
     const body = c.req.valid('json')
@@ -146,10 +148,7 @@ chat.delete('/sessions/:sessionId', async (c) => {
   const auth = requireAuth(c)
   const sessionId = c.req.param('sessionId')
 
-  const { error } = await auth.supabase
-    .from('chat_sessions')
-    .delete()
-    .eq('id', sessionId)
+  const { error } = await auth.supabase.from('chat_sessions').delete().eq('id', sessionId)
 
   if (error) {
     throw new Error(error.message)

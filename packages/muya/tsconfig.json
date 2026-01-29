@@ -1,35 +1,35 @@
 {
-    "compilerOptions": {
-        "target": "ES2022",
-        "lib": ["ES2022", "DOM", "DOM.Iterable"],
-        "useDefineForClassFields": true,
-        "experimentalDecorators": true,
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "useDefineForClassFields": true,
+    "experimentalDecorators": true,
 
-        /* Output */
-        "rootDir": "src",
-        "outDir": "./dist",
-        "module": "ESNext",
-        /* Bundler mode */
-        "moduleResolution": "bundler",
-        "resolveJsonModule": true,
+    /* Output */
+    "rootDir": "src",
+    "outDir": "./dist",
+    "module": "ESNext",
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
 
-        /* Type declarations - disabled until JS files are migrated to TS */
-        "declaration": false,
-        "noEmit": true,
+    /* Type declarations - disabled until JS files are migrated to TS */
+    "declaration": false,
+    "noEmit": true,
 
-        /* Linting */
-        "strict": true,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitOverride": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true,
-        "isolatedModules": true,
-        "skipLibCheck": true,
-        "noErrorTruncation": true,
-        "allowJs": true,
-        "checkJs": false
-    },
-    "include": ["src"]
+    /* Linting */
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noErrorTruncation": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["src"]
 }

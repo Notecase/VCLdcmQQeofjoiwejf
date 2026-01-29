@@ -96,9 +96,15 @@ function renderContent(text: string | undefined): string {
       <Brain :size="20" />
     </template>
 
-    <div class="mindmap-container" v-if="mindmap">
+    <div
+      class="mindmap-container"
+      v-if="mindmap"
+    >
       <!-- Central Node -->
-      <div class="central-node math-content" v-html="renderContent(mindmap.center)"></div>
+      <div
+        class="central-node math-content"
+        v-html="renderContent(mindmap.center)"
+      ></div>
 
       <!-- Branches -->
       <div class="branches-container">
@@ -108,20 +114,32 @@ function renderContent(text: string | undefined): string {
           class="branch"
           :style="{ '--branch-color': getBranchColor(index) }"
         >
-          <div class="branch-node math-content" v-html="renderContent(node.label)"></div>
+          <div
+            class="branch-node math-content"
+            v-html="renderContent(node.label)"
+          ></div>
 
           <!-- Children -->
-          <div v-if="node.children?.length" class="children">
+          <div
+            v-if="node.children?.length"
+            class="children"
+          >
             <div
               v-for="child in node.children"
               :key="child.id"
               class="child-node"
             >
               <span class="connector"></span>
-              <span class="math-content" v-html="renderContent(child.label)"></span>
+              <span
+                class="math-content"
+                v-html="renderContent(child.label)"
+              ></span>
 
               <!-- Grandchildren -->
-              <div v-if="child.children?.length" class="grandchildren">
+              <div
+                v-if="child.children?.length"
+                class="grandchildren"
+              >
                 <div
                   v-for="grandchild in child.children"
                   :key="grandchild.id"
@@ -135,17 +153,33 @@ function renderContent(text: string | undefined): string {
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No mindmap data available.</p>
     </div>
 
     <template #footer>
-      <button class="footer-btn secondary" :class="{ copied }" @click="copyToClipboard">
-        <Check v-if="copied" :size="14" />
-        <Copy v-else :size="14" />
+      <button
+        class="footer-btn secondary"
+        :class="{ copied }"
+        @click="copyToClipboard"
+      >
+        <Check
+          v-if="copied"
+          :size="14"
+        />
+        <Copy
+          v-else
+          :size="14"
+        />
         {{ copied ? 'Copied!' : 'Copy as Markdown' }}
       </button>
-      <button class="footer-btn primary" @click="addToNote">
+      <button
+        class="footer-btn primary"
+        @click="addToNote"
+      >
         <Plus :size="14" />
         Add to Note
       </button>
@@ -177,7 +211,8 @@ function renderContent(text: string | undefined): string {
 }
 
 @keyframes central-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 4px 24px rgba(88, 166, 255, 0.4);
   }
   50% {

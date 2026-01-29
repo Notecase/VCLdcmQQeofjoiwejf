@@ -93,9 +93,15 @@ function handleDelete() {
 </script>
 
 <template>
-  <div class="source-card" :class="{ processing: source.status === 'processing' }">
+  <div
+    class="source-card"
+    :class="{ processing: source.status === 'processing' }"
+  >
     <div class="source-icon">
-      <component :is="iconComponent" :size="16" />
+      <component
+        :is="iconComponent"
+        :size="16"
+      />
     </div>
 
     <div class="source-info">
@@ -103,7 +109,10 @@ function handleDelete() {
       <span class="source-meta">{{ subtitle }}</span>
     </div>
 
-    <div class="source-status" :class="statusClass">
+    <div
+      class="source-status"
+      :class="statusClass"
+    >
       <component
         v-if="statusIcon"
         :is="statusIcon"

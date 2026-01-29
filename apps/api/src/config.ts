@@ -72,12 +72,12 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
 
   // AI providers - at least one should be configured
   const hasAnyAiProvider =
-    config.ai.openai.apiKey ||
-    config.ai.anthropic.apiKey ||
-    config.ai.google.apiKey
+    config.ai.openai.apiKey || config.ai.anthropic.apiKey || config.ai.google.apiKey
 
   if (!hasAnyAiProvider) {
-    errors.push('At least one AI provider API key is required (OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_AI_API_KEY)')
+    errors.push(
+      'At least one AI provider API key is required (OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_AI_API_KEY)'
+    )
   }
 
   // OpenAI is required for embeddings

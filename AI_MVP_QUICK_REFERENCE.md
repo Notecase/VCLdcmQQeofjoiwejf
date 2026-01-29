@@ -4,23 +4,23 @@
 
 ### Core Stack (Hard to Change)
 
-| Layer | MVP Choice | Scale Migration | Why |
-|-------|-----------|-----------------|-----|
-| **Database** | Supabase PostgreSQL | Same + Read replicas | Already set up, RLS works |
-| **Vector Store** | pgvector (1536 dims) | Pinecone at 500K vectors | Monitor query latency |
-| **Auth** | Supabase Auth | Same (add Clerk for SSO if needed) | Already integrated |
-| **AI Backend** | Hono (TypeScript) + Railway/Vercel | Modal (auto-scaling + GPUs) | Native TypeScript, edge-compatible |
+| Layer            | MVP Choice                         | Scale Migration                    | Why                                |
+| ---------------- | ---------------------------------- | ---------------------------------- | ---------------------------------- |
+| **Database**     | Supabase PostgreSQL                | Same + Read replicas               | Already set up, RLS works          |
+| **Vector Store** | pgvector (1536 dims)               | Pinecone at 500K vectors           | Monitor query latency              |
+| **Auth**         | Supabase Auth                      | Same (add Clerk for SSO if needed) | Already integrated                 |
+| **AI Backend**   | Hono (TypeScript) + Railway/Vercel | Modal (auto-scaling + GPUs)        | Native TypeScript, edge-compatible |
 
 ### Flexible Stack (Can Swap)
 
-| Layer | MVP Choice | Scale Options |
-|-------|-----------|---------------|
-| **Chat Model** | OpenAI GPT-4o | Claude Sonnet, local Llama |
-| **Specialized Tasks Model** | Google Gemini Pro | Claude Opus (for complex reasoning) |
-| **Embeddings** | OpenAI text-embedding-3-large | Cohere, local Mixedbread |
-| **Frontend AI** | Vercel AI SDK | Same |
-| **Caching** | None | Upstash Redis |
-| **Background Jobs** | Simple polling worker | BullMQ + Redis |
+| Layer                       | MVP Choice                    | Scale Options                       |
+| --------------------------- | ----------------------------- | ----------------------------------- |
+| **Chat Model**              | OpenAI GPT-4o                 | Claude Sonnet, local Llama          |
+| **Specialized Tasks Model** | Google Gemini Pro             | Claude Opus (for complex reasoning) |
+| **Embeddings**              | OpenAI text-embedding-3-large | Cohere, local Mixedbread            |
+| **Frontend AI**             | Vercel AI SDK                 | Same                                |
+| **Caching**                 | None                          | Upstash Redis                       |
+| **Background Jobs**         | Simple polling worker         | BullMQ + Redis                      |
 
 ---
 
@@ -89,6 +89,7 @@ touch src/config.py
 ```
 
 **Files to Create:**
+
 1. `apps/api/src/main.py` - FastAPI app
 2. `apps/api/src/config.py` - Environment config
 3. `apps/api/requirements.txt` - Dependencies
@@ -97,6 +98,7 @@ touch src/config.py
 ### Week 2: Provider Implementation
 
 **Order of implementation:**
+
 1. `packages/ai/src/providers/openai.ts` - For embeddings (REQUIRED)
 2. `packages/ai/src/providers/anthropic.ts` - For chat (PRIMARY)
 3. `packages/ai/src/services/embedding.service.ts` - Document processing
@@ -104,6 +106,7 @@ touch src/config.py
 ### Week 3: RAG Pipeline
 
 **Order:**
+
 1. Document chunking logic
 2. Embedding generation endpoint
 3. Semantic search integration
@@ -112,12 +115,14 @@ touch src/config.py
 ### Week 4: LangGraph Agents
 
 **Start with:**
+
 1. Research agent (query → retrieve → generate)
 2. Writing assistant (context → generate → refine)
 
 ### Week 5: Frontend Integration
 
 **Order:**
+
 1. Install Vercel AI SDK
 2. `useAIChat` composable
 3. Chat panel component
@@ -154,6 +159,7 @@ Create and apply this migration for AI features:
 ```
 
 Key tables added:
+
 - `ai_usage` - Track API costs
 - `embedding_queue` - Background processing
 - `chat_sessions` - Conversation history
@@ -163,14 +169,14 @@ Key tables added:
 
 ## Cost Estimates (MVP)
 
-| Service | Monthly Cost |
-|---------|-------------|
-| Supabase Pro | $25 |
-| Railway (AI Backend) | $20 |
-| Vercel (Frontend) | $20 |
-| OpenAI API | ~$50-200 (usage) |
-| Anthropic API | ~$50-200 (usage) |
-| **Total MVP** | **~$165-465/month** |
+| Service              | Monthly Cost        |
+| -------------------- | ------------------- |
+| Supabase Pro         | $25                 |
+| Railway (AI Backend) | $20                 |
+| Vercel (Frontend)    | $20                 |
+| OpenAI API           | ~$50-200 (usage)    |
+| Anthropic API        | ~$50-200 (usage)    |
+| **Total MVP**        | **~$165-465/month** |
 
 ---
 

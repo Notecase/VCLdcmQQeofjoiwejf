@@ -16,7 +16,7 @@ import {
   Wrench,
   ExternalLink,
   Copy,
-  Check
+  Check,
 } from 'lucide-vue-next'
 import BaseModal from './BaseModal.vue'
 import { renderMathContent } from '@/utils/mathRenderer'
@@ -33,9 +33,7 @@ const emit = defineEmits<{
 }>()
 
 // Computed
-const resources = computed<Resource[]>(() =>
-  store.currentRecommendations?.resources || []
-)
+const resources = computed<Resource[]>(() => store.currentRecommendations?.resources || [])
 
 // Type icon mapping
 function getTypeIcon(type: string) {
@@ -91,8 +89,9 @@ function renderContent(text: string | undefined): string {
 // Copy all resources as markdown
 async function copyAsMarkdown() {
   const markdown = resources.value
-    .map((r) =>
-      `- **${r.title}** (${getTypeLabel(r.type)})${r.link ? `\n  ${r.link}` : ''}${r.description ? `\n  ${r.description}` : ''}`
+    .map(
+      (r) =>
+        `- **${r.title}** (${getTypeLabel(r.type)})${r.link ? `\n  ${r.link}` : ''}${r.description ? `\n  ${r.description}` : ''}`
     )
     .join('\n')
 
@@ -126,13 +125,22 @@ async function copyAsMarkdown() {
         @click.stop="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
       >
-        <Check v-if="copied" :size="14" />
-        <Copy v-else :size="14" />
+        <Check
+          v-if="copied"
+          :size="14"
+        />
+        <Copy
+          v-else
+          :size="14"
+        />
         <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
-    <div class="resources-list" v-if="resources.length > 0">
+    <div
+      class="resources-list"
+      v-if="resources.length > 0"
+    >
       <div
         v-for="(resource, index) in resources"
         :key="index"
@@ -141,23 +149,39 @@ async function copyAsMarkdown() {
         @click="openResource(resource.link)"
       >
         <div class="resource-icon">
-          <component :is="getTypeIcon(resource.type)" :size="20" />
+          <component
+            :is="getTypeIcon(resource.type)"
+            :size="20"
+          />
         </div>
 
         <div class="resource-content">
           <div class="resource-header">
-            <span class="resource-title math-content" v-html="renderContent(resource.title)"></span>
+            <span
+              class="resource-title math-content"
+              v-html="renderContent(resource.title)"
+            ></span>
             <span class="resource-type">{{ getTypeLabel(resource.type) }}</span>
           </div>
 
-          <p class="resource-description math-content" v-html="renderContent(resource.description)"></p>
+          <p
+            class="resource-description math-content"
+            v-html="renderContent(resource.description)"
+          ></p>
         </div>
 
-        <ExternalLink v-if="resource.link" :size="16" class="external-icon" />
+        <ExternalLink
+          v-if="resource.link"
+          :size="16"
+          class="external-icon"
+        />
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No resources available.</p>
     </div>
   </BaseModal>

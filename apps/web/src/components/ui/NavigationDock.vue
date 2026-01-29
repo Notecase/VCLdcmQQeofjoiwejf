@@ -6,14 +6,14 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLayoutStore } from '@/stores'
-import { 
-  FileText, 
-  LayoutGrid, 
-  Calendar, 
-  GraduationCap, 
+import {
+  FileText,
+  LayoutGrid,
+  Calendar,
+  GraduationCap,
   PanelLeft,
   PanelRight,
-  Home 
+  Home,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -36,7 +36,7 @@ const isNoteActive = computed(() => {
 <template>
   <nav class="nav-dock">
     <!-- Left Sidebar Toggle -->
-    <button 
+    <button
       class="dock-item toggle-btn"
       :class="{ active: layoutStore.sidebarVisible }"
       title="Toggle Sidebar (Cmd+B)"
@@ -86,7 +86,7 @@ const isNoteActive = computed(() => {
     </button>
 
     <!-- Right Sidebar (AI) Toggle -->
-    <button 
+    <button
       class="dock-item toggle-btn"
       :class="{ active: layoutStore.rightPanelVisible }"
       title="Toggle AI Sidebar (Cmd+J)"

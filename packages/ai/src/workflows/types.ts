@@ -241,7 +241,7 @@ export interface TimelineResult {
 export interface ActionProgress {
   actionType: WorkflowActionType
   status: 'starting' | 'processing' | 'complete' | 'error'
-  progress: number  // 0-100
+  progress: number // 0-100
   message: string
   error?: string
 }

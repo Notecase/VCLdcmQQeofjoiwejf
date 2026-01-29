@@ -1,255 +1,249 @@
-import type { Listener } from './event/types';
-import type { ILocale } from './i18n/types';
-import type { TState } from './state/types';
-import type { IMuyaOptions } from './types';
-import {
-    CLASS_NAMES,
-    MUYA_DEFAULT_OPTIONS,
-} from './config/index';
-import { Editor } from './editor/index';
+import type { Listener } from './event/types'
+import type { ILocale } from './i18n/types'
+import type { TState } from './state/types'
+import type { IMuyaOptions } from './types'
+import { CLASS_NAMES, MUYA_DEFAULT_OPTIONS } from './config/index'
+import { Editor } from './editor/index'
 
-import EventCenter from './event/index';
-import I18n from './i18n/index';
-import { Ui } from './ui/ui';
-import './assets/styles/blockSyntax.css';
-import './assets/styles/index.css';
-import './assets/styles/inlineSyntax.css';
-import './assets/styles/prismjs/light.theme.css';
+import EventCenter from './event/index'
+import I18n from './i18n/index'
+import { Ui } from './ui/ui'
+import './assets/styles/blockSyntax.css'
+import './assets/styles/index.css'
+import './assets/styles/inlineSyntax.css'
+import './assets/styles/prismjs/light.theme.css'
 
 interface IPlugin {
-    plugin: any;
-    options: any;
+  plugin: any
+  options: any
 }
 
 export class Muya {
-    static plugins: IPlugin[] = [];
+  static plugins: IPlugin[] = []
 
-    static use(plugin: any, options = {}) {
-        this.plugins.push({
-            plugin,
-            options,
-        });
+  static use(plugin: any, options = {}) {
+    this.plugins.push({
+      plugin,
+      options,
+    })
+  }
+
+  public readonly version = typeof window.MUYA_VERSION === 'undefined' ? 'dev' : window.MUYA_VERSION
+  public options: IMuyaOptions = MUYA_DEFAULT_OPTIONS
+  public eventCenter: EventCenter
+  public domNode: HTMLElement
+  public editor: Editor
+  public ui: Ui
+  public i18n: I18n
+
+  private _uiPlugins: Record<string, any> = {}
+
+  get container(): HTMLElement {
+    return this.domNode
+  }
+
+  constructor(element: HTMLElement, options?: Partial<IMuyaOptions>) {
+    this.options = Object.assign({}, MUYA_DEFAULT_OPTIONS, options ?? {})
+    this.eventCenter = new EventCenter()
+    this.domNode = getContainer(element, this.options)
+    // this.domNode[BLOCK_DOM_PROPERTY] = this;
+    this.editor = new Editor(this)
+    this.ui = new Ui(this)
+    this.i18n = new I18n(this, this.options.locale)
+    this.init()
+  }
+
+  init() {
+    this.editor.init()
+
+    // UI plugins
+    if (Muya.plugins.length) {
+      for (const { plugin: Plugin, options: opts } of Muya.plugins)
+        this._uiPlugins[Plugin.pluginName] = new Plugin(this, opts)
     }
+  }
 
-    public readonly version = typeof window.MUYA_VERSION === 'undefined' ? 'dev' : window.MUYA_VERSION;
-    public options: IMuyaOptions = MUYA_DEFAULT_OPTIONS;
-    public eventCenter: EventCenter;
-    public domNode: HTMLElement;
-    public editor: Editor;
-    public ui: Ui;
-    public i18n: I18n;
+  locale(object: ILocale) {
+    return this.i18n.locale(object)
+  }
 
-    private _uiPlugins: Record<string, any> = {};
+  /**
+   * [on] on custom event
+   */
+  on(event: string, listener: Listener) {
+    this.eventCenter.on(event, listener)
+  }
 
-    get container(): HTMLElement {
-        return this.domNode;
-    }
+  /**
+   * [off] off custom event
+   */
+  off(event: string, listener: Listener) {
+    this.eventCenter.off(event, listener)
+  }
 
-    constructor(element: HTMLElement, options?: Partial<IMuyaOptions>) {
-        this.options = Object.assign({}, MUYA_DEFAULT_OPTIONS, options ?? {});
-        this.eventCenter = new EventCenter();
-        this.domNode = getContainer(element, this.options);
-        // this.domNode[BLOCK_DOM_PROPERTY] = this;
-        this.editor = new Editor(this);
-        this.ui = new Ui(this);
-        this.i18n = new I18n(this, this.options.locale);
-        this.init();
-    }
+  /**
+   * [once] subscribe event and listen once
+   */
+  once(event: string, listener: Listener) {
+    this.eventCenter.once(event, listener)
+  }
 
-    init() {
-        this.editor.init();
+  getState() {
+    return this.editor.jsonState.getState()
+  }
 
-        // UI plugins
-        if (Muya.plugins.length) {
-            for (const { plugin: Plugin, options: opts } of Muya.plugins)
-                this._uiPlugins[Plugin.pluginName] = new Plugin(this, opts);
+  getMarkdown() {
+    return this.editor.jsonState.getMarkdown()
+  }
+
+  undo() {
+    this.editor.history.undo()
+  }
+
+  redo() {
+    this.editor.history.redo()
+  }
+
+  /**
+   * Search value in current document.
+   * @param {string} value
+   * @param {object} opts
+   */
+  search(value: string, opts = {}) {
+    return this.editor.searchModule.search(value, opts)
+  }
+
+  /**
+   * Find preview or next value, and highlight it.
+   * @param {string} action : previous or next.
+   */
+  find(action: 'previous' | 'next') {
+    return this.editor.searchModule.find(action)
+  }
+
+  replace(replaceValue: string, opt = { isSingle: true, isRegexp: false }) {
+    return this.editor.searchModule.replace(replaceValue, opt)
+  }
+
+  setContent(content: TState[] | string, autoFocus = false) {
+    this.editor.setContent(content, autoFocus)
+  }
+
+  focus() {
+    this.editor.focus()
+  }
+
+  selectAll() {
+    this.editor.selection.selectAll()
+  }
+
+  destroy() {
+    this.eventCenter.detachAllDomEvents()
+    // this.domNode[BLOCK_DOM_PROPERTY] = null;
+    if (this.domNode.remove) this.domNode.remove()
+
+    // Hide all float tools.
+    if (this.ui) this.ui.hideAllFloatTools()
+  }
+
+  /**
+   * Set cursor position in the editor
+   */
+  setCursor(cursor: any) {
+    if (!cursor || !this.editor?.scrollPage) return
+
+    try {
+      // Find the block by path and set cursor
+      const { path, anchor, focus } = cursor
+      if (path) {
+        const block = this.editor.scrollPage.queryBlock(path)
+        if (block?.setCursor) {
+          block.setCursor(anchor?.offset ?? 0, focus?.offset ?? anchor?.offset ?? 0)
         }
+      }
+    } catch (e) {
+      console.warn('Failed to set cursor:', e)
     }
+  }
 
-    locale(object: ILocale) {
-        return this.i18n.locale(object);
+  /**
+   * Set markdown content with optional cursor position
+   */
+  setMarkdown(markdown: string, cursor?: any) {
+    this.setContent(markdown)
+    if (cursor) {
+      // Use setTimeout to ensure content is rendered
+      setTimeout(() => this.setCursor(cursor), 0)
     }
+  }
 
-    /**
-     * [on] on custom event
-     */
-    on(event: string, listener: Listener) {
-        this.eventCenter.on(event, listener);
+  /**
+   * Toggle focus mode
+   */
+  setFocusMode(enabled: boolean) {
+    this.options.focusMode = enabled
+    if (enabled) {
+      this.domNode.classList.add('mu-focus-mode')
+    } else {
+      this.domNode.classList.remove('mu-focus-mode')
     }
+  }
 
-    /**
-     * [off] off custom event
-     */
-    off(event: string, listener: Listener) {
-        this.eventCenter.off(event, listener);
+  /**
+   * Update font settings
+   */
+  setFont(fontOptions: { fontSize?: number; lineHeight?: number }) {
+    if (fontOptions.fontSize !== undefined) {
+      this.options.fontSize = fontOptions.fontSize
+      this.domNode.style.fontSize = `${fontOptions.fontSize}px`
     }
-
-    /**
-     * [once] subscribe event and listen once
-     */
-    once(event: string, listener: Listener) {
-        this.eventCenter.once(event, listener);
+    if (fontOptions.lineHeight !== undefined) {
+      this.options.lineHeight = fontOptions.lineHeight
+      this.domNode.style.lineHeight = String(fontOptions.lineHeight)
     }
+  }
 
-    getState() {
-        return this.editor.jsonState.getState();
+  /**
+   * Set tab size for code blocks
+   */
+  setTabSize(size: number) {
+    this.options.tabSize = size
+  }
+
+  /**
+   * Bulk update options
+   */
+  setOptions(options: Partial<IMuyaOptions>, updateUI = false) {
+    Object.assign(this.options, options)
+
+    if (updateUI) {
+      // Re-render UI components that depend on these options
+      this.eventCenter.emit('options-change', options)
     }
-
-    getMarkdown() {
-        return this.editor.jsonState.getMarkdown();
-    }
-
-    undo() {
-        this.editor.history.undo();
-    }
-
-    redo() {
-        this.editor.history.redo();
-    }
-
-    /**
-     * Search value in current document.
-     * @param {string} value
-     * @param {object} opts
-     */
-    search(value: string, opts = {}) {
-        return this.editor.searchModule.search(value, opts);
-    }
-
-    /**
-     * Find preview or next value, and highlight it.
-     * @param {string} action : previous or next.
-     */
-    find(action: 'previous' | 'next') {
-        return this.editor.searchModule.find(action);
-    }
-
-    replace(replaceValue: string, opt = { isSingle: true, isRegexp: false }) {
-        return this.editor.searchModule.replace(replaceValue, opt);
-    }
-
-    setContent(content: TState[] | string, autoFocus = false) {
-        this.editor.setContent(content, autoFocus);
-    }
-
-    focus() {
-        this.editor.focus();
-    }
-
-    selectAll() {
-        this.editor.selection.selectAll();
-    }
-
-    destroy() {
-        this.eventCenter.detachAllDomEvents();
-        // this.domNode[BLOCK_DOM_PROPERTY] = null;
-        if (this.domNode.remove)
-            this.domNode.remove();
-
-        // Hide all float tools.
-        if (this.ui)
-            this.ui.hideAllFloatTools();
-    }
-
-    /**
-     * Set cursor position in the editor
-     */
-    setCursor(cursor: any) {
-        if (!cursor || !this.editor?.scrollPage) return;
-
-        try {
-            // Find the block by path and set cursor
-            const { path, anchor, focus } = cursor;
-            if (path) {
-                const block = this.editor.scrollPage.queryBlock(path);
-                if (block?.setCursor) {
-                    block.setCursor(anchor?.offset ?? 0, focus?.offset ?? anchor?.offset ?? 0);
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to set cursor:', e);
-        }
-    }
-
-    /**
-     * Set markdown content with optional cursor position
-     */
-    setMarkdown(markdown: string, cursor?: any) {
-        this.setContent(markdown);
-        if (cursor) {
-            // Use setTimeout to ensure content is rendered
-            setTimeout(() => this.setCursor(cursor), 0);
-        }
-    }
-
-    /**
-     * Toggle focus mode
-     */
-    setFocusMode(enabled: boolean) {
-        this.options.focusMode = enabled;
-        if (enabled) {
-            this.domNode.classList.add('mu-focus-mode');
-        } else {
-            this.domNode.classList.remove('mu-focus-mode');
-        }
-    }
-
-    /**
-     * Update font settings
-     */
-    setFont(fontOptions: { fontSize?: number; lineHeight?: number }) {
-        if (fontOptions.fontSize !== undefined) {
-            this.options.fontSize = fontOptions.fontSize;
-            this.domNode.style.fontSize = `${fontOptions.fontSize}px`;
-        }
-        if (fontOptions.lineHeight !== undefined) {
-            this.options.lineHeight = fontOptions.lineHeight;
-            this.domNode.style.lineHeight = String(fontOptions.lineHeight);
-        }
-    }
-
-    /**
-     * Set tab size for code blocks
-     */
-    setTabSize(size: number) {
-        this.options.tabSize = size;
-    }
-
-    /**
-     * Bulk update options
-     */
-    setOptions(options: Partial<IMuyaOptions>, updateUI = false) {
-        Object.assign(this.options, options);
-
-        if (updateUI) {
-            // Re-render UI components that depend on these options
-            this.eventCenter.emit('options-change', options);
-        }
-    }
+  }
 }
 
 /**
  * [ensureContainerDiv ensure container element is div]
  */
 function getContainer(originContainer: HTMLElement, options: IMuyaOptions) {
-    const { spellcheckEnabled, hideQuickInsertHint } = options;
-    const newContainer = document.createElement('div');
-    const attrs = originContainer.attributes;
-    // Copy attrs from origin container to new container
-    Array.from(attrs).forEach((attr: { name: string; value: string }) => {
-        newContainer.setAttribute(attr.name, attr.value);
-    });
+  const { spellcheckEnabled, hideQuickInsertHint } = options
+  const newContainer = document.createElement('div')
+  const attrs = originContainer.attributes
+  // Copy attrs from origin container to new container
+  Array.from(attrs).forEach((attr: { name: string; value: string }) => {
+    newContainer.setAttribute(attr.name, attr.value)
+  })
 
-    if (!hideQuickInsertHint)
-        newContainer.classList.add(CLASS_NAMES.MU_SHOW_QUICK_INSERT_HINT);
+  if (!hideQuickInsertHint) newContainer.classList.add(CLASS_NAMES.MU_SHOW_QUICK_INSERT_HINT)
 
-    newContainer.classList.add(CLASS_NAMES.MU_EDITOR);
+  newContainer.classList.add(CLASS_NAMES.MU_EDITOR)
 
-    newContainer.setAttribute('contenteditable', 'true');
-    newContainer.setAttribute('autocorrect', 'false');
-    newContainer.setAttribute('autocomplete', 'off');
-    newContainer.setAttribute('spellcheck', spellcheckEnabled ? 'true' : 'false');
-    originContainer.replaceWith(newContainer);
+  newContainer.setAttribute('contenteditable', 'true')
+  newContainer.setAttribute('autocorrect', 'false')
+  newContainer.setAttribute('autocomplete', 'off')
+  newContainer.setAttribute('spellcheck', spellcheckEnabled ? 'true' : 'false')
+  originContainer.replaceWith(newContainer)
 
-    return newContainer;
+  return newContainer
 }

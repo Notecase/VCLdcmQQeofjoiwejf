@@ -11,19 +11,22 @@ import type {
   ListOptions,
   SignedUrlOptions,
   StorageResult,
-  ImageTransformOptions
+  ImageTransformOptions,
 } from '../providers'
 
 // Initialize localforage for storage
 const storage = localforage.createInstance({
   name: 'inkdown',
-  storeName: 'storage'
+  storeName: 'storage',
 })
 
 class LocalStorageProvider implements IStorageProvider {
   private buckets: Map<string, { name: string; public: boolean }> = new Map()
 
-  async createBucket(name: string, options?: { public?: boolean }): Promise<StorageResult<{ name: string }>> {
+  async createBucket(
+    name: string,
+    options?: { public?: boolean }
+  ): Promise<StorageResult<{ name: string }>> {
     this.buckets.set(name, { name, public: options?.public ?? false })
     return { data: { name }, error: null }
   }
@@ -64,10 +67,11 @@ class LocalStorageProvider implements IStorageProvider {
         bucket,
         path,
         size: blob.size,
-        mime_type: options?.contentType || (file instanceof File ? file.type : 'application/octet-stream'),
+        mime_type:
+          options?.contentType || (file instanceof File ? file.type : 'application/octet-stream'),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        metadata: options?.metadata
+        metadata: options?.metadata,
       }
 
       // Store metadata
@@ -161,7 +165,12 @@ class LocalStorageProvider implements IStorageProvider {
 
       if (blob && meta) {
         await storage.setItem(toKey, blob)
-        const newMeta = { ...meta, id: crypto.randomUUID(), path: toPath, created_at: new Date().toISOString() }
+        const newMeta = {
+          ...meta,
+          id: crypto.randomUUID(),
+          path: toPath,
+          created_at: new Date().toISOString(),
+        }
         await storage.setItem(`${toKey}__meta`, newMeta)
 
         return { data: { path: toPath }, error: null }
@@ -269,7 +278,10 @@ class LocalStorageProvider implements IStorageProvider {
       }
     }
 
-    return { data: null, error: result.error || { code: 'upload_error', message: 'Failed to upload image' } }
+    return {
+      data: null,
+      error: result.error || { code: 'upload_error', message: 'Failed to upload image' },
+    }
   }
 }
 

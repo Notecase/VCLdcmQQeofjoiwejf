@@ -15,7 +15,7 @@ const error = ref('')
 async function handleSubmit() {
   isLoading.value = true
   error.value = ''
-  
+
   try {
     if (isLogin.value) {
       await authStore.signIn(email.value, password.value)
@@ -52,11 +52,24 @@ function skipAuth() {
       </div>
 
       <div class="auth-tabs">
-        <button :class="{ active: isLogin }" @click="isLogin = true">Sign In</button>
-        <button :class="{ active: !isLogin }" @click="isLogin = false">Sign Up</button>
+        <button
+          :class="{ active: isLogin }"
+          @click="isLogin = true"
+        >
+          Sign In
+        </button>
+        <button
+          :class="{ active: !isLogin }"
+          @click="isLogin = false"
+        >
+          Sign Up
+        </button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="auth-form">
+      <form
+        @submit.prevent="handleSubmit"
+        class="auth-form"
+      >
         <el-input
           v-model="email"
           placeholder="Email"
@@ -72,9 +85,14 @@ function skipAuth() {
           show-password
           required
         />
-        
-        <el-alert v-if="error" :title="error" type="error" :closable="false" />
-        
+
+        <el-alert
+          v-if="error"
+          :title="error"
+          type="error"
+          :closable="false"
+        />
+
         <el-button
           type="primary"
           native-type="submit"
@@ -91,16 +109,25 @@ function skipAuth() {
       </div>
 
       <div class="oauth-buttons">
-        <el-button @click="handleOAuth('github')" size="large">
+        <el-button
+          @click="handleOAuth('github')"
+          size="large"
+        >
           GitHub
         </el-button>
-        <el-button @click="handleOAuth('google')" size="large">
+        <el-button
+          @click="handleOAuth('google')"
+          size="large"
+        >
           Google
         </el-button>
       </div>
 
       <div class="skip-auth">
-        <el-button type="text" @click="skipAuth">
+        <el-button
+          type="text"
+          @click="skipAuth"
+        >
           Continue without account →
         </el-button>
       </div>

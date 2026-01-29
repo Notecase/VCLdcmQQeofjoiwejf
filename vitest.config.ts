@@ -10,10 +10,7 @@ export default defineConfig({
     environment: 'happy-dom',
 
     // Include patterns
-    include: [
-      'packages/**/src/**/*.{test,spec}.{ts,tsx}',
-      'apps/**/src/**/*.{test,spec}.{ts,tsx}',
-    ],
+    include: ['packages/**/src/**/*.{test,spec}.{ts,tsx}', 'apps/**/src/**/*.{test,spec}.{ts,tsx}'],
 
     // Exclude patterns
     exclude: [
@@ -27,11 +24,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: [
-        'packages/**/src/**/*.ts',
-        'apps/**/src/**/*.ts',
-        'apps/**/src/**/*.vue',
-      ],
+      include: ['packages/**/src/**/*.ts', 'apps/**/src/**/*.ts', 'apps/**/src/**/*.vue'],
       exclude: [
         '**/node_modules/**',
         '**/dist/**',

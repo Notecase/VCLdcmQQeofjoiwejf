@@ -1,18 +1,18 @@
 /* eslint-disable no-useless-escape */
 const FOOTNOTE_REG = /^\[\^([^\^\[\]\s]+?)(?<!\\)\]: /
 /* eslint-enable no-useless-escape */
-const footnoteCtrl = ContentState => {
+const footnoteCtrl = (ContentState) => {
   ContentState.prototype.updateFootnote = function (block, line) {
     const { start, end } = this.cursor
     const { text } = line
     const match = FOOTNOTE_REG.exec(text)
     const footnoteIdentifer = match[1]
     const sectionWrapper = this.createBlock('figure', {
-      functionType: 'footnote'
+      functionType: 'footnote',
     })
     const footnoteInput = this.createBlock('span', {
       text: footnoteIdentifer,
-      functionType: 'footnoteInput'
+      functionType: 'footnoteInput',
     })
     const pBlock = this.createBlockP(text.substring(match[0].length))
     this.appendChild(sectionWrapper, footnoteInput)
@@ -24,12 +24,12 @@ const footnoteCtrl = ContentState => {
     this.cursor = {
       start: {
         key,
-        offset: Math.max(0, start.offset - footnoteIdentifer.length)
+        offset: Math.max(0, start.offset - footnoteIdentifer.length),
       },
       end: {
         key,
-        offset: Math.max(0, end.offset - footnoteIdentifer.length)
-      }
+        offset: Math.max(0, end.offset - footnoteIdentifer.length),
+      },
     }
 
     if (this.isCollapse()) {
@@ -49,7 +49,7 @@ const footnoteCtrl = ContentState => {
     const offset = newBlock.children[0].text.length
     this.cursor = {
       start: { key, offset },
-      end: { key, offset }
+      end: { key, offset },
     }
     const sectionWrapper = this.updateFootnote(newBlock, newBlock.children[0])
     const id = sectionWrapper.key

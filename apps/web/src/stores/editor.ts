@@ -67,25 +67,25 @@ export const useEditorStore = defineStore('editor', {
     toc: [],
     isLoading: false,
     isLoadingDocuments: false,
-    isRealtimeSyncEnabled: false
+    isRealtimeSyncEnabled: false,
   }),
 
   getters: {
     activeTab: (state): Tab | undefined => {
-      return state.tabs.find(t => t.id === state.activeTabId)
+      return state.tabs.find((t) => t.id === state.activeTabId)
     },
 
     hasUnsavedChanges: (state): boolean => {
-      return state.tabs.some(t => !t.isSaved)
+      return state.tabs.some((t) => !t.isSaved)
     },
 
     openDocumentIds: (state): string[] => {
-      return state.tabs.map(t => t.document.id)
+      return state.tabs.map((t) => t.document.id)
     },
 
     tableOfContents: (state): any[] => {
       return state.toc
-    }
+    },
   },
 
   actions: {
@@ -149,8 +149,8 @@ export const useEditorStore = defineStore('editor', {
         const result = await notesService.createNote(authStore.user.id, {
           title,
           content: '',
-          project_id: parentNoteId ? undefined : (projectId || undefined),
-          parent_note_id: parentNoteId || undefined
+          project_id: parentNoteId ? undefined : projectId || undefined,
+          parent_note_id: parentNoteId || undefined,
         })
 
         if (result.error) {
@@ -176,7 +176,7 @@ export const useEditorStore = defineStore('editor', {
      */
     openDocument(doc: Note) {
       // Check if already open
-      const existingTab = this.tabs.find(t => t.document.id === doc.id)
+      const existingTab = this.tabs.find((t) => t.document.id === doc.id)
       if (existingTab) {
         this.activeTabId = existingTab.id
         this.currentDocument = doc
@@ -188,11 +188,11 @@ export const useEditorStore = defineStore('editor', {
         id: doc.id,
         document: { ...doc },
         isSaved: true,
-        isActive: true
+        isActive: true,
       }
 
       // Deactivate other tabs
-      this.tabs.forEach(t => t.isActive = false)
+      this.tabs.forEach((t) => (t.isActive = false))
 
       this.tabs.push(tab)
       this.activeTabId = tab.id
@@ -267,7 +267,7 @@ export const useEditorStore = defineStore('editor', {
           title: tab.document.title,
           word_count: tab.document.word_count,
           character_count: tab.document.character_count,
-          editor_state: tab.document.editor_state as EditorState
+          editor_state: tab.document.editor_state as EditorState,
         })
 
         if (result.error) {
@@ -279,7 +279,7 @@ export const useEditorStore = defineStore('editor', {
         this.lastSaved = new Date()
 
         // Update in documents list
-        const docIndex = this.documents.findIndex(d => d.id === tab.document.id)
+        const docIndex = this.documents.findIndex((d) => d.id === tab.document.id)
         if (docIndex !== -1) {
           this.documents[docIndex] = { ...tab.document }
         }
@@ -294,7 +294,7 @@ export const useEditorStore = defineStore('editor', {
      * Close a tab
      */
     closeTab(tabId: string) {
-      const index = this.tabs.findIndex(t => t.id === tabId)
+      const index = this.tabs.findIndex((t) => t.id === tabId)
       if (index === -1) return
 
       this.tabs.splice(index, 1)
@@ -319,9 +319,9 @@ export const useEditorStore = defineStore('editor', {
      * Switch to a tab
      */
     switchTab(tabId: string) {
-      const tab = this.tabs.find(t => t.id === tabId)
+      const tab = this.tabs.find((t) => t.id === tabId)
       if (tab) {
-        this.tabs.forEach(t => t.isActive = false)
+        this.tabs.forEach((t) => (t.isActive = false))
         tab.isActive = true
         this.activeTabId = tabId
         this.currentDocument = tab.document
@@ -341,7 +341,7 @@ export const useEditorStore = defineStore('editor', {
         }
 
         // Remove from documents list
-        this.documents = this.documents.filter(d => d.id !== id)
+        this.documents = this.documents.filter((d) => d.id !== id)
 
         // Close tab if open
         this.closeTab(id)
@@ -363,11 +363,11 @@ export const useEditorStore = defineStore('editor', {
         }
 
         // Update in documents list
-        const doc = this.documents.find(d => d.id === id)
+        const doc = this.documents.find((d) => d.id === id)
         if (doc) doc.title = newTitle
 
         // Update in tab if open
-        const tab = this.tabs.find(t => t.document.id === id)
+        const tab = this.tabs.find((t) => t.document.id === id)
         if (tab) tab.document.title = newTitle
 
         if (this.currentDocument?.id === id) {
@@ -442,7 +442,7 @@ export const useEditorStore = defineStore('editor', {
         case 'INSERT':
           if (event.new) {
             // Add to documents list if not already there
-            const exists = this.documents.find(d => d.id === event.new!.id)
+            const exists = this.documents.find((d) => d.id === event.new!.id)
             if (!exists) {
               this.documents.unshift(event.new)
             }
@@ -452,14 +452,14 @@ export const useEditorStore = defineStore('editor', {
         case 'UPDATE':
           if (event.new) {
             // Update in documents list
-            const docIndex = this.documents.findIndex(d => d.id === event.new!.id)
+            const docIndex = this.documents.findIndex((d) => d.id === event.new!.id)
             if (docIndex !== -1) {
               this.documents[docIndex] = event.new
             }
 
             // Update in tabs if open (but not if currently saving to avoid conflicts)
             if (!this.isSaving) {
-              const tab = this.tabs.find(t => t.document.id === event.new!.id)
+              const tab = this.tabs.find((t) => t.document.id === event.new!.id)
               if (tab) {
                 // Only update if tab is saved (no local changes)
                 if (tab.isSaved) {
@@ -478,16 +478,16 @@ export const useEditorStore = defineStore('editor', {
         case 'DELETE':
           if (event.old) {
             // Remove from documents list
-            this.documents = this.documents.filter(d => d.id !== event.old!.id)
+            this.documents = this.documents.filter((d) => d.id !== event.old!.id)
 
             // Close tab if open
-            const tab = this.tabs.find(t => t.document.id === event.old!.id)
+            const tab = this.tabs.find((t) => t.document.id === event.old!.id)
             if (tab) {
               this.closeTab(tab.id)
             }
           }
           break
       }
-    }
-  }
+    },
+  },
 })

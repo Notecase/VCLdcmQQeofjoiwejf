@@ -30,19 +30,18 @@ const EmbedNoteSchema = z.object({
  * Returns the embedding vector for the provided text
  * Useful for custom search or similarity calculations
  */
-embed.post(
-  '/text',
-  zValidator('json', EmbedTextSchema),
-  async (c) => {
-    requireAuth(c) // Validate auth
+embed.post('/text', zValidator('json', EmbedTextSchema), async (c) => {
+  requireAuth(c) // Validate auth
 
-    // Placeholder - not yet implemented
-    return c.json({
+  // Placeholder - not yet implemented
+  return c.json(
+    {
       error: 'Not Implemented',
       message: 'Embedding generation not yet implemented. Full AI integration coming in Phase 1.',
-    }, 501)
-  }
-)
+    },
+    501
+  )
+})
 
 /**
  * Queue note for embedding generation
@@ -50,54 +49,56 @@ embed.post(
  *
  * Adds a note to the embedding queue for background processing
  */
-embed.post(
-  '/note',
-  zValidator('json', EmbedNoteSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+embed.post('/note', zValidator('json', EmbedNoteSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
 
-    // Verify note exists and belongs to user
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id, title')
-      .eq('id', body.noteId)
-      .eq('is_deleted', false)
-      .single()
+  // Verify note exists and belongs to user
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id, title')
+    .eq('id', body.noteId)
+    .eq('is_deleted', false)
+    .single()
 
-    if (noteError || !note) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
+  if (noteError || !note) {
+    return c.json({ error: 'Note not found' }, 404)
+  }
 
-    // Add to embedding queue
-    const { data: queueItem, error: queueError } = await auth.supabase
-      .from('embedding_queue')
-      .upsert({
+  // Add to embedding queue
+  const { data: queueItem, error: queueError } = await auth.supabase
+    .from('embedding_queue')
+    .upsert(
+      {
         user_id: auth.userId,
         note_id: body.noteId,
         priority: body.priority,
         status: 'pending',
         attempts: 0,
         last_error: null,
-      }, {
+      },
+      {
         onConflict: 'note_id',
-      })
-      .select()
-      .single()
+      }
+    )
+    .select()
+    .single()
 
-    if (queueError) {
-      throw new Error(queueError.message)
-    }
+  if (queueError) {
+    throw new Error(queueError.message)
+  }
 
-    return c.json({
+  return c.json(
+    {
       queued: true,
       noteId: body.noteId,
       noteTitle: note.title,
       queueId: queueItem?.id,
       priority: body.priority,
-    }, 201)
-  }
-)
+    },
+    201
+  )
+})
 
 /**
  * Get embedding status for a note
@@ -146,7 +147,8 @@ embed.get('/queue', async (c) => {
 
   const { data: queueItems, error } = await auth.supabase
     .from('embedding_queue')
-    .select(`
+    .select(
+      `
       id,
       note_id,
       status,
@@ -156,7 +158,8 @@ embed.get('/queue', async (c) => {
       created_at,
       started_at,
       completed_at
-    `)
+    `
+    )
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -165,10 +168,13 @@ embed.get('/queue', async (c) => {
   }
 
   // Count by status
-  const statusCounts = (queueItems || []).reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const statusCounts = (queueItems || []).reduce(
+    (acc, item) => {
+      acc[item.status] = (acc[item.status] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>
+  )
 
   return c.json({
     items: queueItems,

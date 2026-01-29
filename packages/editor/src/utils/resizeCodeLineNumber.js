@@ -17,13 +17,13 @@ const getStyles = function (element) {
     return null
   }
 
-  return window.getComputedStyle ? getComputedStyle(element) : (element.currentStyle || null)
+  return window.getComputedStyle ? getComputedStyle(element) : element.currentStyle || null
 }
 
 /**
-* Resizes line numbers spans according to height of line of code
-* @param {Element} element <pre> element
-*/
+ * Resizes line numbers spans according to height of line of code
+ * @param {Element} element <pre> element
+ */
 const resizeCodeBlockLineNumber = function (element) {
   // FIXME: Heavy performance issues with this function, please see #1648.
 

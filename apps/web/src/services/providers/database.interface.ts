@@ -55,9 +55,7 @@ export interface RealtimePayload<T = Record<string, unknown>> {
   commit_timestamp: string
 }
 
-export type RealtimeCallback<T = Record<string, unknown>> = (
-  payload: RealtimePayload<T>
-) => void
+export type RealtimeCallback<T = Record<string, unknown>> = (payload: RealtimePayload<T>) => void
 
 /**
  * Database Provider Interface
@@ -68,7 +66,10 @@ export interface IDatabaseProvider {
   from<T = Record<string, unknown>>(table: string): IQueryBuilder<T>
 
   // RPC/Function calls
-  rpc<T = unknown>(functionName: string, params?: Record<string, unknown>): Promise<DatabaseResult<T>>
+  rpc<T = unknown>(
+    functionName: string,
+    params?: Record<string, unknown>
+  ): Promise<DatabaseResult<T>>
 
   // Real-time subscriptions
   on<T = Record<string, unknown>>(

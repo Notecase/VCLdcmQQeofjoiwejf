@@ -9,33 +9,33 @@ const icons = [
   {
     type: 'edit',
     tooltip: 'Edit Image',
-    icon: editIcon
+    icon: editIcon,
   },
   {
     type: 'inline',
     tooltip: 'Inline Image',
-    icon: inlineIcon
+    icon: inlineIcon,
   },
   {
     type: 'left',
     tooltip: 'Align Left',
-    icon: leftIcon
+    icon: leftIcon,
   },
   {
     type: 'center',
     tooltip: 'Align Middle',
-    icon: middleIcon
+    icon: middleIcon,
   },
   {
     type: 'right',
     tooltip: 'Align Right',
-    icon: rightIcon
+    icon: rightIcon,
   },
   {
     type: 'delete',
     tooltip: 'Remove Image',
-    icon: deleteIcon
-  }
+    icon: deleteIcon,
+  },
 ]
 
 export default icons

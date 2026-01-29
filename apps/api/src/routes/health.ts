@@ -21,11 +21,14 @@ health.get('/', (c) => {
  * GET /health/detailed
  */
 health.get('/detailed', async (c) => {
-  const checks: Record<string, {
-    status: 'ok' | 'error' | 'warning'
-    message?: string
-    latencyMs?: number
-  }> = {}
+  const checks: Record<
+    string,
+    {
+      status: 'ok' | 'error' | 'warning'
+      message?: string
+      latencyMs?: number
+    }
+  > = {}
 
   // Check configuration
   const configValidation = validateConfig()
@@ -56,24 +59,28 @@ health.get('/detailed', async (c) => {
   const availableProviders = getAvailableProviders()
   checks.aiProviders = {
     status: availableProviders.length > 0 ? 'ok' : 'error',
-    message: availableProviders.length > 0
-      ? `Available: ${availableProviders.join(', ')}`
-      : 'No AI providers configured',
+    message:
+      availableProviders.length > 0
+        ? `Available: ${availableProviders.join(', ')}`
+        : 'No AI providers configured',
   }
 
   // Determine overall status
-  const hasError = Object.values(checks).some(c => c.status === 'error')
-  const hasWarning = Object.values(checks).some(c => c.status === 'warning')
+  const hasError = Object.values(checks).some((c) => c.status === 'error')
+  const hasWarning = Object.values(checks).some((c) => c.status === 'warning')
 
   const overallStatus = hasError ? 'error' : hasWarning ? 'warning' : 'ok'
 
-  return c.json({
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    version: '0.1.0',
-    environment: config.nodeEnv,
-    checks,
-  }, overallStatus === 'error' ? 503 : 200)
+  return c.json(
+    {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      version: '0.1.0',
+      environment: config.nodeEnv,
+      checks,
+    },
+    overallStatus === 'error' ? 503 : 200
+  )
 })
 
 /**

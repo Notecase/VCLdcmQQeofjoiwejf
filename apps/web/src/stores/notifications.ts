@@ -37,7 +37,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       id,
       createdAt: Date.now(),
       dismissible: notification.dismissible ?? true,
-      duration: notification.duration ?? 5000
+      duration: notification.duration ?? 5000,
     }
 
     // Add to list
@@ -73,7 +73,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       timers.delete(id)
     }
 
-    notifications.value = notifications.value.filter(n => n.id !== id)
+    notifications.value = notifications.value.filter((n) => n.id !== id)
   }
 
   function dismissAll() {
@@ -108,6 +108,6 @@ export const useNotificationsStore = defineStore('notifications', () => {
     info,
     success,
     warning,
-    error
+    error,
   }
 })

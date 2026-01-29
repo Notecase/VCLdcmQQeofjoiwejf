@@ -140,11 +140,18 @@ sources.post('/upload', async (c) => {
               })
             })
           } else {
-            source = await processor.processFile(noteId, buffer, filename, file.type, {}, async (progress) => {
-              await stream.writeSSE({
-                data: JSON.stringify({ type: 'progress', ...progress }),
-              })
-            })
+            source = await processor.processFile(
+              noteId,
+              buffer,
+              filename,
+              file.type,
+              {},
+              async (progress) => {
+                await stream.writeSSE({
+                  data: JSON.stringify({ type: 'progress', ...progress }),
+                })
+              }
+            )
           }
 
           if (source) {
@@ -191,70 +198,66 @@ sources.post('/upload', async (c) => {
  * Add a URL as a source
  * POST /api/sources/link
  */
-sources.post(
-  '/link',
-  zValidator('json', AddLinkSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+sources.post('/link', zValidator('json', AddLinkSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
 
-    // Verify note ownership
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id')
-      .eq('id', body.noteId)
-      .eq('user_id', auth.userId)
-      .single()
+  // Verify note ownership
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', body.noteId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (noteError || !note) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
+  if (noteError || !note) {
+    return c.json({ error: 'Note not found' }, 404)
+  }
 
-    // Check Accept header for SSE
-    const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
+  // Check Accept header for SSE
+  const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
 
-    const { createSourceProcessor } = await import('@inkdown/ai/sources')
-    const processor = createSourceProcessor(auth.supabase, auth.userId)
+  const { createSourceProcessor } = await import('@inkdown/ai/sources')
+  const processor = createSourceProcessor(auth.supabase, auth.userId)
 
-    if (acceptSSE) {
-      return streamSSE(c, async (stream) => {
-        try {
-          const source = await processor.processLink(body.noteId, body.url, {}, async (progress) => {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'progress', ...progress }),
-            })
-          })
-
-          if (source) {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'complete', source }),
-            })
-          } else {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'error', error: 'Failed to fetch link' }),
-            })
-          }
-        } catch (error) {
+  if (acceptSSE) {
+    return streamSSE(c, async (stream) => {
+      try {
+        const source = await processor.processLink(body.noteId, body.url, {}, async (progress) => {
           await stream.writeSSE({
-            data: JSON.stringify({ type: 'error', error: String(error) }),
+            data: JSON.stringify({ type: 'progress', ...progress }),
+          })
+        })
+
+        if (source) {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'complete', source }),
+          })
+        } else {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'error', error: 'Failed to fetch link' }),
           })
         }
-      })
-    }
-
-    try {
-      const source = await processor.processLink(body.noteId, body.url)
-
-      if (!source) {
-        return c.json({ success: false, error: 'Failed to fetch link' }, 500)
+      } catch (error) {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'error', error: String(error) }),
+        })
       }
-
-      return c.json({ success: true, source })
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500)
-    }
+    })
   }
-)
+
+  try {
+    const source = await processor.processLink(body.noteId, body.url)
+
+    if (!source) {
+      return c.json({ success: false, error: 'Failed to fetch link' }, 500)
+    }
+
+    return c.json({ success: true, source })
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500)
+  }
+})
 
 // ============================================================================
 // Add Text
@@ -264,45 +267,37 @@ sources.post(
  * Add pasted text as a source
  * POST /api/sources/text
  */
-sources.post(
-  '/text',
-  zValidator('json', AddTextSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+sources.post('/text', zValidator('json', AddTextSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
 
-    // Verify note ownership
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id')
-      .eq('id', body.noteId)
-      .eq('user_id', auth.userId)
-      .single()
+  // Verify note ownership
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', body.noteId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (noteError || !note) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
-
-    const { createSourceProcessor } = await import('@inkdown/ai/sources')
-    const processor = createSourceProcessor(auth.supabase, auth.userId)
-
-    try {
-      const source = await processor.processText(
-        body.noteId,
-        body.text,
-        body.title || 'Pasted Text'
-      )
-
-      if (!source) {
-        return c.json({ success: false, error: 'Failed to process text' }, 500)
-      }
-
-      return c.json({ success: true, source })
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500)
-    }
+  if (noteError || !note) {
+    return c.json({ error: 'Note not found' }, 404)
   }
-)
+
+  const { createSourceProcessor } = await import('@inkdown/ai/sources')
+  const processor = createSourceProcessor(auth.supabase, auth.userId)
+
+  try {
+    const source = await processor.processText(body.noteId, body.text, body.title || 'Pasted Text')
+
+    if (!source) {
+      return c.json({ success: false, error: 'Failed to process text' }, 500)
+    }
+
+    return c.json({ success: true, source })
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500)
+  }
+})
 
 // ============================================================================
 // Search Sources
@@ -312,45 +307,41 @@ sources.post(
  * Search across sources for a note
  * POST /api/sources/search
  */
-sources.post(
-  '/search',
-  zValidator('json', SearchSourcesSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+sources.post('/search', zValidator('json', SearchSourcesSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
 
-    // Verify note ownership
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id')
-      .eq('id', body.noteId)
-      .eq('user_id', auth.userId)
-      .single()
+  // Verify note ownership
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', body.noteId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (noteError || !note) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
-
-    const { createSourceStorage } = await import('@inkdown/ai/sources')
-    const storage = createSourceStorage(auth.supabase, auth.userId)
-
-    try {
-      const results = await storage.searchSources({
-        noteId: body.noteId,
-        query: body.query,
-        limit: body.limit,
-      })
-
-      return c.json({
-        success: true,
-        results,
-        query: body.query,
-      })
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500)
-    }
+  if (noteError || !note) {
+    return c.json({ error: 'Note not found' }, 404)
   }
-)
+
+  const { createSourceStorage } = await import('@inkdown/ai/sources')
+  const storage = createSourceStorage(auth.supabase, auth.userId)
+
+  try {
+    const results = await storage.searchSources({
+      noteId: body.noteId,
+      query: body.query,
+      limit: body.limit,
+    })
+
+    return c.json({
+      success: true,
+      results,
+      query: body.query,
+    })
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500)
+  }
+})
 
 // ============================================================================
 // Execute Workflow Action
@@ -360,80 +351,76 @@ sources.post(
  * Execute a quick action on sources
  * POST /api/sources/action
  */
-sources.post(
-  '/action',
-  zValidator('json', ExecuteActionSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
-    const openaiApiKey = process.env.OPENAI_API_KEY
+sources.post('/action', zValidator('json', ExecuteActionSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
+  const openaiApiKey = process.env.OPENAI_API_KEY
 
-    if (!openaiApiKey) {
-      return c.json({ error: 'OpenAI API key not configured' }, 500)
-    }
+  if (!openaiApiKey) {
+    return c.json({ error: 'OpenAI API key not configured' }, 500)
+  }
 
-    // Verify note ownership
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id')
-      .eq('id', body.noteId)
-      .eq('user_id', auth.userId)
-      .single()
+  // Verify note ownership
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', body.noteId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (noteError || !note) {
-      return c.json({ error: 'Note not found' }, 404)
-    }
+  if (noteError || !note) {
+    return c.json({ error: 'Note not found' }, 404)
+  }
 
-    // Check Accept header for SSE
-    const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
+  // Check Accept header for SSE
+  const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
 
-    const { createWorkflowActions } = await import('@inkdown/ai/workflows')
-    const actions = createWorkflowActions(auth.supabase, auth.userId, openaiApiKey)
+  const { createWorkflowActions } = await import('@inkdown/ai/workflows')
+  const actions = createWorkflowActions(auth.supabase, auth.userId, openaiApiKey)
 
-    if (acceptSSE) {
-      return streamSSE(c, async (stream) => {
-        try {
-          const result = await actions.execute(
-            body.noteId,
-            body.actionType,
-            body.options || {},
-            async (progress) => {
-              await stream.writeSSE({
-                data: JSON.stringify({ type: 'progress', ...progress }),
-              })
-            }
-          )
-
-          if (result) {
+  if (acceptSSE) {
+    return streamSSE(c, async (stream) => {
+      try {
+        const result = await actions.execute(
+          body.noteId,
+          body.actionType,
+          body.options || {},
+          async (progress) => {
             await stream.writeSSE({
-              data: JSON.stringify({ type: 'complete', result }),
-            })
-          } else {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'error', error: 'Action failed' }),
+              data: JSON.stringify({ type: 'progress', ...progress }),
             })
           }
-        } catch (error) {
+        )
+
+        if (result) {
           await stream.writeSSE({
-            data: JSON.stringify({ type: 'error', error: String(error) }),
+            data: JSON.stringify({ type: 'complete', result }),
+          })
+        } else {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'error', error: 'Action failed' }),
           })
         }
-      })
-    }
-
-    try {
-      const result = await actions.execute(body.noteId, body.actionType, body.options || {})
-
-      if (!result) {
-        return c.json({ success: false, error: 'Action failed' }, 500)
+      } catch (error) {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'error', error: String(error) }),
+        })
       }
-
-      return c.json({ success: true, result })
-    } catch (error) {
-      return c.json({ success: false, error: String(error) }, 500)
-    }
+    })
   }
-)
+
+  try {
+    const result = await actions.execute(body.noteId, body.actionType, body.options || {})
+
+    if (!result) {
+      return c.json({ success: false, error: 'Action failed' }, 500)
+    }
+
+    return c.json({ success: true, result })
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500)
+  }
+})
 
 // ============================================================================
 // Get Source Content

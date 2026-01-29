@@ -5,7 +5,7 @@ import { DEFAULT_PREFERENCES, type UserPreferences } from '@/types'
 
 const localPrefsStore = localforage.createInstance({
   name: 'marktext',
-  storeName: 'preferences'
+  storeName: 'preferences',
 })
 
 const PREFS_KEY = 'user_preferences'
@@ -50,15 +50,13 @@ export const usePreferencesStore = defineStore('preferences', {
       if (isSupabaseConfigured) {
         const { data: session } = await supabase.auth.getSession()
         if (session.session) {
-          await supabase
-            .from('user_preferences')
-            .upsert({
-              user_id: session.session.user.id,
-              theme: prefs.theme,
-              font_size: prefs.fontSize,
-              line_height: prefs.lineHeight,
-              settings: prefs
-            })
+          await supabase.from('user_preferences').upsert({
+            user_id: session.session.user.id,
+            theme: prefs.theme,
+            font_size: prefs.fontSize,
+            line_height: prefs.lineHeight,
+            settings: prefs,
+          })
           return
         }
       }
@@ -71,7 +69,7 @@ export const usePreferencesStore = defineStore('preferences', {
      * Update a single preference
      */
     async update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
-      (this as any)[key] = value
+      ;(this as any)[key] = value
       await this.save()
     },
 
@@ -114,6 +112,6 @@ export const usePreferencesStore = defineStore('preferences', {
     toggleSourceCode() {
       this.sourceCode = !this.sourceCode
       this.save()
-    }
-  }
+    },
+  },
 })

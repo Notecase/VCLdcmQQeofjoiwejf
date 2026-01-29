@@ -28,14 +28,17 @@ function createNewDocument() {
 }
 
 // Auto-scroll to active tab when it changes
-watch(() => editorStore.activeTabId, () => {
-  nextTick(() => {
-    const activeEl = tabsContainerRef.value?.querySelector('.tab.active')
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-    }
-  })
-})
+watch(
+  () => editorStore.activeTabId,
+  () => {
+    nextTick(() => {
+      const activeEl = tabsContainerRef.value?.querySelector('.tab.active')
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+      }
+    })
+  }
+)
 </script>
 
 <template>
@@ -55,7 +58,10 @@ watch(() => editorStore.activeTabId, () => {
     </div>
 
     <!-- Tabs Zone -->
-    <div class="tabs-zone" ref="tabsContainerRef">
+    <div
+      class="tabs-zone"
+      ref="tabsContainerRef"
+    >
       <!-- Tabs -->
       <div
         v-for="(tab, index) in editorStore.tabs"
@@ -64,16 +70,30 @@ watch(() => editorStore.activeTabId, () => {
         :class="{ active: tab.id === editorStore.activeTabId }"
         @click="editorStore.switchTab(tab.id)"
       >
-        <FileText :size="14" class="tab-icon" />
+        <FileText
+          :size="14"
+          class="tab-icon"
+        />
         <span class="tab-title">{{ tab.document.title }}</span>
-        <span v-if="!tab.isSaved" class="tab-unsaved">•</span>
-        <button class="tab-close" @click.stop="editorStore.closeTab(tab.id)">
+        <span
+          v-if="!tab.isSaved"
+          class="tab-unsaved"
+          >•</span
+        >
+        <button
+          class="tab-close"
+          @click.stop="editorStore.closeTab(tab.id)"
+        >
           <X :size="12" />
         </button>
       </div>
-      
+
       <!-- New Tab Button -->
-      <button class="new-tab-btn" @click="createNewDocument" title="New Document">
+      <button
+        class="new-tab-btn"
+        @click="createNewDocument"
+        title="New Document"
+      >
         <Plus :size="16" />
       </button>
     </div>

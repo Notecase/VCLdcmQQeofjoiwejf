@@ -7,7 +7,7 @@ import {
   styleModule,
   eventListenersModule,
   h as sh,
-  toVNode as sToVNode
+  toVNode as sToVNode,
 } from 'snabbdom'
 import snabbdomToHtml from 'snabbdom-to-html'
 
@@ -17,14 +17,15 @@ export const patch = init([
   styleModule,
   propsModule,
   datasetModule,
-  eventListenersModule
+  eventListenersModule,
 ])
 
 export const h = sh
 export const toVNode = sToVNode
 
 export const toHTML = snabbdomToHtml // helper function for convert vnode to HTML string
-export const htmlToVNode = html => { // helper function for convert html to vnode
+export const htmlToVNode = (html) => {
+  // helper function for convert html to vnode
   const wrapper = document.createElement('div')
   wrapper.innerHTML = html
 

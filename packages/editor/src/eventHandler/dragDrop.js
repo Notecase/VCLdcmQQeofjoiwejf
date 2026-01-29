@@ -1,5 +1,5 @@
 class DragDrop {
-  constructor (muya) {
+  constructor(muya) {
     this.muya = muya
     this.dragOverBinding()
     this.dropBinding()
@@ -7,10 +7,10 @@ class DragDrop {
     this.dragStartBinding()
   }
 
-  dragStartBinding () {
+  dragStartBinding() {
     const { container, eventCenter } = this.muya
 
-    const dragStartHandler = event => {
+    const dragStartHandler = (event) => {
       if (event.target.tagName === 'IMG') {
         return event.preventDefault()
       }
@@ -19,30 +19,30 @@ class DragDrop {
     eventCenter.attachDOMEvent(container, 'dragstart', dragStartHandler)
   }
 
-  dragOverBinding () {
+  dragOverBinding() {
     const { container, eventCenter, contentState } = this.muya
 
-    const dragoverHandler = event => {
+    const dragoverHandler = (event) => {
       contentState.dragoverHandler(event)
     }
 
     eventCenter.attachDOMEvent(container, 'dragover', dragoverHandler)
   }
 
-  dropBinding () {
+  dropBinding() {
     const { container, eventCenter, contentState } = this.muya
 
-    const dropHandler = event => {
+    const dropHandler = (event) => {
       contentState.dropHandler(event)
     }
 
     eventCenter.attachDOMEvent(container, 'drop', dropHandler)
   }
 
-  dragendBinding () {
+  dragendBinding() {
     const { eventCenter, contentState } = this.muya
 
-    const dragleaveHandler = event => {
+    const dragleaveHandler = (event) => {
       contentState.dragleaveHandler(event)
     }
 

@@ -11,14 +11,17 @@ const appClasses = computed(() => ({
   'typewriter-mode': preferencesStore.typewriter,
   'focus-mode': preferencesStore.focus || layoutStore.isFocusMode,
   'source-code-mode': layoutStore.isSourceMode,
-  'zen-mode': layoutStore.isZenMode
+  'zen-mode': layoutStore.isZenMode,
 }))
 </script>
 
 <template>
-  <div id="inkdown-app" :class="appClasses">
+  <div
+    id="inkdown-app"
+    :class="appClasses"
+  >
     <router-view />
-    
+
     <!-- Global components -->
     <CommandPalette />
     <NotificationToast />
@@ -36,7 +39,12 @@ const appClasses = computed(() => ({
   overflow: hidden;
   background: var(--bg-color);
   color: var(--text-color);
-  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Open Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 /* Zen mode - hide sidebar with smooth fade */
@@ -46,4 +54,3 @@ const appClasses = computed(() => ({
   transition: opacity 0.3s ease;
 }
 </style>
-

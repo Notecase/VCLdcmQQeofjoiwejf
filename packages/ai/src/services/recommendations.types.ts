@@ -52,7 +52,15 @@ export interface ExerciseData {
 // Resource Types
 // ============================================================================
 
-export type ResourceType = 'Book' | 'Course' | 'Video' | 'Paper' | 'Tutorial' | 'Interactive' | 'Article' | 'Website'
+export type ResourceType =
+  | 'Book'
+  | 'Course'
+  | 'Video'
+  | 'Paper'
+  | 'Tutorial'
+  | 'Interactive'
+  | 'Article'
+  | 'Website'
 
 export interface ResourceData {
   type: ResourceType
@@ -71,7 +79,7 @@ export interface SlideData {
   slideNumber: number
   title: string
   type: SlideType
-  imageData: string  // Base64 encoded PNG image
+  imageData: string // Base64 encoded PNG image
   caption: string
 }
 
@@ -116,7 +124,13 @@ export interface RecommendationCache {
   timestamp: number
 }
 
-export type RecommendationType = 'mindmap' | 'flashcards' | 'concepts' | 'exercises' | 'resources' | 'slides'
+export type RecommendationType =
+  | 'mindmap'
+  | 'flashcards'
+  | 'concepts'
+  | 'exercises'
+  | 'resources'
+  | 'slides'
 
 // ============================================================================
 // API Types

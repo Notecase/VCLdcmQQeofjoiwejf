@@ -11,7 +11,7 @@ import type {
   DownloadOptions,
   ListOptions,
   SignedUrlOptions,
-  ImageTransformOptions
+  ImageTransformOptions,
 } from '../providers'
 
 /**
@@ -23,12 +23,12 @@ function toStorageError(error: unknown): { code: string; message: string; status
     return {
       code: err.error || 'STORAGE_ERROR',
       message: err.message,
-      statusCode: err.statusCode
+      statusCode: err.statusCode,
     }
   }
   return {
     code: 'STORAGE_ERROR',
-    message: String(error)
+    message: String(error),
   }
 }
 
@@ -45,7 +45,7 @@ function toStorageFile(file: any, bucket: string): StorageFile {
     mime_type: file.metadata?.mimetype || 'application/octet-stream',
     created_at: file.created_at || new Date().toISOString(),
     updated_at: file.updated_at || file.created_at || new Date().toISOString(),
-    metadata: file.metadata
+    metadata: file.metadata,
   }
 }
 
@@ -59,7 +59,7 @@ class SupabaseStorageProvider implements IStorageProvider {
   ): Promise<StorageResult<{ name: string }>> {
     try {
       const { data, error } = await supabase.storage.createBucket(name, {
-        public: options?.public ?? false
+        public: options?.public ?? false,
       })
 
       if (error) {
@@ -109,8 +109,8 @@ class SupabaseStorageProvider implements IStorageProvider {
       }
 
       return {
-        data: data.map(b => ({ name: b.name, public: b.public })),
-        error: null
+        data: data.map((b) => ({ name: b.name, public: b.public })),
+        error: null,
       }
     } catch (err) {
       return { data: null, error: toStorageError(err) }
@@ -124,13 +124,11 @@ class SupabaseStorageProvider implements IStorageProvider {
     options?: UploadOptions
   ): Promise<StorageResult<StorageFile>> {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, {
-          cacheControl: options?.cacheControl || '3600',
-          contentType: options?.contentType,
-          upsert: options?.upsert ?? false
-        })
+      const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+        cacheControl: options?.cacheControl || '3600',
+        contentType: options?.contentType,
+        upsert: options?.upsert ?? false,
+      })
 
       if (error) {
         return { data: null, error: toStorageError(error) }
@@ -141,14 +139,14 @@ class SupabaseStorageProvider implements IStorageProvider {
         .from(bucket)
         .list(path.split('/').slice(0, -1).join('/'), {
           limit: 1,
-          search: path.split('/').pop()
+          search: path.split('/').pop(),
         })
 
       const fileInfo = fileData?.[0] || { name: path, metadata: {} }
 
       return {
         data: toStorageFile({ ...fileInfo, name: data.path }, bucket),
-        error: null
+        error: null,
       }
     } catch (err) {
       return { data: null, error: toStorageError(err) }
@@ -165,7 +163,12 @@ class SupabaseStorageProvider implements IStorageProvider {
 
       if (options?.transform) {
         const { data, error } = await query.download(path, {
-          transform: options.transform as { width?: number; height?: number; quality?: number; format?: 'origin' }
+          transform: options.transform as {
+            width?: number
+            height?: number
+            quality?: number
+            format?: 'origin'
+          },
         })
 
         if (error) {
@@ -189,17 +192,15 @@ class SupabaseStorageProvider implements IStorageProvider {
 
   async delete(bucket: string, paths: string[]): Promise<StorageResult<StorageFile[]>> {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .remove(paths)
+      const { data, error } = await supabase.storage.from(bucket).remove(paths)
 
       if (error) {
         return { data: null, error: toStorageError(error) }
       }
 
       return {
-        data: data.map(f => toStorageFile(f, bucket)),
-        error: null
+        data: data.map((f) => toStorageFile(f, bucket)),
+        error: null,
       }
     } catch (err) {
       return { data: null, error: toStorageError(err) }
@@ -212,9 +213,7 @@ class SupabaseStorageProvider implements IStorageProvider {
     toPath: string
   ): Promise<StorageResult<{ path: string }>> {
     try {
-      const { error } = await supabase.storage
-        .from(bucket)
-        .move(fromPath, toPath)
+      const { error } = await supabase.storage.from(bucket).move(fromPath, toPath)
 
       if (error) {
         return { data: null, error: toStorageError(error) }
@@ -232,9 +231,7 @@ class SupabaseStorageProvider implements IStorageProvider {
     toPath: string
   ): Promise<StorageResult<{ path: string }>> {
     try {
-      const { error } = await supabase.storage
-        .from(bucket)
-        .copy(fromPath, toPath)
+      const { error } = await supabase.storage.from(bucket).copy(fromPath, toPath)
 
       if (error) {
         return { data: null, error: toStorageError(error) }
@@ -252,25 +249,25 @@ class SupabaseStorageProvider implements IStorageProvider {
     options?: ListOptions
   ): Promise<StorageResult<StorageFile[]>> {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .list(path, {
-          limit: options?.limit || 100,
-          offset: options?.offset || 0,
-          sortBy: options?.sortBy ? {
-            column: options.sortBy.column,
-            order: options.sortBy.order
-          } : undefined,
-          search: options?.search
-        })
+      const { data, error } = await supabase.storage.from(bucket).list(path, {
+        limit: options?.limit || 100,
+        offset: options?.offset || 0,
+        sortBy: options?.sortBy
+          ? {
+              column: options.sortBy.column,
+              order: options.sortBy.order,
+            }
+          : undefined,
+        search: options?.search,
+      })
 
       if (error) {
         return { data: null, error: toStorageError(error) }
       }
 
       return {
-        data: data.map(f => toStorageFile(f, bucket)),
-        error: null
+        data: data.map((f) => toStorageFile(f, bucket)),
+        error: null,
       }
     } catch (err) {
       return { data: null, error: toStorageError(err) }
@@ -278,13 +275,18 @@ class SupabaseStorageProvider implements IStorageProvider {
   }
 
   getPublicUrl(bucket: string, path: string, options?: ImageTransformOptions): string {
-    const transformOptions = options ? {
-      transform: options as { width?: number; height?: number; quality?: number; format?: 'origin' }
-    } : undefined
+    const transformOptions = options
+      ? {
+          transform: options as {
+            width?: number
+            height?: number
+            quality?: number
+            format?: 'origin'
+          },
+        }
+      : undefined
 
-    const result = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path, transformOptions)
+    const result = supabase.storage.from(bucket).getPublicUrl(path, transformOptions)
 
     return result.data.publicUrl
   }
@@ -299,7 +301,9 @@ class SupabaseStorageProvider implements IStorageProvider {
         .from(bucket)
         .createSignedUrl(path, options?.expiresIn || 3600, {
           download: options?.download,
-          transform: options?.transform as { width?: number; height?: number; quality?: number; format?: 'origin' } | undefined
+          transform: options?.transform as
+            | { width?: number; height?: number; quality?: number; format?: 'origin' }
+            | undefined,
         })
 
       if (error) {
@@ -327,8 +331,8 @@ class SupabaseStorageProvider implements IStorageProvider {
       }
 
       return {
-        data: data.map(d => ({ path: d.path!, signedUrl: d.signedUrl })),
-        error: null
+        data: data.map((d) => ({ path: d.path!, signedUrl: d.signedUrl })),
+        error: null,
       }
     } catch (err) {
       return { data: null, error: toStorageError(err) }
@@ -348,7 +352,7 @@ class SupabaseStorageProvider implements IStorageProvider {
 
     const result = await this.upload('attachments', path, file, {
       contentType: file.type,
-      upsert: false
+      upsert: false,
     })
 
     if (result.error) {
@@ -357,7 +361,7 @@ class SupabaseStorageProvider implements IStorageProvider {
 
     // Get signed URL for private bucket
     const urlResult = await this.createSignedUrl('attachments', path, {
-      expiresIn: 86400 // 24 hours
+      expiresIn: 86400, // 24 hours
     })
 
     if (urlResult.error) {
@@ -366,7 +370,7 @@ class SupabaseStorageProvider implements IStorageProvider {
 
     return {
       data: { url: urlResult.data.signedUrl, path },
-      error: null
+      error: null,
     }
   }
 }

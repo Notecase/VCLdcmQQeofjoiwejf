@@ -1,6 +1,6 @@
 import selection from '../selection'
 
-const deleteCtrl = ContentState => {
+const deleteCtrl = (ContentState) => {
   // Handle `delete` keydown event on document.
   ContentState.prototype.docDeleteHandler = function (event) {
     // handle delete selected image
@@ -38,18 +38,18 @@ const deleteCtrl = ContentState => {
       startBlock.text = text.substring(2)
       this.cursor = {
         start: { key, offset: 0 },
-        end: { key, offset: 0 }
+        end: { key, offset: 0 },
       }
       return this.singleRender(startBlock)
     }
-    if (
-      /h\d|span/.test(type) &&
-      start.offset === text.length
-    ) {
+    if (/h\d|span/.test(type) && start.offset === text.length) {
       event.preventDefault()
       if (nextBlock && /h\d|span/.test(nextBlock.type)) {
         // if cursor at the end of code block-language input, do nothing!
-        if (nextBlock.functionType === 'codeContent' && startBlock.functionType === 'languageInput') {
+        if (
+          nextBlock.functionType === 'codeContent' &&
+          startBlock.functionType === 'languageInput'
+        ) {
           return
         }
 
@@ -66,12 +66,12 @@ const deleteCtrl = ContentState => {
           parent = this.getParent(parent)
         }
 
-        toBeRemoved.forEach(b => this.removeBlock(b))
+        toBeRemoved.forEach((b) => this.removeBlock(b))
 
         const offset = start.offset
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
         this.render()
       }

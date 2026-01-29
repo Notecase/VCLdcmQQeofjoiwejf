@@ -8,13 +8,13 @@ export { supabase, auth, isSupabaseConfigured } from './supabase'
 
 // Service factory
 export {
-    initializeServices,
-    getAuthService,
-    getDatabaseService,
-    getStorageService,
-    getCurrentProvider,
-    isServicesInitialized,
-    type ProviderType
+  initializeServices,
+  getAuthService,
+  getDatabaseService,
+  getStorageService,
+  getCurrentProvider,
+  isServicesInitialized,
+  type ProviderType,
 } from './factory'
 
 // Provider interfaces

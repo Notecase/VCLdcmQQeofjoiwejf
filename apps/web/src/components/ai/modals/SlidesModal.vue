@@ -10,13 +10,7 @@
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRecommendationsStore, type Slide } from '@/stores/recommendations'
-import {
-  Presentation,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  FileDown
-} from 'lucide-vue-next'
+import { Presentation, ChevronLeft, ChevronRight, Download, FileDown } from 'lucide-vue-next'
 import BaseModal from './BaseModal.vue'
 import { renderMathContent } from '@/utils/mathRenderer'
 
@@ -32,9 +26,7 @@ const emit = defineEmits<{
 const currentIndex = ref(0)
 
 // Computed
-const slides = computed<Slide[]>(() =>
-  store.currentRecommendations?.slides || []
-)
+const slides = computed<Slide[]>(() => store.currentRecommendations?.slides || [])
 
 const currentSlide = computed(() => slides.value[currentIndex.value])
 const slideCount = computed(() => slides.value.length)
@@ -94,7 +86,7 @@ async function downloadAllSlides() {
       link.download = `slide-${i + 1}.png`
       link.click()
       // Small delay between downloads
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise((resolve) => setTimeout(resolve, 200))
     }
   }
 }
@@ -130,7 +122,10 @@ function renderContent(text: string | undefined): string {
       <Presentation :size="20" />
     </template>
 
-    <div class="slides-container" v-if="slides.length > 0">
+    <div
+      class="slides-container"
+      v-if="slides.length > 0"
+    >
       <!-- Main slide preview -->
       <div class="slide-preview">
         <div class="slide-image-container">
@@ -140,10 +135,19 @@ function renderContent(text: string | undefined): string {
             :alt="currentSlide.title"
             class="slide-image"
           />
-          <div v-else class="slide-placeholder">
+          <div
+            v-else
+            class="slide-placeholder"
+          >
             <Presentation :size="48" />
-            <p class="math-content" v-html="renderContent(currentSlide?.title || 'Slide Preview')"></p>
-            <p class="slide-content math-content" v-html="renderContent(currentSlide?.caption)"></p>
+            <p
+              class="math-content"
+              v-html="renderContent(currentSlide?.title || 'Slide Preview')"
+            ></p>
+            <p
+              class="slide-content math-content"
+              v-html="renderContent(currentSlide?.caption)"
+            ></p>
           </div>
         </div>
 
@@ -155,7 +159,10 @@ function renderContent(text: string | undefined): string {
           >
             {{ currentSlide?.type }}
           </span>
-          <span class="slide-title math-content" v-html="renderContent(currentSlide?.title)"></span>
+          <span
+            class="slide-title math-content"
+            v-html="renderContent(currentSlide?.title)"
+          ></span>
         </div>
       </div>
 
@@ -178,13 +185,19 @@ function renderContent(text: string | undefined): string {
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No slides available.</p>
     </div>
 
     <template #footer>
       <div class="footer-left">
-        <button class="footer-btn secondary" @click="downloadCurrentSlide">
+        <button
+          class="footer-btn secondary"
+          @click="downloadCurrentSlide"
+        >
           <Download :size="14" />
           Download PNG
         </button>
@@ -208,7 +221,10 @@ function renderContent(text: string | undefined): string {
       </div>
 
       <div class="footer-right">
-        <button class="footer-btn primary" @click="downloadAllSlides">
+        <button
+          class="footer-btn primary"
+          @click="downloadAllSlides"
+        >
           <FileDown :size="14" />
           Download All
         </button>

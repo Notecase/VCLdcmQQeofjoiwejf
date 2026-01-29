@@ -146,6 +146,6 @@ export const useLayoutStore = defineStore('layout', () => {
     toggleFocusMode,
     toggleZenMode,
     setSidebarWidth,
-    setRightPanelWidth
+    setRightPanelWidth,
   }
 })

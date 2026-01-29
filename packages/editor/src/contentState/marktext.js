@@ -3,7 +3,7 @@
 import { extractWord, offsetToWordCursor, validateLineCursor } from '../marktext/spellchecker'
 import selection from '../selection'
 
-const marktextApi = ContentState => {
+const marktextApi = (ContentState) => {
   /**
    * Replace the current selected word with the given replacement.
    *
@@ -33,7 +33,9 @@ const marktextApi = ContentState => {
     if (wordInfo) {
       const { left, right, word: selectedWord } = wordInfo
       if (selectedWord !== word) {
-        console.warn(`Unable to replace word: Chromium selection mismatch (expected "${selectedWord}" but found "${word}").`)
+        console.warn(
+          `Unable to replace word: Chromium selection mismatch (expected "${selectedWord}" but found "${word}").`
+        )
         return false
       }
 

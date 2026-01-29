@@ -45,15 +45,15 @@ Phase 1 establishes the AI provider foundation for Inkdown:
 
 ### Provider Strategy
 
-| Use Case | Provider | Model | Why |
-|----------|----------|-------|-----|
-| **General Chat** | OpenAI | GPT-4o | Fast, reliable, excellent tool use |
-| **Note Operations** | OpenAI | GPT-4o | Precise function calling |
-| **Planning** | OpenAI | GPT-4o | Structured thinking |
-| **Embeddings** | OpenAI | text-embedding-3-large | Industry standard, 1536 dims |
-| **Slides Generation** | Gemini | Pro/Flash | Structured output, creative |
-| **Deep Research** | Gemini | Pro | 1M token context window |
-| **Course Generation** | Gemini | Pro | Long-form educational content |
+| Use Case              | Provider | Model                  | Why                                |
+| --------------------- | -------- | ---------------------- | ---------------------------------- |
+| **General Chat**      | OpenAI   | GPT-4o                 | Fast, reliable, excellent tool use |
+| **Note Operations**   | OpenAI   | GPT-4o                 | Precise function calling           |
+| **Planning**          | OpenAI   | GPT-4o                 | Structured thinking                |
+| **Embeddings**        | OpenAI   | text-embedding-3-large | Industry standard, 1536 dims       |
+| **Slides Generation** | Gemini   | Pro/Flash              | Structured output, creative        |
+| **Deep Research**     | Gemini   | Pro                    | 1M token context window            |
+| **Course Generation** | Gemini   | Pro                    | Long-form educational content      |
 
 ---
 
@@ -96,14 +96,17 @@ supabase migration list
 ### 3. Cost Planning
 
 **OpenAI Costs** (per 1M tokens):
+
 - GPT-4o: $2.50 input / $10 output
 - text-embedding-3-large: $0.13
 
 **Gemini Costs** (per 1M tokens):
+
 - Gemini 2.0 Flash: $0.075 input / $0.30 output
 - Gemini Pro: $1.25 input / $5 output
 
 **MVP Budget** (~1000 users, 10 requests/day):
+
 - OpenAI: ~$100-200/month
 - Gemini: ~$50-100/month
 - **Total: ~$150-300/month**
@@ -115,16 +118,19 @@ supabase migration list
 ### Week 1: OpenAI Foundation
 
 **Day 1-2**: OpenAI Provider Basic Implementation
+
 - ✅ Chat completions with streaming
 - ✅ Basic error handling
 - ✅ Test with simple prompts
 
 **Day 3-4**: Embeddings Service
+
 - ✅ Embedding generation
 - ✅ Batch processing
 - ✅ Database integration
 
 **Day 5**: API Routes
+
 - ✅ POST /api/chat endpoint
 - ✅ POST /api/embed endpoint
 - ✅ Authentication middleware
@@ -132,16 +138,19 @@ supabase migration list
 ### Week 2: Gemini + Factory
 
 **Day 6-7**: Gemini Provider
+
 - ✅ Basic chat with Gemini Pro
 - ✅ Structured output (JSON mode)
 - ✅ Long context handling
 
 **Day 8-9**: Provider Factory
+
 - ✅ Task-based routing
 - ✅ Model selection logic
 - ✅ Fallback handling
 
 **Day 10**: Testing & Refinement
+
 - ✅ Integration tests
 - ✅ Cost tracking verification
 - ✅ Performance optimization
@@ -160,13 +169,7 @@ supabase migration list
 import { OpenAI } from 'openai'
 import { openai } from '@ai-sdk/openai'
 import { streamText, generateText } from 'ai'
-import type {
-  AIProvider,
-  AIContext,
-  ChatMessage,
-  AICompletionOptions,
-  AIUsage,
-} from './interface'
+import type { AIProvider, AIContext, ChatMessage, AICompletionOptions, AIUsage } from './interface'
 
 export interface OpenAIProviderConfig {
   apiKey: string
@@ -209,7 +212,7 @@ export class OpenAIProvider implements AIProvider {
       // Convert to OpenAI format
       const openaiMessages = [
         ...(systemMessage ? [{ role: 'system' as const, content: systemMessage }] : []),
-        ...messages.map(m => ({
+        ...messages.map((m) => ({
           role: m.role as 'user' | 'assistant' | 'system',
           content: m.content,
         })),
@@ -239,7 +242,9 @@ export class OpenAIProvider implements AIProvider {
       }
     } catch (error) {
       console.error('OpenAI chat error:', error)
-      throw new Error(`OpenAI chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `OpenAI chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -275,7 +280,9 @@ export class OpenAIProvider implements AIProvider {
       }
     } catch (error) {
       console.error('OpenAI completion error:', error)
-      throw new Error(`OpenAI completion failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `OpenAI completion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -291,7 +298,8 @@ export class OpenAIProvider implements AIProvider {
     const messages: ChatMessage[] = [
       {
         role: 'system',
-        content: 'You are a helpful writing assistant. Rewrite the given text according to the instruction.',
+        content:
+          'You are a helpful writing assistant. Rewrite the given text according to the instruction.',
       },
       {
         role: 'user',
@@ -345,10 +353,12 @@ export class OpenAIProvider implements AIProvider {
         costCents: (response.usage.total_tokens / 1000000) * 13, // $0.13 per 1M tokens
       }
 
-      return response.data.map(d => d.embedding)
+      return response.data.map((d) => d.embedding)
     } catch (error) {
       console.error('OpenAI embedding error:', error)
-      throw new Error(`OpenAI embedding failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `OpenAI embedding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -413,8 +423,8 @@ export class OpenAIProvider implements AIProvider {
 
   private calculateCost(inputTokens: number, outputTokens: number): number {
     // GPT-4o pricing: $2.50 per 1M input, $10 per 1M output
-    const inputCost = (inputTokens / 1000000) * 2.50
-    const outputCost = (outputTokens / 1000000) * 10.00
+    const inputCost = (inputTokens / 1000000) * 2.5
+    const outputCost = (outputTokens / 1000000) * 10.0
     return (inputCost + outputCost) * 100 // Convert to cents
   }
 }
@@ -482,52 +492,47 @@ const ChatRequestSchema = z.object({
 // POST /api/chat - Stream chat responses
 // =============================================================================
 
-chat.post(
-  '/',
-  requireAuth,
-  zValidator('json', ChatRequestSchema),
-  async (c) => {
-    const userId = c.get('userId')
-    const body = c.req.valid('json')
+chat.post('/', requireAuth, zValidator('json', ChatRequestSchema), async (c) => {
+  const userId = c.get('userId')
+  const body = c.req.valid('json')
 
-    try {
-      const supabase = createClient(c.env?.SUPABASE_URL, c.env?.SUPABASE_SERVICE_KEY)
+  try {
+    const supabase = createClient(c.env?.SUPABASE_URL, c.env?.SUPABASE_SERVICE_KEY)
 
-      // Get context from notes if provided
-      let context = ''
-      if (body.noteIds && body.noteIds.length > 0) {
-        const { data: notes } = await supabase
-          .from('notes')
-          .select('title, content')
-          .in('id', body.noteIds)
-          .eq('user_id', userId)
+    // Get context from notes if provided
+    let context = ''
+    if (body.noteIds && body.noteIds.length > 0) {
+      const { data: notes } = await supabase
+        .from('notes')
+        .select('title, content')
+        .in('id', body.noteIds)
+        .eq('user_id', userId)
 
-        if (notes && notes.length > 0) {
-          context = notes
-            .map(n => `# ${n.title}\n\n${n.content}`)
-            .join('\n\n---\n\n')
-        }
+      if (notes && notes.length > 0) {
+        context = notes.map((n) => `# ${n.title}\n\n${n.content}`).join('\n\n---\n\n')
       }
+    }
 
-      // Add context to system message
-      const messages = [...body.messages]
-      if (context && messages[0]?.role !== 'system') {
-        messages.unshift({
-          role: 'system',
-          content: `You are a helpful AI assistant for Inkdown, a note-taking app. Here is the user's note context:\n\n${context}`,
-        })
-      }
-
-      // Create streaming response using Vercel AI SDK
-      const result = await streamText({
-        model: openai(body.model || config.ai.defaultChatModel),
-        messages,
-        temperature: 0.7,
-        maxTokens: 4000,
+    // Add context to system message
+    const messages = [...body.messages]
+    if (context && messages[0]?.role !== 'system') {
+      messages.unshift({
+        role: 'system',
+        content: `You are a helpful AI assistant for Inkdown, a note-taking app. Here is the user's note context:\n\n${context}`,
       })
+    }
 
-      // Track usage in background (don't await)
-      result.usage.then(async (usage) => {
+    // Create streaming response using Vercel AI SDK
+    const result = await streamText({
+      model: openai(body.model || config.ai.defaultChatModel),
+      messages,
+      temperature: 0.7,
+      maxTokens: 4000,
+    })
+
+    // Track usage in background (don't await)
+    result.usage
+      .then(async (usage) => {
         await supabase.from('ai_usage').insert({
           user_id: userId,
           provider: 'openai',
@@ -535,21 +540,25 @@ chat.post(
           action_type: 'chat',
           input_tokens: usage.promptTokens,
           output_tokens: usage.completionTokens,
-          cost_cents: ((usage.promptTokens / 1000000) * 2.5 + (usage.completionTokens / 1000000) * 10) * 100,
+          cost_cents:
+            ((usage.promptTokens / 1000000) * 2.5 + (usage.completionTokens / 1000000) * 10) * 100,
           session_id: body.sessionId,
           project_id: body.projectId,
           success: true,
         })
-      }).catch(err => console.error('Failed to track usage:', err))
+      })
+      .catch((err) => console.error('Failed to track usage:', err))
 
-      // Return streaming response
-      return result.toTextStreamResponse()
-    } catch (error) {
-      console.error('Chat error:', error)
+    // Return streaming response
+    return result.toTextStreamResponse()
+  } catch (error) {
+    console.error('Chat error:', error)
 
-      // Track error
-      const supabase = createClient(c.env?.SUPABASE_URL, c.env?.SUPABASE_SERVICE_KEY)
-      await supabase.from('ai_usage').insert({
+    // Track error
+    const supabase = createClient(c.env?.SUPABASE_URL, c.env?.SUPABASE_SERVICE_KEY)
+    await supabase
+      .from('ai_usage')
+      .insert({
         user_id: userId,
         provider: 'openai',
         model: body.model || config.ai.defaultChatModel,
@@ -559,18 +568,18 @@ chat.post(
         success: false,
         error_code: 'internal_error',
         error_message: error instanceof Error ? error.message : 'Unknown error',
-      }).catch(err => console.error('Failed to track error:', err))
+      })
+      .catch((err) => console.error('Failed to track error:', err))
 
-      return c.json(
-        {
-          error: 'Chat request failed',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        },
-        500
-      )
-    }
+    return c.json(
+      {
+        error: 'Chat request failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    )
   }
-)
+})
 
 export default chat
 ```
@@ -587,13 +596,7 @@ export default chat
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { google } from '@ai-sdk/google'
 import { streamText, generateText } from 'ai'
-import type {
-  AIProvider,
-  AIContext,
-  ChatMessage,
-  AICompletionOptions,
-  AIUsage,
-} from './interface'
+import type { AIProvider, AIContext, ChatMessage, AICompletionOptions, AIUsage } from './interface'
 
 export interface GeminiProviderConfig {
   apiKey: string
@@ -631,8 +634,8 @@ export class GeminiProvider implements AIProvider {
 
       const geminiMessages = [
         ...(systemMessage ? [{ role: 'user' as const, content: systemMessage }] : []),
-        ...messages.map(m => ({
-          role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+        ...messages.map((m) => ({
+          role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
           content: m.content,
         })),
       ]
@@ -658,7 +661,9 @@ export class GeminiProvider implements AIProvider {
       }
     } catch (error) {
       console.error('Gemini chat error:', error)
-      throw new Error(`Gemini chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Gemini chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -726,7 +731,9 @@ Requirements:
   - Speaker notes
 - Format: ${options?.format === 'json' ? 'JSON' : 'Markdown'}
 
-${options?.format === 'json' ? `
+${
+  options?.format === 'json'
+    ? `
 Return as JSON:
 {
   "title": "Presentation Title",
@@ -739,7 +746,9 @@ Return as JSON:
     }
   ]
 }
-` : ''}
+`
+    : ''
+}
 
 Generate the slides now:`
 
@@ -773,9 +782,7 @@ Generate the slides now:`
     sources: string[],
     options?: SpecializedTaskOptions
   ): Promise<string> {
-    const sourcesContext = sources
-      .map((s, i) => `## Source ${i + 1}\n\n${s}`)
-      .join('\n\n---\n\n')
+    const sourcesContext = sources.map((s, i) => `## Source ${i + 1}\n\n${s}`).join('\n\n---\n\n')
 
     const prompt = `You are a research assistant. Conduct comprehensive research on: "${query}"
 
@@ -838,7 +845,9 @@ Requirements:
 - Progressive difficulty
 - Include prerequisites and outcomes
 
-${options?.format === 'json' ? `
+${
+  options?.format === 'json'
+    ? `
 Return as JSON:
 {
   "courseTitle": "Course Title",
@@ -860,7 +869,9 @@ Return as JSON:
     }
   ]
 }
-` : ''}
+`
+    : ''
+}
 
 Generate the course curriculum now:`
 
@@ -917,7 +928,7 @@ Generate the course curriculum now:`
   private calculateCost(inputTokens: number, outputTokens: number): number {
     // Gemini 2.0 Flash pricing: $0.075 per 1M input, $0.30 per 1M output
     const inputCost = (inputTokens / 1000000) * 0.075
-    const outputCost = (outputTokens / 1000000) * 0.30
+    const outputCost = (outputTokens / 1000000) * 0.3
     return (inputCost + outputCost) * 100 // Convert to cents
   }
 }
@@ -937,16 +948,16 @@ import { GeminiProvider, GeminiProviderConfig } from './gemini'
 import type { AIProvider } from './interface'
 
 export type TaskType =
-  | 'chat'              // General conversation
-  | 'complete'          // Text completion
-  | 'rewrite'           // Text rewriting
-  | 'summarize'         // Summarization
-  | 'embed'             // Embedding generation
-  | 'note-agent'        // Note CRUD operations
-  | 'planner'           // Task planning
-  | 'slides'            // Slides generation
-  | 'research'          // Deep research
-  | 'course'            // Course generation
+  | 'chat' // General conversation
+  | 'complete' // Text completion
+  | 'rewrite' // Text rewriting
+  | 'summarize' // Summarization
+  | 'embed' // Embedding generation
+  | 'note-agent' // Note CRUD operations
+  | 'planner' // Task planning
+  | 'slides' // Slides generation
+  | 'research' // Deep research
+  | 'course' // Course generation
 
 export interface ProviderFactoryConfig {
   openai?: OpenAIProviderConfig
@@ -1079,15 +1090,19 @@ import { initProviderFactory } from '@inkdown/ai/providers'
 // Initialize provider factory on startup
 if (config.ai.openaiKey || config.ai.googleKey) {
   initProviderFactory({
-    openai: config.ai.openaiKey ? {
-      apiKey: config.ai.openaiKey,
-      model: config.ai.defaultChatModel,
-      embeddingModel: config.ai.defaultEmbeddingModel,
-    } : undefined,
-    gemini: config.ai.googleKey ? {
-      apiKey: config.ai.googleKey,
-      model: config.ai.defaultSpecializedModel,
-    } : undefined,
+    openai: config.ai.openaiKey
+      ? {
+          apiKey: config.ai.openaiKey,
+          model: config.ai.defaultChatModel,
+          embeddingModel: config.ai.defaultEmbeddingModel,
+        }
+      : undefined,
+    gemini: config.ai.googleKey
+      ? {
+          apiKey: config.ai.googleKey,
+          model: config.ai.defaultSpecializedModel,
+        }
+      : undefined,
   })
 }
 ```
@@ -1116,9 +1131,7 @@ describe('OpenAIProvider', () => {
   })
 
   it('should generate chat response', async () => {
-    const messages = [
-      { role: 'user' as const, content: 'Say "test successful" and nothing else' },
-    ]
+    const messages = [{ role: 'user' as const, content: 'Say "test successful" and nothing else' }]
 
     let response = ''
     for await (const chunk of provider.chat(messages)) {
@@ -1136,9 +1149,7 @@ describe('OpenAIProvider', () => {
   })
 
   it('should track usage', async () => {
-    const messages = [
-      { role: 'user' as const, content: 'Hi' },
-    ]
+    const messages = [{ role: 'user' as const, content: 'Hi' }]
 
     for await (const _ of provider.chat(messages)) {
       // Consume stream
@@ -1168,12 +1179,10 @@ describe('POST /api/chat', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-token', // Mock auth
+        Authorization: 'Bearer test-token', // Mock auth
       },
       body: JSON.stringify({
-        messages: [
-          { role: 'user', content: 'Say hi' },
-        ],
+        messages: [{ role: 'user', content: 'Say hi' }],
       }),
     })
 
@@ -1228,6 +1237,7 @@ testOpenAI().catch(console.error)
 ```
 
 Run with:
+
 ```bash
 cd apps/api
 tsx scripts/test-providers.ts
@@ -1240,6 +1250,7 @@ tsx scripts/test-providers.ts
 ### Token Estimation
 
 **Average use case tokens**:
+
 - Simple chat message: 50-200 input, 100-500 output
 - Document-aware chat: 1000-5000 input, 200-1000 output
 - Embedding (per note): 500-2000 tokens
@@ -1248,14 +1259,14 @@ tsx scripts/test-providers.ts
 
 ### Cost per Operation
 
-| Operation | Provider | Cost Range |
-|-----------|----------|------------|
-| Simple chat | OpenAI GPT-4o | $0.001 - $0.01 |
-| Document chat | OpenAI GPT-4o | $0.01 - $0.05 |
-| Embedding (1 note) | OpenAI | $0.0001 - $0.0003 |
-| Course generation | Gemini Pro | $0.05 - $0.25 |
-| Deep research | Gemini Pro | $0.10 - $0.50 |
-| Slides generation | Gemini Flash | $0.01 - $0.05 |
+| Operation          | Provider      | Cost Range        |
+| ------------------ | ------------- | ----------------- |
+| Simple chat        | OpenAI GPT-4o | $0.001 - $0.01    |
+| Document chat      | OpenAI GPT-4o | $0.01 - $0.05     |
+| Embedding (1 note) | OpenAI        | $0.0001 - $0.0003 |
+| Course generation  | Gemini Pro    | $0.05 - $0.25     |
+| Deep research      | Gemini Pro    | $0.10 - $0.50     |
+| Slides generation  | Gemini Flash  | $0.01 - $0.05     |
 
 ### Budget Monitoring
 
@@ -1274,8 +1285,7 @@ await supabase.from('ai_usage').insert({
 })
 
 // Query monthly costs
-const { data } = await supabase
-  .rpc('get_monthly_ai_usage', { p_user_id: userId })
+const { data } = await supabase.rpc('get_monthly_ai_usage', { p_user_id: userId })
 ```
 
 ---
@@ -1287,6 +1297,7 @@ const { data } = await supabase
 **Symptoms**: `401 Unauthorized` errors
 
 **Solution**:
+
 ```bash
 # Verify keys are set
 echo $OPENAI_API_KEY
@@ -1306,18 +1317,16 @@ curl https://api.openai.com/v1/models \
 **Symptoms**: `429 Too Many Requests`
 
 **Solution**:
+
 ```typescript
 // Add retry logic with exponential backoff
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3
-): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn()
     } catch (error) {
       if (error.status === 429 && i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)))
+        await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, i)))
         continue
       }
       throw error
@@ -1332,6 +1341,7 @@ async function withRetry<T>(
 **Symptoms**: Responses take > 5 seconds
 
 **Solution**:
+
 1. Reduce context size - only send relevant notes
 2. Use streaming to show partial responses
 3. Switch to faster models (GPT-4o-mini, Gemini Flash)
@@ -1342,6 +1352,7 @@ async function withRetry<T>(
 **Symptoms**: `pgvector dimension mismatch` error
 
 **Solution**:
+
 ```typescript
 // Ensure model matches database schema
 const EMBEDDING_MODEL = 'text-embedding-3-large'
@@ -1372,6 +1383,7 @@ CREATE TABLE note_embeddings (
 ### Next Phase
 
 Once Phase 1 is complete, proceed to:
+
 - **Phase 2**: RAG Pipeline (chunking, embeddings, retrieval)
 - **Phase 3**: LangGraph Agents (chat, note, planner, specialized)
 
@@ -1412,6 +1424,7 @@ curl -X POST http://localhost:3001/api/chat \
 ## Support
 
 If you encounter issues:
+
 1. Check environment variables are set correctly
 2. Verify API keys have sufficient quota
 3. Review error logs in API server

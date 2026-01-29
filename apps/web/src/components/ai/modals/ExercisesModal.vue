@@ -26,9 +26,7 @@ const emit = defineEmits<{
 const expandedIds = ref<Set<number>>(new Set())
 
 // Computed
-const exercises = computed<Exercise[]>(() =>
-  store.currentRecommendations?.exercises || []
-)
+const exercises = computed<Exercise[]>(() => store.currentRecommendations?.exercises || [])
 
 // Difficulty styling
 function getDifficultyColor(difficulty: string): string {
@@ -68,8 +66,9 @@ function renderContent(text: string | undefined): string {
 // Copy all exercises as markdown
 async function copyAsMarkdown() {
   const markdown = exercises.value
-    .map((ex, i) =>
-      `### Exercise ${i + 1}: ${ex.title}\n*Difficulty: ${ex.difficulty || 'medium'}*\n\n${ex.description}`
+    .map(
+      (ex, i) =>
+        `### Exercise ${i + 1}: ${ex.title}\n*Difficulty: ${ex.difficulty || 'medium'}*\n\n${ex.description}`
     )
     .join('\n\n')
 
@@ -103,48 +102,81 @@ async function copyAsMarkdown() {
         @click="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
       >
-        <Check v-if="copied" :size="14" />
-        <Copy v-else :size="14" />
+        <Check
+          v-if="copied"
+          :size="14"
+        />
+        <Copy
+          v-else
+          :size="14"
+        />
         <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
-    <div class="exercises-list" v-if="exercises.length > 0">
+    <div
+      class="exercises-list"
+      v-if="exercises.length > 0"
+    >
       <div
         v-for="(exercise, index) in exercises"
         :key="index"
         class="exercise-item"
       >
-        <div class="exercise-header" @click="toggleExpanded(index)">
+        <div
+          class="exercise-header"
+          @click="toggleExpanded(index)"
+        >
           <span class="exercise-bullet">-</span>
           <div class="exercise-content">
-            <p class="exercise-question math-content" v-html="renderContent(exercise.title)"></p>
+            <p
+              class="exercise-question math-content"
+              v-html="renderContent(exercise.title)"
+            ></p>
             <span
               v-if="exercise.difficulty"
               class="difficulty-badge"
               :style="{
                 backgroundColor: `${getDifficultyColor(exercise.difficulty)}20`,
-                color: getDifficultyColor(exercise.difficulty)
+                color: getDifficultyColor(exercise.difficulty),
               }"
             >
               {{ exercise.difficulty }}
             </span>
           </div>
           <button class="expand-btn">
-            <ChevronUp v-if="isExpanded(index)" :size="16" />
-            <ChevronDown v-else :size="16" />
+            <ChevronUp
+              v-if="isExpanded(index)"
+              :size="16"
+            />
+            <ChevronDown
+              v-else
+              :size="16"
+            />
           </button>
         </div>
 
         <!-- Expanded content -->
-        <div v-if="isExpanded(index)" class="exercise-details">
-          <div class="detail-section" v-if="exercise.description">
+        <div
+          v-if="isExpanded(index)"
+          class="exercise-details"
+        >
+          <div
+            class="detail-section"
+            v-if="exercise.description"
+          >
             <span class="detail-label">Description</span>
-            <p class="detail-text math-content" v-html="renderContent(exercise.description)"></p>
+            <p
+              class="detail-text math-content"
+              v-html="renderContent(exercise.description)"
+            ></p>
           </div>
 
           <div class="detail-actions">
-            <button class="add-btn" @click="handleAddExercise(exercise)">
+            <button
+              class="add-btn"
+              @click="handleAddExercise(exercise)"
+            >
               <Plus :size="14" />
               Add to Note
             </button>
@@ -153,7 +185,10 @@ async function copyAsMarkdown() {
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No exercises available.</p>
     </div>
   </BaseModal>

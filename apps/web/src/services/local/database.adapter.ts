@@ -11,13 +11,13 @@ import type {
   UpdateOptions,
   RealtimeSubscription,
   RealtimeEvent,
-  RealtimeCallback
+  RealtimeCallback,
 } from '../providers'
 
 // Initialize localforage
 const db = localforage.createInstance({
   name: 'inkdown',
-  storeName: 'documents'
+  storeName: 'documents',
 })
 
 class LocalQueryBuilder<T> implements IQueryBuilder<T> {
@@ -144,29 +144,41 @@ class LocalQueryBuilder<T> implements IQueryBuilder<T> {
   }
 
   private filterItems(items: T[]): T[] {
-    return items.filter(item => {
-      return this._filters.every(filter => {
+    return items.filter((item) => {
+      return this._filters.every((filter) => {
         const val = (item as Record<string, unknown>)[filter.column]
         switch (filter.op) {
-          case 'eq': return val === filter.value
-          case 'neq': return val !== filter.value
-          case 'gt': return (val as number) > (filter.value as number)
-          case 'gte': return (val as number) >= (filter.value as number)
-          case 'lt': return (val as number) < (filter.value as number)
-          case 'lte': return (val as number) <= (filter.value as number)
+          case 'eq':
+            return val === filter.value
+          case 'neq':
+            return val !== filter.value
+          case 'gt':
+            return (val as number) > (filter.value as number)
+          case 'gte':
+            return (val as number) >= (filter.value as number)
+          case 'lt':
+            return (val as number) < (filter.value as number)
+          case 'lte':
+            return (val as number) <= (filter.value as number)
           case 'like':
           case 'ilike':
             const pattern = String(filter.value).replace(/%/g, '.*')
             return new RegExp(pattern, 'i').test(String(val))
-          case 'in': return (filter.value as unknown[]).includes(val)
-          case 'is': return val === filter.value
-          default: return true
+          case 'in':
+            return (filter.value as unknown[]).includes(val)
+          case 'is':
+            return val === filter.value
+          default:
+            return true
         }
       })
     })
   }
 
-  async insert(data: Partial<T> | Partial<T>[], _options?: InsertOptions): Promise<DatabaseResult<T | T[]>> {
+  async insert(
+    data: Partial<T> | Partial<T>[],
+    _options?: InsertOptions
+  ): Promise<DatabaseResult<T | T[]>> {
     try {
       const items = Array.isArray(data) ? data : [data]
       const results: T[] = []
@@ -220,7 +232,10 @@ class LocalQueryBuilder<T> implements IQueryBuilder<T> {
     }
   }
 
-  async upsert(data: Partial<T> | Partial<T>[], options?: InsertOptions): Promise<DatabaseResult<T | T[]>> {
+  async upsert(
+    data: Partial<T> | Partial<T>[],
+    options?: InsertOptions
+  ): Promise<DatabaseResult<T | T[]>> {
     return this.insert(data, options)
   }
 
@@ -257,8 +272,14 @@ class LocalDatabaseProvider implements IDatabaseProvider {
     return new LocalQueryBuilder<T>(table)
   }
 
-  async rpc<T = unknown>(_functionName: string, _params?: Record<string, unknown>): Promise<DatabaseResult<T>> {
-    return { data: null, error: { code: 'not_supported', message: 'RPC not available in local mode' } }
+  async rpc<T = unknown>(
+    _functionName: string,
+    _params?: Record<string, unknown>
+  ): Promise<DatabaseResult<T>> {
+    return {
+      data: null,
+      error: { code: 'not_supported', message: 'RPC not available in local mode' },
+    }
   }
 
   on<T = Record<string, unknown>>(
@@ -268,7 +289,7 @@ class LocalDatabaseProvider implements IDatabaseProvider {
     _filter?: { column: string; value: unknown }
   ): RealtimeSubscription {
     // No-op in local mode
-    return { unsubscribe: () => { } }
+    return { unsubscribe: () => {} }
   }
 }
 

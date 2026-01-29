@@ -194,18 +194,18 @@ export const allTools = [
  * Tool names by category
  */
 export const toolNames = {
-  core: coreEditingTools.map(t => t.name),
-  database: databaseTools.map(t => t.name),
-  artifact: artifactTools.map(t => t.name),
-  secretary: secretaryTools.map(t => t.name),
-  all: allTools.map(t => t.name),
+  core: coreEditingTools.map((t) => t.name),
+  database: databaseTools.map((t) => t.name),
+  artifact: artifactTools.map((t) => t.name),
+  secretary: secretaryTools.map((t) => t.name),
+  all: allTools.map((t) => t.name),
 } as const
 
 /**
  * Get tool by name
  */
 export function getToolByName(name: string) {
-  return allTools.find(t => t.name === name)
+  return allTools.find((t) => t.name === name)
 }
 
 /**
@@ -213,10 +213,14 @@ export function getToolByName(name: string) {
  */
 export function getToolsByCategory(category: 'core' | 'database' | 'artifact' | 'secretary') {
   switch (category) {
-    case 'core': return coreEditingTools
-    case 'database': return databaseTools
-    case 'artifact': return artifactTools
-    case 'secretary': return secretaryTools
+    case 'core':
+      return coreEditingTools
+    case 'database':
+      return databaseTools
+    case 'artifact':
+      return artifactTools
+    case 'secretary':
+      return secretaryTools
   }
 }
 
@@ -251,7 +255,7 @@ export async function executeTool(
     if (err instanceof z.ZodError) {
       return {
         success: false,
-        error: `Invalid input: ${err.errors.map(e => e.message).join(', ')}`
+        error: `Invalid input: ${err.errors.map((e) => e.message).join(', ')}`,
       }
     }
     return { success: false, error: String(err) }
@@ -261,44 +265,151 @@ export async function executeTool(
 /**
  * Tool metadata for UI display
  */
-export const TOOL_METADATA: Record<string, { label: string; description: string; category: string }> = {
+export const TOOL_METADATA: Record<
+  string,
+  { label: string; description: string; category: string }
+> = {
   // Core
-  read_block: { label: 'Read Block', description: 'Read a specific block from a note', category: 'core' },
-  read_note: { label: 'Read Note', description: 'Read entire note with metadata', category: 'core' },
-  edit_block: { label: 'Edit Block', description: 'Edit a block or note content', category: 'core' },
-  search_web: { label: 'Web Search', description: 'Search the web for information', category: 'core' },
-  create_artifact: { label: 'Create Artifact', description: 'Create HTML/CSS/JS visualization', category: 'core' },
-  create_database: { label: 'Create Database', description: 'Create embedded database', category: 'core' },
+  read_block: {
+    label: 'Read Block',
+    description: 'Read a specific block from a note',
+    category: 'core',
+  },
+  read_note: {
+    label: 'Read Note',
+    description: 'Read entire note with metadata',
+    category: 'core',
+  },
+  edit_block: {
+    label: 'Edit Block',
+    description: 'Edit a block or note content',
+    category: 'core',
+  },
+  search_web: {
+    label: 'Web Search',
+    description: 'Search the web for information',
+    category: 'core',
+  },
+  create_artifact: {
+    label: 'Create Artifact',
+    description: 'Create HTML/CSS/JS visualization',
+    category: 'core',
+  },
+  create_database: {
+    label: 'Create Database',
+    description: 'Create embedded database',
+    category: 'core',
+  },
   read_memory_file: { label: 'Read Memory', description: 'Read AI memory', category: 'core' },
   write_memory_file: { label: 'Write Memory', description: 'Write AI memory', category: 'core' },
   // Database
   db_add_row: { label: 'Add Row', description: 'Add row to database', category: 'database' },
-  db_update_rows: { label: 'Update Rows', description: 'Update matching rows', category: 'database' },
-  db_delete_rows: { label: 'Delete Rows', description: 'Delete matching rows', category: 'database' },
+  db_update_rows: {
+    label: 'Update Rows',
+    description: 'Update matching rows',
+    category: 'database',
+  },
+  db_delete_rows: {
+    label: 'Delete Rows',
+    description: 'Delete matching rows',
+    category: 'database',
+  },
   db_query_rows: { label: 'Query Rows', description: 'Query database rows', category: 'database' },
   db_aggregate: { label: 'Aggregate', description: 'Compute aggregations', category: 'database' },
   db_group_by: { label: 'Group By', description: 'Group and aggregate', category: 'database' },
-  db_column_stats: { label: 'Column Stats', description: 'Get column statistics', category: 'database' },
+  db_column_stats: {
+    label: 'Column Stats',
+    description: 'Get column statistics',
+    category: 'database',
+  },
   db_sort_rows: { label: 'Sort Rows', description: 'Sort database rows', category: 'database' },
   db_get_schema: { label: 'Get Schema', description: 'Get database schema', category: 'database' },
-  db_create_chart_data: { label: 'Chart Data', description: 'Generate chart data', category: 'database' },
+  db_create_chart_data: {
+    label: 'Chart Data',
+    description: 'Generate chart data',
+    category: 'database',
+  },
   // Artifact
-  artifact_modify_html: { label: 'Modify HTML', description: 'Modify artifact HTML', category: 'artifact' },
-  artifact_modify_css: { label: 'Modify CSS', description: 'Modify artifact CSS', category: 'artifact' },
-  artifact_modify_js: { label: 'Modify JS', description: 'Modify artifact JavaScript', category: 'artifact' },
-  artifact_parse_structure: { label: 'Parse Structure', description: 'Parse HTML structure', category: 'artifact' },
-  artifact_get_css_rules: { label: 'Get CSS Rules', description: 'Extract CSS rules', category: 'artifact' },
-  artifact_validate: { label: 'Validate', description: 'Validate artifact syntax', category: 'artifact' },
-  artifact_get_js_functions: { label: 'Get JS Functions', description: 'Extract JavaScript functions', category: 'artifact' },
-  artifact_extract_dependencies: { label: 'Extract Dependencies', description: 'Find imports and CDN links', category: 'artifact' },
-  artifact_optimize: { label: 'Optimize', description: 'Optimize code for size/performance/a11y', category: 'artifact' },
-  artifact_get_colors: { label: 'Get Colors', description: 'Extract color palette from CSS', category: 'artifact' },
+  artifact_modify_html: {
+    label: 'Modify HTML',
+    description: 'Modify artifact HTML',
+    category: 'artifact',
+  },
+  artifact_modify_css: {
+    label: 'Modify CSS',
+    description: 'Modify artifact CSS',
+    category: 'artifact',
+  },
+  artifact_modify_js: {
+    label: 'Modify JS',
+    description: 'Modify artifact JavaScript',
+    category: 'artifact',
+  },
+  artifact_parse_structure: {
+    label: 'Parse Structure',
+    description: 'Parse HTML structure',
+    category: 'artifact',
+  },
+  artifact_get_css_rules: {
+    label: 'Get CSS Rules',
+    description: 'Extract CSS rules',
+    category: 'artifact',
+  },
+  artifact_validate: {
+    label: 'Validate',
+    description: 'Validate artifact syntax',
+    category: 'artifact',
+  },
+  artifact_get_js_functions: {
+    label: 'Get JS Functions',
+    description: 'Extract JavaScript functions',
+    category: 'artifact',
+  },
+  artifact_extract_dependencies: {
+    label: 'Extract Dependencies',
+    description: 'Find imports and CDN links',
+    category: 'artifact',
+  },
+  artifact_optimize: {
+    label: 'Optimize',
+    description: 'Optimize code for size/performance/a11y',
+    category: 'artifact',
+  },
+  artifact_get_colors: {
+    label: 'Get Colors',
+    description: 'Extract color palette from CSS',
+    category: 'artifact',
+  },
   // Secretary
-  create_roadmap: { label: 'Create Roadmap', description: 'Create learning roadmap', category: 'secretary' },
-  save_roadmap: { label: 'Save Roadmap', description: 'Save roadmap changes', category: 'secretary' },
-  list_memory_files: { label: 'List Memory', description: 'List all memory types', category: 'secretary' },
-  delete_memory_file: { label: 'Delete Memory', description: 'Delete memory type', category: 'secretary' },
+  create_roadmap: {
+    label: 'Create Roadmap',
+    description: 'Create learning roadmap',
+    category: 'secretary',
+  },
+  save_roadmap: {
+    label: 'Save Roadmap',
+    description: 'Save roadmap changes',
+    category: 'secretary',
+  },
+  list_memory_files: {
+    label: 'List Memory',
+    description: 'List all memory types',
+    category: 'secretary',
+  },
+  delete_memory_file: {
+    label: 'Delete Memory',
+    description: 'Delete memory type',
+    category: 'secretary',
+  },
   get_roadmap: { label: 'Get Roadmap', description: 'Get roadmap details', category: 'secretary' },
-  advance_roadmap_week: { label: 'Advance Week', description: 'Advance to next week', category: 'secretary' },
-  get_current_week_tasks: { label: 'Week Tasks', description: 'Get current week tasks', category: 'secretary' },
+  advance_roadmap_week: {
+    label: 'Advance Week',
+    description: 'Advance to next week',
+    category: 'secretary',
+  },
+  get_current_week_tasks: {
+    label: 'Week Tasks',
+    description: 'Get current week tasks',
+    category: 'secretary',
+  },
 }

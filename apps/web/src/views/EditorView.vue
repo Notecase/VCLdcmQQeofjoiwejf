@@ -31,7 +31,7 @@ const lastUpdated = computed(() => {
   const date = new Date(doc.updated_at)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   if (diff < 60000) return 'Just now'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
@@ -42,19 +42,24 @@ function createNewDocument() {
   editorStore.createDocument('Untitled')
   nextTick(() => {
     if (tabsContainerRef.value) {
-      (tabsContainerRef.value as HTMLElement).scrollLeft = (tabsContainerRef.value as HTMLElement).scrollWidth
+      ;(tabsContainerRef.value as HTMLElement).scrollLeft = (
+        tabsContainerRef.value as HTMLElement
+      ).scrollWidth
     }
   })
 }
 
-watch(() => editorStore.activeTabId, () => {
-  nextTick(() => {
-    const activeEl = (tabsContainerRef.value as HTMLElement | null)?.querySelector('.tab.active')
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-    }
-  })
-})
+watch(
+  () => editorStore.activeTabId,
+  () => {
+    nextTick(() => {
+      const activeEl = (tabsContainerRef.value as HTMLElement | null)?.querySelector('.tab.active')
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+      }
+    })
+  }
+)
 
 onMounted(async () => {
   await editorStore.loadDocuments()
@@ -76,7 +81,10 @@ onMounted(async () => {
     <main class="main-content">
       <!-- Tabs Bar -->
       <div class="tabs-bar">
-        <div class="tabs-container" ref="tabsContainerRef">
+        <div
+          class="tabs-container"
+          ref="tabsContainerRef"
+        >
           <button
             v-for="tab in editorStore.tabs"
             :key="tab.id"
@@ -84,29 +92,48 @@ onMounted(async () => {
             :class="{ active: tab.id === editorStore.activeTabId }"
             @click="editorStore.switchTab(tab.id)"
           >
-            <FileText :size="14" class="tab-icon" />
+            <FileText
+              :size="14"
+              class="tab-icon"
+            />
             <span class="tab-title">{{ tab.document.title }}</span>
-            <span v-if="!tab.isSaved" class="tab-unsaved">•</span>
-            <button class="tab-close" @click.stop="editorStore.closeTab(tab.id)">
+            <span
+              v-if="!tab.isSaved"
+              class="tab-unsaved"
+              >•</span
+            >
+            <button
+              class="tab-close"
+              @click.stop="editorStore.closeTab(tab.id)"
+            >
               <X :size="12" />
             </button>
           </button>
         </div>
-        <button class="new-tab-btn" @click="createNewDocument" title="New Document">
+        <button
+          class="new-tab-btn"
+          @click="createNewDocument"
+          title="New Document"
+        >
           <Plus :size="16" />
         </button>
-        
+
         <!-- Metadata in tabs bar -->
-        <div class="tabs-meta" v-if="isReady && editorStore.currentDocument">
+        <div
+          class="tabs-meta"
+          v-if="isReady && editorStore.currentDocument"
+        >
           <span class="meta-item">
             <Clock :size="12" />
             Updated {{ lastUpdated }}
           </span>
-          <span class="status-badge" :class="{ saved: isSaved }">
+          <span
+            class="status-badge"
+            :class="{ saved: isSaved }"
+          >
             {{ isSaved ? 'Saved' : 'Draft' }}
           </span>
           <span class="word-count">{{ wordCount }}</span>
-          
         </div>
       </div>
 
@@ -128,8 +155,11 @@ onMounted(async () => {
             v-if="isReady && editorStore.currentDocument"
             ref="editorAreaRef"
           />
-          
-          <div v-else-if="!isReady" class="loading-state">
+
+          <div
+            v-else-if="!isReady"
+            class="loading-state"
+          >
             <div class="loading-spinner"></div>
             <p>Loading...</p>
           </div>
@@ -141,10 +171,12 @@ onMounted(async () => {
     <Transition name="slide-right">
       <AISidebar
         v-if="layoutStore.rightPanelVisible && editorStore.currentDocument"
-        :noteContext="{ id: editorStore.currentDocument.id, title: editorStore.currentDocument.title }"
+        :noteContext="{
+          id: editorStore.currentDocument.id,
+          title: editorStore.currentDocument.title,
+        }"
       />
     </Transition>
-
   </div>
 </template>
 
@@ -153,8 +185,13 @@ onMounted(async () => {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background: var(--app-bg, #F8FAFC);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--app-bg, #f8fafc);
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   overflow: hidden;
 }
 
@@ -181,7 +218,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  color: var(--text-color-secondary, #94A3B8);
+  color: var(--text-color-secondary, #94a3b8);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -209,7 +246,7 @@ onMounted(async () => {
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: var(--text-color-secondary, #64748B);
+  color: var(--text-color-secondary, #64748b);
   font-size: 13px;
   font-weight: 400;
   cursor: pointer;
@@ -225,7 +262,7 @@ onMounted(async () => {
 }
 
 .tab.active {
-  background: var(--card-bg, #FFFFFF);
+  background: var(--card-bg, #ffffff);
   color: #58a6ff;
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -258,7 +295,7 @@ onMounted(async () => {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--text-color-secondary, #94A3B8);
+  color: var(--text-color-secondary, #94a3b8);
   border-radius: 4px;
   cursor: pointer;
   opacity: 0.5;
@@ -279,7 +316,7 @@ onMounted(async () => {
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--text-color-secondary, #94A3B8);
+  color: var(--text-color-secondary, #94a3b8);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -292,9 +329,11 @@ onMounted(async () => {
 /* Note Container - Elevated Card */
 .note-container {
   flex: 1;
-  background: var(--editorBgColor, var(--card-bg, #FFFFFF));
+  background: var(--editorBgColor, var(--card-bg, #ffffff));
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -309,7 +348,7 @@ onMounted(async () => {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  background: var(--editorBgColor, var(--card-bg, #FFFFFF));
+  background: var(--editorBgColor, var(--card-bg, #ffffff));
   min-height: 0;
 }
 
@@ -323,17 +362,17 @@ onMounted(async () => {
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(52, 211, 153, 0.15);
-  color: #10B981;
+  color: #10b981;
   font-weight: 500;
 }
 
 .status-badge:not(.saved) {
   background: rgba(124, 158, 248, 0.1);
-  color: var(--primary-color, #7C9EF8);
+  color: var(--primary-color, #7c9ef8);
 }
 
 .word-count {
-  color: var(--text-color-secondary, #94A3B8);
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Loading State */
@@ -344,20 +383,22 @@ onMounted(async () => {
   justify-content: center;
   height: 100%;
   gap: 16px;
-  color: var(--text-color-secondary, #94A3B8);
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--border-color, #E2E8F0);
-  border-top-color: var(--primary-color, #7C9EF8);
+  border: 3px solid var(--border-color, #e2e8f0);
+  border-top-color: var(--primary-color, #7c9ef8);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* AI Toggle Button */
@@ -369,8 +410,8 @@ onMounted(async () => {
   height: 32px;
   border-radius: 8px;
   background: transparent;
-  border: 1px solid var(--border-color, #E2E8F0);
-  color: var(--text-color-secondary, #94A3B8);
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-color-secondary, #94a3b8);
   cursor: pointer;
   transition: all 0.2s ease;
   margin-left: 8px;
@@ -378,20 +419,22 @@ onMounted(async () => {
 
 .ai-toggle-btn:hover {
   background: rgba(124, 158, 248, 0.1);
-  border-color: var(--primary-color, #7C9EF8);
-  color: var(--primary-color, #7C9EF8);
+  border-color: var(--primary-color, #7c9ef8);
+  color: var(--primary-color, #7c9ef8);
 }
 
 .ai-toggle-btn.active {
   background: linear-gradient(135deg, rgba(124, 158, 248, 0.15), rgba(167, 139, 250, 0.15));
-  border-color: var(--primary-color, #7C9EF8);
-  color: var(--primary-color, #7C9EF8);
+  border-color: var(--primary-color, #7c9ef8);
+  color: var(--primary-color, #7c9ef8);
 }
 
 /* Slide right transition for AI Sidebar */
 .slide-right-enter-active,
 .slide-right-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
 }
 
 .slide-right-enter-from,

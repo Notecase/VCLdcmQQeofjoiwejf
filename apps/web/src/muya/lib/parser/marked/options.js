@@ -33,5 +33,5 @@ export default {
   footnote: false,
   isGitlabCompatibilityEnabled: false,
 
-  isHtmlEnabled: true
+  isHtmlEnabled: true,
 }

@@ -12,7 +12,17 @@ import { computed, watch, ref, onUnmounted, onMounted } from 'vue'
 import { useRecommendationsStore, type RecommendationType } from '@/stores/recommendations'
 import { useLearningResourcesStore, type LearningResourceType } from '@/stores/learningResources'
 import { useEditorStore } from '@/stores'
-import { Loader2, Brain, BookOpen, Lightbulb, PenTool, Link2, Presentation, Save, Check } from 'lucide-vue-next'
+import {
+  Loader2,
+  Brain,
+  BookOpen,
+  Lightbulb,
+  PenTool,
+  Link2,
+  Presentation,
+  Save,
+  Check,
+} from 'lucide-vue-next'
 
 // Stores
 const recommendStore = useRecommendationsStore()
@@ -66,7 +76,7 @@ async function checkAPIHealth(): Promise<boolean> {
     // Use the health endpoint (mounted at /health, not /api/health)
     const response = await fetch('/health', {
       method: 'GET',
-      signal: AbortSignal.timeout(5000) // 5 second timeout
+      signal: AbortSignal.timeout(5000), // 5 second timeout
     })
 
     if (response.ok) {
@@ -131,7 +141,11 @@ function getEditorContent(): string {
   // Source 2: Get from currentDocument
   const currentContent = editorStore.currentDocument?.content
   if (currentContent && currentContent.length > 0) {
-    console.log('📝 [RecommendTab] Got content from currentDocument:', currentContent.length, 'chars')
+    console.log(
+      '📝 [RecommendTab] Got content from currentDocument:',
+      currentContent.length,
+      'chars'
+    )
     return currentContent
   }
 
@@ -184,11 +198,13 @@ async function handleManualAnalysis() {
     recommendStore.setCurrentNote(activeNote.value.id)
     console.log('🔧 [RecommendTab] Store currentNoteId after set:', recommendStore.currentNoteId)
 
-    await recommendStore.generateAll(
-      activeNote.value.id,
-      noteContent,
-      ['mindmap', 'flashcards', 'concepts', 'exercises', 'resources']
-    )
+    await recommendStore.generateAll(activeNote.value.id, noteContent, [
+      'mindmap',
+      'flashcards',
+      'concepts',
+      'exercises',
+      'resources',
+    ])
 
     console.log('✅ [RecommendTab] Generation complete')
     console.log('✅ [RecommendTab] Current recommendations:', recommendStore.currentRecommendations)
@@ -211,7 +227,8 @@ const recommendationCards = computed(() => [
     icon: Brain,
     badge: 'NEW',
     badgeClass: 'new',
-    description: 'Visualize your study guide as an interactive mindmap. See connections between concepts and understand the big picture.',
+    description:
+      'Visualize your study guide as an interactive mindmap. See connections between concepts and understand the big picture.',
     tags: ['Visual', 'Structure', 'Overview'],
     hasData: recommendStore.hasMindmap,
   },
@@ -231,7 +248,8 @@ const recommendationCards = computed(() => [
     icon: Lightbulb,
     badge: 'UPDATE',
     badgeClass: 'update',
-    description: 'Explore advanced topics and related concepts. Each concept builds on your current understanding.',
+    description:
+      'Explore advanced topics and related concepts. Each concept builds on your current understanding.',
     tags: ['Deep Dive', 'Learning', 'Theory'],
     hasData: recommendStore.hasConcepts,
   },
@@ -268,7 +286,7 @@ const recommendationCards = computed(() => [
 ])
 
 const visibleCards = computed(() =>
-  recommendationCards.value.filter(card =>
+  recommendationCards.value.filter((card) =>
     recommendStore.visibleRecommendationTypes.includes(card.id)
   )
 )
@@ -386,7 +404,7 @@ function getResourceData(type: RecommendationType): { data: unknown; itemCount: 
         // Convert concepts to key_terms format
         return {
           data: {
-            terms: recommendations.concepts.map(c => ({
+            terms: recommendations.concepts.map((c) => ({
               term: c.title,
               definition: c.description,
             })),
@@ -399,7 +417,7 @@ function getResourceData(type: RecommendationType): { data: unknown; itemCount: 
       if (recommendations.exercises) {
         return {
           data: {
-            exercises: recommendations.exercises.map(e => ({
+            exercises: recommendations.exercises.map((e) => ({
               title: e.title,
               description: e.description,
               difficulty: e.difficulty || 'medium',
@@ -413,7 +431,7 @@ function getResourceData(type: RecommendationType): { data: unknown; itemCount: 
       if (recommendations.resources) {
         return {
           data: {
-            resources: recommendations.resources.map(r => ({
+            resources: recommendations.resources.map((r) => ({
               type: r.type,
               title: r.title,
               description: r.description,
@@ -480,7 +498,10 @@ function isSaved(type: RecommendationType): boolean {
 <template>
   <div class="recommend-tab">
     <!-- Analysis Header with Circle Trigger -->
-    <div class="analysis-header" v-if="activeNote">
+    <div
+      class="analysis-header"
+      v-if="activeNote"
+    >
       <span class="analysis-label">AI Analysis</span>
       <span
         class="analysis-trigger"
@@ -493,7 +514,10 @@ function isSaved(type: RecommendationType): boolean {
     </div>
 
     <!-- Thinking Animation -->
-    <div class="thinking-indicator" v-if="isAnalyzing">
+    <div
+      class="thinking-indicator"
+      v-if="isAnalyzing"
+    >
       <div class="thinking-dots">
         <span class="dot"></span>
         <span class="dot"></span>
@@ -503,32 +527,52 @@ function isSaved(type: RecommendationType): boolean {
     </div>
 
     <!-- API Status Warning -->
-    <div class="api-warning" v-if="apiStatus === 'offline'">
+    <div
+      class="api-warning"
+      v-if="apiStatus === 'offline'"
+    >
       <span class="warning-icon">⚠️</span>
       <div class="warning-content">
         <span class="warning-title">Backend Unavailable</span>
         <span class="warning-message">{{ apiError || 'Cannot connect to API server' }}</span>
-        <button class="retry-btn" @click="checkAPIHealth">Retry</button>
+        <button
+          class="retry-btn"
+          @click="checkAPIHealth"
+        >
+          Retry
+        </button>
       </div>
     </div>
 
     <!-- Content Too Short Warning -->
-    <div class="content-warning" v-if="contentTooShort && activeNote">
+    <div
+      class="content-warning"
+      v-if="contentTooShort && activeNote"
+    >
       <span class="warning-icon">📝</span>
       <div class="warning-content">
         <span class="warning-title">More Content Needed</span>
-        <span class="warning-message">Add more content to your note (at least 50 characters) to enable AI recommendations.</span>
+        <span class="warning-message"
+          >Add more content to your note (at least 50 characters) to enable AI
+          recommendations.</span
+        >
       </div>
     </div>
 
     <!-- Context Indicator -->
-    <div class="context-indicator" v-if="!activeNote">
+    <div
+      class="context-indicator"
+      v-if="!activeNote"
+    >
       <span class="radio-dot"></span>
       <span>Select a note to get AI recommendations</span>
     </div>
 
     <!-- Slides Progress -->
-    <div class="slides-progress" v-if="recommendStore.slidesProgress">
+    <div
+      class="slides-progress"
+      v-if="recommendStore.slidesProgress"
+    >
       <div class="progress-header">
         <Presentation :size="16" />
         <span>Generating Slides...</span>
@@ -537,18 +581,22 @@ function isSaved(type: RecommendationType): boolean {
         <div
           class="progress-bar-fill"
           :style="{
-            width: `${(recommendStore.slidesProgress.currentSlide / recommendStore.slidesProgress.totalSlides) * 100}%`
+            width: `${(recommendStore.slidesProgress.currentSlide / recommendStore.slidesProgress.totalSlides) * 100}%`,
           }"
         />
       </div>
       <div class="progress-text">
         {{ recommendStore.slidesProgress.message }}
-        ({{ recommendStore.slidesProgress.currentSlide }} / {{ recommendStore.slidesProgress.totalSlides }})
+        ({{ recommendStore.slidesProgress.currentSlide }} /
+        {{ recommendStore.slidesProgress.totalSlides }})
       </div>
     </div>
 
     <!-- Recommendations List -->
-    <div class="recommendations-list" v-if="activeNote">
+    <div
+      class="recommendations-list"
+      v-if="activeNote"
+    >
       <div
         v-for="card in visibleCards"
         :key="card.id"
@@ -556,7 +604,11 @@ function isSaved(type: RecommendationType): boolean {
         :class="{ 'has-data': card.hasData, 'is-loading': isLoading(card.id) }"
       >
         <div class="card-header">
-          <component :is="card.icon" :size="16" class="card-icon" />
+          <component
+            :is="card.icon"
+            :size="16"
+            class="card-icon"
+          />
           <span class="card-title">{{ card.title }}</span>
           <span
             v-if="card.badge"
@@ -570,12 +622,19 @@ function isSaved(type: RecommendationType): boolean {
         <p class="card-desc">{{ card.description }}</p>
 
         <!-- Error message -->
-        <div class="card-error" v-if="getError(card.id)">
+        <div
+          class="card-error"
+          v-if="getError(card.id)"
+        >
           {{ getError(card.id) }}
         </div>
 
         <div class="card-tags">
-          <span v-for="tag in card.tags" :key="tag" class="card-tag">
+          <span
+            v-for="tag in card.tags"
+            :key="tag"
+            class="card-tag"
+          >
             {{ tag }}
           </span>
         </div>
@@ -594,7 +653,11 @@ function isSaved(type: RecommendationType): boolean {
             :disabled="isLoading(card.id)"
             @click="handleGenerate(card.id)"
           >
-            <Loader2 v-if="isLoading(card.id)" :size="14" class="spin" />
+            <Loader2
+              v-if="isLoading(card.id)"
+              :size="14"
+              class="spin"
+            />
             <span v-else>Generate</span>
           </button>
           <!-- Save button (only for saveable types with data) -->
@@ -606,19 +669,35 @@ function isSaved(type: RecommendationType): boolean {
             @click="handleSave(card.id)"
             :title="isSaved(card.id) ? 'Saved!' : 'Save to Resources'"
           >
-            <Loader2 v-if="isSaving(card.id)" :size="14" class="spin" />
-            <Check v-else-if="isSaved(card.id)" :size="14" />
-            <Save v-else :size="14" />
+            <Loader2
+              v-if="isSaving(card.id)"
+              :size="14"
+              class="spin"
+            />
+            <Check
+              v-else-if="isSaved(card.id)"
+              :size="14"
+            />
+            <Save
+              v-else
+              :size="14"
+            />
             <span>{{ isSaved(card.id) ? 'Saved' : 'Save' }}</span>
           </button>
-          <button class="action-btn secondary" @click="handleDismiss(card.id)">
+          <button
+            class="action-btn secondary"
+            @click="handleDismiss(card.id)"
+          >
             Dismiss
           </button>
         </div>
       </div>
 
       <!-- Empty state when all dismissed -->
-      <div class="empty-state" v-if="visibleCards.length === 0">
+      <div
+        class="empty-state"
+        v-if="visibleCards.length === 0"
+      >
         <p>All recommendations have been dismissed.</p>
         <button
           class="reset-btn"
@@ -680,7 +759,8 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -727,7 +807,9 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 @keyframes thinking-bounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(1);
     opacity: 0.5;
   }

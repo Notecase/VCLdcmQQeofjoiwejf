@@ -26,14 +26,17 @@ app.use('*', logger())
 app.use('*', timing())
 
 // CORS configuration
-app.use('*', cors({
-  origin: config.cors.origin,
-  credentials: config.cors.credentials,
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposeHeaders: ['X-Response-Time'],
-  maxAge: 86400, // 24 hours
-}))
+app.use(
+  '*',
+  cors({
+    origin: config.cors.origin,
+    credentials: config.cors.credentials,
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposeHeaders: ['X-Response-Time'],
+    maxAge: 86400, // 24 hours
+  })
+)
 
 // =============================================================================
 // Routes
@@ -83,14 +86,14 @@ function startServer() {
 
   if (!validation.valid) {
     console.log('\n⚠️  Configuration warnings:')
-    validation.errors.forEach(err => console.log(`   - ${err}`))
+    validation.errors.forEach((err) => console.log(`   - ${err}`))
   }
 
   // Log available providers
   const providers = getAvailableProviders()
   console.log('\n📦 AI Providers:')
   if (providers.length > 0) {
-    providers.forEach(p => console.log(`   ✅ ${p}`))
+    providers.forEach((p) => console.log(`   ✅ ${p}`))
   } else {
     console.log('   ⚠️  No AI providers configured')
   }
@@ -105,15 +108,18 @@ function startServer() {
   console.log('\n' + '='.repeat(60))
 
   // Start server
-  serve({
-    fetch: app.fetch,
-    port: config.port,
-  }, (info) => {
-    console.log(`\n🚀 Server running at http://localhost:${info.port}`)
-    console.log(`   Health: http://localhost:${info.port}/health`)
-    console.log(`   API: http://localhost:${info.port}/api`)
-    console.log('\n' + '='.repeat(60) + '\n')
-  })
+  serve(
+    {
+      fetch: app.fetch,
+      port: config.port,
+    },
+    (info) => {
+      console.log(`\n🚀 Server running at http://localhost:${info.port}`)
+      console.log(`   Health: http://localhost:${info.port}/health`)
+      console.log(`   API: http://localhost:${info.port}/api`)
+      console.log('\n' + '='.repeat(60) + '\n')
+    }
+  )
 }
 
 // Start the server

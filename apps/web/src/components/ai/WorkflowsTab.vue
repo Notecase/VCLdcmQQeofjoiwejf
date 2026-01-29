@@ -183,7 +183,10 @@ function mapActionToResourceType(action: WorkflowActionType): LearningResourceTy
 /**
  * Convert workflow result to learning resource data format
  */
-function convertResultToResourceData(action: WorkflowActionType, data: any): { data: any; itemCount: number } | null {
+function convertResultToResourceData(
+  action: WorkflowActionType,
+  data: any
+): { data: any; itemCount: number } | null {
   switch (action) {
     case 'generate_study_note':
       return {
@@ -201,11 +204,12 @@ function convertResultToResourceData(action: WorkflowActionType, data: any): { d
     case 'extract_key_terms':
       return {
         data: {
-          terms: data.terms?.map((t: any) => ({
-            term: t.term,
-            definition: t.definition,
-            source: t.sources?.[0]?.title,
-          })) || [],
+          terms:
+            data.terms?.map((t: any) => ({
+              term: t.term,
+              definition: t.definition,
+              source: t.sources?.[0]?.title,
+            })) || [],
         },
         itemCount: data.terms?.length || 0,
       }
@@ -213,18 +217,23 @@ function convertResultToResourceData(action: WorkflowActionType, data: any): { d
       return {
         data: {
           agreements: data.agreements?.map((a: any) => `${a.topic}: ${a.summary}`) || [],
-          differences: data.differences?.map((d: any) => `${d.topic}: ${d.comparisons?.map((c: any) => `${c.title} - ${c.position}`).join('; ')}`) || [],
+          differences:
+            data.differences?.map(
+              (d: any) =>
+                `${d.topic}: ${d.comparisons?.map((c: any) => `${c.title} - ${c.position}`).join('; ')}`
+            ) || [],
         },
         itemCount: (data.agreements?.length || 0) + (data.differences?.length || 0),
       }
     case 'generate_qa':
       return {
         data: {
-          questions: data.questions?.map((q: any) => ({
-            question: q.question,
-            answer: q.answer,
-            source: q.sourceTitle,
-          })) || [],
+          questions:
+            data.questions?.map((q: any) => ({
+              question: q.question,
+              answer: q.answer,
+              source: q.sourceTitle,
+            })) || [],
         },
         itemCount: data.questions?.length || 0,
       }
@@ -240,11 +249,12 @@ function convertResultToResourceData(action: WorkflowActionType, data: any): { d
     case 'build_timeline':
       return {
         data: {
-          events: data.events?.map((e: any) => ({
-            date: e.date,
-            event: e.event,
-            source: e.sourceTitle,
-          })) || [],
+          events:
+            data.events?.map((e: any) => ({
+              date: e.date,
+              event: e.event,
+              source: e.sourceTitle,
+            })) || [],
         },
         itemCount: data.events?.length || 0,
       }
@@ -326,12 +336,16 @@ function renderMarkdown(content: string): string {
 }
 
 // Load sources when note changes
-watch(noteId, async (id) => {
-  if (id) {
-    sourcesStore.setCurrentNote(id)
-    await sourcesStore.fetchSources(id)
-  }
-}, { immediate: true })
+watch(
+  noteId,
+  async (id) => {
+    if (id) {
+      sourcesStore.setCurrentNote(id)
+      await sourcesStore.fetchSources(id)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await sourcesStore.fetchAvailableActions()
@@ -341,7 +355,10 @@ onMounted(async () => {
 <template>
   <div class="workflows-tab">
     <!-- No Note Selected -->
-    <div class="context-indicator" v-if="!activeNote">
+    <div
+      class="context-indicator"
+      v-if="!activeNote"
+    >
       <span class="radio-dot"></span>
       <span>Select a note to manage sources</span>
     </div>
@@ -352,34 +369,55 @@ onMounted(async () => {
       <section class="section sources-section">
         <div class="section-header">
           <h3 class="section-title">Sources for this Note</h3>
-          <button class="add-btn" @click="openAddModal">
+          <button
+            class="add-btn"
+            @click="openAddModal"
+          >
             <Plus :size="14" />
             <span>Add Source</span>
           </button>
         </div>
 
         <!-- Source Type Buttons -->
-        <div class="source-types" v-if="sources.length === 0">
-          <button class="type-btn" @click="openAddModal">
+        <div
+          class="source-types"
+          v-if="sources.length === 0"
+        >
+          <button
+            class="type-btn"
+            @click="openAddModal"
+          >
             <FileText :size="16" />
             <span>PDF</span>
           </button>
-          <button class="type-btn" @click="openAddModal">
+          <button
+            class="type-btn"
+            @click="openAddModal"
+          >
             <GitCompare :size="16" />
             <span>Link</span>
           </button>
-          <button class="type-btn" @click="openAddModal">
+          <button
+            class="type-btn"
+            @click="openAddModal"
+          >
             <FileText :size="16" />
             <span>File</span>
           </button>
-          <button class="type-btn" @click="openAddModal">
+          <button
+            class="type-btn"
+            @click="openAddModal"
+          >
             <List :size="16" />
             <span>Text</span>
           </button>
         </div>
 
         <!-- Sources List -->
-        <div class="sources-list" v-if="sources.length > 0">
+        <div
+          class="sources-list"
+          v-if="sources.length > 0"
+        >
           <SourceCard
             v-for="source in sources"
             :key="source.id"
@@ -390,7 +428,10 @@ onMounted(async () => {
         </div>
 
         <!-- Sources Summary -->
-        <div class="sources-summary" v-if="hasReadySources">
+        <div
+          class="sources-summary"
+          v-if="hasReadySources"
+        >
           <span>{{ readySources.length }} source{{ readySources.length !== 1 ? 's' : '' }}</span>
           <span class="dot">•</span>
           <span>{{ totalWordCount.toLocaleString() }} words</span>
@@ -398,17 +439,29 @@ onMounted(async () => {
       </section>
 
       <!-- Divider -->
-      <div class="divider" v-if="hasReadySources"></div>
+      <div
+        class="divider"
+        v-if="hasReadySources"
+      ></div>
 
       <!-- Quick Actions Section -->
-      <section class="section actions-section" v-if="hasReadySources">
+      <section
+        class="section actions-section"
+        v-if="hasReadySources"
+      >
         <h3 class="section-title">Quick Actions</h3>
         <p class="section-desc">One-click workflows using your sources</p>
 
         <!-- Action Progress -->
-        <div class="action-progress" v-if="actionProgress">
+        <div
+          class="action-progress"
+          v-if="actionProgress"
+        >
           <div class="progress-info">
-            <Loader2 :size="14" class="spin" />
+            <Loader2
+              :size="14"
+              class="spin"
+            />
             <span>{{ actionProgress.message }}</span>
           </div>
           <div class="progress-bar">
@@ -429,7 +482,11 @@ onMounted(async () => {
             :disabled="!canExecuteAction(action.minSources) || isExecutingAction"
             @click="executeAction(action.id)"
           >
-            <component :is="action.icon" :size="18" class="action-icon" />
+            <component
+              :is="action.icon"
+              :size="18"
+              class="action-icon"
+            />
             <span class="action-name">{{ action.name }}</span>
             <span class="action-desc">{{ action.description }}</span>
             <span
@@ -443,17 +500,26 @@ onMounted(async () => {
       </section>
 
       <!-- Divider -->
-      <div class="divider" v-if="hasReadySources"></div>
+      <div
+        class="divider"
+        v-if="hasReadySources"
+      ></div>
 
       <!-- AI Integration Hint -->
-      <section class="section hint-section" v-if="hasReadySources">
+      <section
+        class="section hint-section"
+        v-if="hasReadySources"
+      >
         <div class="hint-card">
-          <Lightbulb :size="16" class="hint-icon" />
+          <Lightbulb
+            :size="16"
+            class="hint-icon"
+          />
           <div class="hint-content">
             <p class="hint-title">AI Agent Integration</p>
             <p class="hint-text">
-              Your sources are now available to the AI Agent! Try asking:
-              "Summarize the PDF" or "What does the paper say about...?"
+              Your sources are now available to the AI Agent! Try asking: "Summarize the PDF" or
+              "What does the paper say about...?"
             </p>
           </div>
         </div>
@@ -505,9 +571,19 @@ onMounted(async () => {
           :disabled="isSavingResult || resultSaved"
           @click="handleSaveResult"
         >
-          <Loader2 v-if="isSavingResult" :size="14" class="spin" />
-          <Check v-else-if="resultSaved" :size="14" />
-          <Save v-else :size="14" />
+          <Loader2
+            v-if="isSavingResult"
+            :size="14"
+            class="spin"
+          />
+          <Check
+            v-else-if="resultSaved"
+            :size="14"
+          />
+          <Save
+            v-else
+            :size="14"
+          />
           <span>{{ resultSaved ? 'Saved!' : 'Save to Resources' }}</span>
         </button>
       </template>
@@ -515,7 +591,10 @@ onMounted(async () => {
       <div class="result-content">
         <!-- Study Note Result -->
         <template v-if="(resultData as any).type === 'study_note'">
-          <div class="result-markdown" v-html="renderMarkdown((resultData as any).content)"></div>
+          <div
+            class="result-markdown"
+            v-html="renderMarkdown((resultData as any).content)"
+          ></div>
           <div class="result-meta">
             {{ (resultData as any).wordCount.toLocaleString() }} words •
             {{ (resultData as any).sourcesUsed.length }} sources used
@@ -525,10 +604,16 @@ onMounted(async () => {
         <!-- Summary Result -->
         <template v-else-if="(resultData as any).type === 'summary'">
           <div class="result-text">{{ (resultData as any).content }}</div>
-          <div class="result-section" v-if="(resultData as any).keyPoints?.length">
+          <div
+            class="result-section"
+            v-if="(resultData as any).keyPoints?.length"
+          >
             <h4>Key Points</h4>
             <ul>
-              <li v-for="(point, i) in (resultData as any).keyPoints" :key="i">
+              <li
+                v-for="(point, i) in (resultData as any).keyPoints"
+                :key="i"
+              >
                 {{ point }}
               </li>
             </ul>
@@ -545,7 +630,10 @@ onMounted(async () => {
             >
               <h4 class="term-name">{{ term.term }}</h4>
               <p class="term-definition">{{ term.definition }}</p>
-              <p class="term-source" v-if="term.sources?.[0]?.title">
+              <p
+                class="term-source"
+                v-if="term.sources?.[0]?.title"
+              >
                 From: {{ term.sources[0].title }}
               </p>
             </div>
@@ -554,7 +642,10 @@ onMounted(async () => {
 
         <!-- Comparison Result -->
         <template v-else-if="(resultData as any).type === 'comparison'">
-          <div class="comparison-section" v-if="(resultData as any).agreements?.length">
+          <div
+            class="comparison-section"
+            v-if="(resultData as any).agreements?.length"
+          >
             <h4>Agreements</h4>
             <div
               v-for="(item, i) in (resultData as any).agreements"
@@ -565,7 +656,10 @@ onMounted(async () => {
               <p>{{ item.summary }}</p>
             </div>
           </div>
-          <div class="comparison-section" v-if="(resultData as any).differences?.length">
+          <div
+            class="comparison-section"
+            v-if="(resultData as any).differences?.length"
+          >
             <h4>Differences</h4>
             <div
               v-for="(item, i) in (resultData as any).differences"
@@ -574,7 +668,10 @@ onMounted(async () => {
             >
               <strong>{{ item.topic }}</strong>
               <ul>
-                <li v-for="comp in item.comparisons" :key="comp.sourceId">
+                <li
+                  v-for="comp in item.comparisons"
+                  :key="comp.sourceId"
+                >
                   <em>{{ comp.title }}:</em> {{ comp.position }}
                 </li>
               </ul>
@@ -599,10 +696,16 @@ onMounted(async () => {
 
         <!-- Conflicts Result -->
         <template v-else-if="(resultData as any).type === 'conflicts'">
-          <div v-if="!(resultData as any).hasConflicts" class="no-conflicts">
+          <div
+            v-if="!(resultData as any).hasConflicts"
+            class="no-conflicts"
+          >
             No conflicts found between your sources.
           </div>
-          <div v-else class="conflicts-list">
+          <div
+            v-else
+            class="conflicts-list"
+          >
             <div
               v-for="(conflict, i) in (resultData as any).conflicts"
               :key="i"
@@ -610,7 +713,10 @@ onMounted(async () => {
             >
               <h4>{{ conflict.topic }}</h4>
               <ul>
-                <li v-for="src in conflict.conflictingSources" :key="src.sourceId">
+                <li
+                  v-for="src in conflict.conflictingSources"
+                  :key="src.sourceId"
+                >
                   <strong>{{ src.title }}:</strong> {{ src.claim }}
                 </li>
               </ul>

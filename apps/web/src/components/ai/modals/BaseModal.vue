@@ -50,7 +50,10 @@ function handleOverlayClick(e: MouseEvent) {
 
 <template>
   <Teleport to="body">
-    <div class="modal-overlay" @click="handleOverlayClick">
+    <div
+      class="modal-overlay"
+      @click="handleOverlayClick"
+    >
       <div
         class="modal-container"
         :class="[`size-${size || 'md'}`]"
@@ -58,7 +61,11 @@ function handleOverlayClick(e: MouseEvent) {
         aria-modal="true"
       >
         <!-- Close button -->
-        <button class="close-btn" @click="emit('close')" aria-label="Close">
+        <button
+          class="close-btn"
+          @click="emit('close')"
+          aria-label="Close"
+        >
           <X :size="18" />
         </button>
 
@@ -68,7 +75,12 @@ function handleOverlayClick(e: MouseEvent) {
             <slot name="icon" />
             <div class="header-text">
               <h2 class="modal-title">{{ title }}</h2>
-              <p v-if="subtitle" class="modal-subtitle">{{ subtitle }}</p>
+              <p
+                v-if="subtitle"
+                class="modal-subtitle"
+              >
+                {{ subtitle }}
+              </p>
             </div>
           </div>
           <slot name="header-right" />
@@ -80,7 +92,10 @@ function handleOverlayClick(e: MouseEvent) {
         </div>
 
         <!-- Footer -->
-        <footer class="modal-footer" v-if="$slots.footer">
+        <footer
+          class="modal-footer"
+          v-if="$slots.footer"
+        >
           <slot name="footer" />
         </footer>
       </div>

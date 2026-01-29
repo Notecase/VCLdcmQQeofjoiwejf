@@ -21,7 +21,7 @@ export const clipboard = {
     const blob = new Blob([html], { type: 'text/html' })
     const item = new ClipboardItem({ 'text/html': blob })
     await navigator.clipboard.write([item])
-  }
+  },
 }
 
 // Path utilities (browser-compatible)
@@ -64,7 +64,7 @@ export const path = {
 
   isAbsolute(filepath: string): boolean {
     return filepath.startsWith('/') || /^https?:\/\//.test(filepath)
-  }
+  },
 }
 
 // Platform detection
@@ -77,7 +77,7 @@ export const platform = {
     if (this.isMac) return 'darwin'
     if (this.isWindows) return 'win32'
     return 'linux'
-  }
+  },
 }
 
 // Environment flags
@@ -125,7 +125,11 @@ export function openImageDialog(): Promise<File | null> {
 }
 
 // Download file
-export function downloadFile(content: string | Blob, filename: string, mimeType: string = 'text/plain'): void {
+export function downloadFile(
+  content: string | Blob,
+  filename: string,
+  mimeType: string = 'text/plain'
+): void {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

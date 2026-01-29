@@ -12,8 +12,8 @@ import { createOpenAIProvider } from '../providers/openai'
 // Simple UUID generator (avoids external dependency)
 function generateId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
 }
@@ -47,7 +47,11 @@ const EXPENSE_TRACKER_TEMPLATE: WorkflowTemplate = {
         title: 'Expenses',
         columns: [
           { name: 'Date', type: 'date' },
-          { name: 'Category', type: 'select', options: ['Food', 'Transport', 'Entertainment', 'Utilities', 'Other'] },
+          {
+            name: 'Category',
+            type: 'select',
+            options: ['Food', 'Transport', 'Entertainment', 'Utilities', 'Other'],
+          },
           { name: 'Description', type: 'text' },
           { name: 'Amount', type: 'number' },
         ],
@@ -78,7 +82,13 @@ const EXPENSE_TRACKER_TEMPLATE: WorkflowTemplate = {
     },
   ],
   parameters: [
-    { name: 'title', param_type: 'String', description: 'Title for the expense tracker', default: 'Expense Tracker', required: false },
+    {
+      name: 'title',
+      param_type: 'String',
+      description: 'Title for the expense tracker',
+      default: 'Expense Tracker',
+      required: false,
+    },
   ],
 }
 
@@ -107,7 +117,13 @@ const TODO_LIST_TEMPLATE: WorkflowTemplate = {
   ],
   data_mappings: [],
   parameters: [
-    { name: 'title', param_type: 'String', description: 'Title for the todo list', default: 'Todo List', required: false },
+    {
+      name: 'title',
+      param_type: 'String',
+      description: 'Title for the todo list',
+      default: 'Todo List',
+      required: false,
+    },
   ],
 }
 
@@ -129,7 +145,11 @@ const PROJECT_DASHBOARD_TEMPLATE: WorkflowTemplate = {
           { name: 'Start Date', type: 'date' },
           { name: 'End Date', type: 'date' },
           { name: 'Progress', type: 'number' },
-          { name: 'Status', type: 'select', options: ['Not Started', 'In Progress', 'Blocked', 'Complete'] },
+          {
+            name: 'Status',
+            type: 'select',
+            options: ['Not Started', 'In Progress', 'Blocked', 'Complete'],
+          },
         ],
       },
       depends_on: [],
@@ -162,7 +182,13 @@ const PROJECT_DASHBOARD_TEMPLATE: WorkflowTemplate = {
     { from_step: 'tasks_db', from_field: 'id', to_step: 'progress', to_field: 'databaseId' },
   ],
   parameters: [
-    { name: 'title', param_type: 'String', description: 'Project name', default: 'Project Dashboard', required: false },
+    {
+      name: 'title',
+      param_type: 'String',
+      description: 'Project name',
+      default: 'Project Dashboard',
+      required: false,
+    },
   ],
 }
 
@@ -213,8 +239,20 @@ const MEETING_NOTES_TEMPLATE: WorkflowTemplate = {
   ],
   data_mappings: [],
   parameters: [
-    { name: 'meeting_title', param_type: 'String', description: 'Meeting title', default: 'Team Meeting', required: true },
-    { name: 'date', param_type: 'String', description: 'Meeting date', default: '', required: false },
+    {
+      name: 'meeting_title',
+      param_type: 'String',
+      description: 'Meeting title',
+      default: 'Team Meeting',
+      required: true,
+    },
+    {
+      name: 'date',
+      param_type: 'String',
+      description: 'Meeting date',
+      default: '',
+      required: false,
+    },
   ],
 }
 
@@ -232,7 +270,11 @@ const HABIT_TRACKER_TEMPLATE: WorkflowTemplate = {
         title: 'Habits',
         columns: [
           { name: 'Habit', type: 'text' },
-          { name: 'Category', type: 'select', options: ['Health', 'Productivity', 'Learning', 'Mindfulness', 'Other'] },
+          {
+            name: 'Category',
+            type: 'select',
+            options: ['Health', 'Productivity', 'Learning', 'Mindfulness', 'Other'],
+          },
           { name: 'Frequency', type: 'select', options: ['Daily', 'Weekly', 'Custom'] },
           { name: 'Current Streak', type: 'number' },
           { name: 'Best Streak', type: 'number' },
@@ -270,7 +312,13 @@ const HABIT_TRACKER_TEMPLATE: WorkflowTemplate = {
     { from_step: 'log_db', from_field: 'id', to_step: 'streak_chart', to_field: 'databaseId' },
   ],
   parameters: [
-    { name: 'title', param_type: 'String', description: 'Title for the habit tracker', default: 'Habit Tracker', required: false },
+    {
+      name: 'title',
+      param_type: 'String',
+      description: 'Title for the habit tracker',
+      default: 'Habit Tracker',
+      required: false,
+    },
   ],
 }
 
@@ -309,7 +357,7 @@ export class OrchestrationService {
    * Get a specific template by ID
    */
   getTemplate(templateId: string): WorkflowTemplate | undefined {
-    return TEMPLATES.find(t => t.id === templateId)
+    return TEMPLATES.find((t) => t.id === templateId)
   }
 
   /**
@@ -360,7 +408,7 @@ export class OrchestrationService {
       noteId: options.noteId,
       parameters: options.parameters || {},
       state: 'Planning',
-      steps: template.steps.map(s => ({
+      steps: template.steps.map((s) => ({
         id: generateId(),
         templateStepId: s.id,
         status: 'pending',
@@ -389,9 +437,9 @@ export class OrchestrationService {
       const execStep = execution.steps[i]
 
       // Check dependencies
-      const canExecute = templateStep.depends_on.every(depId => {
-        const depStep = template!.steps.find(s => s.id === depId)
-        const depExecStep = execution.steps.find(s => s.templateStepId === depStep?.id)
+      const canExecute = templateStep.depends_on.every((depId) => {
+        const depStep = template!.steps.find((s) => s.id === depId)
+        const depExecStep = execution.steps.find((s) => s.templateStepId === depStep?.id)
         return depExecStep?.status === 'completed'
       })
 
@@ -447,9 +495,12 @@ export class OrchestrationService {
     }
 
     // Determine final state
-    const finalState: WorkflowState = stepsFailed > 0
-      ? (stepsCompleted > 0 ? 'Completed' : { Failed: 'All steps failed' })
-      : 'Completed'
+    const finalState: WorkflowState =
+      stepsFailed > 0
+        ? stepsCompleted > 0
+          ? 'Completed'
+          : { Failed: 'All steps failed' }
+        : 'Completed'
 
     execution.state = finalState
 
@@ -458,9 +509,10 @@ export class OrchestrationService {
       state: finalState,
       currentStepIndex: template.steps.length,
       totalSteps: template.steps.length,
-      message: typeof finalState === 'string'
-        ? `Workflow ${finalState.toLowerCase()}`
-        : `Workflow failed: ${finalState.Failed}`,
+      message:
+        typeof finalState === 'string'
+          ? `Workflow ${finalState.toLowerCase()}`
+          : `Workflow failed: ${finalState.Failed}`,
     })
 
     return {
@@ -526,7 +578,7 @@ export class OrchestrationService {
 
     // Try to match existing template
     for (const template of TEMPLATES) {
-      if (template.tags.some(tag => promptLower.includes(tag.toLowerCase()))) {
+      if (template.tags.some((tag) => promptLower.includes(tag.toLowerCase()))) {
         return template
       }
       if (promptLower.includes(template.name.toLowerCase())) {
@@ -606,7 +658,7 @@ Return a JSON object:
         if (sourceResult && typeof sourceResult === 'object') {
           const sourceValue = (sourceResult as Record<string, unknown>)[mapping.from_field]
           if (sourceValue !== undefined) {
-            (config as Record<string, unknown>)[mapping.to_field] = sourceValue
+            ;(config as Record<string, unknown>)[mapping.to_field] = sourceValue
           }
         }
       }
@@ -620,7 +672,9 @@ Return a JSON object:
         return this.createDatabase(config as { title: string; columns: unknown[] })
 
       case 'CreateArtifact':
-        return this.createArtifact(config as { title: string; type: string; [key: string]: unknown })
+        return this.createArtifact(
+          config as { title: string; type: string; [key: string]: unknown }
+        )
 
       case 'AIGenerate':
         return this.aiGenerate(config as { prompt: string })
@@ -660,7 +714,10 @@ Return a JSON object:
   /**
    * Create a note
    */
-  private async createNote(config: { title: string; template?: string }): Promise<{ blockId: string; title: string }> {
+  private async createNote(config: {
+    title: string
+    template?: string
+  }): Promise<{ blockId: string; title: string }> {
     const blockId = generateId()
     return { blockId, title: config.title }
   }
@@ -668,7 +725,10 @@ Return a JSON object:
   /**
    * Create a database
    */
-  private async createDatabase(config: { title: string; columns: unknown[] }): Promise<{ blockId: string; title: string; columns: unknown[] }> {
+  private async createDatabase(config: {
+    title: string
+    columns: unknown[]
+  }): Promise<{ blockId: string; title: string; columns: unknown[] }> {
     const blockId = generateId()
     return { blockId, title: config.title, columns: config.columns }
   }
@@ -676,7 +736,11 @@ Return a JSON object:
   /**
    * Create an artifact
    */
-  private async createArtifact(config: { title: string; type: string; [key: string]: unknown }): Promise<{ blockId: string; title: string; type: string }> {
+  private async createArtifact(config: {
+    title: string
+    type: string
+    [key: string]: unknown
+  }): Promise<{ blockId: string; title: string; type: string }> {
     const blockId = generateId()
     return { blockId, title: config.title, type: config.type }
   }
@@ -767,9 +831,7 @@ Return a JSON object:
       }
     }
 
-    return suggestions
-      .sort((a, b) => b.score - a.score)
-      .map(s => s.template)
+    return suggestions.sort((a, b) => b.score - a.score).map((s) => s.template)
   }
 
   /**
@@ -781,9 +843,11 @@ Return a JSON object:
     }
 
     if (result.state === 'Completed') {
-      return `Workflow completed successfully!\n` +
+      return (
+        `Workflow completed successfully!\n` +
         `Created ${result.created_blocks.length} blocks in ${result.execution_time_ms}ms\n` +
         `Steps: ${result.steps_completed} completed, ${result.steps_failed} failed`
+      )
     }
 
     return `Workflow state: ${result.state}`

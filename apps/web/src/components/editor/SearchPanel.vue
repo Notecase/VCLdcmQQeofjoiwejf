@@ -4,7 +4,16 @@
  * Floating panel with keyboard navigation
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Search, Replace, ChevronUp, ChevronDown, X, CaseSensitive, Regex, WholeWord } from 'lucide-vue-next'
+import {
+  Search,
+  Replace,
+  ChevronUp,
+  ChevronDown,
+  X,
+  CaseSensitive,
+  Regex,
+  WholeWord,
+} from 'lucide-vue-next'
 
 interface SearchMatch {
   index: number
@@ -60,34 +69,34 @@ const matchCountText = computed(() => {
 function performSearch() {
   matches.value = []
   currentMatchIndex.value = -1
-  
+
   if (!searchQuery.value || !props.content) return
-  
+
   try {
     let pattern: RegExp
-    
+
     if (useRegex.value) {
       pattern = new RegExp(searchQuery.value, caseSensitive.value ? 'g' : 'gi')
     } else {
       // Escape special regex characters for literal search
       let escaped = searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      
+
       if (wholeWord.value) {
         escaped = `\\b${escaped}\\b`
       }
-      
+
       pattern = new RegExp(escaped, caseSensitive.value ? 'g' : 'gi')
     }
-    
+
     let match: RegExpExecArray | null
     const lines = props.content.split('\n')
-    
+
     while ((match = pattern.exec(props.content)) !== null) {
       // Calculate line and column
       let pos = 0
       let line = 0
       let column = 0
-      
+
       for (let i = 0; i < lines.length; i++) {
         const lineLength = lines[i]?.length ?? 0
         if (pos + lineLength >= match.index) {
@@ -97,22 +106,22 @@ function performSearch() {
         }
         pos += lineLength + 1 // +1 for newline
       }
-      
+
       matches.value.push({
         index: match.index,
         start: match.index,
         end: match.index + match[0].length,
         line,
         column,
-        text: match[0]
+        text: match[0],
       })
-      
+
       // Prevent infinite loop on zero-width matches
       if (match[0].length === 0) {
         pattern.lastIndex++
       }
     }
-    
+
     if (matches.value.length > 0 && matches.value[0]) {
       currentMatchIndex.value = 0
       emit('navigate', matches.value[0])
@@ -125,7 +134,7 @@ function performSearch() {
 
 function navigateNext() {
   if (matches.value.length === 0) return
-  
+
   currentMatchIndex.value = (currentMatchIndex.value + 1) % matches.value.length
   const match = matches.value[currentMatchIndex.value]
   if (match) emit('navigate', match)
@@ -133,10 +142,9 @@ function navigateNext() {
 
 function navigatePrev() {
   if (matches.value.length === 0) return
-  
-  currentMatchIndex.value = currentMatchIndex.value <= 0 
-    ? matches.value.length - 1 
-    : currentMatchIndex.value - 1
+
+  currentMatchIndex.value =
+    currentMatchIndex.value <= 0 ? matches.value.length - 1 : currentMatchIndex.value - 1
   const match = matches.value[currentMatchIndex.value]
   if (match) emit('navigate', match)
 }
@@ -144,31 +152,31 @@ function navigatePrev() {
 function replaceCurrentMatch() {
   const match = currentMatch.value
   if (!match) return
-  
+
   emit('replace', {
     from: match.start,
     to: match.end,
-    text: replaceQuery.value
+    text: replaceQuery.value,
   })
-  
+
   // Re-search after replacement
   setTimeout(performSearch, 50)
 }
 
 function replaceAllMatches() {
   if (matches.value.length === 0) return
-  
+
   // Build replacements in reverse order to maintain positions
   const replacements = [...matches.value]
     .sort((a, b) => b.start - a.start)
-    .map(match => ({
+    .map((match) => ({
       from: match.start,
       to: match.end,
-      text: replaceQuery.value
+      text: replaceQuery.value,
     }))
-  
+
   emit('replace-all', replacements)
-  
+
   // Re-search after replacement
   setTimeout(performSearch, 50)
 }
@@ -205,18 +213,24 @@ watch([searchQuery, caseSensitive, wholeWord, useRegex], () => {
 })
 
 // Watch visibility
-watch(() => props.visible, (visible) => {
-  if (visible) {
-    setTimeout(() => searchInputRef.value?.focus(), 100)
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      setTimeout(() => searchInputRef.value?.focus(), 100)
+    }
   }
-})
+)
 
 // Watch content changes
-watch(() => props.content, () => {
-  if (searchQuery.value) {
-    performSearch()
+watch(
+  () => props.content,
+  () => {
+    if (searchQuery.value) {
+      performSearch()
+    }
   }
-})
+)
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
@@ -233,10 +247,16 @@ onUnmounted(() => {
 
 <template>
   <Transition name="slide-down">
-    <div v-if="visible" class="search-panel">
+    <div
+      v-if="visible"
+      class="search-panel"
+    >
       <div class="search-row">
         <div class="search-input-wrapper">
-          <Search :size="16" class="input-icon" />
+          <Search
+            :size="16"
+            class="input-icon"
+          />
           <input
             ref="searchInputRef"
             v-model="searchQuery"
@@ -246,9 +266,9 @@ onUnmounted(() => {
             @keydown.enter.prevent="navigateNext"
           />
         </div>
-        
+
         <div class="search-options">
-          <button 
+          <button
             class="option-btn"
             :class="{ active: caseSensitive }"
             @click="caseSensitive = !caseSensitive"
@@ -256,7 +276,7 @@ onUnmounted(() => {
           >
             <CaseSensitive :size="16" />
           </button>
-          <button 
+          <button
             class="option-btn"
             :class="{ active: wholeWord }"
             @click="wholeWord = !wholeWord"
@@ -264,7 +284,7 @@ onUnmounted(() => {
           >
             <WholeWord :size="16" />
           </button>
-          <button 
+          <button
             class="option-btn"
             :class="{ active: useRegex }"
             @click="useRegex = !useRegex"
@@ -273,19 +293,19 @@ onUnmounted(() => {
             <Regex :size="16" />
           </button>
         </div>
-        
+
         <div class="search-nav">
           <span class="match-count">{{ matchCountText }}</span>
-          <button 
-            class="nav-btn" 
+          <button
+            class="nav-btn"
             @click="navigatePrev"
             :disabled="matches.length === 0"
             title="Previous (Shift+Enter)"
           >
             <ChevronUp :size="16" />
           </button>
-          <button 
-            class="nav-btn" 
+          <button
+            class="nav-btn"
             @click="navigateNext"
             :disabled="matches.length === 0"
             title="Next (Enter)"
@@ -293,24 +313,34 @@ onUnmounted(() => {
             <ChevronDown :size="16" />
           </button>
         </div>
-        
-        <button 
+
+        <button
           class="toggle-replace-btn"
           @click="showReplace = !showReplace"
           title="Toggle Replace"
         >
           <Replace :size="16" />
         </button>
-        
-        <button class="close-btn" @click="closePanel" title="Close (Esc)">
+
+        <button
+          class="close-btn"
+          @click="closePanel"
+          title="Close (Esc)"
+        >
           <X :size="16" />
         </button>
       </div>
-      
+
       <Transition name="expand">
-        <div v-if="showReplace" class="replace-row">
+        <div
+          v-if="showReplace"
+          class="replace-row"
+        >
           <div class="search-input-wrapper">
-            <Replace :size="16" class="input-icon" />
+            <Replace
+              :size="16"
+              class="input-icon"
+            />
             <input
               v-model="replaceQuery"
               type="text"
@@ -318,8 +348,8 @@ onUnmounted(() => {
               class="search-input"
             />
           </div>
-          
-          <button 
+
+          <button
             class="replace-btn"
             @click="replaceCurrentMatch"
             :disabled="!currentMatch"
@@ -327,7 +357,7 @@ onUnmounted(() => {
           >
             Replace
           </button>
-          <button 
+          <button
             class="replace-btn"
             @click="replaceAllMatches"
             :disabled="matches.length === 0"

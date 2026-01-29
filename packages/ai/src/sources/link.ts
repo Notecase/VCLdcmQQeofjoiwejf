@@ -5,11 +5,7 @@
  * Handles various content types and cleans HTML to readable text.
  */
 
-import type {
-  LinkProcessingResult,
-  ProcessingOptions,
-  SourceChunk,
-} from './types'
+import type { LinkProcessingResult, ProcessingOptions, SourceChunk } from './types'
 
 // Default processing options
 const DEFAULT_OPTIONS: ProcessingOptions = {
@@ -45,7 +41,7 @@ export async function fetchLinkContent(
       method: 'GET',
       headers: {
         'User-Agent': USER_AGENT,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
       },
       signal: controller.signal,
@@ -104,7 +100,10 @@ async function processHTMLContent(
   options: ProcessingOptions
 ): Promise<LinkProcessingResult> {
   // Extract main content and metadata
-  const { content, title, description, author, publishedAt, canonicalUrl } = extractFromHTML(html, parsedUrl)
+  const { content, title, description, author, publishedAt, canonicalUrl } = extractFromHTML(
+    html,
+    parsedUrl
+  )
 
   if (!content || content.trim().length === 0) {
     return {
@@ -138,7 +137,10 @@ async function processHTMLContent(
 /**
  * Extract content and metadata from HTML
  */
-function extractFromHTML(html: string, _parsedUrl: URL): {
+function extractFromHTML(
+  html: string,
+  _parsedUrl: URL
+): {
   content: string
   title?: string
   description?: string
@@ -151,8 +153,9 @@ function extractFromHTML(html: string, _parsedUrl: URL): {
   const title = titleMatch ? decodeHTMLEntities(titleMatch[1].trim()) : undefined
 
   // Extract meta description
-  const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
-    || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i)
+  const descMatch =
+    html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i)
   const description = descMatch ? decodeHTMLEntities(descMatch[1].trim()) : undefined
 
   // Extract author
@@ -160,8 +163,9 @@ function extractFromHTML(html: string, _parsedUrl: URL): {
   const author = authorMatch ? decodeHTMLEntities(authorMatch[1].trim()) : undefined
 
   // Extract published date
-  const dateMatch = html.match(/<meta[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i)
-    || html.match(/<time[^>]*datetime=["']([^"']+)["']/i)
+  const dateMatch =
+    html.match(/<meta[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<time[^>]*datetime=["']([^"']+)["']/i)
   const publishedAt = dateMatch ? new Date(dateMatch[1]) : undefined
 
   // Extract canonical URL
@@ -191,9 +195,12 @@ function extractMainContent(html: string): string {
   cleaned = cleaned.replace(/<form[^>]*>[\s\S]*?<\/form>/gi, '')
 
   // Try to find main content area
-  const mainMatch = cleaned.match(/<main[^>]*>([\s\S]*?)<\/main>/i)
-    || cleaned.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
-    || cleaned.match(/<div[^>]*class=["'][^"']*(?:content|article|post|entry)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
+  const mainMatch =
+    cleaned.match(/<main[^>]*>([\s\S]*?)<\/main>/i) ||
+    cleaned.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
+    cleaned.match(
+      /<div[^>]*class=["'][^"']*(?:content|article|post|entry)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i
+    )
 
   if (mainMatch) {
     cleaned = mainMatch[1]
@@ -211,8 +218,8 @@ function extractMainContent(html: string): string {
   cleaned = decodeHTMLEntities(cleaned)
 
   // Clean up whitespace
-  cleaned = cleaned.replace(/\n\s*\n/g, '\n\n')  // Collapse multiple newlines
-  cleaned = cleaned.replace(/[ \t]+/g, ' ')  // Collapse spaces
+  cleaned = cleaned.replace(/\n\s*\n/g, '\n\n') // Collapse multiple newlines
+  cleaned = cleaned.replace(/[ \t]+/g, ' ') // Collapse spaces
   cleaned = cleaned.trim()
 
   return cleaned
@@ -293,11 +300,7 @@ async function processJSON(
 /**
  * Chunk content into smaller pieces
  */
-function chunkContent(
-  content: string,
-  chunkSize: number,
-  chunkOverlap: number
-): SourceChunk[] {
+function chunkContent(content: string, chunkSize: number, chunkOverlap: number): SourceChunk[] {
   const chunks: SourceChunk[] = []
   let position = 0
   let offset = 0
@@ -329,7 +332,7 @@ function chunkContent(
     if (chunkContent.length > 0) {
       chunks.push({
         id: `chunk_${position}`,
-        sourceId: '',  // Will be set when saving
+        sourceId: '', // Will be set when saving
         content: chunkContent,
         position,
       })

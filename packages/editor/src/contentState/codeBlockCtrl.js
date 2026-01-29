@@ -5,10 +5,10 @@ import selection from '../selection'
 
 const CODE_UPDATE_REP = /^`{3,}(.*)/
 
-const codeBlockCtrl = ContentState => {
+const codeBlockCtrl = (ContentState) => {
   /**
-  * check edit language
-  */
+   * check edit language
+   */
   ContentState.prototype.checkEditLanguage = function () {
     const { start } = selection.getCursorRange()
     if (!start) {
@@ -72,7 +72,7 @@ const codeBlockCtrl = ContentState => {
         preBlock.lang = lang
         preBlock.functionType = 'fencecode'
         nextSibling.lang = lang
-        nextSibling.children.forEach(c => (c.lang = lang))
+        nextSibling.children.forEach((c) => (c.lang = lang))
       }
 
       // Set cursor at the first line
@@ -80,7 +80,7 @@ const codeBlockCtrl = ContentState => {
       const offset = 0
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
     } else {
       block.text = block.text.replace(/^(`+)([^`]+$)/g, `$1${lang}`)
@@ -106,16 +106,16 @@ const codeBlockCtrl = ContentState => {
     if (match || lang) {
       const language = lang || (match ? match[1] : '')
       const codeBlock = this.createBlock('code', {
-        lang: language
+        lang: language,
       })
       const codeContent = this.createBlock('span', {
         text: code,
         lang: language,
-        functionType: 'codeContent'
+        functionType: 'codeContent',
       })
       const inputBlock = this.createBlock('span', {
         text: language,
-        functionType: 'languageInput'
+        functionType: 'languageInput',
       })
 
       if (language) {
@@ -136,7 +136,7 @@ const codeBlockCtrl = ContentState => {
       const offset = code.length
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
       return true
     }
@@ -150,7 +150,7 @@ const codeBlockCtrl = ContentState => {
     const { target } = event
     const preEle = target.closest('pre')
     const preBlock = this.getBlock(preEle.id)
-    const codeBlock = preBlock.children.find(c => c.type === 'code')
+    const codeBlock = preBlock.children.find((c) => c.type === 'code')
     const codeContent = codeBlock.children[0].text
     this.muya.clipboard.copy('copyCodeContent', codeContent)
   }
@@ -161,7 +161,6 @@ const codeBlockCtrl = ContentState => {
     // if (!codeBlockLineNumbers) {
     //   return
     // }
-
     // const codeBlocks = document.querySelectorAll('pre.line-numbers')
     // if (codeBlocks.length) {
     //   for (const ele of codeBlocks) {

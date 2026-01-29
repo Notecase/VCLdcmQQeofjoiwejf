@@ -96,5 +96,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
   aiEnabled: true,
   aiModel: 'claude-sonnet-4-20250514',
-  aiAutoComplete: false
+  aiAutoComplete: false,
 }

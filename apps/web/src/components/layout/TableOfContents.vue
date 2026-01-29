@@ -24,15 +24,15 @@ const isEmpty = computed(() => toc.value.length === 0)
 
 function scrollToHeading(item: TocItem) {
   // Emit event for editor to scroll
-  const event = new CustomEvent('scroll-to-heading', { 
-    detail: { slug: item.slug } 
+  const event = new CustomEvent('scroll-to-heading', {
+    detail: { slug: item.slug },
   })
   window.dispatchEvent(event)
 }
 
 function getIndentStyle(level: number) {
   return {
-    paddingLeft: `${(level - 1) * 16 + 12}px`
+    paddingLeft: `${(level - 1) * 16 + 12}px`,
   }
 }
 
@@ -47,19 +47,28 @@ function getHeadingClass(level: number) {
       <List :size="16" />
       <span>Table of Contents</span>
     </div>
-    
-    <div class="toc-content" v-if="!isEmpty">
+
+    <div
+      class="toc-content"
+      v-if="!isEmpty"
+    >
       <div
         v-for="item in toc"
         :key="item.id"
         class="toc-tree"
       >
         <!-- Recursive TOC rendering -->
-        <TocNode :item="item" :scrollToHeading="scrollToHeading" />
+        <TocNode
+          :item="item"
+          :scrollToHeading="scrollToHeading"
+        />
       </div>
     </div>
-    
-    <div class="toc-empty" v-else>
+
+    <div
+      class="toc-empty"
+      v-else
+    >
       <div class="empty-icon">
         <List :size="48" />
       </div>
@@ -93,11 +102,11 @@ const TocNode = {
         />
       </template>
     </div>
-  `
+  `,
 }
 
 export default {
-  components: { TocNode }
+  components: { TocNode },
 }
 </script>
 

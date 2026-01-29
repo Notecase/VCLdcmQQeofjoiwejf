@@ -148,10 +148,7 @@ export {
 // Agentic Agent (Autonomous Task Execution)
 // ============================================================================
 
-export {
-  AgenticAgent,
-  createAgenticAgent,
-} from './agentic.agent'
+export { AgenticAgent, createAgenticAgent } from './agentic.agent'
 
 export type {
   AgentStep,
@@ -222,11 +219,14 @@ export function createAgent(
 /**
  * Agent metadata for UI
  */
-export const AGENT_METADATA: Record<AgentType, {
-  name: string
-  description: string
-  capabilities: string[]
-}> = {
+export const AGENT_METADATA: Record<
+  AgentType,
+  {
+    name: string
+    description: string
+    capabilities: string[]
+  }
+> = {
   chat: {
     name: 'Chat Agent',
     description: 'Conversational AI with RAG and citations',

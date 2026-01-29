@@ -12,17 +12,18 @@ export const usePluginAddRules = (turndownService, keeps) => {
     filter: ['del', 's', 'strike'],
     replacement(content) {
       return '~~' + content + '~~'
-    }
+    },
   })
 
   turndownService.addRule('paragraph', {
     filter: 'p',
 
     replacement: function (content, node) {
-      const isTaskListItemParagraph = node.previousElementSibling && node.previousElementSibling.tagName === 'INPUT'
+      const isTaskListItemParagraph =
+        node.previousElementSibling && node.previousElementSibling.tagName === 'INPUT'
 
       return isTaskListItemParagraph ? content + '\n\n' : '\n\n' + content + '\n\n'
-    }
+    },
   })
 
   turndownService.addRule('listItem', {
@@ -41,10 +42,8 @@ export const usePluginAddRules = (turndownService, keeps) => {
         const index = Array.prototype.indexOf.call(parent.children, node)
         prefix = (start ? Number(start) + index : index + 1) + '. '
       }
-      return (
-        prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
-      )
-    }
+      return prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
+    },
   })
 
   // Handle multiple math lines
@@ -54,7 +53,7 @@ export const usePluginAddRules = (turndownService, keeps) => {
     },
     replacement(content, node, options) {
       return `$$\n${content}\n$$`
-    }
+    },
   })
 
   // IMPORTANT: Set escape to identity AFTER using GFM plugin

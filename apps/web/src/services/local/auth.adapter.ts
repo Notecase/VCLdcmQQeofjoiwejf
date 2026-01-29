@@ -13,7 +13,7 @@ import type {
   UpdatePasswordOptions,
   AuthResult,
   AuthStateChangeCallback,
-  AuthStateChangeEvent
+  AuthStateChangeEvent,
 } from '../providers'
 
 const LOCAL_USER_KEY = 'inkdown_local_user'
@@ -49,7 +49,7 @@ class LocalAuthProvider implements IAuthProvider {
   }
 
   private notify(event: AuthStateChangeEvent, session: AuthSession | null): void {
-    this.listeners.forEach(cb => cb(event, session))
+    this.listeners.forEach((cb) => cb(event, session))
   }
 
   private createSession(user: AuthUser): AuthSession {
@@ -59,7 +59,7 @@ class LocalAuthProvider implements IAuthProvider {
       expires_at: Date.now() + 3600000, // 1 hour
       expires_in: 3600,
       token_type: 'bearer',
-      user
+      user,
     }
   }
 
@@ -78,7 +78,7 @@ class LocalAuthProvider implements IAuthProvider {
       email_verified: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_metadata: credentials.metadata
+      user_metadata: credentials.metadata,
     }
 
     const session = this.createSession(user)
@@ -96,7 +96,7 @@ class LocalAuthProvider implements IAuthProvider {
       email: credentials.email,
       email_verified: true,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }
 
     const session = this.createSession(user)
@@ -110,7 +110,7 @@ class LocalAuthProvider implements IAuthProvider {
   async signInWithOAuth(_options: OAuthOptions): Promise<AuthResult<void>> {
     return {
       data: null,
-      error: { code: 'not_supported', message: 'OAuth not available in local mode' }
+      error: { code: 'not_supported', message: 'OAuth not available in local mode' },
     }
   }
 
@@ -163,7 +163,7 @@ class LocalAuthProvider implements IAuthProvider {
   onAuthStateChange(callback: AuthStateChangeCallback): { unsubscribe: () => void } {
     this.listeners.add(callback)
     return {
-      unsubscribe: () => this.listeners.delete(callback)
+      unsubscribe: () => this.listeners.delete(callback),
     }
   }
 }

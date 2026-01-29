@@ -13,16 +13,16 @@ export function buildProjectTree(projects: Project[]): ProjectTreeNode[] {
   const roots: ProjectTreeNode[] = []
 
   // First pass: create nodes
-  projects.forEach(project => {
+  projects.forEach((project) => {
     map.set(project.id, {
       ...project,
       children: [],
-      notes: []
+      notes: [],
     })
   })
 
   // Second pass: build hierarchy
-  projects.forEach(project => {
+  projects.forEach((project) => {
     const node = map.get(project.id)!
 
     if (project.parent_id === null) {
@@ -41,7 +41,7 @@ export function buildProjectTree(projects: Project[]): ProjectTreeNode[] {
   // Sort by sort_order at each level
   const sortChildren = (nodes: ProjectTreeNode[]) => {
     nodes.sort((a, b) => a.sort_order - b.sort_order)
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.children.length > 0) {
         sortChildren(node.children)
       }
@@ -61,7 +61,7 @@ export function buildNoteTree(notes: Note[], attachments: Attachment[] = []): No
 
   // Group attachments by note_id
   const attachmentsByNote = new Map<string, Attachment[]>()
-  attachments.forEach(att => {
+  attachments.forEach((att) => {
     if (att.note_id) {
       if (!attachmentsByNote.has(att.note_id)) {
         attachmentsByNote.set(att.note_id, [])
@@ -71,16 +71,16 @@ export function buildNoteTree(notes: Note[], attachments: Attachment[] = []): No
   })
 
   // First pass: create nodes
-  notes.forEach(note => {
+  notes.forEach((note) => {
     map.set(note.id, {
       ...note,
       children: [],
-      attachments: attachmentsByNote.get(note.id) || []
+      attachments: attachmentsByNote.get(note.id) || [],
     })
   })
 
   // Second pass: build hierarchy
-  notes.forEach(note => {
+  notes.forEach((note) => {
     const node = map.get(note.id)!
 
     if (note.parent_note_id === null) {
@@ -103,7 +103,7 @@ export function buildNoteTree(notes: Note[], attachments: Attachment[] = []): No
       }
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.children.length > 0) {
         sortChildren(node.children)
       }
@@ -121,7 +121,7 @@ export function flattenProjectTree(tree: ProjectTreeNode[]): Project[] {
   const result: Project[] = []
 
   const traverse = (nodes: ProjectTreeNode[]) => {
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       result.push(node)
       if (node.children.length > 0) {
         traverse(node.children)
@@ -140,7 +140,7 @@ export function flattenNoteTree(tree: NoteTreeNode[]): Note[] {
   const result: Note[] = []
 
   const traverse = (nodes: NoteTreeNode[]) => {
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       result.push(node)
       if (node.children.length > 0) {
         traverse(node.children)
@@ -172,10 +172,7 @@ export function findProjectNode(
 /**
  * Find node by ID in note tree
  */
-export function findNoteNode(
-  tree: NoteTreeNode[],
-  noteId: string
-): NoteTreeNode | null {
+export function findNoteNode(tree: NoteTreeNode[], noteId: string): NoteTreeNode | null {
   for (const node of tree) {
     if (node.id === noteId) return node
     if (node.children.length > 0) {
@@ -189,10 +186,7 @@ export function findNoteNode(
 /**
  * Get path from root to project node
  */
-export function getProjectPath(
-  tree: ProjectTreeNode[],
-  projectId: string
-): Project[] {
+export function getProjectPath(tree: ProjectTreeNode[], projectId: string): Project[] {
   const path: Project[] = []
 
   const traverse = (nodes: ProjectTreeNode[], target: string): boolean => {
@@ -216,10 +210,7 @@ export function getProjectPath(
 /**
  * Get path from root to note node
  */
-export function getNotePath(
-  tree: NoteTreeNode[],
-  noteId: string
-): Note[] {
+export function getNotePath(tree: NoteTreeNode[], noteId: string): Note[] {
   const path: Note[] = []
 
   const traverse = (nodes: NoteTreeNode[], target: string): boolean => {
@@ -247,7 +238,7 @@ export function getProjectDescendants(node: ProjectTreeNode): ProjectTreeNode[] 
   const descendants: ProjectTreeNode[] = []
 
   const traverse = (nodes: ProjectTreeNode[]) => {
-    nodes.forEach(child => {
+    nodes.forEach((child) => {
       descendants.push(child)
       if (child.children.length > 0) {
         traverse(child.children)
@@ -266,7 +257,7 @@ export function getNoteDescendants(node: NoteTreeNode): NoteTreeNode[] {
   const descendants: NoteTreeNode[] = []
 
   const traverse = (nodes: NoteTreeNode[]) => {
-    nodes.forEach(child => {
+    nodes.forEach((child) => {
       descendants.push(child)
       if (child.children.length > 0) {
         traverse(child.children)
@@ -295,7 +286,7 @@ export function wouldCreateCircular(
 
   // Check if target is a descendant of node
   const descendants = getProjectDescendants(node)
-  return descendants.some(d => d.id === targetId)
+  return descendants.some((d) => d.id === targetId)
 }
 
 /**
@@ -315,5 +306,5 @@ export function wouldCreateCircularNote(
 
   // Check if target is a descendant of node
   const descendants = getNoteDescendants(node)
-  return descendants.some(d => d.id === targetId)
+  return descendants.some((d) => d.id === targetId)
 }

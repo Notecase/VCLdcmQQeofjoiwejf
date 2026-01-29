@@ -1,7 +1,7 @@
 // User and profile types
 
 export interface User {
-  id: string                    // UUID from auth provider
+  id: string // UUID from auth provider
   email: string
   email_verified?: boolean
   created_at: string

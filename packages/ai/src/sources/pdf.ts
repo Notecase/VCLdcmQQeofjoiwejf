@@ -5,12 +5,7 @@
  * Handles page-by-page extraction and chunking for semantic search.
  */
 
-import type {
-  PDFProcessingResult,
-  PDFPage,
-  ProcessingOptions,
-  SourceChunk,
-} from './types'
+import type { PDFProcessingResult, PDFPage, ProcessingOptions, SourceChunk } from './types'
 
 // Default processing options
 const DEFAULT_OPTIONS: ProcessingOptions = {
@@ -35,7 +30,9 @@ export async function extractPDFContent(
 
     const data = await pdf(buffer, {
       // Return page-by-page content
-      pagerender: async (pageData: { getTextContent: () => Promise<{ items: Array<{ str: string }> }> }) => {
+      pagerender: async (pageData: {
+        getTextContent: () => Promise<{ items: Array<{ str: string }> }>
+      }) => {
         const textContent = await pageData.getTextContent()
         return textContent.items.map((item) => item.str).join(' ')
       },
@@ -73,7 +70,7 @@ export async function extractPDFContent(
  */
 function parsePages(text: string, numPages: number): PDFPage[] {
   // If we have page markers, use them
-  const pageMarker = /\f/g  // Form feed character often separates pages
+  const pageMarker = /\f/g // Form feed character often separates pages
   const pageTexts = text.split(pageMarker)
 
   if (pageTexts.length === numPages) {
@@ -141,7 +138,7 @@ function chunkContent(
       if (chunkContent.length > 0) {
         chunks.push({
           id: `chunk_${position}`,
-          sourceId: '',  // Will be set when saving
+          sourceId: '', // Will be set when saving
           content: chunkContent,
           pageNumber: page.pageNumber,
           position,

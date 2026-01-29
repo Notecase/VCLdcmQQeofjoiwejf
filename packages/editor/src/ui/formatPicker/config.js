@@ -17,53 +17,62 @@ const icons = [
     type: 'strong',
     tooltip: 'Bold',
     shortcut: `${COMMAND_KEY}+B`,
-    icon: strongIcon
-  }, {
+    icon: strongIcon,
+  },
+  {
     type: 'em',
     tooltip: 'Italic',
     shortcut: `${COMMAND_KEY}+I`,
-    icon: emphasisIcon
-  }, {
+    icon: emphasisIcon,
+  },
+  {
     type: 'u',
     tooltip: 'Underline',
     shortcut: `${COMMAND_KEY}+U`,
-    icon: underlineIcon
-  }, {
+    icon: underlineIcon,
+  },
+  {
     type: 'del',
     tooltip: 'Strikethrough',
     shortcut: `${COMMAND_KEY}+D`,
-    icon: strikeIcon
-  }, {
+    icon: strikeIcon,
+  },
+  {
     type: 'mark',
     tooltip: 'Highlight',
     shortcut: `⇧+${COMMAND_KEY}+H`,
-    icon: highlightIcon
-  }, {
+    icon: highlightIcon,
+  },
+  {
     type: 'inline_code',
     tooltip: 'Inline Code',
     shortcut: `${COMMAND_KEY}+\``,
-    icon: codeIcon
-  }, {
+    icon: codeIcon,
+  },
+  {
     type: 'inline_math',
     tooltip: 'Inline Math',
     shortcut: `⇧+${COMMAND_KEY}+M`,
-    icon: mathIcon
-  }, {
+    icon: mathIcon,
+  },
+  {
     type: 'link',
     tooltip: 'Link',
     shortcut: `${COMMAND_KEY}+L`,
-    icon: linkIcon
-  }, {
+    icon: linkIcon,
+  },
+  {
     type: 'image',
     tooltip: 'Image',
     shortcut: `⇧+${COMMAND_KEY}+I`,
-    icon: imageIcon
-  }, {
+    icon: imageIcon,
+  },
+  {
     type: 'clear',
     tooltip: 'Clear Formatting',
     shortcut: `⇧+${COMMAND_KEY}+R`,
-    icon: clearIcon
-  }
+    icon: clearIcon,
+  },
 ]
 
 export default icons

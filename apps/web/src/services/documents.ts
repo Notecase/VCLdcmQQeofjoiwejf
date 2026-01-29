@@ -6,7 +6,7 @@ import type { Document, CreateDocument, UpdateDocument } from '@/types'
 // Local storage fallback for offline/unauthenticated mode
 const localDocStore = localforage.createInstance({
   name: 'marktext',
-  storeName: 'documents'
+  storeName: 'documents',
 })
 
 export const documentService = {
@@ -32,9 +32,7 @@ export const documentService = {
     await localDocStore.iterate<Document, void>((value) => {
       docs.push(value)
     })
-    return docs.sort((a, b) =>
-      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    )
+    return docs.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
   },
 
   /**
@@ -44,11 +42,7 @@ export const documentService = {
     if (isSupabaseConfigured) {
       const { data: session } = await supabase.auth.getSession()
       if (session.session) {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', id)
-          .single()
+        const { data, error } = await supabase.from('documents').select('*').eq('id', id).single()
 
         if (error) {
           if (error.code === 'PGRST116') return null // Not found
@@ -76,18 +70,14 @@ export const documentService = {
       is_pinned: false,
       created_at: now,
       updated_at: now,
-      ...doc
+      ...doc,
     }
 
     if (isSupabaseConfigured) {
       const { data: session } = await supabase.auth.getSession()
       if (session.session) {
         newDoc.user_id = session.session.user.id
-        const { data, error } = await supabase
-          .from('documents')
-          .insert(newDoc)
-          .select()
-          .single()
+        const { data, error } = await supabase.from('documents').insert(newDoc).select().single()
 
         if (error) throw error
         return data
@@ -105,7 +95,7 @@ export const documentService = {
   async update(id: string, updates: UpdateDocument): Promise<Document | null> {
     const updatedData = {
       ...updates,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }
 
     if (isSupabaseConfigured) {
@@ -139,10 +129,7 @@ export const documentService = {
     if (isSupabaseConfigured) {
       const { data: session } = await supabase.auth.getSession()
       if (session.session) {
-        const { error } = await supabase
-          .from('documents')
-          .delete()
-          .eq('id', id)
+        const { error } = await supabase.from('documents').delete().eq('id', id)
 
         if (error) throw error
         return true
@@ -161,9 +148,10 @@ export const documentService = {
     const allDocs = await this.list()
     const lowerQuery = query.toLowerCase()
 
-    return allDocs.filter(doc =>
-      doc.title.toLowerCase().includes(lowerQuery) ||
-      doc.content.toLowerCase().includes(lowerQuery)
+    return allDocs.filter(
+      (doc) =>
+        doc.title.toLowerCase().includes(lowerQuery) ||
+        doc.content.toLowerCase().includes(lowerQuery)
     )
-  }
+  },
 }

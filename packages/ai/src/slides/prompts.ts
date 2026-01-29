@@ -254,7 +254,8 @@ export function buildSlidePrompt(
  * Build the slide outline prompt
  */
 export function buildOutlinePrompt(noteContent: string, maxSlides: number): string {
-  return SLIDE_OUTLINE_PROMPT
-    .replace('{NOTE_CONTENT}', noteContent.substring(0, 8000))
-    .replace('{NUM_SLIDES}', String(Math.min(maxSlides, 14)))
+  return SLIDE_OUTLINE_PROMPT.replace('{NOTE_CONTENT}', noteContent.substring(0, 8000)).replace(
+    '{NUM_SLIDES}',
+    String(Math.min(maxSlides, 14))
+  )
 }

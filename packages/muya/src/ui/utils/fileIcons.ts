@@ -4,17 +4,17 @@
  */
 
 interface FileIcons {
-  matchName: (name: string) => null;
-  matchLanguage: (lang: string) => null;
-  getClassByName: (name: string) => null;
-  getClassByLanguage: (lang: string) => null;
+  matchName: (name: string) => null
+  matchLanguage: (lang: string) => null
+  getClassByName: (name: string) => null
+  getClassByLanguage: (lang: string) => null
 }
 
 const fileIcons: FileIcons = {
   matchName: () => null,
   matchLanguage: () => null,
   getClassByName: () => null,
-  getClassByLanguage: () => null
-};
+  getClassByLanguage: () => null,
+}
 
-export default fileIcons;
+export default fileIcons

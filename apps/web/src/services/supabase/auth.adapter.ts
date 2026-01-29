@@ -14,7 +14,7 @@ import type {
   ResetPasswordOptions,
   UpdatePasswordOptions,
   AuthStateChangeCallback,
-  AuthError
+  AuthError,
 } from '../providers'
 
 /**
@@ -26,12 +26,12 @@ function toAuthError(error: unknown): AuthError {
     return {
       code: err.code || 'UNKNOWN_ERROR',
       message: err.message,
-      status: err.status
+      status: err.status,
     }
   }
   return {
     code: 'UNKNOWN_ERROR',
-    message: String(error)
+    message: String(error),
   }
 }
 
@@ -47,7 +47,7 @@ function toAuthUser(user: any): AuthUser {
     updated_at: user.updated_at || user.created_at,
     last_sign_in_at: user.last_sign_in_at,
     app_metadata: user.app_metadata,
-    user_metadata: user.user_metadata
+    user_metadata: user.user_metadata,
   }
 }
 
@@ -61,7 +61,7 @@ function toAuthSession(session: any): AuthSession {
     expires_at: session.expires_at || 0,
     expires_in: session.expires_in || 0,
     token_type: session.token_type || 'bearer',
-    user: toAuthUser(session.user)
+    user: toAuthUser(session.user),
   }
 }
 
@@ -93,8 +93,8 @@ class SupabaseAuthProvider implements IAuthProvider {
         email: credentials.email,
         password: credentials.password,
         options: {
-          data: credentials.metadata
-        }
+          data: credentials.metadata,
+        },
       })
 
       if (error) {
@@ -107,8 +107,8 @@ class SupabaseAuthProvider implements IAuthProvider {
           data: null,
           error: {
             code: 'EMAIL_CONFIRMATION_REQUIRED',
-            message: 'Please check your email to confirm your account'
-          }
+            message: 'Please check your email to confirm your account',
+          },
         }
       }
 
@@ -122,7 +122,7 @@ class SupabaseAuthProvider implements IAuthProvider {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
-        password: credentials.password
+        password: credentials.password,
       })
 
       if (error) {
@@ -145,8 +145,8 @@ class SupabaseAuthProvider implements IAuthProvider {
         provider: options.provider as 'google' | 'github' | 'apple',
         options: {
           redirectTo: options.redirectTo,
-          scopes: options.scopes?.join(' ')
-        }
+          scopes: options.scopes?.join(' '),
+        },
       })
 
       if (error) {
@@ -175,10 +175,9 @@ class SupabaseAuthProvider implements IAuthProvider {
 
   async resetPassword(options: ResetPasswordOptions): Promise<AuthResult<void>> {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        options.email,
-        { redirectTo: options.redirectTo }
-      )
+      const { error } = await supabase.auth.resetPasswordForEmail(options.email, {
+        redirectTo: options.redirectTo,
+      })
 
       if (error) {
         return { data: null, error: toAuthError(error) }
@@ -193,7 +192,7 @@ class SupabaseAuthProvider implements IAuthProvider {
   async updatePassword(options: UpdatePasswordOptions): Promise<AuthResult<void>> {
     try {
       const { error } = await supabase.auth.updateUser({
-        password: options.password
+        password: options.password,
       })
 
       if (error) {
@@ -245,7 +244,7 @@ class SupabaseAuthProvider implements IAuthProvider {
   async updateUser(updates: Partial<AuthUser['user_metadata']>): Promise<AuthResult<AuthUser>> {
     try {
       const { data, error } = await supabase.auth.updateUser({
-        data: updates
+        data: updates,
       })
 
       if (error) {
@@ -263,13 +262,15 @@ class SupabaseAuthProvider implements IAuthProvider {
   }
 
   onAuthStateChange(callback: AuthStateChangeCallback): { unsubscribe: () => void } {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       const mappedEvent = event as any // Supabase events match our events
       callback(mappedEvent, session ? toAuthSession(session) : null)
     })
 
     return {
-      unsubscribe: () => subscription.unsubscribe()
+      unsubscribe: () => subscription.unsubscribe(),
     }
   }
 }

@@ -12,8 +12,8 @@ import { createOpenAIProvider } from '../providers/openai'
 // Simple UUID generator (avoids external dependency)
 function generateId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
 }
@@ -175,8 +175,8 @@ User request: ${task}`
       const step = steps[i]
 
       // Check dependencies
-      const canExecute = step.depends_on.every(depId => {
-        const depStep = steps.find(s => s.id === depId)
+      const canExecute = step.depends_on.every((depId) => {
+        const depStep = steps.find((s) => s.id === depId)
         return depStep?.status === 'Completed'
       })
 
@@ -246,9 +246,8 @@ User request: ${task}`
     }
 
     // Determine final status
-    const finalStatus: AgenticStatus = stepsFailed > 0
-      ? (stepsCompleted > 0 ? 'Completed' : 'Failed')
-      : 'Completed'
+    const finalStatus: AgenticStatus =
+      stepsFailed > 0 ? (stepsCompleted > 0 ? 'Completed' : 'Failed') : 'Completed'
 
     agenticTask.status = finalStatus
     agenticTask.updatedAt = new Date()
@@ -258,9 +257,10 @@ User request: ${task}`
       status: finalStatus,
       currentStepIndex: steps.length,
       totalSteps: steps.length,
-      message: finalStatus === 'Completed'
-        ? `Task completed: ${stepsCompleted} steps`
-        : `Task failed: ${stepsFailed} steps failed`,
+      message:
+        finalStatus === 'Completed'
+          ? `Task completed: ${stepsCompleted} steps`
+          : `Task failed: ${stepsFailed} steps failed`,
     })
 
     return {
@@ -270,7 +270,7 @@ User request: ${task}`
       execution_time_ms: Date.now() - startTime,
       steps_completed: stepsCompleted,
       steps_failed: stepsFailed,
-      error: stepsFailed > 0 ? steps.find(s => s.status === 'Failed')?.error : undefined,
+      error: stepsFailed > 0 ? steps.find((s) => s.status === 'Failed')?.error : undefined,
     }
   }
 
@@ -314,11 +314,7 @@ User request: ${task}`
         )
 
       case 'PopulateDatabase':
-        return this.executePopulateDatabase(
-          stepType.database_id,
-          stepType.data_source,
-          stepResults
-        )
+        return this.executePopulateDatabase(stepType.database_id, stepType.data_source, stepResults)
 
       case 'Validate':
         return this.executeValidate(stepType.target, stepType.criteria, stepResults)
@@ -386,7 +382,11 @@ Return a JSON object:
 
     const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      return { passed: false, issues: [{ severity: 'Error', description: 'Failed to validate' }], score: 0 }
+      return {
+        passed: false,
+        issues: [{ severity: 'Error', description: 'Failed to validate' }],
+        score: 0,
+      }
     }
 
     return JSON.parse(jsonMatch[0])
@@ -450,7 +450,7 @@ Return a JSON object:
     }
 
     const columnDescriptions = schema.columns
-      .map(c => `- ${c.name} (${c.data_type}): ${c.description}`)
+      .map((c) => `- ${c.name} (${c.data_type}): ${c.description}`)
       .join('\n')
 
     const prompt = `Extract structured data based on the following:
@@ -463,7 +463,7 @@ ${columnDescriptions}
 
 Extract ${count} records and return ONLY a JSON array:
 [
-  { ${schema.columns.map(c => `"${c.name}": ...`).join(', ')} }
+  { ${schema.columns.map((c) => `"${c.name}": ...`).join(', ')} }
 ]`
 
     let response = ''
@@ -719,9 +719,11 @@ Return a JSON object:
     }
 
     if (result.status === 'Completed') {
-      return `Task completed successfully!\n` +
+      return (
+        `Task completed successfully!\n` +
         `Created ${result.created_blocks.length} blocks in ${result.execution_time_ms}ms\n` +
         `Steps: ${result.steps_completed} completed, ${result.steps_failed} failed`
+      )
     }
 
     return `Task status: ${result.status}`
@@ -734,9 +736,8 @@ Return a JSON object:
     return steps
       .map((step, idx) => {
         const type = step.step_type.type
-        const deps = step.depends_on.length > 0
-          ? ` (depends on: ${step.depends_on.join(', ')})`
-          : ''
+        const deps =
+          step.depends_on.length > 0 ? ` (depends on: ${step.depends_on.join(', ')})` : ''
         return `${idx + 1}. [${step.id}] ${type}${deps}`
       })
       .join('\n')

@@ -290,21 +290,25 @@ Provide your response as JSON in this format:
     }
 
     // Transform to expected format
-    const keyTerms = terms.map((t: {
-      term: string
-      definition: string
-      sourceId?: string
-      sourceTitle?: string
-      quote?: string
-    }) => ({
-      term: t.term,
-      definition: t.definition,
-      sources: [{
-        sourceId: t.sourceId || sources[0]?.id || '',
-        title: t.sourceTitle || sources[0]?.title || '',
-        quote: t.quote,
-      }],
-    }))
+    const keyTerms = terms.map(
+      (t: {
+        term: string
+        definition: string
+        sourceId?: string
+        sourceTitle?: string
+        quote?: string
+      }) => ({
+        term: t.term,
+        definition: t.definition,
+        sources: [
+          {
+            sourceId: t.sourceId || sources[0]?.id || '',
+            title: t.sourceTitle || sources[0]?.title || '',
+            quote: t.quote,
+          },
+        ],
+      })
+    )
 
     onProgress?.({
       actionType: 'extract_key_terms',
@@ -741,7 +745,7 @@ Provide your response as JSON with events sorted chronologically:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.openaiApiKey}`,
+        Authorization: `Bearer ${this.openaiApiKey}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
@@ -765,7 +769,7 @@ Provide your response as JSON with events sorted chronologically:
       throw new Error(`OpenAI API error: ${error}`)
     }
 
-    const data = await response.json() as { choices: Array<{ message?: { content?: string } }> }
+    const data = (await response.json()) as { choices: Array<{ message?: { content?: string } }> }
     return data.choices[0]?.message?.content || ''
   }
 }

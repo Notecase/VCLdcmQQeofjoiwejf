@@ -50,16 +50,22 @@ export interface AIMonthlyUsage {
   total_requests: number
   total_tokens: number
   total_cost_cents: number
-  requests_by_provider: Record<AIProvider, {
-    requests: number
-    tokens: number
-    cost: number
-  }>
-  requests_by_action: Record<AIActionType, {
-    requests: number
-    tokens: number
-    cost: number
-  }>
+  requests_by_provider: Record<
+    AIProvider,
+    {
+      requests: number
+      tokens: number
+      cost: number
+    }
+  >
+  requests_by_action: Record<
+    AIActionType,
+    {
+      requests: number
+      tokens: number
+      cost: number
+    }
+  >
 }
 
 // =============================================================================
@@ -291,7 +297,7 @@ export interface ChatModelConfig {
   contextWindow: number
   supportsStreaming: boolean
   supportsTools: boolean
-  costPer1kInput: number  // in cents
+  costPer1kInput: number // in cents
   costPer1kOutput: number // in cents
 }
 

@@ -42,7 +42,7 @@ export const ErrorCode = {
   INTERNAL: 'INTERNAL',
 } as const
 
-export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode]
+export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode]
 
 /**
  * Application error class with support for error codes and user-friendly messages
@@ -81,20 +81,13 @@ export class AppError extends Error {
     }
 
     if (error instanceof Error) {
-      return new AppError(
-        error.message,
-        code || ErrorCode.UNKNOWN,
-        undefined,
-        { ...context, originalError: error.name }
-      )
+      return new AppError(error.message, code || ErrorCode.UNKNOWN, undefined, {
+        ...context,
+        originalError: error.name,
+      })
     }
 
-    return new AppError(
-      String(error),
-      code || ErrorCode.UNKNOWN,
-      undefined,
-      context
-    )
+    return new AppError(String(error), code || ErrorCode.UNKNOWN, undefined, context)
   }
 
   /**
@@ -174,9 +167,7 @@ export function handleError(
 /**
  * Result type for operations that can fail
  */
-export type Result<T, E = AppError> =
-  | { success: true; data: T }
-  | { success: false; error: E }
+export type Result<T, E = AppError> = { success: true; data: T } | { success: false; error: E }
 
 /**
  * Creates a successful result

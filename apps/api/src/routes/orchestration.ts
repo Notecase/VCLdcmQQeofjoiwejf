@@ -47,15 +47,25 @@ orchestration.get('/workflows', async (c) => {
   const templates = service.getTemplates()
 
   return c.json({
-    templates: templates.map((t: { id: string; name: string; description: string; tags: string[]; icon: string; steps: unknown[]; parameters: unknown[] }) => ({
-      id: t.id,
-      name: t.name,
-      description: t.description,
-      tags: t.tags,
-      icon: t.icon,
-      stepCount: t.steps.length,
-      parameters: t.parameters,
-    })),
+    templates: templates.map(
+      (t: {
+        id: string
+        name: string
+        description: string
+        tags: string[]
+        icon: string
+        steps: unknown[]
+        parameters: unknown[]
+      }) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        tags: t.tags,
+        icon: t.icon,
+        stepCount: t.steps.length,
+        parameters: t.parameters,
+      })
+    ),
   })
 })
 
@@ -99,12 +109,14 @@ orchestration.get('/suggest', async (c) => {
   const suggestions = service.suggestTemplates(query)
 
   return c.json({
-    suggestions: suggestions.map((t: { id: string; name: string; description: string; icon: string }) => ({
-      id: t.id,
-      name: t.name,
-      description: t.description,
-      icon: t.icon,
-    })),
+    suggestions: suggestions.map(
+      (t: { id: string; name: string; description: string; icon: string }) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+      })
+    ),
   })
 })
 
@@ -116,70 +128,73 @@ orchestration.get('/suggest', async (c) => {
  * Execute a workflow
  * POST /api/orchestration/execute
  */
-orchestration.post(
-  '/execute',
-  zValidator('json', ExecuteWorkflowSchema),
-  async (c) => {
-    requireAuth(c)
-    const body = c.req.valid('json')
-    const openaiApiKey = process.env.OPENAI_API_KEY
+orchestration.post('/execute', zValidator('json', ExecuteWorkflowSchema), async (c) => {
+  requireAuth(c)
+  const body = c.req.valid('json')
+  const openaiApiKey = process.env.OPENAI_API_KEY
 
-    if (!openaiApiKey) {
-      return c.json({ error: 'OpenAI API key not configured' }, 500)
-    }
-
-    if (!body.prompt && !body.templateId) {
-      return c.json({ error: 'Either prompt or templateId is required' }, 400)
-    }
-
-    const { createOrchestrationService } = await import('@inkdown/ai')
-    const service = createOrchestrationService(openaiApiKey)
-
-    // Check Accept header for SSE
-    const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
-
-    if (acceptSSE) {
-      return streamSSE(c, async (stream) => {
-        try {
-          const result = await service.orchestrateWorkflow(
-            {
-              prompt: body.prompt,
-              templateId: body.templateId,
-              parameters: body.parameters,
-              noteId: body.noteId,
-            },
-            async (progress: { workflowId: string; state: unknown; currentStep?: string; currentStepIndex: number; totalSteps: number; message: string }) => {
-              await stream.writeSSE({
-                data: JSON.stringify({ type: 'progress', ...progress }),
-              })
-            }
-          )
-
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'complete', result }),
-          })
-        } catch (error) {
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'error', error: String(error) }),
-          })
-        }
-      })
-    }
-
-    try {
-      const result = await service.orchestrateWorkflow({
-        prompt: body.prompt,
-        templateId: body.templateId,
-        parameters: body.parameters,
-        noteId: body.noteId,
-      })
-
-      return c.json(result)
-    } catch (error) {
-      return c.json({ error: String(error) }, 500)
-    }
+  if (!openaiApiKey) {
+    return c.json({ error: 'OpenAI API key not configured' }, 500)
   }
-)
+
+  if (!body.prompt && !body.templateId) {
+    return c.json({ error: 'Either prompt or templateId is required' }, 400)
+  }
+
+  const { createOrchestrationService } = await import('@inkdown/ai')
+  const service = createOrchestrationService(openaiApiKey)
+
+  // Check Accept header for SSE
+  const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
+
+  if (acceptSSE) {
+    return streamSSE(c, async (stream) => {
+      try {
+        const result = await service.orchestrateWorkflow(
+          {
+            prompt: body.prompt,
+            templateId: body.templateId,
+            parameters: body.parameters,
+            noteId: body.noteId,
+          },
+          async (progress: {
+            workflowId: string
+            state: unknown
+            currentStep?: string
+            currentStepIndex: number
+            totalSteps: number
+            message: string
+          }) => {
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'progress', ...progress }),
+            })
+          }
+        )
+
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'complete', result }),
+        })
+      } catch (error) {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'error', error: String(error) }),
+        })
+      }
+    })
+  }
+
+  try {
+    const result = await service.orchestrateWorkflow({
+      prompt: body.prompt,
+      templateId: body.templateId,
+      parameters: body.parameters,
+      noteId: body.noteId,
+    })
+
+    return c.json(result)
+  } catch (error) {
+    return c.json({ error: String(error) }, 500)
+  }
+})
 
 /**
  * Get workflow execution status

@@ -86,5 +86,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
   showTabBar: true,
   textDirection: 'ltr',
-  hideToolbar: false
+  hideToolbar: false,
 }

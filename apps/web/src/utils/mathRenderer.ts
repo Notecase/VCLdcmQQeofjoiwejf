@@ -80,7 +80,9 @@ export function renderMathContent(content: string): string {
   // Step 1: Extract and protect code blocks first
   html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
     const escapedCode = escapeHtml(code.trim())
-    return addPlaceholder(`<pre class="math-code-block" data-lang="${lang || ''}"><code>${escapedCode}</code></pre>`)
+    return addPlaceholder(
+      `<pre class="math-code-block" data-lang="${lang || ''}"><code>${escapedCode}</code></pre>`
+    )
   })
 
   // Step 2: Extract and protect inline code

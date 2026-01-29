@@ -16,8 +16,8 @@ for (const emoji of emojis) {
 /**
  * check if one emoji code is in emojis, return undefined or found emoji
  */
-export const validEmoji = text => {
-  return emojis.find(emoji => {
+export const validEmoji = (text) => {
+  return emojis.find((emoji) => {
     return emoji.aliases.includes(text)
   })
 }
@@ -26,7 +26,7 @@ export const validEmoji = text => {
  * check edit emoji
  */
 
-export const checkEditEmoji = node => {
+export const checkEditEmoji = (node) => {
   if (node && node.classList.contains(CLASS_OR_ID.AG_EMOJI_MARKED_TEXT)) {
     return node
   }
@@ -34,16 +34,16 @@ export const checkEditEmoji = node => {
 }
 
 class Emoji {
-  constructor () {
+  constructor() {
     this.cache = new Map()
   }
 
-  search (text) {
+  search(text) {
     const { cache } = this
     if (cache.has(text)) return cache.get(text)
     const result = {}
 
-    Object.keys(emojisForSearch).forEach(category => {
+    Object.keys(emojisForSearch).forEach((category) => {
       const list = filter(emojisForSearch[category], text, { key: 'search' })
       if (list.length) {
         result[category] = list
@@ -53,7 +53,7 @@ class Emoji {
     return result
   }
 
-  destroy () {
+  destroy() {
     return this.cache.clear()
   }
 }

@@ -24,7 +24,7 @@ function copyMessage() {
 </script>
 
 <template>
-  <div 
+  <div
     class="chat-message"
     :class="{ 'user-message': isUser, 'assistant-message': isAssistant }"
   >
@@ -33,20 +33,39 @@ function copyMessage() {
       <span v-if="isUser">👤</span>
       <span v-else>✨</span>
     </div>
-    
+
     <!-- Content -->
     <div class="message-content">
-      <div 
+      <div
         class="message-text"
         v-html="renderedContent"
       ></div>
-      
+
       <!-- Actions (only for assistant) -->
-      <div v-if="isAssistant && displayContent" class="message-actions">
-        <button @click="copyMessage" title="Copy">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M2 5C2 3.89543 2.89543 3 4 3H10C11.1046 3 12 3.89543 12 5V11C12 12.1046 11.1046 13 10 13H4C2.89543 13 2 12.1046 2 11V5Z" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M4 3V2C4 1.44772 4.44772 1 5 1H12C13.1046 1 14 1.89543 14 3V12C14 12.5523 13.5523 13 13 13H12" stroke="currentColor" stroke-width="1.5"/>
+      <div
+        v-if="isAssistant && displayContent"
+        class="message-actions"
+      >
+        <button
+          @click="copyMessage"
+          title="Copy"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+          >
+            <path
+              d="M2 5C2 3.89543 2.89543 3 4 3H10C11.1046 3 12 3.89543 12 5V11C12 12.1046 11.1046 13 10 13H4C2.89543 13 2 12.1046 2 11V5Z"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M4 3V2C4 1.44772 4.44772 1 5 1H12C13.1046 1 14 1.89543 14 3V12C14 12.5523 13.5523 13 13 13H12"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
           </svg>
         </button>
       </div>

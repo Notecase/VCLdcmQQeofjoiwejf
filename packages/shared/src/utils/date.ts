@@ -7,7 +7,7 @@ export function formatDate(date: string | Date, locale: string = 'en-US'): strin
   return d.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   })
 }
 
@@ -18,7 +18,7 @@ export function formatDateTime(date: string | Date, locale: string = 'en-US'): s
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 

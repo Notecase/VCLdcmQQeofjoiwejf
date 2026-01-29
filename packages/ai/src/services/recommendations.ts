@@ -105,7 +105,12 @@ function repairJSON(jsonString: string): string {
   // Remove trailing incomplete strings (unterminated quotes)
   // Match pattern: string that ends mid-value like "label": "some text without closing
   const unterminatedStringMatch = repaired.match(/(.*"[^"]*":\s*"[^"]*)[^"}\]]*$/)
-  if (unterminatedStringMatch && !repaired.endsWith('"') && !repaired.endsWith('}') && !repaired.endsWith(']')) {
+  if (
+    unterminatedStringMatch &&
+    !repaired.endsWith('"') &&
+    !repaired.endsWith('}') &&
+    !repaired.endsWith(']')
+  ) {
     repaired = unterminatedStringMatch[1] + '"'
   }
 
@@ -169,10 +174,13 @@ function parseAIResponse<T>(response: string, fallback: T): T {
       // Try to find JSON without code blocks
       // IMPORTANT: Check for arrays FIRST since most recommendation responses are arrays
       const arrayMatch = response.match(/\[[\s\S]*\]/)
-      const objectMatch = response.match(/^\s*\{[\s\S]*\}\s*$/)  // Only match if ENTIRE response is an object
+      const objectMatch = response.match(/^\s*\{[\s\S]*\}\s*$/) // Only match if ENTIRE response is an object
       if (arrayMatch) {
         jsonString = arrayMatch[0]
-        console.log('[RecommendationService] parseAIResponse - found array match, length:', jsonString.length)
+        console.log(
+          '[RecommendationService] parseAIResponse - found array match, length:',
+          jsonString.length
+        )
       } else if (objectMatch) {
         jsonString = objectMatch[0]
         console.log('[RecommendationService] parseAIResponse - found object match')
@@ -194,12 +202,20 @@ function parseAIResponse<T>(response: string, fallback: T): T {
         console.log('[RecommendationService] JSON repair successful')
       } catch (repairError) {
         console.warn('[RecommendationService] JSON repair failed:', repairError)
-        console.warn('[RecommendationService] Original response (first 500 chars):', response.substring(0, 500))
+        console.warn(
+          '[RecommendationService] Original response (first 500 chars):',
+          response.substring(0, 500)
+        )
         return fallback
       }
     }
 
-    console.log('[RecommendationService] parseAIResponse - parsed successfully, type:', typeof parsed, 'isArray:', Array.isArray(parsed))
+    console.log(
+      '[RecommendationService] parseAIResponse - parsed successfully, type:',
+      typeof parsed,
+      'isArray:',
+      Array.isArray(parsed)
+    )
     if (Array.isArray(parsed)) {
       console.log('[RecommendationService] parseAIResponse - array length:', parsed.length)
     }
@@ -208,7 +224,7 @@ function parseAIResponse<T>(response: string, fallback: T): T {
     if (Array.isArray(parsed)) {
       return parsed.map((item: unknown) => {
         if (typeof item === 'object' && item !== null) {
-          const normalized: Record<string, unknown> = { ...item as Record<string, unknown> }
+          const normalized: Record<string, unknown> = { ...(item as Record<string, unknown>) }
           for (const key in normalized) {
             if (typeof normalized[key] === 'string') {
               normalized[key] = normalizeLatexToInline(normalized[key] as string)
@@ -219,7 +235,7 @@ function parseAIResponse<T>(response: string, fallback: T): T {
         return item
       }) as T
     } else if (typeof parsed === 'object' && parsed !== null) {
-      const normalized: Record<string, unknown> = { ...parsed as Record<string, unknown> }
+      const normalized: Record<string, unknown> = { ...(parsed as Record<string, unknown>) }
       for (const key in normalized) {
         if (typeof normalized[key] === 'string') {
           normalized[key] = normalizeLatexToInline(normalized[key] as string)
@@ -239,10 +255,7 @@ function parseAIResponse<T>(response: string, fallback: T): T {
 // Chat Helper
 // ============================================================================
 
-async function chatWithAI(
-  prompt: string,
-  apiKey: string
-): Promise<string> {
+async function chatWithAI(prompt: string, apiKey: string): Promise<string> {
   try {
     console.log('[RecommendationService] chatWithAI - prompt length:', prompt.length)
     const provider = createOpenAIProvider({ apiKey })
@@ -333,13 +346,20 @@ export async function generateFlashcards(
     // Check cache - only use if non-empty
     const cached = getCachedRecommendation(noteId)
     if (cached?.flashcards && cached.flashcards.length > 0) {
-      console.log('[RecommendationService] generateFlashcards - returning cached:', cached.flashcards.length, 'items')
+      console.log(
+        '[RecommendationService] generateFlashcards - returning cached:',
+        cached.flashcards.length,
+        'items'
+      )
       return cached.flashcards
     }
 
     // Truncate content to fit context window (24000 chars ≈ 6000 tokens for GPT-5.2)
     const truncatedContent = noteContent.substring(0, 24000)
-    console.log('[RecommendationService] generateFlashcards - content length:', truncatedContent.length)
+    console.log(
+      '[RecommendationService] generateFlashcards - content length:',
+      truncatedContent.length
+    )
 
     const prompt = `Analyze this note and create 8-12 flashcards for studying the key concepts.
 
@@ -365,7 +385,11 @@ Generate exactly 8-12 flashcards now:`
     console.log('[RecommendationService] generateFlashcards - AI response length:', response.length)
 
     const flashcards = parseAIResponse<FlashcardData[]>(response, [])
-    console.log('[RecommendationService] generateFlashcards - parsed:', flashcards.length, 'flashcards')
+    console.log(
+      '[RecommendationService] generateFlashcards - parsed:',
+      flashcards.length,
+      'flashcards'
+    )
 
     // Only cache if we got results
     if (flashcards.length > 0) {
@@ -393,13 +417,20 @@ export async function generateConcepts(
     // Check cache - only use if non-empty
     const cached = getCachedRecommendation(noteId)
     if (cached?.concepts && cached.concepts.length > 0) {
-      console.log('[RecommendationService] generateConcepts - returning cached:', cached.concepts.length, 'items')
+      console.log(
+        '[RecommendationService] generateConcepts - returning cached:',
+        cached.concepts.length,
+        'items'
+      )
       return cached.concepts
     }
 
     // Truncate content to fit context window (24000 chars ≈ 6000 tokens for GPT-5.2)
     const truncatedContent = noteContent.substring(0, 24000)
-    console.log('[RecommendationService] generateConcepts - content length:', truncatedContent.length)
+    console.log(
+      '[RecommendationService] generateConcepts - content length:',
+      truncatedContent.length
+    )
 
     const prompt = `Analyze this note and identify 5-8 advanced related concepts that a student should explore to deepen their understanding.
 
@@ -453,13 +484,20 @@ export async function generateExercises(
     // Check cache - only use if non-empty
     const cached = getCachedRecommendation(noteId)
     if (cached?.exercises && cached.exercises.length > 0) {
-      console.log('[RecommendationService] generateExercises - returning cached:', cached.exercises.length, 'items')
+      console.log(
+        '[RecommendationService] generateExercises - returning cached:',
+        cached.exercises.length,
+        'items'
+      )
       return cached.exercises
     }
 
     // Truncate content to fit context window (24000 chars ≈ 6000 tokens for GPT-5.2)
     const truncatedContent = noteContent.substring(0, 24000)
-    console.log('[RecommendationService] generateExercises - content length:', truncatedContent.length)
+    console.log(
+      '[RecommendationService] generateExercises - content length:',
+      truncatedContent.length
+    )
 
     const prompt = `Analyze this note and create 5-8 practice exercises to help students master the material.
 
@@ -488,7 +526,11 @@ Generate exactly 5-8 exercises now:`
     console.log('[RecommendationService] generateExercises - AI response length:', response.length)
 
     const exercises = parseAIResponse<ExerciseData[]>(response, [])
-    console.log('[RecommendationService] generateExercises - parsed:', exercises.length, 'exercises')
+    console.log(
+      '[RecommendationService] generateExercises - parsed:',
+      exercises.length,
+      'exercises'
+    )
 
     // Only cache if we got results
     if (exercises.length > 0) {
@@ -516,13 +558,20 @@ export async function generateResources(
     // Check cache - only use if non-empty
     const cached = getCachedRecommendation(noteId)
     if (cached?.resources && cached.resources.length > 0) {
-      console.log('[RecommendationService] generateResources - returning cached:', cached.resources.length, 'items')
+      console.log(
+        '[RecommendationService] generateResources - returning cached:',
+        cached.resources.length,
+        'items'
+      )
       return cached.resources
     }
 
     // Truncate content to fit context window (24000 chars ≈ 6000 tokens for GPT-5.2)
     const truncatedContent = noteContent.substring(0, 24000)
-    console.log('[RecommendationService] generateResources - content length:', truncatedContent.length)
+    console.log(
+      '[RecommendationService] generateResources - content length:',
+      truncatedContent.length
+    )
 
     const prompt = `Analyze this note and suggest 6-10 high-quality learning resources that would help someone learn more about these topics.
 
@@ -552,7 +601,11 @@ Generate exactly 6-10 resources now:`
     console.log('[RecommendationService] generateResources - AI response length:', response.length)
 
     const resources = parseAIResponse<ResourceData[]>(response, [])
-    console.log('[RecommendationService] generateResources - parsed:', resources.length, 'resources')
+    console.log(
+      '[RecommendationService] generateResources - parsed:',
+      resources.length,
+      'resources'
+    )
 
     // Only cache if we got results
     if (resources.length > 0) {
@@ -605,11 +658,11 @@ export async function generateSlides(
     )
 
     // Convert GeneratedSlide[] to SlideData[]
-    const slides: SlideData[] = generatedSlides.map(slide => ({
+    const slides: SlideData[] = generatedSlides.map((slide) => ({
       slideNumber: slide.index,
       title: slide.title,
       type: slide.type as SlideData['type'],
-      imageData: slide.imageData,  // Now contains actual base64 PNG data
+      imageData: slide.imageData, // Now contains actual base64 PNG data
       caption: slide.caption,
     }))
 

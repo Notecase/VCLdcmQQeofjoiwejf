@@ -3,7 +3,7 @@ import { findNearestParagraph, findOutMostParagraph } from '../selection/dom'
 import { tokenizer, generator } from '../parser/'
 import { getImageInfo } from '../utils/getImageInfo'
 
-const backspaceCtrl = ContentState => {
+const backspaceCtrl = (ContentState) => {
   ContentState.prototype.checkBackspaceCase = function () {
     const node = selection.getSelectionStart()
     const paragraph = findNearestParagraph(node)
@@ -24,7 +24,11 @@ const backspaceCtrl = ContentState => {
 
     if (
       (parent && parent.type === 'li' && inLeft === 0 && this.isFirstChild(block)) ||
-      (parent && parent.type === 'li' && inLeft === 0 && parent.listItemType === 'task' && preBlock.type === 'input') // handle task item
+      (parent &&
+        parent.type === 'li' &&
+        inLeft === 0 &&
+        parent.listItemType === 'task' &&
+        preBlock.type === 'input') // handle task item
     ) {
       if (this.isOnlyChild(parent)) {
         /**
@@ -151,14 +155,14 @@ const backspaceCtrl = ContentState => {
       startBlock.functionType === 'atxLine'
     ) {
       if (
-        start.offset === 0 && end.offset === startBlock.text.length ||
-        start.offset === end.offset && start.offset === 1 && startBlock.text === '#'
+        (start.offset === 0 && end.offset === startBlock.text.length) ||
+        (start.offset === end.offset && start.offset === 1 && startBlock.text === '#')
       ) {
         event.preventDefault()
         startBlock.text = ''
         this.cursor = {
           start: { key: start.key, offset: 0 },
-          end: { key: end.key, offset: 0 }
+          end: { key: end.key, offset: 0 },
         }
         this.updateToParagraph(this.getParent(startBlock), startBlock)
         return this.partialRender()
@@ -167,16 +171,13 @@ const backspaceCtrl = ContentState => {
     // fix: #897
     const { text } = startBlock
     const tokens = tokenizer(text, {
-      options: this.muya.options
+      options: this.muya.options,
     })
     let needRender = false
     let preToken = null
     for (const token of tokens) {
       // handle delete the second $ in inline_math.
-      if (
-        token.range.end === start.offset &&
-        token.type === 'inline_math'
-      ) {
+      if (token.range.end === start.offset && token.type === 'inline_math') {
         needRender = true
         token.raw = token.raw.substr(0, token.raw.length - 1)
         break
@@ -201,7 +202,7 @@ const backspaceCtrl = ContentState => {
       end.offset--
       this.cursor = {
         start,
-        end
+        end,
       }
       return this.partialRender()
     }
@@ -212,9 +213,10 @@ const backspaceCtrl = ContentState => {
     const maybeCell = this.getParent(startBlock)
     if (/th/.test(maybeCell.type) && start.offset === 0 && !maybeCell.preSibling) {
       if (
-        end.offset === endBlock.text.length &&
-        startOutmostBlock === endOutmostBlock &&
-        !endBlock.nextSibling && !maybeLastRow.nextSibling ||
+        (end.offset === endBlock.text.length &&
+          startOutmostBlock === endOutmostBlock &&
+          !endBlock.nextSibling &&
+          !maybeLastRow.nextSibling) ||
         startOutmostBlock !== endOutmostBlock
       ) {
         event.preventDefault()
@@ -233,7 +235,7 @@ const backspaceCtrl = ContentState => {
         const offset = 0
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
         return this.render()
       }
@@ -252,7 +254,7 @@ const backspaceCtrl = ContentState => {
       const offset = 0
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       return this.singleRender(startBlock)
@@ -275,7 +277,7 @@ const backspaceCtrl = ContentState => {
       const offset = startBlock.text.length
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       return this.singleRender(startBlock)
@@ -314,7 +316,7 @@ const backspaceCtrl = ContentState => {
         const offset = start.offset - 1
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
         return this.singleRender(startBlock)
       }
@@ -343,7 +345,7 @@ const backspaceCtrl = ContentState => {
 
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
       return this.singleRender(startBlock)
     }
@@ -357,17 +359,19 @@ const backspaceCtrl = ContentState => {
       const offset = 0
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       return this.singleRender(startBlock)
     }
 
-    const tableHasContent = table => {
+    const tableHasContent = (table) => {
       const tHead = table.children[0]
       const tBody = table.children[1]
-      const tHeadHasContent = tHead.children[0].children.some(th => th.children[0].text.trim())
-      const tBodyHasContent = tBody.children.some(row => row.children.some(td => td.children[0].text.trim()))
+      const tHeadHasContent = tHead.children[0].children.some((th) => th.children[0].text.trim())
+      const tBodyHasContent = tBody.children.some((row) =>
+        row.children.some((td) => td.children[0].text.trim())
+      )
       return tHeadHasContent || tBodyHasContent
     }
 
@@ -389,7 +393,7 @@ const backspaceCtrl = ContentState => {
         const offset = 0
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
 
         this.partialRender()
@@ -402,9 +406,7 @@ const backspaceCtrl = ContentState => {
     ) {
       event.preventDefault()
       event.stopPropagation()
-      if (
-        !block.nextSibling
-      ) {
+      if (!block.nextSibling) {
         const preBlock = this.getParent(parent)
         const pBlock = this.createBlock('p')
         const lineBlock = this.createBlock('span', { text: block.text })
@@ -433,7 +435,7 @@ const backspaceCtrl = ContentState => {
 
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
         this.partialRender()
       }
@@ -463,7 +465,7 @@ const backspaceCtrl = ContentState => {
       if (key !== undefined && offset !== undefined) {
         this.cursor = {
           start: { key, offset },
-          end: { key, offset }
+          end: { key, offset },
         }
 
         this.partialRender()
@@ -485,7 +487,7 @@ const backspaceCtrl = ContentState => {
             if (children[0].type === 'input') {
               this.removeBlock(children[0])
             }
-            children.forEach(child => {
+            children.forEach((child) => {
               this.insertBefore(child, grandpa)
             })
             this.removeBlock(grandpa)
@@ -495,7 +497,7 @@ const backspaceCtrl = ContentState => {
             if (children[0].type === 'input') {
               this.removeBlock(children[0])
             }
-            children.forEach(child => {
+            children.forEach((child) => {
               this.insertBefore(child, grandpa)
             })
             this.removeBlock(parent)
@@ -505,7 +507,7 @@ const backspaceCtrl = ContentState => {
             if (children[0].type === 'input') {
               this.removeBlock(children[0])
             }
-            children.forEach(child => {
+            children.forEach((child) => {
               this.appendChild(parPre, child)
             })
             this.removeBlock(parent)
@@ -527,7 +529,7 @@ const backspaceCtrl = ContentState => {
       const offset = 0
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       if (inlineDegrade.type !== 'STOP') {
@@ -549,11 +551,15 @@ const backspaceCtrl = ContentState => {
 
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
       let needRenderAll = false
 
-      if (this.isCollapse() && preBlock.type === 'span' && preBlock.functionType === 'paragraphContent') {
+      if (
+        this.isCollapse() &&
+        preBlock.type === 'span' &&
+        preBlock.functionType === 'paragraphContent'
+      ) {
         this.checkInlineUpdate(preBlock)
         needRenderAll = true
       }

@@ -57,9 +57,7 @@ export interface AuthError {
   status?: number
 }
 
-export type AuthResult<T> =
-  | { data: T; error: null }
-  | { data: null; error: AuthError }
+export type AuthResult<T> = { data: T; error: null } | { data: null; error: AuthError }
 
 export type AuthStateChangeCallback = (
   event: AuthStateChangeEvent,

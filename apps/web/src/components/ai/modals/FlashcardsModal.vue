@@ -29,20 +29,14 @@ const currentIndex = ref(0)
 const isFlipped = ref(false)
 
 // Computed
-const flashcards = computed<Flashcard[]>(() =>
-  store.currentRecommendations?.flashcards || []
-)
+const flashcards = computed<Flashcard[]>(() => store.currentRecommendations?.flashcards || [])
 
 const currentCard = computed(() => flashcards.value[currentIndex.value])
 const cardCount = computed(() => flashcards.value.length)
 
 // Rendered content with math support
-const renderedQuestion = computed(() =>
-  renderMathContent(currentCard.value?.question || '')
-)
-const renderedAnswer = computed(() =>
-  renderMathContent(currentCard.value?.answer || '')
-)
+const renderedQuestion = computed(() => renderMathContent(currentCard.value?.question || ''))
+const renderedAnswer = computed(() => renderMathContent(currentCard.value?.answer || ''))
 
 // Actions
 function flipCard() {
@@ -91,9 +85,7 @@ onUnmounted(() => {
 // Copy all flashcards as markdown
 async function copyAsMarkdown() {
   const markdown = flashcards.value
-    .map((card, i) =>
-      `### Card ${i + 1}\n**Q:** ${card.question}\n**A:** ${card.answer}`
-    )
+    .map((card, i) => `### Card ${i + 1}\n**Q:** ${card.question}\n**A:** ${card.answer}`)
     .join('\n\n')
 
   try {
@@ -106,7 +98,6 @@ async function copyAsMarkdown() {
     console.error('Failed to copy:', error)
   }
 }
-
 </script>
 
 <template>
@@ -127,13 +118,22 @@ async function copyAsMarkdown() {
         @click="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
       >
-        <Check v-if="copied" :size="14" />
-        <Copy v-else :size="14" />
+        <Check
+          v-if="copied"
+          :size="14"
+        />
+        <Copy
+          v-else
+          :size="14"
+        />
         <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
-    <div class="flashcards-container" v-if="flashcards.length > 0">
+    <div
+      class="flashcards-container"
+      v-if="flashcards.length > 0"
+    >
       <!-- Card -->
       <div
         class="card-wrapper"
@@ -144,14 +144,20 @@ async function copyAsMarkdown() {
           <!-- Front -->
           <div class="card-face card-front">
             <span class="card-label">QUESTION</span>
-            <div class="card-content math-content" v-html="renderedQuestion"></div>
+            <div
+              class="card-content math-content"
+              v-html="renderedQuestion"
+            ></div>
             <span class="card-hint">Click or press Space to flip</span>
           </div>
 
           <!-- Back -->
           <div class="card-face card-back">
             <span class="card-label answer">ANSWER</span>
-            <div class="card-content math-content" v-html="renderedAnswer"></div>
+            <div
+              class="card-content math-content"
+              v-html="renderedAnswer"
+            ></div>
           </div>
         </div>
       </div>
@@ -168,7 +174,10 @@ async function copyAsMarkdown() {
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No flashcards available.</p>
     </div>
 

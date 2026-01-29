@@ -5,62 +5,62 @@
  * ============================================ */
 
 /* DARK THEMES (dark, one-dark, material-dark) */
-:root[data-theme="dark"],
-:root[data-theme="one-dark"],
-:root[data-theme="material-dark"] {
+:root[data-theme='dark'],
+:root[data-theme='one-dark'],
+:root[data-theme='material-dark'] {
   /* New design colors */
   --app-bg: #1a1a1e;
   --card-bg: #242428;
   --sidebar-bg: #1e1e22;
   --bg-color: #252525;
-  --primary-color: #7C9EF8;
-  --primary-gradient: linear-gradient(135deg, #7C9EF8 0%, #A78BFA 100%);
+  --primary-color: #7c9ef8;
+  --primary-gradient: linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%);
   --hover-bg: rgba(255, 255, 255, 0.06);
-  --text-color: #E2E8F0;
-  --text-color-secondary: #94A3B8;
+  --text-color: #e2e8f0;
+  --text-color-secondary: #94a3b8;
   --border-color: #333338;
-  
+
   /* Theme colors */
-  --themeColor: #7C9EF8;
-  --themeColor90: rgba(124, 158, 248, .9);
-  --themeColor80: rgba(124, 158, 248, .8);
-  --themeColor70: rgba(124, 158, 248, .7);
-  --themeColor60: rgba(124, 158, 248, .6);
-  --themeColor50: rgba(124, 158, 248, .5);
-  --themeColor40: rgba(124, 158, 248, .4);
-  --themeColor30: rgba(124, 158, 248, .3);
-  --themeColor20: rgba(124, 158, 248, .2);
-  --themeColor10: rgba(124, 158, 248, .1);
+  --themeColor: #7c9ef8;
+  --themeColor90: rgba(124, 158, 248, 0.9);
+  --themeColor80: rgba(124, 158, 248, 0.8);
+  --themeColor70: rgba(124, 158, 248, 0.7);
+  --themeColor60: rgba(124, 158, 248, 0.6);
+  --themeColor50: rgba(124, 158, 248, 0.5);
+  --themeColor40: rgba(124, 158, 248, 0.4);
+  --themeColor30: rgba(124, 158, 248, 0.3);
+  --themeColor20: rgba(124, 158, 248, 0.2);
+  --themeColor10: rgba(124, 158, 248, 0.1);
 
   /* Editor colors - white/light colors for dark backgrounds */
-  --highlightColor: rgba(102, 177, 255, .6);
-  --selectionColor: rgba(102, 177, 255, .3);
-  --editorColor: rgba(255, 255, 255, .7);
-  --editorColor80: rgba(255, 255, 255, .8);
-  --editorColor60: rgba(255, 255, 255, .6);
-  --editorColor50: rgba(255, 255, 255, .5);
-  --editorColor40: rgba(255, 255, 255, .4);
-  --editorColor30: rgba(255, 255, 255, .3);
-  --editorColor10: rgba(255, 255, 255, .1);
-  --editorColor04: rgba(255, 255, 255, .04);
+  --highlightColor: rgba(102, 177, 255, 0.6);
+  --selectionColor: rgba(102, 177, 255, 0.3);
+  --editorColor: rgba(255, 255, 255, 0.7);
+  --editorColor80: rgba(255, 255, 255, 0.8);
+  --editorColor60: rgba(255, 255, 255, 0.6);
+  --editorColor50: rgba(255, 255, 255, 0.5);
+  --editorColor40: rgba(255, 255, 255, 0.4);
+  --editorColor30: rgba(255, 255, 255, 0.3);
+  --editorColor10: rgba(255, 255, 255, 0.1);
+  --editorColor04: rgba(255, 255, 255, 0.04);
   --editorBgColor: #282828;
   --deleteColor: #409eff;
 
   /* Icon color - CRITICAL for drag handler dots */
-  --iconColor: rgba(255, 255, 255, .56);
+  --iconColor: rgba(255, 255, 255, 0.56);
 
   /* Code block colors */
   --codeBgColor: #424344;
   --codeBlockBgColor: #424344;
-  --footnoteBgColor: rgba(66, 67, 68, .3);
+  --footnoteBgColor: rgba(66, 67, 68, 0.3);
   --inputBgColor: #2f3336;
 
   /* UI colors */
   --focusColor: var(--themeColor);
-  --floatFontColor: rgba(255, 255, 255, .7);
+  --floatFontColor: rgba(255, 255, 255, 0.7);
   --floatBgColor: #3f3f3f;
-  --floatHoverColor: rgba(255, 255, 255, .04);
-  --floatBorderColor: rgba(0, 0, 0, .05);
+  --floatHoverColor: rgba(255, 255, 255, 0.04);
+  --floatBorderColor: rgba(0, 0, 0, 0.05);
   --floatShadow: rgba(0, 0, 0, 0.2);
   --tableBorderColor: #363839;
 
@@ -97,63 +97,63 @@
 }
 
 /* LIGHT THEMES (light, ulysses-light, graphite-light, cadmium-light) */
-:root[data-theme="light"],
-:root[data-theme="ulysses-light"],
-:root[data-theme="graphite-light"],
-:root[data-theme="cadmium-light"] {
+:root[data-theme='light'],
+:root[data-theme='ulysses-light'],
+:root[data-theme='graphite-light'],
+:root[data-theme='cadmium-light'] {
   /* New design colors */
-  --app-bg: #F8FAFC;
-  --card-bg: #FFFFFF;
-  --sidebar-bg: #FFFFFF;
+  --app-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --sidebar-bg: #ffffff;
   --bg-color: #f5f5f5;
-  --primary-color: #7C9EF8;
-  --primary-gradient: linear-gradient(135deg, #7C9EF8 0%, #A78BFA 100%);
-  --hover-bg: #F1F5F9;
+  --primary-color: #7c9ef8;
+  --primary-gradient: linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%);
+  --hover-bg: #f1f5f9;
   --text-color: #334155;
-  --text-color-secondary: #64748B;
-  --border-color: #E2E8F0;
-  
+  --text-color-secondary: #64748b;
+  --border-color: #e2e8f0;
+
   /* Theme colors */
-  --themeColor: #7C9EF8;
-  --themeColor90: rgba(124, 158, 248, .9);
-  --themeColor80: rgba(124, 158, 248, .8);
-  --themeColor70: rgba(124, 158, 248, .7);
-  --themeColor60: rgba(124, 158, 248, .6);
-  --themeColor50: rgba(124, 158, 248, .5);
-  --themeColor40: rgba(124, 158, 248, .4);
-  --themeColor30: rgba(124, 158, 248, .3);
-  --themeColor20: rgba(124, 158, 248, .2);
-  --themeColor10: rgba(124, 158, 248, .1);
+  --themeColor: #7c9ef8;
+  --themeColor90: rgba(124, 158, 248, 0.9);
+  --themeColor80: rgba(124, 158, 248, 0.8);
+  --themeColor70: rgba(124, 158, 248, 0.7);
+  --themeColor60: rgba(124, 158, 248, 0.6);
+  --themeColor50: rgba(124, 158, 248, 0.5);
+  --themeColor40: rgba(124, 158, 248, 0.4);
+  --themeColor30: rgba(124, 158, 248, 0.3);
+  --themeColor20: rgba(124, 158, 248, 0.2);
+  --themeColor10: rgba(124, 158, 248, 0.1);
 
   /* Editor colors - dark/gray colors for light backgrounds */
-  --highlightColor: rgba(33, 150, 243, .3);
-  --selectionColor: rgba(33, 150, 243, .15);
-  --editorColor: rgba(0, 0, 0, .87);
-  --editorColor80: rgba(0, 0, 0, .8);
-  --editorColor60: rgba(0, 0, 0, .6);
-  --editorColor50: rgba(0, 0, 0, .5);
-  --editorColor40: rgba(0, 0, 0, .4);
-  --editorColor30: rgba(0, 0, 0, .3);
-  --editorColor10: rgba(0, 0, 0, .1);
-  --editorColor04: rgba(0, 0, 0, .04);
+  --highlightColor: rgba(33, 150, 243, 0.3);
+  --selectionColor: rgba(33, 150, 243, 0.15);
+  --editorColor: rgba(0, 0, 0, 0.87);
+  --editorColor80: rgba(0, 0, 0, 0.8);
+  --editorColor60: rgba(0, 0, 0, 0.6);
+  --editorColor50: rgba(0, 0, 0, 0.5);
+  --editorColor40: rgba(0, 0, 0, 0.4);
+  --editorColor30: rgba(0, 0, 0, 0.3);
+  --editorColor10: rgba(0, 0, 0, 0.1);
+  --editorColor04: rgba(0, 0, 0, 0.04);
   --editorBgColor: #ffffff;
   --deleteColor: #f44336;
 
   /* Icon color - CRITICAL for drag handler dots - darker for light theme */
-  --iconColor: rgba(0, 0, 0, .54);
+  --iconColor: rgba(0, 0, 0, 0.54);
 
   /* Code block colors */
   --codeBgColor: #f5f5f5;
   --codeBlockBgColor: #f5f5f5;
-  --footnoteBgColor: rgba(0, 0, 0, .05);
+  --footnoteBgColor: rgba(0, 0, 0, 0.05);
   --inputBgColor: #fafafa;
 
   /* UI colors */
   --focusColor: var(--themeColor);
-  --floatFontColor: rgba(0, 0, 0, .87);
+  --floatFontColor: rgba(0, 0, 0, 0.87);
   --floatBgColor: #ffffff;
-  --floatHoverColor: rgba(0, 0, 0, .04);
-  --floatBorderColor: rgba(0, 0, 0, .12);
+  --floatHoverColor: rgba(0, 0, 0, 0.04);
+  --floatBorderColor: rgba(0, 0, 0, 0.12);
   --floatShadow: rgba(0, 0, 0, 0.2);
   --tableBorderColor: #e0e0e0;
 
@@ -170,20 +170,20 @@
   --glass-divider: rgba(0, 0, 0, 0.1);
 
   /* AI Sidebar - Light */
-  --ai-sidebar-bg: #F8FAFC;
+  --ai-sidebar-bg: #f8fafc;
   --ai-header-bg: rgba(255, 255, 255, 0.85);
-  --ai-tab-color: #64748B;
+  --ai-tab-color: #64748b;
   --ai-tab-active: #334155;
-  --ai-card-bg: #FFFFFF;
-  --ai-card-border: #E2E8F0;
+  --ai-card-bg: #ffffff;
+  --ai-card-border: #e2e8f0;
   --ai-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --ai-input-bg: #FFFFFF;
-  --ai-input-border: #E2E8F0;
+  --ai-input-bg: #ffffff;
+  --ai-input-border: #e2e8f0;
   --ai-input-focus: rgba(124, 158, 248, 0.2);
-  --ai-cmd-header: #7C9EF8;
-  --ai-cmd-bg: #F1F5F9;
-  --ai-send-bg: #E2E8F0;
+  --ai-cmd-header: #7c9ef8;
+  --ai-cmd-bg: #f1f5f9;
+  --ai-send-bg: #e2e8f0;
   --ai-send-active-bg: #238636;
   --ai-send-active-color: #ffffff;
-  --ai-scrollbar-thumb: #CBD5E1;
+  --ai-scrollbar-thumb: #cbd5e1;
 }

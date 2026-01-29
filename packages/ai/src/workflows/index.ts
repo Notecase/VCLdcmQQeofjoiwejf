@@ -32,7 +32,4 @@ export type {
 export { WORKFLOW_ACTIONS } from './types'
 
 // Actions
-export {
-  WorkflowActions,
-  createWorkflowActions,
-} from './actions'
+export { WorkflowActions, createWorkflowActions } from './actions'

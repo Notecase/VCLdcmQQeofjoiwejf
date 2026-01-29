@@ -21,19 +21,19 @@ const router = createRouter({
     {
       path: '/',
       name: 'editor',
-      component: () => import('./views/EditorView.vue')
+      component: () => import('./views/EditorView.vue'),
     },
     {
       path: '/auth',
       name: 'auth',
-      component: () => import('./views/AuthView.vue')
+      component: () => import('./views/AuthView.vue'),
     },
     {
       path: '/ai',
       name: 'ai-chat',
-      component: () => import('./views/AIChat.vue')
-    }
-  ]
+      component: () => import('./views/AIChat.vue'),
+    },
+  ],
 })
 
 // Create app

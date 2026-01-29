@@ -5,13 +5,36 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
-  FileText, List, Plus, ChevronRight, Trash2,
-  Folder, FolderOpen, ChevronRight as ChevronRightIcon,
-  MoreHorizontal, Edit2, FolderPlus, FilePlus, Search,
-  Settings, LogOut, Moon, Sun, Monitor, User, MessageCircle, ChevronUp,
-  CornerDownRight
+  FileText,
+  List,
+  Plus,
+  ChevronRight,
+  Trash2,
+  Folder,
+  FolderOpen,
+  ChevronRight as ChevronRightIcon,
+  MoreHorizontal,
+  Edit2,
+  FolderPlus,
+  FilePlus,
+  Search,
+  Settings,
+  LogOut,
+  Moon,
+  Sun,
+  Monitor,
+  User,
+  MessageCircle,
+  ChevronUp,
+  CornerDownRight,
 } from 'lucide-vue-next'
-import { useEditorStore, useLayoutStore, useProjectStore, useAuthStore, usePreferencesStore } from '@/stores'
+import {
+  useEditorStore,
+  useLayoutStore,
+  useProjectStore,
+  useAuthStore,
+  usePreferencesStore,
+} from '@/stores'
 import NavigationDock from '@/components/ui/NavigationDock.vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -104,7 +127,7 @@ async function signOut() {
 const searchQuery = ref('')
 const activeTab = computed({
   get: () => layoutStore.activeSidebarPanel as SidebarTab,
-  set: (val: SidebarTab) => layoutStore.setSidebarPanel(val)
+  set: (val: SidebarTab) => layoutStore.setSidebarPanel(val),
 })
 
 const sidebarVisible = computed(() => layoutStore.sidebarVisible)
@@ -121,7 +144,7 @@ const contextMenu = ref({
   x: 0,
   y: 0,
   type: '' as 'project' | 'note' | '',
-  targetId: ''
+  targetId: '',
 })
 
 // New project input state
@@ -150,45 +173,47 @@ const dragState = ref<{
   itemId: null,
   itemType: null,
   dropTargetId: null,
-  dropTargetType: null
+  dropTargetType: null,
 })
 
 // Filter documents - only root-level general notes (no parent)
 const generalDocuments = computed(() => {
-  const docs = editorStore.documents.filter(doc => !doc.project_id && !doc.parent_note_id)
+  const docs = editorStore.documents.filter((doc) => !doc.project_id && !doc.parent_note_id)
   if (!searchQuery.value) return docs
   const query = searchQuery.value.toLowerCase()
-  return docs.filter(doc => doc.title.toLowerCase().includes(query))
+  return docs.filter((doc) => doc.title.toLowerCase().includes(query))
 })
 
 // Build note tree for general notes
 const generalNoteTree = computed((): NoteTreeNode[] => {
-  const generalNotes = editorStore.documents.filter(d => !d.project_id)
+  const generalNotes = editorStore.documents.filter((d) => !d.project_id)
   return buildNoteTree(generalNotes)
 })
 
 // Get root-level documents for a project (no parent note)
 const getProjectDocuments = (projectId: string) => {
-  const docs = editorStore.documents.filter(doc => doc.project_id === projectId && !doc.parent_note_id)
+  const docs = editorStore.documents.filter(
+    (doc) => doc.project_id === projectId && !doc.parent_note_id
+  )
   if (!searchQuery.value) return docs
   const query = searchQuery.value.toLowerCase()
-  return docs.filter(doc => doc.title.toLowerCase().includes(query))
+  return docs.filter((doc) => doc.title.toLowerCase().includes(query))
 }
 
 // Build note tree for a project
 const getProjectNoteTree = (projectId: string): NoteTreeNode[] => {
-  const projectNotes = editorStore.documents.filter(d => d.project_id === projectId)
+  const projectNotes = editorStore.documents.filter((d) => d.project_id === projectId)
   return buildNoteTree(projectNotes)
 }
 
 // Get children of a note
 const getNoteChildren = (noteId: string) => {
-  return editorStore.documents.filter(doc => doc.parent_note_id === noteId)
+  return editorStore.documents.filter((doc) => doc.parent_note_id === noteId)
 }
 
 // Check if a note has children
 const hasNoteChildren = (noteId: string) => {
-  return editorStore.documents.some(doc => doc.parent_note_id === noteId)
+  return editorStore.documents.some((doc) => doc.parent_note_id === noteId)
 }
 
 // Check if a note is expanded
@@ -222,11 +247,9 @@ async function openDocument(doc: any) {
 async function deleteDocument(doc: any, e: Event) {
   e.stopPropagation()
   try {
-    await ElMessageBox.confirm(
-      `Delete "${doc.title}"? This cannot be undone.`,
-      'Delete Document',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`Delete "${doc.title}"? This cannot be undone.`, 'Delete Document', {
+      type: 'warning',
+    })
     await editorStore.deleteDocument(doc.id)
   } catch {
     // Cancelled
@@ -351,7 +374,7 @@ async function createSubnote(parentNoteId: string) {
 async function moveNoteToGeneral(noteId: string) {
   const result = await notesService.moveNote(noteId, {
     project_id: null,
-    parent_note_id: null
+    parent_note_id: null,
   })
   if (result.error) {
     ElMessage.error('Failed to move note')
@@ -368,7 +391,7 @@ function handleDragStart(e: DragEvent, itemId: string, itemType: 'note' | 'proje
     itemId,
     itemType,
     dropTargetId: null,
-    dropTargetType: null
+    dropTargetType: null,
   }
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
@@ -385,7 +408,11 @@ function handleDragEnd(e: DragEvent) {
   resetDragState()
 }
 
-function handleDragOver(e: DragEvent, targetId: string, targetType: 'project' | 'note' | 'general') {
+function handleDragOver(
+  e: DragEvent,
+  targetId: string,
+  targetType: 'project' | 'note' | 'general'
+) {
   e.preventDefault()
 
   // Only allow note drags for now
@@ -423,7 +450,11 @@ function handleDragLeave(e: DragEvent) {
   }
 }
 
-async function handleDrop(e: DragEvent, targetId: string, targetType: 'project' | 'note' | 'general') {
+async function handleDrop(
+  e: DragEvent,
+  targetId: string,
+  targetType: 'project' | 'note' | 'general'
+) {
   e.preventDefault()
   e.stopPropagation()
 
@@ -468,7 +499,7 @@ function resetDragState() {
     itemId: null,
     itemType: null,
     dropTargetId: null,
-    dropTargetType: null
+    dropTargetType: null,
   }
 }
 
@@ -481,7 +512,7 @@ function showContextMenu(e: MouseEvent, type: 'project' | 'note', id: string) {
     x: e.clientX,
     y: e.clientY,
     type,
-    targetId: id
+    targetId: id,
   }
 }
 
@@ -493,7 +524,7 @@ function handleContextMenuAction(action: string) {
   const { type, targetId } = contextMenu.value
 
   if (type === 'project') {
-    const project = projectStore.folders.find(f => f.id === targetId)
+    const project = projectStore.folders.find((f) => f.id === targetId)
     if (!project) return
 
     switch (action) {
@@ -511,7 +542,7 @@ function handleContextMenuAction(action: string) {
         break
     }
   } else if (type === 'note') {
-    const doc = editorStore.documents.find(d => d.id === targetId)
+    const doc = editorStore.documents.find((d) => d.id === targetId)
     if (!doc) return
 
     switch (action) {
@@ -565,7 +596,7 @@ function onDocumentClick() {
 // Tab definitions
 const tabs = [
   { id: 'documents' as SidebarTab, icon: FileText, label: 'Documents' },
-  { id: 'toc' as SidebarTab, icon: List, label: 'Table of Contents' }
+  { id: 'toc' as SidebarTab, icon: List, label: 'Table of Contents' },
 ]
 </script>
 
@@ -577,38 +608,65 @@ const tabs = [
     @click="onDocumentClick"
   >
     <!-- Collapsed state - icon buttons -->
-    <div class="sidebar-collapsed" v-if="!sidebarVisible">
+    <div
+      class="sidebar-collapsed"
+      v-if="!sidebarVisible"
+    >
       <button
         v-for="tab in tabs"
         :key="tab.id"
         class="collapsed-tab-btn"
         :class="{ active: activeTab === tab.id }"
         :title="tab.label"
-        @click="activeTab = tab.id; layoutStore.toggleSidebar()"
+        @click="
+          activeTab = tab.id
+          layoutStore.toggleSidebar()
+        "
       >
-        <component :is="tab.icon" :size="18" />
+        <component
+          :is="tab.icon"
+          :size="18"
+        />
       </button>
       <div class="spacer"></div>
-      <button class="collapsed-tab-btn" @click="toggleSidebar" title="Expand Sidebar">
+      <button
+        class="collapsed-tab-btn"
+        @click="toggleSidebar"
+        title="Expand Sidebar"
+      >
         <ChevronRight :size="18" />
       </button>
     </div>
 
     <!-- Expanded state -->
-    <div class="sidebar-expanded" v-else>
+    <div
+      class="sidebar-expanded"
+      v-else
+    >
       <!-- Navigation Dock (Integrated) -->
       <NavigationDock />
 
       <!-- Action buttons with inline search -->
       <div class="quick-actions">
-        <button class="quick-action-btn primary" @click="createNewDocument()" title="New Document">
+        <button
+          class="quick-action-btn primary"
+          @click="createNewDocument()"
+          title="New Document"
+        >
           <FilePlus :size="14" />
         </button>
-        <button class="quick-action-btn" @click="createProject(null)" title="New Project">
+        <button
+          class="quick-action-btn"
+          @click="createProject(null)"
+          title="New Project"
+        >
           <FolderPlus :size="14" />
         </button>
         <div class="inline-search">
-          <Search :size="12" class="search-icon" />
+          <Search
+            :size="12"
+            class="search-icon"
+          />
           <input
             v-model="searchQuery"
             type="text"
@@ -619,18 +677,21 @@ const tabs = [
 
       <!-- Documents Panel -->
       <div class="panel documents-panel">
-
         <!-- Tree view -->
         <div class="tree-view">
           <!-- Projects -->
-          <template v-for="project in projectStore.rootFolders" :key="project.id">
+          <template
+            v-for="project in projectStore.rootFolders"
+            :key="project.id"
+          >
             <div class="tree-section">
               <!-- Project header (drop target for notes) -->
               <div
                 class="tree-item project-item"
                 :class="{
                   expanded: isProjectExpanded(project.id),
-                  'drag-over': dragState.dropTargetId === project.id && dragState.dropTargetType === 'project'
+                  'drag-over':
+                    dragState.dropTargetId === project.id && dragState.dropTargetType === 'project',
                 }"
                 :data-item-id="project.id"
                 @click="toggleProjectExpanded(project.id)"
@@ -639,7 +700,10 @@ const tabs = [
                 @dragleave="handleDragLeave"
                 @drop="handleDrop($event, project.id, 'project')"
               >
-                <button class="expand-btn" @click.stop="toggleProjectExpanded(project.id)">
+                <button
+                  class="expand-btn"
+                  @click.stop="toggleProjectExpanded(project.id)"
+                >
                   <ChevronRightIcon
                     :size="14"
                     :class="{ rotated: isProjectExpanded(project.id) }"
@@ -678,10 +742,19 @@ const tabs = [
               </div>
 
               <!-- Project contents (when expanded) -->
-              <div v-show="isProjectExpanded(project.id)" class="tree-children">
+              <div
+                v-show="isProjectExpanded(project.id)"
+                class="tree-children"
+              >
                 <!-- New project input (for subproject) -->
-                <div v-if="showNewProjectInput && newProjectParentId === project.id" class="new-item-input">
-                  <Folder :size="14" class="item-icon folder-icon" />
+                <div
+                  v-if="showNewProjectInput && newProjectParentId === project.id"
+                  class="new-item-input"
+                >
+                  <Folder
+                    :size="14"
+                    class="item-icon folder-icon"
+                  />
                   <input
                     ref="newProjectInputRef"
                     v-model="newProjectName"
@@ -693,11 +766,18 @@ const tabs = [
                 </div>
 
                 <!-- Subprojects (recursive - simplified for now) -->
-                <template v-for="subproject in projectStore.folders.filter(f => f.parent_id === project.id)" :key="subproject.id">
+                <template
+                  v-for="subproject in projectStore.folders.filter(
+                    (f) => f.parent_id === project.id
+                  )"
+                  :key="subproject.id"
+                >
                   <div
                     class="tree-item project-item sub-project"
                     :class="{
-                      'drag-over': dragState.dropTargetId === subproject.id && dragState.dropTargetType === 'project'
+                      'drag-over':
+                        dragState.dropTargetId === subproject.id &&
+                        dragState.dropTargetType === 'project',
                     }"
                     :data-item-id="subproject.id"
                     @click="toggleProjectExpanded(subproject.id)"
@@ -706,7 +786,10 @@ const tabs = [
                     @dragleave="handleDragLeave"
                     @drop="handleDrop($event, subproject.id, 'project')"
                   >
-                    <button class="expand-btn" @click.stop="toggleProjectExpanded(subproject.id)">
+                    <button
+                      class="expand-btn"
+                      @click.stop="toggleProjectExpanded(subproject.id)"
+                    >
                       <ChevronRightIcon
                         :size="14"
                         :class="{ rotated: isProjectExpanded(subproject.id) }"
@@ -731,7 +814,9 @@ const tabs = [
                     </template>
                     <template v-else>
                       <span class="item-name">{{ subproject.name }}</span>
-                      <span class="item-count">{{ getProjectDocuments(subproject.id).length }}</span>
+                      <span class="item-count">{{
+                        getProjectDocuments(subproject.id).length
+                      }}</span>
                     </template>
 
                     <button
@@ -743,7 +828,10 @@ const tabs = [
                   </div>
 
                   <!-- Subproject documents -->
-                  <div v-show="isProjectExpanded(subproject.id)" class="tree-children">
+                  <div
+                    v-show="isProjectExpanded(subproject.id)"
+                    class="tree-children"
+                  >
                     <div
                       v-for="doc in getProjectDocuments(subproject.id)"
                       :key="doc.id"
@@ -752,7 +840,10 @@ const tabs = [
                       @click.stop="openDocument(doc)"
                       @contextmenu="showContextMenu($event, 'note', doc.id)"
                     >
-                      <FileText :size="14" class="item-icon doc-icon" />
+                      <FileText
+                        :size="14"
+                        class="item-icon doc-icon"
+                      />
                       <span class="item-name">{{ doc.title }}</span>
                       <button
                         class="delete-btn"
@@ -766,17 +857,22 @@ const tabs = [
                 </template>
 
                 <!-- Project documents (hierarchical) -->
-                <template v-for="doc in getProjectDocuments(project.id)" :key="doc.id">
+                <template
+                  v-for="doc in getProjectDocuments(project.id)"
+                  :key="doc.id"
+                >
                   <!-- Document item -->
                   <div
                     class="tree-item doc-item"
                     :class="{
                       active: editorStore.currentDocument?.id === doc.id,
-                      'drag-over': dragState.dropTargetId === doc.id
+                      'drag-over': dragState.dropTargetId === doc.id,
                     }"
                     :data-item-id="doc.id"
                     draggable="true"
-                    @click.stop="hasNoteChildren(doc.id) ? toggleNoteExpanded(doc.id) : openDocument(doc)"
+                    @click.stop="
+                      hasNoteChildren(doc.id) ? toggleNoteExpanded(doc.id) : openDocument(doc)
+                    "
                     @dblclick.stop="openDocument(doc)"
                     @contextmenu="showContextMenu($event, 'note', doc.id)"
                     @dragstart="handleDragStart($event, doc.id, 'note')"
@@ -786,12 +882,25 @@ const tabs = [
                     @drop="handleDrop($event, doc.id, 'note')"
                   >
                     <!-- Expand button for notes with children -->
-                    <button v-if="hasNoteChildren(doc.id)" class="expand-btn" @click.stop="toggleNoteExpanded(doc.id)">
-                      <ChevronRightIcon :size="14" :class="{ rotated: isNoteExpanded(doc.id) }" />
+                    <button
+                      v-if="hasNoteChildren(doc.id)"
+                      class="expand-btn"
+                      @click.stop="toggleNoteExpanded(doc.id)"
+                    >
+                      <ChevronRightIcon
+                        :size="14"
+                        :class="{ rotated: isNoteExpanded(doc.id) }"
+                      />
                     </button>
-                    <span v-else class="expand-placeholder"></span>
+                    <span
+                      v-else
+                      class="expand-placeholder"
+                    ></span>
 
-                    <FileText :size="14" class="item-icon doc-icon" />
+                    <FileText
+                      :size="14"
+                      class="item-icon doc-icon"
+                    />
 
                     <!-- Editing state -->
                     <template v-if="editingNoteId === doc.id">
@@ -819,13 +928,19 @@ const tabs = [
                   </div>
 
                   <!-- Subnotes (children) -->
-                  <div v-if="hasNoteChildren(doc.id) && isNoteExpanded(doc.id)" class="tree-children subnotes">
-                    <template v-for="subnote in getNoteChildren(doc.id)" :key="subnote.id">
+                  <div
+                    v-if="hasNoteChildren(doc.id) && isNoteExpanded(doc.id)"
+                    class="tree-children subnotes"
+                  >
+                    <template
+                      v-for="subnote in getNoteChildren(doc.id)"
+                      :key="subnote.id"
+                    >
                       <div
                         class="tree-item doc-item subnote"
                         :class="{
                           active: editorStore.currentDocument?.id === subnote.id,
-                          'drag-over': dragState.dropTargetId === subnote.id
+                          'drag-over': dragState.dropTargetId === subnote.id,
                         }"
                         :data-item-id="subnote.id"
                         draggable="true"
@@ -837,8 +952,14 @@ const tabs = [
                         @dragleave="handleDragLeave"
                         @drop="handleDrop($event, subnote.id, 'note')"
                       >
-                        <CornerDownRight :size="12" class="subnote-indicator" />
-                        <FileText :size="14" class="item-icon doc-icon" />
+                        <CornerDownRight
+                          :size="12"
+                          class="subnote-indicator"
+                        />
+                        <FileText
+                          :size="14"
+                          class="item-icon doc-icon"
+                        />
 
                         <template v-if="editingNoteId === subnote.id">
                           <input
@@ -869,11 +990,17 @@ const tabs = [
 
                 <!-- Empty project state -->
                 <div
-                  v-if="getProjectDocuments(project.id).length === 0 && projectStore.folders.filter(f => f.parent_id === project.id).length === 0"
+                  v-if="
+                    getProjectDocuments(project.id).length === 0 &&
+                    projectStore.folders.filter((f) => f.parent_id === project.id).length === 0
+                  "
                   class="empty-project"
                 >
                   <span>Empty project</span>
-                  <button class="add-doc-btn" @click.stop="createNewDocument(project.id)">
+                  <button
+                    class="add-doc-btn"
+                    @click.stop="createNewDocument(project.id)"
+                  >
                     <Plus :size="12" />
                     Add note
                   </button>
@@ -883,8 +1010,14 @@ const tabs = [
           </template>
 
           <!-- New root project input -->
-          <div v-if="showNewProjectInput && newProjectParentId === null" class="new-item-input root-level">
-            <Folder :size="16" class="item-icon folder-icon" />
+          <div
+            v-if="showNewProjectInput && newProjectParentId === null"
+            class="new-item-input root-level"
+          >
+            <Folder
+              :size="16"
+              class="item-icon folder-icon"
+            />
             <input
               ref="newProjectInputRef"
               v-model="newProjectName"
@@ -904,22 +1037,30 @@ const tabs = [
             @drop="handleDrop($event, '', 'general')"
           >
             <div class="section-header">
-              <FileText :size="14" class="section-icon" />
+              <FileText
+                :size="14"
+                class="section-icon"
+              />
               <span>General Notes</span>
               <span class="item-count">{{ generalDocuments.length }}</span>
             </div>
 
             <div class="tree-children">
-              <template v-for="doc in generalDocuments" :key="doc.id">
+              <template
+                v-for="doc in generalDocuments"
+                :key="doc.id"
+              >
                 <div
                   class="tree-item doc-item"
                   :class="{
                     active: editorStore.currentDocument?.id === doc.id,
-                    'drag-over': dragState.dropTargetId === doc.id
+                    'drag-over': dragState.dropTargetId === doc.id,
                   }"
                   :data-item-id="doc.id"
                   draggable="true"
-                  @click.stop="hasNoteChildren(doc.id) ? toggleNoteExpanded(doc.id) : openDocument(doc)"
+                  @click.stop="
+                    hasNoteChildren(doc.id) ? toggleNoteExpanded(doc.id) : openDocument(doc)
+                  "
                   @dblclick.stop="openDocument(doc)"
                   @contextmenu="showContextMenu($event, 'note', doc.id)"
                   @dragstart="handleDragStart($event, doc.id, 'note')"
@@ -929,12 +1070,25 @@ const tabs = [
                   @drop.stop="handleDrop($event, doc.id, 'note')"
                 >
                   <!-- Expand button for notes with children -->
-                  <button v-if="hasNoteChildren(doc.id)" class="expand-btn" @click.stop="toggleNoteExpanded(doc.id)">
-                    <ChevronRightIcon :size="14" :class="{ rotated: isNoteExpanded(doc.id) }" />
+                  <button
+                    v-if="hasNoteChildren(doc.id)"
+                    class="expand-btn"
+                    @click.stop="toggleNoteExpanded(doc.id)"
+                  >
+                    <ChevronRightIcon
+                      :size="14"
+                      :class="{ rotated: isNoteExpanded(doc.id) }"
+                    />
                   </button>
-                  <span v-else class="expand-placeholder"></span>
+                  <span
+                    v-else
+                    class="expand-placeholder"
+                  ></span>
 
-                  <FileText :size="14" class="item-icon doc-icon" />
+                  <FileText
+                    :size="14"
+                    class="item-icon doc-icon"
+                  />
 
                   <!-- Editing state -->
                   <template v-if="editingNoteId === doc.id">
@@ -963,13 +1117,19 @@ const tabs = [
                 </div>
 
                 <!-- Subnotes (children) for general notes -->
-                <div v-if="hasNoteChildren(doc.id) && isNoteExpanded(doc.id)" class="tree-children subnotes">
-                  <template v-for="subnote in getNoteChildren(doc.id)" :key="subnote.id">
+                <div
+                  v-if="hasNoteChildren(doc.id) && isNoteExpanded(doc.id)"
+                  class="tree-children subnotes"
+                >
+                  <template
+                    v-for="subnote in getNoteChildren(doc.id)"
+                    :key="subnote.id"
+                  >
                     <div
                       class="tree-item doc-item subnote"
                       :class="{
                         active: editorStore.currentDocument?.id === subnote.id,
-                        'drag-over': dragState.dropTargetId === subnote.id
+                        'drag-over': dragState.dropTargetId === subnote.id,
                       }"
                       :data-item-id="subnote.id"
                       draggable="true"
@@ -981,8 +1141,14 @@ const tabs = [
                       @dragleave="handleDragLeave"
                       @drop.stop="handleDrop($event, subnote.id, 'note')"
                     >
-                      <CornerDownRight :size="12" class="subnote-indicator" />
-                      <FileText :size="14" class="item-icon doc-icon" />
+                      <CornerDownRight
+                        :size="12"
+                        class="subnote-indicator"
+                      />
+                      <FileText
+                        :size="14"
+                        class="item-icon doc-icon"
+                      />
 
                       <template v-if="editingNoteId === subnote.id">
                         <input
@@ -1011,7 +1177,10 @@ const tabs = [
                 </div>
               </template>
 
-              <div v-if="generalDocuments.length === 0" class="empty-state">
+              <div
+                v-if="generalDocuments.length === 0"
+                class="empty-state"
+              >
                 <p v-if="searchQuery">No documents match your search</p>
                 <p v-else>No general notes yet</p>
               </div>
@@ -1021,45 +1190,70 @@ const tabs = [
       </div>
 
       <!-- TOC Panel -->
-      <div v-show="activeTab === 'toc'" class="panel toc-panel">
+      <div
+        v-show="activeTab === 'toc'"
+        class="panel toc-panel"
+      >
         <TableOfContents />
       </div>
 
       <!-- User Profile Section -->
-      <div class="user-section" ref="userMenuRef">
-        <button class="user-profile-btn" @click="toggleUserMenu">
+      <div
+        class="user-section"
+        ref="userMenuRef"
+      >
+        <button
+          class="user-profile-btn"
+          @click="toggleUserMenu"
+        >
           <div class="user-avatar">
             <span>{{ userInitial }}</span>
           </div>
           <div class="user-info">
             <span class="user-name">{{ userDisplayName }}</span>
-            <span v-if="!authStore.isAuthenticated" class="user-badge guest">Guest</span>
-            <span v-else class="user-badge">Free</span>
+            <span
+              v-if="!authStore.isAuthenticated"
+              class="user-badge guest"
+              >Guest</span
+            >
+            <span
+              v-else
+              class="user-badge"
+              >Free</span
+            >
           </div>
-          <ChevronUp :size="16" class="expand-icon" :class="{ rotated: !showUserMenu }" />
+          <ChevronUp
+            :size="16"
+            class="expand-icon"
+            :class="{ rotated: !showUserMenu }"
+          />
         </button>
 
         <!-- User Menu Dropdown -->
         <Transition name="slide-up">
-          <div v-if="showUserMenu" class="user-menu" @click.stop>
+          <div
+            v-if="showUserMenu"
+            class="user-menu"
+            @click.stop
+          >
             <!-- Theme Toggle -->
             <div class="theme-toggle">
-              <button 
-                :class="{ active: currentTheme === 'light' }" 
+              <button
+                :class="{ active: currentTheme === 'light' }"
                 @click="setTheme('light')"
               >
                 <Sun :size="14" />
                 Light
               </button>
-              <button 
-                :class="{ active: currentTheme === 'dark' }" 
+              <button
+                :class="{ active: currentTheme === 'dark' }"
                 @click="setTheme('dark')"
               >
                 <Moon :size="14" />
                 Dark
               </button>
-              <button 
-                :class="{ active: currentTheme === 'system' }" 
+              <button
+                :class="{ active: currentTheme === 'system' }"
                 @click="setTheme('system')"
               >
                 <Monitor :size="14" />
@@ -1069,18 +1263,27 @@ const tabs = [
 
             <div class="menu-divider"></div>
 
-            <button class="menu-item" @click="goToSettings">
+            <button
+              class="menu-item"
+              @click="goToSettings"
+            >
               <Settings :size="16" />
               <span>Settings</span>
               <span class="shortcut">⌘ .</span>
             </button>
 
-            <button class="menu-item" @click="closeUserMenu">
+            <button
+              class="menu-item"
+              @click="closeUserMenu"
+            >
               <MessageCircle :size="16" />
               <span>Join Discord</span>
             </button>
 
-            <button class="menu-item" @click="closeUserMenu">
+            <button
+              class="menu-item"
+              @click="closeUserMenu"
+            >
               <Trash2 :size="16" />
               <span>Trash</span>
             </button>
@@ -1088,13 +1291,19 @@ const tabs = [
             <div class="menu-divider"></div>
 
             <template v-if="authStore.isAuthenticated">
-              <button class="menu-item danger" @click="signOut">
+              <button
+                class="menu-item danger"
+                @click="signOut"
+              >
                 <LogOut :size="16" />
                 <span>Log out</span>
               </button>
             </template>
             <template v-else>
-              <button class="menu-item primary" @click="goToAuth">
+              <button
+                class="menu-item primary"
+                @click="goToAuth"
+              >
                 <User :size="16" />
                 <span>Sign In</span>
               </button>
@@ -1126,7 +1335,10 @@ const tabs = [
             <Edit2 :size="14" />
             <span>Rename</span>
           </button>
-          <button class="danger" @click="handleContextMenuAction('delete')">
+          <button
+            class="danger"
+            @click="handleContextMenuAction('delete')"
+          >
             <Trash2 :size="14" />
             <span>Delete</span>
           </button>
@@ -1146,7 +1358,10 @@ const tabs = [
             <span>Move to General</span>
           </button>
           <div class="menu-divider"></div>
-          <button class="danger" @click="handleContextMenuAction('delete')">
+          <button
+            class="danger"
+            @click="handleContextMenuAction('delete')"
+          >
             <Trash2 :size="14" />
             <span>Delete</span>
           </button>
@@ -1248,15 +1463,15 @@ const tabs = [
 }
 
 .quick-action-btn.primary {
-  background: var(--primary-color, #7C9EF8);
-  color: #FFFFFF;
+  background: var(--primary-color, #7c9ef8);
+  color: #ffffff;
   border-color: transparent;
 }
 
 .quick-action-btn.primary:hover {
   opacity: 0.9;
-  background: var(--primary-color, #7C9EF8);
-  color: #FFFFFF;
+  background: var(--primary-color, #7c9ef8);
+  color: #ffffff;
 }
 
 /* Inline search in quick actions */
@@ -1648,8 +1863,14 @@ const tabs = [
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .context-menu button {

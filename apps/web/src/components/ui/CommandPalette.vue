@@ -34,103 +34,103 @@ const commands = computed<CommandItem[]>(() => [
     label: 'New Document',
     shortcut: 'Ctrl+N',
     category: 'File',
-    action: () => editorStore.createDocument()
+    action: () => editorStore.createDocument(),
   },
   {
     id: 'save-document',
     label: 'Save Document',
     shortcut: 'Ctrl+S',
     category: 'File',
-    action: () => editorStore.saveDocument()
+    action: () => editorStore.saveDocument(),
   },
-  
+
   // Edit commands
   {
     id: 'find',
     label: 'Find in Document',
     shortcut: 'Ctrl+F',
     category: 'Edit',
-    action: () => layoutStore.openSearchPanel()
+    action: () => layoutStore.openSearchPanel(),
   },
-  
+
   // View commands
   {
     id: 'toggle-sidebar',
     label: 'Toggle Sidebar',
     shortcut: 'Ctrl+\\',
     category: 'View',
-    action: () => layoutStore.toggleSidebar()
+    action: () => layoutStore.toggleSidebar(),
   },
   {
     id: 'toggle-source-mode',
     label: layoutStore.isSourceMode ? 'Switch to WYSIWYG Mode' : 'Switch to Source Mode',
     shortcut: 'Ctrl+/',
     category: 'View',
-    action: () => layoutStore.toggleEditorMode()
+    action: () => layoutStore.toggleEditorMode(),
   },
   {
     id: 'toggle-focus-mode',
     label: 'Toggle Focus Mode',
     category: 'View',
-    action: () => layoutStore.toggleFocusMode()
+    action: () => layoutStore.toggleFocusMode(),
   },
   {
     id: 'toggle-zen-mode',
     label: 'Toggle Zen Mode',
     category: 'View',
-    action: () => layoutStore.toggleZenMode()
+    action: () => layoutStore.toggleZenMode(),
   },
   {
     id: 'show-toc',
     label: 'Show Table of Contents',
     category: 'View',
-    action: () => layoutStore.setSidebarPanel('toc')
+    action: () => layoutStore.setSidebarPanel('toc'),
   },
   {
     id: 'show-documents',
     label: 'Show Documents',
     category: 'View',
-    action: () => layoutStore.setSidebarPanel('documents')
+    action: () => layoutStore.setSidebarPanel('documents'),
   },
-  
+
   // Theme commands
   {
     id: 'theme-one-dark',
     label: 'Theme: One Dark',
     category: 'Theme',
-    action: () => preferencesStore.setTheme('one-dark')
+    action: () => preferencesStore.setTheme('one-dark'),
   },
   {
     id: 'theme-dark',
     label: 'Theme: Dark',
     category: 'Theme',
-    action: () => preferencesStore.setTheme('dark')
+    action: () => preferencesStore.setTheme('dark'),
   },
   {
     id: 'theme-material-dark',
     label: 'Theme: Material Dark',
     category: 'Theme',
-    action: () => preferencesStore.setTheme('material-dark')
+    action: () => preferencesStore.setTheme('material-dark'),
   },
   {
     id: 'theme-ulysses',
     label: 'Theme: Ulysses Light',
     category: 'Theme',
-    action: () => preferencesStore.setTheme('ulysses-light')
+    action: () => preferencesStore.setTheme('ulysses-light'),
   },
   {
     id: 'theme-graphite',
     label: 'Theme: Graphite Light',
     category: 'Theme',
-    action: () => preferencesStore.setTheme('graphite-light')
-  }
+    action: () => preferencesStore.setTheme('graphite-light'),
+  },
 ])
 
 // Fuzzy search filter
 function fuzzyMatch(text: string, query: string): boolean {
   const searchLower = query.toLowerCase()
   const textLower = text.toLowerCase()
-  
+
   let searchIndex = 0
   for (let i = 0; i < textLower.length && searchIndex < searchLower.length; i++) {
     if (textLower[i] === searchLower[searchIndex]) {
@@ -142,36 +142,35 @@ function fuzzyMatch(text: string, query: string): boolean {
 
 const filteredCommands = computed(() => {
   if (!searchQuery.value) return commands.value
-  
-  return commands.value.filter(cmd => 
-    fuzzyMatch(cmd.label, searchQuery.value) ||
-    fuzzyMatch(cmd.category, searchQuery.value)
+
+  return commands.value.filter(
+    (cmd) => fuzzyMatch(cmd.label, searchQuery.value) || fuzzyMatch(cmd.category, searchQuery.value)
   )
 })
 
 // Group by category
 const groupedCommands = computed(() => {
   const groups: Record<string, CommandItem[]> = {}
-  
+
   for (const cmd of filteredCommands.value) {
     if (!groups[cmd.category]) {
       groups[cmd.category] = []
     }
     groups[cmd.category]!.push(cmd)
   }
-  
+
   return groups
 })
 
 // Flat list for navigation
 const flatList = computed(() => {
   const items: (CommandItem | { type: 'header'; label: string })[] = []
-  
+
   for (const [category, cmds] of Object.entries(groupedCommands.value)) {
     items.push({ type: 'header', label: category })
     items.push(...cmds)
   }
-  
+
   return items
 })
 
@@ -182,7 +181,7 @@ function executeCommand(cmd: CommandItem) {
 
 function handleKeydown(e: KeyboardEvent) {
   if (!layoutStore.commandPaletteVisible) return
-  
+
   if (e.key === 'Escape') {
     layoutStore.closeCommandPalette()
   } else if (e.key === 'ArrowDown') {
@@ -206,9 +205,7 @@ function navigateDown() {
 function navigateUp() {
   const commandItems = filteredCommands.value
   if (commandItems.length === 0) return
-  selectedIndex.value = selectedIndex.value <= 0 
-    ? commandItems.length - 1 
-    : selectedIndex.value - 1
+  selectedIndex.value = selectedIndex.value <= 0 ? commandItems.length - 1 : selectedIndex.value - 1
 }
 
 function executeSelected() {
@@ -219,13 +216,16 @@ function executeSelected() {
 }
 
 // Reset on open
-watch(() => layoutStore.commandPaletteVisible, (visible) => {
-  if (visible) {
-    searchQuery.value = ''
-    selectedIndex.value = 0
-    nextTick(() => searchInputRef.value?.focus())
+watch(
+  () => layoutStore.commandPaletteVisible,
+  (visible) => {
+    if (visible) {
+      searchQuery.value = ''
+      selectedIndex.value = 0
+      nextTick(() => searchInputRef.value?.focus())
+    }
   }
-})
+)
 
 // Reset selection on search change
 watch(searchQuery, () => {
@@ -260,14 +260,20 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div 
-        v-if="layoutStore.commandPaletteVisible" 
+      <div
+        v-if="layoutStore.commandPaletteVisible"
         class="command-palette-overlay"
         @click="layoutStore.closeCommandPalette()"
       >
-        <div class="command-palette" @click.stop>
+        <div
+          class="command-palette"
+          @click.stop
+        >
           <div class="palette-header">
-            <Command :size="18" class="palette-icon" />
+            <Command
+              :size="18"
+              class="palette-icon"
+            />
             <input
               ref="searchInputRef"
               v-model="searchQuery"
@@ -275,15 +281,18 @@ onUnmounted(() => {
               placeholder="Type a command or search..."
               class="palette-input"
             />
-            <button class="close-btn" @click="layoutStore.closeCommandPalette()">
+            <button
+              class="close-btn"
+              @click="layoutStore.closeCommandPalette()"
+            >
               <X :size="16" />
             </button>
           </div>
-          
+
           <div class="palette-results">
             <template v-if="filteredCommands.length > 0">
-              <div 
-                v-for="(category, categoryName) in groupedCommands" 
+              <div
+                v-for="(category, categoryName) in groupedCommands"
                 :key="categoryName"
                 class="command-group"
               >
@@ -292,21 +301,30 @@ onUnmounted(() => {
                   v-for="(cmd, idx) in category"
                   :key="cmd.id"
                   class="command-item"
-                  :class="{ 
-                    selected: filteredCommands.indexOf(cmd) === selectedIndex 
+                  :class="{
+                    selected: filteredCommands.indexOf(cmd) === selectedIndex,
                   }"
                   @click="executeCommand(cmd)"
                   @mouseenter="selectedIndex = filteredCommands.indexOf(cmd)"
                 >
                   <span class="command-label">{{ cmd.label }}</span>
-                  <span v-if="cmd.shortcut" class="command-shortcut">
+                  <span
+                    v-if="cmd.shortcut"
+                    class="command-shortcut"
+                  >
                     {{ cmd.shortcut }}
                   </span>
-                  <ChevronRight :size="14" class="command-arrow" />
+                  <ChevronRight
+                    :size="14"
+                    class="command-arrow"
+                  />
                 </button>
               </div>
             </template>
-            <div v-else class="no-results">
+            <div
+              v-else
+              class="no-results"
+            >
               No commands found
             </div>
           </div>
@@ -424,7 +442,7 @@ onUnmounted(() => {
 }
 
 .command-item.selected {
-  background: var(--themeColor, var(--primary-color, #7C9EF8));
+  background: var(--themeColor, var(--primary-color, #7c9ef8));
   color: #fff;
 }
 

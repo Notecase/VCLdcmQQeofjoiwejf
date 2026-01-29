@@ -5,13 +5,17 @@ const FUNCTION_TYPE_LANG = {
   sequence: 'yaml',
   plantuml: 'yaml',
   'vega-lite': 'yaml',
-  html: 'markup'
+  html: 'markup',
 }
 
-const containerCtrl = ContentState => {
-  ContentState.prototype.createContainerBlock = function (functionType, value = '', style = undefined) {
+const containerCtrl = (ContentState) => {
+  ContentState.prototype.createContainerBlock = function (
+    functionType,
+    value = '',
+    style = undefined
+  ) {
     const figureBlock = this.createBlock('figure', {
-      functionType
+      functionType,
     })
 
     if (functionType === 'multiplemath') {
@@ -31,10 +35,10 @@ const containerCtrl = ContentState => {
     const lang = FUNCTION_TYPE_LANG[functionType]
     const preBlock = this.createBlock('pre', {
       functionType,
-      lang
+      lang,
     })
     const codeBlock = this.createBlock('code', {
-      lang
+      lang,
     })
 
     this.appendChild(preBlock, codeBlock)
@@ -44,13 +48,13 @@ const containerCtrl = ContentState => {
       const codeContent = this.createBlock('span', {
         text: value,
         lang,
-        functionType: 'codeContent'
+        functionType: 'codeContent',
       })
       this.appendChild(codeBlock, codeContent)
     } else {
       const emptyCodeContent = this.createBlock('span', {
         functionType: 'codeContent',
-        lang
+        lang,
       })
 
       this.appendChild(codeBlock, emptyCodeContent)
@@ -58,13 +62,14 @@ const containerCtrl = ContentState => {
 
     const preview = this.createBlock('div', {
       editable: false,
-      functionType
+      functionType,
     })
 
     return { preBlock, preview }
   }
 
-  ContentState.prototype.initContainerBlock = function (functionType, block, style = undefined) { // p block
+  ContentState.prototype.initContainerBlock = function (functionType, block, style = undefined) {
+    // p block
     block.type = 'figure'
     block.functionType = functionType
     block.children = []
@@ -93,7 +98,7 @@ const containerCtrl = ContentState => {
     const offset = 0
     this.cursor = {
       start: { key, offset },
-      end: { key, offset }
+      end: { key, offset },
     }
     this.partialRender()
   }
@@ -114,7 +119,7 @@ const containerCtrl = ContentState => {
           const offset = 0
           this.cursor = {
             start: { key, offset },
-            end: { key, offset }
+            end: { key, offset },
           }
 
           // Force render

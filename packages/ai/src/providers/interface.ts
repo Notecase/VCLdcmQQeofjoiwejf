@@ -45,10 +45,7 @@ export interface AIUsage {
 // Provider interface
 export interface AIProvider {
   // Streaming completion
-  complete(
-    context: AIContext,
-    options?: AICompletionOptions
-  ): AsyncGenerator<string, void, unknown>
+  complete(context: AIContext, options?: AICompletionOptions): AsyncGenerator<string, void, unknown>
 
   // Rewrite selected text
   rewrite(
@@ -58,10 +55,7 @@ export interface AIProvider {
   ): AsyncGenerator<string, void, unknown>
 
   // Chat with document context
-  chat(
-    messages: ChatMessage[],
-    context?: AIContext
-  ): AsyncGenerator<string, void, unknown>
+  chat(messages: ChatMessage[], context?: AIContext): AsyncGenerator<string, void, unknown>
 
   // Summarize text
   summarize(text: string): AsyncGenerator<string, void, unknown>

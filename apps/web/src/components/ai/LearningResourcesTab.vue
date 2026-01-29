@@ -183,8 +183,9 @@ function renderResourceContent(resource: LearningResource): string {
     case 'flashcards': {
       const cards = (data as any).cards || []
       return cards
-        .map((card: any, i: number) =>
-          `<div class="card-item">
+        .map(
+          (card: any, i: number) =>
+            `<div class="card-item">
             <div class="card-number">Card ${i + 1}</div>
             <div class="card-question"><strong>Q:</strong> ${escapeHtml(card.question)}</div>
             <div class="card-answer"><strong>A:</strong> ${escapeHtml(card.answer)}</div>
@@ -196,8 +197,9 @@ function renderResourceContent(resource: LearningResource): string {
     case 'key_terms': {
       const terms = (data as any).terms || []
       return terms
-        .map((t: any) =>
-          `<div class="term-item">
+        .map(
+          (t: any) =>
+            `<div class="term-item">
             <div class="term-name">${escapeHtml(t.term)}</div>
             <div class="term-definition">${escapeHtml(t.definition)}</div>
             ${t.source ? `<div class="term-source">Source: ${escapeHtml(t.source)}</div>` : ''}
@@ -209,8 +211,9 @@ function renderResourceContent(resource: LearningResource): string {
     case 'qa': {
       const questions = (data as any).questions || []
       return questions
-        .map((q: any, i: number) =>
-          `<div class="qa-item">
+        .map(
+          (q: any, i: number) =>
+            `<div class="qa-item">
             <div class="qa-number">Question ${i + 1}</div>
             <div class="qa-question"><strong>Q:</strong> ${escapeHtml(q.question)}</div>
             <div class="qa-answer"><strong>A:</strong> ${escapeHtml(q.answer)}</div>
@@ -234,8 +237,9 @@ function renderResourceContent(resource: LearningResource): string {
     case 'exercises': {
       const exercises = (data as any).exercises || []
       return exercises
-        .map((ex: any, i: number) =>
-          `<div class="exercise-item">
+        .map(
+          (ex: any, i: number) =>
+            `<div class="exercise-item">
             <div class="exercise-header">
               <span class="exercise-number">Exercise ${i + 1}:</span>
               <span class="exercise-title">${escapeHtml(ex.title)}</span>
@@ -253,8 +257,9 @@ function renderResourceContent(resource: LearningResource): string {
     case 'timeline': {
       const events = (data as any).events || []
       return events
-        .map((e: any) =>
-          `<div class="timeline-item">
+        .map(
+          (e: any) =>
+            `<div class="timeline-item">
             <div class="timeline-date">${escapeHtml(e.date)}</div>
             <div class="timeline-event">${escapeHtml(e.event)}</div>
           </div>`
@@ -290,12 +295,16 @@ function escapeHtml(text: string): string {
 }
 
 // Load resources when note changes
-watch(noteId, async (id) => {
-  if (id) {
-    learningStore.setCurrentNote(id)
-    await learningStore.fetchResources(id)
-  }
-}, { immediate: true })
+watch(
+  noteId,
+  async (id) => {
+    if (id) {
+      learningStore.setCurrentNote(id)
+      await learningStore.fetchResources(id)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   if (noteId.value) {
@@ -308,7 +317,10 @@ onMounted(async () => {
 <template>
   <div class="learning-resources-tab">
     <!-- No Note Selected -->
-    <div class="context-indicator" v-if="!activeNote">
+    <div
+      class="context-indicator"
+      v-if="!activeNote"
+    >
       <span class="radio-dot"></span>
       <span>Select a note to view learning resources</span>
     </div>
@@ -318,32 +330,47 @@ onMounted(async () => {
       <!-- Header -->
       <div class="tab-header">
         <h3 class="tab-title">Learning Resources</h3>
-        <span class="note-context" v-if="activeNote">
+        <span
+          class="note-context"
+          v-if="activeNote"
+        >
           {{ activeNote.title }}
         </span>
       </div>
 
       <!-- Success Message -->
-      <div class="success-toast" v-if="successMessage">
+      <div
+        class="success-toast"
+        v-if="successMessage"
+      >
         <Check :size="14" />
         <span>{{ successMessage }}</span>
       </div>
 
       <!-- Loading State -->
-      <div class="loading-state" v-if="isLoading">
-        <Loader2 :size="20" class="spin" />
+      <div
+        class="loading-state"
+        v-if="isLoading"
+      >
+        <Loader2
+          :size="20"
+          class="spin"
+        />
         <span>Loading resources...</span>
       </div>
 
       <!-- Empty State -->
-      <div class="empty-state" v-else-if="!hasResources">
+      <div
+        class="empty-state"
+        v-else-if="!hasResources"
+      >
         <div class="empty-icon">
           <BookOpen :size="32" />
         </div>
         <p class="empty-title">No saved resources yet</p>
         <p class="empty-desc">
-          Generate flashcards, mindmaps, Q&A, and more from the Recommend tab,
-          then save them here for easy access.
+          Generate flashcards, mindmaps, Q&A, and more from the Recommend tab, then save them here
+          for easy access.
         </p>
         <div class="empty-hint">
           <span>Tip: Resources are saved per note</span>
@@ -351,7 +378,10 @@ onMounted(async () => {
       </div>
 
       <!-- Resources List -->
-      <div class="resources-list" v-else>
+      <div
+        class="resources-list"
+        v-else
+      >
         <div
           v-for="resource in resources"
           :key="resource.id"
@@ -365,7 +395,10 @@ onMounted(async () => {
             />
             <div class="resource-info">
               <span class="resource-type">{{ getTypeInfo(resource.type).label }}</span>
-              <span class="resource-count" v-if="resource.item_count > 0">
+              <span
+                class="resource-count"
+                v-if="resource.item_count > 0"
+              >
                 ({{ resource.item_count }} {{ resource.item_count === 1 ? 'item' : 'items' }})
               </span>
             </div>
@@ -400,8 +433,15 @@ onMounted(async () => {
               @click="handleCopy(resource)"
               :title="copiedId === resource.id ? 'Copied!' : 'Copy as Markdown'"
             >
-              <Check v-if="copiedId === resource.id" :size="14" class="copied" />
-              <Copy v-else :size="14" />
+              <Check
+                v-if="copiedId === resource.id"
+                :size="14"
+                class="copied"
+              />
+              <Copy
+                v-else
+                :size="14"
+              />
             </button>
 
             <!-- Delete Button -->
@@ -417,8 +457,14 @@ onMounted(async () => {
       </div>
 
       <!-- Generate More Button -->
-      <div class="generate-more" v-if="hasResources">
-        <button class="generate-btn" @click="handleGenerateMore">
+      <div
+        class="generate-more"
+        v-if="hasResources"
+      >
+        <button
+          class="generate-btn"
+          @click="handleGenerateMore"
+        >
           <Plus :size="14" />
           <span>Generate more from Recommend tab</span>
         </button>
@@ -434,7 +480,10 @@ onMounted(async () => {
       @close="closeViewModal"
     >
       <template #icon>
-        <component :is="getTypeIcon(viewingResource.type)" :size="20" />
+        <component
+          :is="getTypeIcon(viewingResource.type)"
+          :size="20"
+        />
       </template>
 
       <template #header-right>
@@ -443,13 +492,23 @@ onMounted(async () => {
           @click="handleCopy(viewingResource)"
           :title="copiedId === viewingResource.id ? 'Copied!' : 'Copy as Markdown'"
         >
-          <Check v-if="copiedId === viewingResource.id" :size="14" class="copied" />
-          <Copy v-else :size="14" />
+          <Check
+            v-if="copiedId === viewingResource.id"
+            :size="14"
+            class="copied"
+          />
+          <Copy
+            v-else
+            :size="14"
+          />
           <span>{{ copiedId === viewingResource.id ? 'Copied!' : 'Copy' }}</span>
         </button>
       </template>
 
-      <div class="resource-content" v-html="renderResourceContent(viewingResource)"></div>
+      <div
+        class="resource-content"
+        v-html="renderResourceContent(viewingResource)"
+      ></div>
     </BaseModal>
 
     <!-- Flashcards Practice Modal -->
@@ -532,8 +591,14 @@ onMounted(async () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Loading State */
@@ -918,6 +983,8 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

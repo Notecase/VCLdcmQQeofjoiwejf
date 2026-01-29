@@ -11,9 +11,17 @@ import { useAIStore } from '@/stores/ai'
 import { useAIChat } from '@/services/ai.service'
 import { useEditorStore } from '@/stores'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
-import { 
-  ArrowUp, Paperclip, Globe, Mic, Zap, ChevronDown, Loader2, 
-  Brain, Code, Lightbulb 
+import {
+  ArrowUp,
+  Paperclip,
+  Globe,
+  Mic,
+  Zap,
+  ChevronDown,
+  Loader2,
+  Brain,
+  Code,
+  Lightbulb,
 } from 'lucide-vue-next'
 
 // Store and composable
@@ -47,7 +55,7 @@ async function handleSubmit() {
   // Trigger exit animation if first message
   if (!hasMessages.value) {
     isRecommendationsExiting.value = true
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise((resolve) => setTimeout(resolve, 300))
   }
 
   inputValue.value = ''
@@ -84,32 +92,32 @@ const recommendations = [
     icon: Brain,
     title: 'Explain VAE vs DAG',
     description: 'Compare Variational Autoencoders and DAG models from your Deep Learning notes.',
-    action: 'Compare'
+    action: 'Compare',
   },
   {
     id: 'neural',
     icon: Lightbulb,
     title: 'Quiz on Neural Pathways',
     description: 'Test your understanding of synaptic plasticity from Neuroscience 2.',
-    action: 'Start Quiz'
+    action: 'Start Quiz',
   },
   {
     id: 'quantum',
     icon: Zap,
     title: 'Quantum Gates Cheatsheet',
     description: 'Generate a quick reference for Hadamard, CNOT, and Pauli gates.',
-    action: 'Generate'
+    action: 'Generate',
   },
   {
     id: 'react',
     icon: Code,
     title: 'React Hooks Deep Dive',
     description: 'Explain useEffect cleanup and dependency arrays from your React notes.',
-    action: 'Explain'
-  }
+    action: 'Explain',
+  },
 ]
 
-function handleRecommendationClick(rec: typeof recommendations[0]) {
+function handleRecommendationClick(rec: (typeof recommendations)[0]) {
   inputValue.value = `${rec.action}: ${rec.title}`
 }
 
@@ -134,8 +142,14 @@ onMounted(() => {
           />
 
           <!-- Loading indicator -->
-          <div v-if="isProcessing" class="loading-indicator">
-            <Loader2 :size="16" class="spin" />
+          <div
+            v-if="isProcessing"
+            class="loading-indicator"
+          >
+            <Loader2
+              :size="16"
+              class="spin"
+            />
             <span>AI is thinking...</span>
           </div>
 
@@ -157,34 +171,58 @@ onMounted(() => {
 
             <div class="input-toolbar">
               <div class="toolbar-left">
-                <button class="toolbar-btn" title="Attach file">
+                <button
+                  class="toolbar-btn"
+                  title="Attach file"
+                >
                   <Paperclip :size="16" />
                 </button>
-                <button class="toolbar-btn" title="Voice input">
+                <button
+                  class="toolbar-btn"
+                  title="Voice input"
+                >
                   <Mic :size="16" />
                 </button>
-                
+
                 <div class="toolbar-divider" />
-                
+
                 <!-- Model selector -->
-                <div class="model-selector" @click.stop>
-                  <button class="model-btn" @click="isModelDropdownOpen = !isModelDropdownOpen">
+                <div
+                  class="model-selector"
+                  @click.stop
+                >
+                  <button
+                    class="model-btn"
+                    @click="isModelDropdownOpen = !isModelDropdownOpen"
+                  >
                     <span class="model-icon">🤖</span>
                     <span>{{ selectedModel === 'gpt' ? 'GPT-5.2' : 'Gemini' }}</span>
-                    <ChevronDown :size="12" :class="{ rotated: isModelDropdownOpen }" />
+                    <ChevronDown
+                      :size="12"
+                      :class="{ rotated: isModelDropdownOpen }"
+                    />
                   </button>
                   <Transition name="dropdown">
-                    <div v-if="isModelDropdownOpen" class="model-dropdown">
-                      <button @click="selectModel('gpt')" :class="{ active: selectedModel === 'gpt' }">
+                    <div
+                      v-if="isModelDropdownOpen"
+                      class="model-dropdown"
+                    >
+                      <button
+                        @click="selectModel('gpt')"
+                        :class="{ active: selectedModel === 'gpt' }"
+                      >
                         🤖 GPT-5.2
                       </button>
-                      <button @click="selectModel('gemini')" :class="{ active: selectedModel === 'gemini' }">
+                      <button
+                        @click="selectModel('gemini')"
+                        :class="{ active: selectedModel === 'gemini' }"
+                      >
                         ✨ Gemini 3 Pro
                       </button>
                     </div>
                   </Transition>
                 </div>
-                
+
                 <button class="toolbar-btn research">
                   <Globe :size="14" />
                   <span>Research</span>
@@ -197,13 +235,24 @@ onMounted(() => {
                 :disabled="!inputValue.trim() || isProcessing"
                 @click="handleSubmit"
               >
-                <Loader2 v-if="isProcessing" :size="16" class="spin" />
-                <ArrowUp v-else :size="16" />
+                <Loader2
+                  v-if="isProcessing"
+                  :size="16"
+                  class="spin"
+                />
+                <ArrowUp
+                  v-else
+                  :size="16"
+                />
               </button>
             </div>
           </div>
-          
-          <button v-if="hasMessages" class="clear-btn" @click="handleClearChat">
+
+          <button
+            v-if="hasMessages"
+            class="clear-btn"
+            @click="handleClearChat"
+          >
             Clear conversation
           </button>
         </div>
@@ -212,13 +261,23 @@ onMounted(() => {
 
     <!-- Empty State: Centered with recommendations -->
     <template v-else>
-      <div class="empty-state" :class="{ exiting: isRecommendationsExiting }">
+      <div
+        class="empty-state"
+        :class="{ exiting: isRecommendationsExiting }"
+      >
         <div class="centered-content">
           <!-- Recommendations -->
           <div class="recommendations-section">
             <div class="recommendations-header">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M9.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM7.25 4a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75V4Z" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+              >
+                <path
+                  d="M9.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM7.25 4a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75V4Z"
+                />
               </svg>
               <span>SUGGESTED FOR YOU</span>
             </div>
@@ -232,7 +291,10 @@ onMounted(() => {
                 @click="handleRecommendationClick(rec)"
               >
                 <div class="card-icon">
-                  <component :is="rec.icon" :size="20" />
+                  <component
+                    :is="rec.icon"
+                    :size="20"
+                  />
                 </div>
                 <h3 class="card-title">{{ rec.title }}</h3>
                 <p class="card-description">{{ rec.description }}</p>
@@ -253,34 +315,58 @@ onMounted(() => {
 
             <div class="input-toolbar">
               <div class="toolbar-left">
-                <button class="toolbar-btn" title="Attach file">
+                <button
+                  class="toolbar-btn"
+                  title="Attach file"
+                >
                   <Paperclip :size="16" />
                 </button>
-                <button class="toolbar-btn" title="Voice input">
+                <button
+                  class="toolbar-btn"
+                  title="Voice input"
+                >
                   <Mic :size="16" />
                 </button>
-                
+
                 <div class="toolbar-divider" />
-                
+
                 <!-- Model selector -->
-                <div class="model-selector" @click.stop>
-                  <button class="model-btn" @click="isModelDropdownOpen = !isModelDropdownOpen">
+                <div
+                  class="model-selector"
+                  @click.stop
+                >
+                  <button
+                    class="model-btn"
+                    @click="isModelDropdownOpen = !isModelDropdownOpen"
+                  >
                     <span class="model-icon">🤖</span>
                     <span>{{ selectedModel === 'gpt' ? 'GPT-5.2' : 'Gemini' }}</span>
-                    <ChevronDown :size="12" :class="{ rotated: isModelDropdownOpen }" />
+                    <ChevronDown
+                      :size="12"
+                      :class="{ rotated: isModelDropdownOpen }"
+                    />
                   </button>
                   <Transition name="dropdown">
-                    <div v-if="isModelDropdownOpen" class="model-dropdown">
-                      <button @click="selectModel('gpt')" :class="{ active: selectedModel === 'gpt' }">
+                    <div
+                      v-if="isModelDropdownOpen"
+                      class="model-dropdown"
+                    >
+                      <button
+                        @click="selectModel('gpt')"
+                        :class="{ active: selectedModel === 'gpt' }"
+                      >
                         🤖 GPT-5.2
                       </button>
-                      <button @click="selectModel('gemini')" :class="{ active: selectedModel === 'gemini' }">
+                      <button
+                        @click="selectModel('gemini')"
+                        :class="{ active: selectedModel === 'gemini' }"
+                      >
                         ✨ Gemini 3 Pro
                       </button>
                     </div>
                   </Transition>
                 </div>
-                
+
                 <button class="toolbar-btn research">
                   <Globe :size="14" />
                   <span>Research</span>
@@ -293,8 +379,15 @@ onMounted(() => {
                 :disabled="!inputValue.trim() || isProcessing"
                 @click="handleSubmit"
               >
-                <Loader2 v-if="isProcessing" :size="16" class="spin" />
-                <ArrowUp v-else :size="16" />
+                <Loader2
+                  v-if="isProcessing"
+                  :size="16"
+                  class="spin"
+                />
+                <ArrowUp
+                  v-else
+                  :size="16"
+                />
               </button>
             </div>
           </div>
@@ -304,7 +397,10 @@ onMounted(() => {
 
     <!-- Error Display -->
     <Transition name="slide-up">
-      <div v-if="error" class="error-banner">
+      <div
+        v-if="error"
+        class="error-banner"
+      >
         <span>{{ error }}</span>
         <button @click="clearError">×</button>
       </div>
@@ -337,12 +433,21 @@ onMounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeUpAndAway {
-  to { opacity: 0; transform: translateY(-30px); }
+  to {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
 }
 
 .centered-content {
@@ -400,9 +505,16 @@ onMounted(() => {
 }
 
 /* Card borders - recreate 2x2 grid lines */
-.recommendation-card:nth-child(1) { border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; }
-.recommendation-card:nth-child(2) { border-bottom: 1px solid #30363d; }
-.recommendation-card:nth-child(3) { border-right: 1px solid #30363d; }
+.recommendation-card:nth-child(1) {
+  border-right: 1px solid #30363d;
+  border-bottom: 1px solid #30363d;
+}
+.recommendation-card:nth-child(2) {
+  border-bottom: 1px solid #30363d;
+}
+.recommendation-card:nth-child(3) {
+  border-right: 1px solid #30363d;
+}
 
 .card-icon {
   color: #7d8590;
@@ -622,7 +734,9 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Messages Area */
@@ -717,14 +831,14 @@ onMounted(() => {
   .recommendations-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .recommendation-card:nth-child(1),
   .recommendation-card:nth-child(2),
   .recommendation-card:nth-child(3) {
     border-right: none;
     border-bottom: 1px solid #30363d;
   }
-  
+
   .recommendation-card:last-child {
     border-bottom: none;
   }

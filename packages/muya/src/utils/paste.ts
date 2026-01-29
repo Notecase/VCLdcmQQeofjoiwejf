@@ -1,117 +1,105 @@
-import { PARAGRAPH_TYPES, PREVIEW_DOMPURIFY_CONFIG } from '../config';
-import { sanitize } from '../utils';
+import { PARAGRAPH_TYPES, PREVIEW_DOMPURIFY_CONFIG } from '../config'
+import { sanitize } from '../utils'
 
-const TIMEOUT = 1500;
+const TIMEOUT = 1500
 
-export const isOnline = () => navigator.onLine === true;
+export const isOnline = () => navigator.onLine === true
 
 export async function getPageTitle(url: string) {
-    // No need to request the title when it's not url.
-    if (!url.startsWith('http'))
-        return '';
+  // No need to request the title when it's not url.
+  if (!url.startsWith('http')) return ''
 
-    // No need to request the title when off line.
-    if (!isOnline())
-        return '';
+  // No need to request the title when off line.
+  if (!isOnline()) return ''
 
-    try {
-        const res = await fetch(url, { method: 'GET', mode: 'cors' });
-        const contentType = res.headers.get('content-type');
+  try {
+    const res = await fetch(url, { method: 'GET', mode: 'cors' })
+    const contentType = res.headers.get('content-type')
 
-        if (res.status === 200 && contentType && /text\/html/.test(contentType)) {
-            const response = await res.json();
+    if (res.status === 200 && contentType && /text\/html/.test(contentType)) {
+      const response = await res.json()
 
-            if (typeof response === 'string') {
-                const match = response.match(/<title>(.*)<\/title>/);
+      if (typeof response === 'string') {
+        const match = response.match(/<title>(.*)<\/title>/)
 
-                return match && match[1] ? match[1] : '';
-            }
+        return match && match[1] ? match[1] : ''
+      }
 
-            return '';
-        }
-        return '';
+      return ''
     }
-    catch (err) {
-        return '';
-    }
+    return ''
+  } catch (err) {
+    return ''
+  }
 }
 
 export async function normalizePastedHTML(html: string) {
-    // Only extract the `body.innerHTML` when the `html` is a full HTML Document.
-    if (/<body>[\s\S]*<\/body>/.test(html)) {
-        const match = /<body>([\s\S]*)<\/body>/.exec(html);
-        if (match && typeof match[1] === 'string')
-            html = match[1];
+  // Only extract the `body.innerHTML` when the `html` is a full HTML Document.
+  if (/<body>[\s\S]*<\/body>/.test(html)) {
+    const match = /<body>([\s\S]*)<\/body>/.exec(html)
+    if (match && typeof match[1] === 'string') html = match[1]
+  }
+
+  // Prevent XSS and sanitize HTML.
+  const sanitizedHtml = sanitize(html, PREVIEW_DOMPURIFY_CONFIG, false) as string
+  const tempWrapper = document.createElement('div')
+  tempWrapper.innerHTML = sanitizedHtml
+
+  // Special process for turndown.js, needed for Number app on macOS.
+  const tables = Array.from(tempWrapper.querySelectorAll('table'))
+
+  for (const table of tables) {
+    const row = table.querySelector('tr')
+    if (row && row.firstElementChild?.tagName !== 'TH') {
+      ;[...row.children].forEach((cell) => {
+        const th = document.createElement('th')
+        th.innerHTML = cell.innerHTML
+        cell.replaceWith(th)
+      })
+    }
+    const paragraphs = Array.from(table.querySelectorAll('p'))
+
+    for (const p of paragraphs) {
+      const span = document.createElement('span')
+      span.innerHTML = p.innerHTML
+      p.replaceWith(span)
     }
 
-    // Prevent XSS and sanitize HTML.
-    const sanitizedHtml = sanitize(
-        html,
-        PREVIEW_DOMPURIFY_CONFIG,
-        false,
-    ) as string;
-    const tempWrapper = document.createElement('div');
-    tempWrapper.innerHTML = sanitizedHtml;
+    const tds = table.querySelectorAll('td')
 
-    // Special process for turndown.js, needed for Number app on macOS.
-    const tables = Array.from(tempWrapper.querySelectorAll('table'));
-
-    for (const table of tables) {
-        const row = table.querySelector('tr');
-        if (row && row.firstElementChild?.tagName !== 'TH') {
-            [...row.children].forEach((cell) => {
-                const th = document.createElement('th');
-                th.innerHTML = cell.innerHTML;
-                cell.replaceWith(th);
-            });
-        }
-        const paragraphs = Array.from(table.querySelectorAll('p'));
-
-        for (const p of paragraphs) {
-            const span = document.createElement('span');
-            span.innerHTML = p.innerHTML;
-            p.replaceWith(span);
-        }
-
-        const tds = table.querySelectorAll('td');
-
-        for (const td of tds) {
-            const rawHtml = td.innerHTML;
-            if (/<br>/.test(rawHtml))
-                td.innerHTML = rawHtml.replace(/<br>/g, '&lt;br&gt;');
-        }
+    for (const td of tds) {
+      const rawHtml = td.innerHTML
+      if (/<br>/.test(rawHtml)) td.innerHTML = rawHtml.replace(/<br>/g, '&lt;br&gt;')
     }
+  }
 
-    // Prevent it parse into a link if copy a url.
-    const links: HTMLElement[] = Array.from(
-        tempWrapper.querySelectorAll('a'),
-    );
+  // Prevent it parse into a link if copy a url.
+  const links: HTMLElement[] = Array.from(tempWrapper.querySelectorAll('a'))
 
-    for (const link of links) {
-        const href = link.getAttribute('href');
-        const text = link.textContent;
+  for (const link of links) {
+    const href = link.getAttribute('href')
+    const text = link.textContent
 
-        if (href === text && typeof href === 'string') {
-            // Resolve empty string when `TIMEOUT` passed.
-            const timer = new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve('');
-                }, TIMEOUT);
-            });
+    if (href === text && typeof href === 'string') {
+      // Resolve empty string when `TIMEOUT` passed.
+      const timer = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve('')
+        }, TIMEOUT)
+      })
 
-            const title = await Promise.race([getPageTitle(href), timer]);
-            if (title) {
-                link.textContent = title as string;
-            }
-            else {
-                const span = document.createElement('span');
-                span.innerHTML = text as string;
-                link.replaceWith(span);
-            }
-        }
+      const title = await Promise.race([getPageTitle(href), timer])
+      if (title) {
+        link.textContent = title as string
+      } else {
+        const span = document.createElement('span')
+        span.innerHTML = text as string
+        link.replaceWith(span)
+      }
     }
+  }
 
-    return tempWrapper.innerHTML;
+  return tempWrapper.innerHTML
 }
 
 /**
@@ -123,22 +111,17 @@ export async function normalizePastedHTML(html: string) {
  * as paste data if the return value is text, we'll create a html code block if the result is code.
  */
 export function getCopyTextType(html: string, text: string, pasteType: string) {
-    const getTextType = (text: string) => {
-        const match
-            = /^<([a-z\d-]+)(?=\s|>).*?>[\s\S]+?<\/([a-z\d-]+)>$/i.exec(
-                text.trim(),
-            );
-        if (match && match[1]) {
-            const tag = match[1];
+  const getTextType = (text: string) => {
+    const match = /^<([a-z\d-]+)(?=\s|>).*?>[\s\S]+?<\/([a-z\d-]+)>$/i.exec(text.trim())
+    if (match && match[1]) {
+      const tag = match[1]
 
-            return PARAGRAPH_TYPES.find(type => type === tag) ? 'code' : 'text';
-        }
+      return PARAGRAPH_TYPES.find((type) => type === tag) ? 'code' : 'text'
+    }
 
-        return 'text';
-    };
+    return 'text'
+  }
 
-    if (pasteType === 'normal')
-        return html && text ? 'html' : getTextType(text);
-    else
-        return getTextType(text);
+  if (pasteType === 'normal') return html && text ? 'html' : getTextType(text)
+  else return getTextType(text)
 }

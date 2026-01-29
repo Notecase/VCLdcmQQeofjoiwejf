@@ -36,14 +36,14 @@ This plan transforms Inkdown into an AI agent-first note-taking application usin
 
 ### Why Full TypeScript?
 
-| Benefit | Impact |
-|---------|--------|
-| Single language | Faster development, easier hiring |
-| Shared types | Type safety across entire stack |
-| Vercel AI SDK | Native TypeScript streaming |
-| LangGraph.js | Production-ready agent framework |
-| Monorepo synergy | `@inkdown/*` packages work seamlessly |
-| Edge deployment | Hono runs on Vercel Edge, Cloudflare Workers |
+| Benefit          | Impact                                       |
+| ---------------- | -------------------------------------------- |
+| Single language  | Faster development, easier hiring            |
+| Shared types     | Type safety across entire stack              |
+| Vercel AI SDK    | Native TypeScript streaming                  |
+| LangGraph.js     | Production-ready agent framework             |
+| Monorepo synergy | `@inkdown/*` packages work seamlessly        |
+| Edge deployment  | Hono runs on Vercel Edge, Cloudflare Workers |
 
 ---
 
@@ -51,28 +51,28 @@ This plan transforms Inkdown into an AI agent-first note-taking application usin
 
 ### Existing Infrastructure (Verified)
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| **Vue 3 Frontend** | ✅ Ready | `apps/web/` |
-| **Supabase PostgreSQL** | ✅ Ready | 4 migrations applied |
-| **pgvector (1536 dims)** | ✅ Ready | `001_initial_schema.sql` |
-| **Semantic Search Functions** | ✅ Ready | `003_enhancements.sql` |
-| **AI Package Structure** | ⚠️ Interface only | `packages/ai/` |
-| **Shared Types** | ✅ Ready | `packages/shared/` |
-| **Embeddings Tables** | ✅ Ready | `note_embeddings`, `attachment_embeddings` |
+| Component                     | Status            | Location                                   |
+| ----------------------------- | ----------------- | ------------------------------------------ |
+| **Vue 3 Frontend**            | ✅ Ready          | `apps/web/`                                |
+| **Supabase PostgreSQL**       | ✅ Ready          | 4 migrations applied                       |
+| **pgvector (1536 dims)**      | ✅ Ready          | `001_initial_schema.sql`                   |
+| **Semantic Search Functions** | ✅ Ready          | `003_enhancements.sql`                     |
+| **AI Package Structure**      | ⚠️ Interface only | `packages/ai/`                             |
+| **Shared Types**              | ✅ Ready          | `packages/shared/`                         |
+| **Embeddings Tables**         | ✅ Ready          | `note_embeddings`, `attachment_embeddings` |
 
 ### What Needs to Be Built
 
-| Component | Priority | Phase |
-|-----------|----------|-------|
-| **AI Backend (Hono)** | Critical | 0 |
-| **AI Usage Tables** | Critical | 0 |
-| **Provider Implementations** | High | 1 |
-| **Embedding Service** | High | 1 |
-| **RAG Pipeline** | High | 2 |
-| **LangGraph Agents** | High | 3 |
-| **Vercel AI SDK Integration** | High | 4 |
-| **Background Workers** | Medium | 5 |
+| Component                     | Priority | Phase |
+| ----------------------------- | -------- | ----- |
+| **AI Backend (Hono)**         | Critical | 0     |
+| **AI Usage Tables**           | Critical | 0     |
+| **Provider Implementations**  | High     | 1     |
+| **Embedding Service**         | High     | 1     |
+| **RAG Pipeline**              | High     | 2     |
+| **LangGraph Agents**          | High     | 3     |
+| **Vercel AI SDK Integration** | High     | 4     |
+| **Background Workers**        | Medium   | 5     |
 
 ---
 
@@ -80,33 +80,33 @@ This plan transforms Inkdown into an AI agent-first note-taking application usin
 
 ### TIER 1: Core Infrastructure (Hard to Change)
 
-| Layer | Decision | Rationale |
-|-------|----------|-----------|
-| **Database** | Supabase PostgreSQL | Already configured, RLS works, scales to 1M users |
-| **Vector Store** | pgvector → Pinecone | Start with pgvector, migrate at 500K vectors |
-| **Auth** | Supabase Auth | Already integrated, JWT works with API |
-| **API Framework** | Hono | Edge-compatible, TypeScript-native, lightweight |
-| **Agent Framework** | LangGraph.js | TypeScript-native, production-ready |
+| Layer               | Decision            | Rationale                                         |
+| ------------------- | ------------------- | ------------------------------------------------- |
+| **Database**        | Supabase PostgreSQL | Already configured, RLS works, scales to 1M users |
+| **Vector Store**    | pgvector → Pinecone | Start with pgvector, migrate at 500K vectors      |
+| **Auth**            | Supabase Auth       | Already integrated, JWT works with API            |
+| **API Framework**   | Hono                | Edge-compatible, TypeScript-native, lightweight   |
+| **Agent Framework** | LangGraph.js        | TypeScript-native, production-ready               |
 
 ### TIER 2: Flexible Components (Can Evolve)
 
-| Layer | MVP Choice | Scale Option |
-|-------|-----------|--------------|
-| **Chat Model (General)** | OpenAI GPT-4o | Claude Sonnet, local Llama |
-| **Chat Model (Specialized)** | Google Gemini Pro/Flash | Claude Opus for complex reasoning |
-| **Embeddings** | OpenAI text-embedding-3-large | Cohere, Mixedbread |
-| **Frontend AI** | Vercel AI SDK | Same |
-| **Caching** | None | Upstash Redis |
-| **Background Jobs** | Simple polling | BullMQ + Redis |
+| Layer                        | MVP Choice                    | Scale Option                      |
+| ---------------------------- | ----------------------------- | --------------------------------- |
+| **Chat Model (General)**     | OpenAI GPT-4o                 | Claude Sonnet, local Llama        |
+| **Chat Model (Specialized)** | Google Gemini Pro/Flash       | Claude Opus for complex reasoning |
+| **Embeddings**               | OpenAI text-embedding-3-large | Cohere, Mixedbread                |
+| **Frontend AI**              | Vercel AI SDK                 | Same                              |
+| **Caching**                  | None                          | Upstash Redis                     |
+| **Background Jobs**          | Simple polling                | BullMQ + Redis                    |
 
 ### TIER 3: Scale-Only (Add When Needed)
 
-| Trigger | Solution |
-|---------|----------|
-| Query latency > 100ms | Pinecone for vectors |
-| Repeated queries > 30% | Upstash Redis cache |
-| AI cost > $10K/month | Local models via Modal |
-| Global users | Cloudflare Workers |
+| Trigger                | Solution               |
+| ---------------------- | ---------------------- |
+| Query latency > 100ms  | Pinecone for vectors   |
+| Repeated queries > 30% | Upstash Redis cache    |
+| AI cost > $10K/month   | Local models via Modal |
+| Global users           | Cloudflare Workers     |
 
 ---
 
@@ -257,6 +257,7 @@ inkdown/
 ### Overview
 
 Phase 0 establishes the foundational infrastructure for AI features:
+
 1. Database tables for AI (usage tracking, chat sessions, embedding queue)
 2. API backend with Hono
 3. Updated packages with AI dependencies
@@ -642,6 +643,7 @@ GRANT EXECUTE ON FUNCTION complete_embedding_job TO service_role;
 Create the Hono-based API backend in `apps/api/`.
 
 **Directory Structure**:
+
 ```
 apps/api/
 ├── src/
@@ -686,18 +688,21 @@ Update `turbo.json` and root `package.json` for the new API package.
 ### Provider Strategy
 
 **OpenAI (Primary)**:
+
 - General chat and conversation
 - Agent capabilities (note manipulation, planning)
 - Embedding generation (text-embedding-3-large)
 - Function calling for tool use
 
 **Google Gemini (Specialized)**:
+
 - Slides generation (long-form structured content)
 - Deep research (large context window - 1M tokens)
 - Course generation (curriculum and content creation)
 - Complex document analysis
 
 ### Step 1.1: OpenAI Provider (Priority 1 - REQUIRED)
+
 - **Chat completions**: GPT-4o for general conversation
 - **Embeddings**: text-embedding-3-large (1536 dimensions)
 - **Function calling**: Tool use support for agents
@@ -705,6 +710,7 @@ Update `turbo.json` and root `package.json` for the new API package.
 - **Cost tracking**: Token usage and billing
 
 **Implementation**:
+
 ```typescript
 // packages/ai/src/providers/openai.ts
 export class OpenAIProvider implements AIProvider {
@@ -720,6 +726,7 @@ export class OpenAIProvider implements AIProvider {
 ```
 
 ### Step 1.2: Gemini Provider (Priority 2 - REQUIRED)
+
 - **Specialized models**: Gemini Pro for complex tasks, Flash for speed
 - **Long context**: Up to 1M tokens for research
 - **Structured output**: JSON mode for slides/courses
@@ -727,6 +734,7 @@ export class OpenAIProvider implements AIProvider {
 - **Multimodal**: Future support for images
 
 **Implementation**:
+
 ```typescript
 // packages/ai/src/providers/gemini.ts
 export class GeminiProvider implements AIProvider {
@@ -738,12 +746,14 @@ export class GeminiProvider implements AIProvider {
 ```
 
 ### Step 1.3: Provider Factory with Intelligent Routing
+
 - **Task-based routing**: Automatically select provider based on task type
 - **Model selection**: Choose optimal model per use case
 - **Fallback logic**: Handle provider failures gracefully
 - **Cost optimization**: Route to cost-effective models
 
 **Implementation**:
+
 ```typescript
 // packages/ai/src/providers/factory.ts
 export function createProvider(taskType: TaskType) {
@@ -765,6 +775,7 @@ export function createProvider(taskType: TaskType) {
 ```
 
 ### Step 1.4: Unified Provider Interface
+
 - Consistent API across all providers
 - Type-safe method signatures
 - Error handling and retry logic
@@ -775,16 +786,19 @@ export function createProvider(taskType: TaskType) {
 ## Phase 2: RAG Pipeline
 
 ### Step 2.1: Text Chunking Service
+
 - Sentence-boundary aware chunking
 - Overlap for context preservation
 - Token counting
 
 ### Step 2.2: Embedding Service
+
 - Batch embedding generation
 - Hash-based deduplication
 - Queue integration
 
 ### Step 2.3: RAG Retrieval
+
 - Semantic search wrapper
 - Hybrid search support
 - Context formatting
@@ -818,17 +832,18 @@ const workflow = new StateGraph(AgentState)
 
 ### Agent-to-Provider Mapping
 
-| Agent Type | Provider | Model | Rationale |
-|------------|----------|-------|-----------|
-| **Chat Agent** | OpenAI | GPT-4o | Fast general conversation, good tool use |
-| **Note Agent** | OpenAI | GPT-4o | Precise CRUD operations, function calling |
-| **Planner Agent** | OpenAI | GPT-4o | Structured thinking, reliable output |
-| **Writing Assistant** | OpenAI | GPT-4o | Quick inline completions |
-| **Course Agent** | Gemini | Pro/Flash | Long-form content generation, structure |
-| **Research Agent** | Gemini | Pro | 1M token context, deep analysis |
-| **Slides Agent** | Gemini | Pro | Structured output, creative content |
+| Agent Type            | Provider | Model     | Rationale                                 |
+| --------------------- | -------- | --------- | ----------------------------------------- |
+| **Chat Agent**        | OpenAI   | GPT-4o    | Fast general conversation, good tool use  |
+| **Note Agent**        | OpenAI   | GPT-4o    | Precise CRUD operations, function calling |
+| **Planner Agent**     | OpenAI   | GPT-4o    | Structured thinking, reliable output      |
+| **Writing Assistant** | OpenAI   | GPT-4o    | Quick inline completions                  |
+| **Course Agent**      | Gemini   | Pro/Flash | Long-form content generation, structure   |
+| **Research Agent**    | Gemini   | Pro       | 1M token context, deep analysis           |
+| **Slides Agent**      | Gemini   | Pro       | Structured output, creative content       |
 
 ### Step 3.1: Chat Agent (OpenAI)
+
 - **Purpose**: General conversation with document context
 - **Provider**: OpenAI GPT-4o
 - **Features**:
@@ -839,6 +854,7 @@ const workflow = new StateGraph(AgentState)
 - **Tools**: Search tool, note read tool
 
 ### Step 3.2: Note Agent (OpenAI)
+
 - **Purpose**: Create, update, organize notes
 - **Provider**: OpenAI GPT-4o
 - **Features**:
@@ -849,6 +865,7 @@ const workflow = new StateGraph(AgentState)
 - **Tools**: Note create, update, delete, move
 
 ### Step 3.3: Planner Agent (OpenAI)
+
 - **Purpose**: Task decomposition and planning
 - **Provider**: OpenAI GPT-4o
 - **Features**:
@@ -859,6 +876,7 @@ const workflow = new StateGraph(AgentState)
 - **Tools**: Note read, project analysis
 
 ### Step 3.4: Course Generation Agent (Gemini)
+
 - **Purpose**: Create structured courses from notes
 - **Provider**: Google Gemini Pro
 - **Features**:
@@ -873,6 +891,7 @@ const workflow = new StateGraph(AgentState)
   - Strong at educational content
 
 ### Step 3.5: Deep Research Agent (Gemini)
+
 - **Purpose**: Comprehensive research and analysis
 - **Provider**: Google Gemini Pro
 - **Features**:
@@ -887,6 +906,7 @@ const workflow = new StateGraph(AgentState)
   - Good at synthesizing diverse sources
 
 ### Step 3.6: Slides Generation Agent (Gemini)
+
 - **Purpose**: Create presentation slides from notes
 - **Provider**: Google Gemini Pro/Flash
 - **Features**:
@@ -905,12 +925,14 @@ const workflow = new StateGraph(AgentState)
 ## Phase 4: Frontend Integration
 
 ### Step 4.1: Vercel AI SDK Setup
+
 ```typescript
 // Install
 pnpm add ai @ai-sdk/vue @ai-sdk/openai @ai-sdk/anthropic
 ```
 
 ### Step 4.2: Chat Composable
+
 ```typescript
 import { useChat } from '@ai-sdk/vue'
 
@@ -926,6 +948,7 @@ export function useAIChat(options: ChatOptions) {
 ```
 
 ### Step 4.3: Completion Composable
+
 ```typescript
 import { useCompletion } from '@ai-sdk/vue'
 
@@ -937,6 +960,7 @@ export function useAICompletion() {
 ```
 
 ### Step 4.4: UI Components
+
 - AIChatPanel.vue
 - AICompletionPopover.vue
 - AIAgentStatus.vue
@@ -946,15 +970,18 @@ export function useAICompletion() {
 ## Phase 5: Background Processing
 
 ### Step 5.1: Embedding Worker
+
 - Poll-based queue processing
 - Batch operations
 - Error handling and retries
 
 ### Step 5.2: Enable Auto-Embedding
+
 - Enable database trigger
 - Monitor queue health
 
 ### Step 5.3: Monitoring
+
 - Queue depth metrics
 - Error rate tracking
 - Cost monitoring
@@ -964,18 +991,21 @@ export function useAICompletion() {
 ## Scalability Roadmap
 
 ### Stage 1: 0 → 100K Users (~$500/month)
+
 - Supabase Pro
 - Vercel Hobby
 - Railway Basic
 - pgvector for embeddings
 
 ### Stage 2: 100K → 1M Users (~$3,500/month)
+
 - Pinecone for vectors
 - Upstash Redis cache
 - Railway Pro
 - Vercel Pro
 
 ### Stage 3: 1M → 10M Users (~$25,000/month)
+
 - Pinecone Enterprise
 - Multi-region deployment
 - Custom model fine-tuning
@@ -986,6 +1016,7 @@ export function useAICompletion() {
 ## Environment Variables
 
 ### Frontend (`apps/web/.env`)
+
 ```bash
 # Supabase
 VITE_SUPABASE_URL=https://xxx.supabase.co
@@ -999,6 +1030,7 @@ VITE_ENABLE_AI=true
 ```
 
 ### API Backend (`apps/api/.env`)
+
 ```bash
 # Server
 PORT=3001
@@ -1032,6 +1064,7 @@ CORS_ORIGIN=http://localhost:5173
 ## Verification Checklist
 
 ### Phase 0 Verification
+
 - [ ] Migration 005 applied successfully
 - [ ] All new tables exist: ai_usage, chat_sessions, chat_messages, embedding_queue
 - [ ] RLS policies active on all tables
@@ -1045,30 +1078,35 @@ CORS_ORIGIN=http://localhost:5173
 - [ ] Turbo tasks work: dev, build, lint
 
 ### Phase 1 Verification
+
 - [ ] OpenAI provider streams responses
 - [ ] Anthropic provider streams responses
 - [ ] Embedding service generates vectors
 - [ ] Provider factory selects correct provider
 
 ### Phase 2 Verification
+
 - [ ] Text chunking produces valid chunks
 - [ ] Embeddings stored in database
 - [ ] Semantic search returns results
 - [ ] Hybrid search combines scores correctly
 
 ### Phase 3 Verification
+
 - [ ] Chat agent responds with context
 - [ ] Note agent creates/updates notes
 - [ ] Planner agent generates plans
 - [ ] Course agent creates curriculum
 
 ### Phase 4 Verification
+
 - [ ] useChat streams to UI
 - [ ] useCompletion provides suggestions
 - [ ] Chat panel displays messages
 - [ ] Error states handled gracefully
 
 ### Phase 5 Verification
+
 - [ ] Worker processes queue
 - [ ] Auto-embedding trigger works
 - [ ] Failed jobs retry correctly

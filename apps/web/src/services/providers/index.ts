@@ -16,7 +16,7 @@ export type {
   AuthResult,
   AuthStateChangeCallback,
   AuthStateChangeEvent,
-  IAuthProvider
+  IAuthProvider,
 } from './auth.interface'
 
 export type { AuthProvider } from './auth.interface'
@@ -35,7 +35,7 @@ export type {
   RealtimeCallback,
   IDatabaseProvider,
   IQueryBuilder,
-  IDocumentQueries
+  IDocumentQueries,
 } from './database.interface'
 
 // Storage
@@ -49,7 +49,7 @@ export type {
   StorageError,
   StorageResult,
   IStorageProvider,
-  StorageBucket
+  StorageBucket,
 } from './storage.interface'
 
 export { STORAGE_BUCKETS } from './storage.interface'

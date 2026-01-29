@@ -73,7 +73,13 @@ export interface RecommendationData {
   slides?: Slide[]
 }
 
-export type RecommendationType = 'mindmap' | 'flashcards' | 'concepts' | 'exercises' | 'resources' | 'slides'
+export type RecommendationType =
+  | 'mindmap'
+  | 'flashcards'
+  | 'concepts'
+  | 'exercises'
+  | 'resources'
+  | 'slides'
 
 export type GenerationStatus = 'idle' | 'generating' | 'complete' | 'error'
 
@@ -135,12 +141,19 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
   const hasSlides = computed(() => !!currentRecommendations.value?.slides?.length)
 
   const isGenerating = computed(() =>
-    Object.values(generationStatus.value).some(s => s === 'generating')
+    Object.values(generationStatus.value).some((s) => s === 'generating')
   )
 
   const visibleRecommendationTypes = computed(() => {
-    const types: RecommendationType[] = ['mindmap', 'flashcards', 'concepts', 'exercises', 'resources', 'slides']
-    return types.filter(t => !dismissedTypes.value.has(t))
+    const types: RecommendationType[] = [
+      'mindmap',
+      'flashcards',
+      'concepts',
+      'exercises',
+      'resources',
+      'slides',
+    ]
+    return types.filter((t) => !dismissedTypes.value.has(t))
   })
 
   // ---------------------------------------------------------------------------
@@ -204,7 +217,9 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     activeModal.value = null
   }
 
-  function setSlidesProgress(progress: { currentSlide: number; totalSlides: number; message: string } | null) {
+  function setSlidesProgress(
+    progress: { currentSlide: number; totalSlides: number; message: string } | null
+  ) {
     slidesProgress.value = progress
   }
 
@@ -218,7 +233,10 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     console.log('🧠 [Recommendations] generateMindmap called')
     console.log('🧠 [Recommendations] noteId:', noteId)
     console.log('🧠 [Recommendations] noteContent length:', noteContent?.length || 0)
-    console.log('🧠 [Recommendations] noteContent preview:', noteContent?.substring(0, 100) || 'N/A')
+    console.log(
+      '🧠 [Recommendations] noteContent preview:',
+      noteContent?.substring(0, 100) || 'N/A'
+    )
 
     if (!noteContent || noteContent.length < 50) {
       const errorMsg = `Content too short (${noteContent?.length || 0} chars, need 50+)`
@@ -260,7 +278,10 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     }
   }
 
-  async function generateFlashcards(noteId: string, noteContent?: string): Promise<Flashcard[] | null> {
+  async function generateFlashcards(
+    noteId: string,
+    noteContent?: string
+  ): Promise<Flashcard[] | null> {
     setGenerationStatus('flashcards', 'generating')
 
     console.log('📚 [Recommendations] generateFlashcards called')
@@ -349,7 +370,10 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     }
   }
 
-  async function generateExercises(noteId: string, noteContent?: string): Promise<Exercise[] | null> {
+  async function generateExercises(
+    noteId: string,
+    noteContent?: string
+  ): Promise<Exercise[] | null> {
     setGenerationStatus('exercises', 'generating')
 
     console.log('✏️ [Recommendations] generateExercises called')
@@ -393,7 +417,10 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     }
   }
 
-  async function generateResources(noteId: string, noteContent?: string): Promise<Resource[] | null> {
+  async function generateResources(
+    noteId: string,
+    noteContent?: string
+  ): Promise<Resource[] | null> {
     setGenerationStatus('resources', 'generating')
 
     console.log('🔗 [Recommendations] generateResources called')
@@ -547,13 +574,13 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
 
     if (!noteContent || noteContent.length < 50) {
       console.error('❌ [Recommendations] generateAll: Content too short, aborting all generation')
-      typesToGenerate.forEach(type => {
+      typesToGenerate.forEach((type) => {
         setError(type, `Content too short (${noteContent?.length || 0} chars, need 50+)`)
       })
       return
     }
 
-    const promises = typesToGenerate.map(type => {
+    const promises = typesToGenerate.map((type) => {
       switch (type) {
         case 'mindmap':
           return generateMindmap(noteId, noteContent)
@@ -595,7 +622,7 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
     activeModal.value = null
     slidesProgress.value = null
     errors.value = {}
-    Object.keys(generationStatus.value).forEach(key => {
+    Object.keys(generationStatus.value).forEach((key) => {
       generationStatus.value[key as RecommendationType] = 'idle'
     })
   }

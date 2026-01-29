@@ -10,136 +10,134 @@ import type { DatabaseResult } from './providers'
  * Get all projects for a user
  */
 export async function getProjects(
-    userId: string,
-    options?: {
-        parentId?: string | null
-        includeArchived?: boolean
-    }
+  userId: string,
+  options?: {
+    parentId?: string | null
+    includeArchived?: boolean
+  }
 ): Promise<DatabaseResult<Project[]>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    let query = db.from<Project>('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_deleted', false)
+  let query = db.from<Project>('projects').select('*').eq('user_id', userId).eq('is_deleted', false)
 
-    if (options?.parentId !== undefined) {
-        if (options.parentId === null) {
-            query = query.is('parent_id', null)
-        } else {
-            query = query.eq('parent_id', options.parentId)
-        }
+  if (options?.parentId !== undefined) {
+    if (options.parentId === null) {
+      query = query.is('parent_id', null)
+    } else {
+      query = query.eq('parent_id', options.parentId)
     }
+  }
 
-    if (!options?.includeArchived) {
-        query = query.eq('is_archived', false)
-    }
+  if (!options?.includeArchived) {
+    query = query.eq('is_archived', false)
+  }
 
-    query = query.order('sort_order', { ascending: true })
-        .order('updated_at', { ascending: false })
+  query = query.order('sort_order', { ascending: true }).order('updated_at', { ascending: false })
 
-    return query.execute()
+  return query.execute()
 }
 
 /**
  * Get root projects (no parent)
  */
 export async function getRootProjects(userId: string): Promise<DatabaseResult<Project[]>> {
-    return getProjects(userId, { parentId: null })
+  return getProjects(userId, { parentId: null })
 }
 
 /**
  * Get subprojects of a project
  */
 export async function getSubprojects(
-    userId: string,
-    parentId: string
+  userId: string,
+  parentId: string
 ): Promise<DatabaseResult<Project[]>> {
-    return getProjects(userId, { parentId })
+  return getProjects(userId, { parentId })
 }
 
 /**
  * Get a single project by ID
  */
 export async function getProject(projectId: string): Promise<DatabaseResult<Project[]>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    return db.from<Project>('projects')
-        .select('*')
-        .eq('id', projectId)
-        .eq('is_deleted', false)
-        .single()
-        .execute()
+  return db
+    .from<Project>('projects')
+    .select('*')
+    .eq('id', projectId)
+    .eq('is_deleted', false)
+    .single()
+    .execute()
 }
 
 /**
  * Get project with all descendants (subprojects)
  */
 export async function getProjectWithDescendants(
-    userId: string,
-    projectId: string
+  userId: string,
+  projectId: string
 ): Promise<DatabaseResult<Project[]>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    // Get the project first to get its path
-    const projectResult = await getProject(projectId)
-    if (projectResult.error || !projectResult.data?.[0]) {
-        return projectResult
-    }
+  // Get the project first to get its path
+  const projectResult = await getProject(projectId)
+  if (projectResult.error || !projectResult.data?.[0]) {
+    return projectResult
+  }
 
-    const project = projectResult.data[0]
+  const project = projectResult.data[0]
 
-    // Get all projects with path starting with this project's path
-    return db.from<Project>('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_deleted', false)
-        .like('path', `${project.path}%`)
-        .order('depth', { ascending: true })
-        .execute()
+  // Get all projects with path starting with this project's path
+  return db
+    .from<Project>('projects')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .like('path', `${project.path}%`)
+    .order('depth', { ascending: true })
+    .execute()
 }
 
 /**
  * Create a new project
  */
 export async function createProject(
-    userId: string,
-    data: CreateProjectDTO
+  userId: string,
+  data: CreateProjectDTO
 ): Promise<DatabaseResult<Project | Project[]>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    return db.from<Project>('projects')
-        .insert({
-            user_id: userId,
-            name: data.name,
-            parent_id: data.parent_id || null,
-            description: data.description || null,
-            icon: data.icon || '📁',
-            color: data.color || '#6366f1'
-        })
+  return db.from<Project>('projects').insert({
+    user_id: userId,
+    name: data.name,
+    parent_id: data.parent_id || null,
+    description: data.description || null,
+    icon: data.icon || '📁',
+    color: data.color || '#6366f1',
+  })
 }
 
 /**
  * Update a project
  */
 export async function updateProject(
-    projectId: string,
-    data: UpdateProjectDTO
+  projectId: string,
+  data: UpdateProjectDTO
 ): Promise<DatabaseResult<Project | Project[]>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    const updateData: Record<string, unknown> = {}
+  const updateData: Record<string, unknown> = {}
 
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined) updateData.description = data.description
-    if (data.icon !== undefined) updateData.icon = data.icon
-    if (data.color !== undefined) updateData.color = data.color
-    if (data.sort_order !== undefined) updateData.sort_order = data.sort_order
-    if (data.is_archived !== undefined) updateData.is_archived = data.is_archived
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.icon !== undefined) updateData.icon = data.icon
+  if (data.color !== undefined) updateData.color = data.color
+  if (data.sort_order !== undefined) updateData.sort_order = data.sort_order
+  if (data.is_archived !== undefined) updateData.is_archived = data.is_archived
 
-    return db.from<Project>('projects')
-        .eq('id', projectId)
-        .update(updateData as Partial<Project>)
+  return db
+    .from<Project>('projects')
+    .eq('id', projectId)
+    .update(updateData as Partial<Project>)
 }
 
 /**
@@ -147,69 +145,72 @@ export async function updateProject(
  * Uses the move_project function with circular reference validation
  */
 export async function moveProject(
-    projectId: string,
-    newParentId: string | null
+  projectId: string,
+  newParentId: string | null
 ): Promise<DatabaseResult<{ success: boolean; project?: Project; error?: string }>> {
-    const db = getDatabaseService()
+  const db = getDatabaseService()
 
-    return db.rpc<{ success: boolean; project?: Project; error?: string }>('move_project', {
-        p_project_id: projectId,
-        p_new_parent_id: newParentId
-    })
+  return db.rpc<{ success: boolean; project?: Project; error?: string }>('move_project', {
+    p_project_id: projectId,
+    p_new_parent_id: newParentId,
+  })
 }
 
 /**
  * Soft delete a project
  */
-export async function deleteProject(projectId: string): Promise<DatabaseResult<Project | Project[]>> {
-    const db = getDatabaseService()
+export async function deleteProject(
+  projectId: string
+): Promise<DatabaseResult<Project | Project[]>> {
+  const db = getDatabaseService()
 
-    return db.from<Project>('projects')
-        .eq('id', projectId)
-        .update({ is_deleted: true } as Partial<Project>)
+  return db
+    .from<Project>('projects')
+    .eq('id', projectId)
+    .update({ is_deleted: true } as Partial<Project>)
 }
 
 /**
  * Get project tree (hierarchical structure)
  */
 export async function getProjectTree(userId: string): Promise<ProjectTreeNode[]> {
-    const result = await getProjects(userId)
+  const result = await getProjects(userId)
 
-    if (result.error || !result.data) {
-        return []
-    }
+  if (result.error || !result.data) {
+    return []
+  }
 
-    return buildTree(result.data)
+  return buildTree(result.data)
 }
 
 interface ProjectTreeNode extends Project {
-    children: ProjectTreeNode[]
+  children: ProjectTreeNode[]
 }
 
 function buildTree(projects: Project[]): ProjectTreeNode[] {
-    const map = new Map<string, ProjectTreeNode>()
-    const roots: ProjectTreeNode[] = []
+  const map = new Map<string, ProjectTreeNode>()
+  const roots: ProjectTreeNode[] = []
 
-    // Create nodes
-    for (const project of projects) {
-        map.set(project.id, { ...project, children: [] })
+  // Create nodes
+  for (const project of projects) {
+    map.set(project.id, { ...project, children: [] })
+  }
+
+  // Build tree
+  for (const project of projects) {
+    const node = map.get(project.id)!
+
+    if (!project.parent_id) {
+      roots.push(node)
+    } else {
+      const parent = map.get(project.parent_id)
+      if (parent) {
+        parent.children.push(node)
+      } else {
+        roots.push(node)
+      }
     }
+  }
 
-    // Build tree
-    for (const project of projects) {
-        const node = map.get(project.id)!
-
-        if (!project.parent_id) {
-            roots.push(node)
-        } else {
-            const parent = map.get(project.parent_id)
-            if (parent) {
-                parent.children.push(node)
-            } else {
-                roots.push(node)
-            }
-        }
-    }
-
-    return roots
+  return roots
 }

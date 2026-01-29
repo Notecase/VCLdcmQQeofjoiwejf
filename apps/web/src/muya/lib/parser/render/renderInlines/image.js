@@ -6,28 +6,39 @@ import DeleteIcon from '../../../assets/pngicon/delete/2.png'
 
 const renderIcon = (h, className, icon) => {
   const selector = `a.${className}`
-  const iconVnode = h('i.icon', h('i.icon-inner', {
-    style: {
-      background: `url(${icon}) no-repeat`,
-      'background-size': '100%'
-    }
-  }, ''))
+  const iconVnode = h(
+    'i.icon',
+    h(
+      'i.icon-inner',
+      {
+        style: {
+          background: `url(${icon}) no-repeat`,
+          'background-size': '100%',
+        },
+      },
+      ''
+    )
+  )
 
-  return h(selector, {
-    attrs: {
-      contenteditable: 'false'
-    }
-  }, iconVnode)
+  return h(
+    selector,
+    {
+      attrs: {
+        contenteditable: 'false',
+      },
+    },
+    iconVnode
+  )
 }
 
 // I dont want operate dom directly, is there any better method? need help!
-export default function image (h, cursor, block, token, outerClass) {
+export default function image(h, cursor, block, token, outerClass) {
   const imageInfo = getImageInfo(token.attrs.src)
   const { selectedImage } = this.muya.contentState
   const data = {
     dataset: {
-      raw: token.raw
-    }
+      raw: token.raw,
+    },
   }
   let id
   let isSuccess
@@ -39,7 +50,7 @@ export default function image (h, cursor, block, token, outerClass) {
   const height = token.attrs.height
 
   if (src) {
-    ({ id, isSuccess, domsrc } = this.loadImageAsync(imageInfo, token.attrs))
+    ;({ id, isSuccess, domsrc } = this.loadImageAsync(imageInfo, token.attrs))
   }
 
   let wrapperSelector = id
@@ -49,14 +60,14 @@ export default function image (h, cursor, block, token, outerClass) {
   const imageIcons = [
     renderIcon(h, 'ag-image-icon-success', ImageIcon),
     renderIcon(h, 'ag-image-icon-fail', ImageFailIcon),
-    renderIcon(h, 'ag-image-icon-close', DeleteIcon)
+    renderIcon(h, 'ag-image-icon-close', DeleteIcon),
   ]
 
   const renderImageContainer = (...args) => {
     const data = {}
     if (title) {
       Object.assign(data, {
-        dataset: { title }
+        dataset: { title },
       })
     }
     return h(`span.${CLASS_OR_ID.AG_IMAGE_CONTAINER}`, data, args)
@@ -80,7 +91,7 @@ export default function image (h, cursor, block, token, outerClass) {
   if (alt.startsWith('loading-')) {
     wrapperSelector += `.${CLASS_OR_ID.AG_IMAGE_UPLOADING}`
     Object.assign(data.dataset, {
-      id: alt
+      id: alt,
     })
     if (this.urlMap.has(alt)) {
       src = this.urlMap.get(alt)
@@ -112,7 +123,7 @@ export default function image (h, cursor, block, token, outerClass) {
 
     const renderImage = () => {
       const data = {
-        props: { alt: alt.replace(/[`*{}[\]()#+\-.!_>~:|<>$]/g, ''), src: domsrc, title }
+        props: { alt: alt.replace(/[`*{}[\]()#+\-.!_>~:|<>$]/g, ''), src: domsrc, title },
       }
 
       if (typeof width === 'number') {
@@ -128,28 +139,18 @@ export default function image (h, cursor, block, token, outerClass) {
 
     return isSuccess
       ? [
-        h(wrapperSelector, data, [
-          ...imageIcons,
-          renderImageContainer(
-            // An image description has inline elements as its contents.
-            // When an image is rendered to HTML, this is standardly used as the image’s alt attribute.
-            renderImage()
-          )
-        ])
-      ]
-      : [
-        h(wrapperSelector, data, [
-          ...imageIcons,
-          renderImageContainer()
-        ])
-      ]
+          h(wrapperSelector, data, [
+            ...imageIcons,
+            renderImageContainer(
+              // An image description has inline elements as its contents.
+              // When an image is rendered to HTML, this is standardly used as the image’s alt attribute.
+              renderImage()
+            ),
+          ]),
+        ]
+      : [h(wrapperSelector, data, [...imageIcons, renderImageContainer()])]
   } else {
     wrapperSelector += `.${CLASS_OR_ID.AG_EMPTY_IMAGE}`
-    return [
-      h(wrapperSelector, data, [
-        ...imageIcons,
-        renderImageContainer()
-      ])
-    ]
+    return [h(wrapperSelector, data, [...imageIcons, renderImageContainer()])]
   }
 }

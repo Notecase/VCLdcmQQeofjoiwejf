@@ -17,10 +17,16 @@ const PRE_BLOCK_HASH = {
   sequence: `.${CLASS_OR_ID.AG_SEQUENCE}`,
   plantuml: `.${CLASS_OR_ID.AG_PLANTUML}`,
   mermaid: `.${CLASS_OR_ID.AG_MERMAID}`,
-  'vega-lite': `.${CLASS_OR_ID.AG_VEGA_LITE}`
+  'vega-lite': `.${CLASS_OR_ID.AG_VEGA_LITE}`,
 }
 
-export default function renderContainerBlock (parent, block, activeBlocks, matches, useCache = false) {
+export default function renderContainerBlock(
+  parent,
+  block,
+  activeBlocks,
+  matches,
+  useCache = false
+) {
   let selector = this.getSelector(block, activeBlocks)
   const {
     key,
@@ -34,7 +40,7 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
     bulletMarkerOrDelimiter,
     isLooseListItem,
     lang,
-    column
+    column,
   } = block
 
   if (type === 'table') {
@@ -43,16 +49,18 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
     this.renderingRowContainer = block
   }
 
-  const children = block.children.map(child => this.renderBlock(block, child, activeBlocks, matches, useCache))
+  const children = block.children.map((child) =>
+    this.renderBlock(block, child, activeBlocks, matches, useCache)
+  )
   const data = {
     attrs: {},
-    dataset: {}
+    dataset: {},
   }
 
   if (editable === false) {
     Object.assign(data.attrs, {
       contenteditable: 'false',
-      spellcheck: 'false'
+      spellcheck: 'false',
     })
   }
 
@@ -78,18 +86,18 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
     const { cells } = this.muya.contentState.selectedTableCells || {}
     if (align) {
       Object.assign(data.attrs, {
-        style: `text-align:${align}`
+        style: `text-align:${align}`,
       })
     }
 
     if (typeof column === 'number') {
       Object.assign(data.dataset, {
-        column
+        column,
       })
     }
 
     if (cells && cells.length) {
-      const cell = cells.find(c => c.key === key)
+      const cell = cells.find((c) => c.key === key)
       if (cell) {
         const { top, right, bottom, left } = cell
         selector += '.ag-cell-selected'
@@ -110,7 +118,9 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
       // Judge whether to render the table drag bar.
       const { renderingTable, renderingRowContainer } = this
 
-      const findTable = renderingTable ? activeBlocks.find(b => b.key === renderingTable.key) : null
+      const findTable = renderingTable
+        ? activeBlocks.find((b) => b.key === renderingTable.key)
+        : null
       if (findTable && renderingRowContainer) {
         const { row: tableRow, column: tableColumn } = findTable
         const isLastRow = () => {
@@ -134,17 +144,21 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
       // TODO: This should be the best place to create and update the TOC.
       //       Cache `block.key` and title and update only if necessary.
       Object.assign(data.dataset, {
-        head: type
+        head: type,
       })
       selector += `.${headingStyle}`
     }
     Object.assign(data.dataset, {
-      role: type
+      role: type,
     })
   } else if (type === 'figure') {
     if (functionType) {
       Object.assign(data.dataset, { role: functionType.toUpperCase() })
-      if (functionType === 'table' && activeBlocks[0] && activeBlocks[0].functionType === 'cellContent') {
+      if (
+        functionType === 'table' &&
+        activeBlocks[0] &&
+        activeBlocks[0].functionType === 'cellContent'
+      ) {
         children.unshift(renderTableTools(activeBlocks))
       } else if (functionType !== 'footnote') {
         children.unshift(renderEditIcon())
@@ -153,9 +167,7 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
       }
     }
 
-    if (
-      /html|multiplemath|flowchart|mermaid|sequence|plantuml|vega-lite/.test(functionType)
-    ) {
+    if (/html|multiplemath|flowchart|mermaid|sequence|plantuml|vega-lite/.test(functionType)) {
       selector += `.${CLASS_OR_ID.AG_CONTAINER_BLOCK}`
       Object.assign(data.attrs, { spellcheck: 'false' })
     }
@@ -168,7 +180,9 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
     Object.assign(data.dataset, { marker: bulletMarkerOrDelimiter })
     selector += `.${CLASS_OR_ID.AG_LIST_ITEM}`
     selector += `.ag-${listItemType}-list-item`
-    selector += isLooseListItem ? `.${CLASS_OR_ID.AG_LOOSE_LIST_ITEM}` : `.${CLASS_OR_ID.AG_TIGHT_LIST_ITEM}`
+    selector += isLooseListItem
+      ? `.${CLASS_OR_ID.AG_LOOSE_LIST_ITEM}`
+      : `.${CLASS_OR_ID.AG_TIGHT_LIST_ITEM}`
   } else if (type === 'pre') {
     Object.assign(data.attrs, { spellcheck: 'false' })
     Object.assign(data.dataset, { role: functionType })
@@ -176,7 +190,7 @@ export default function renderContainerBlock (parent, block, activeBlocks, match
 
     if (/html|multiplemath|mermaid|flowchart|vega-lite|sequence|plantuml/.test(functionType)) {
       const codeBlock = block.children[0]
-      const code = codeBlock.children.map(line => line.text).join('\n')
+      const code = codeBlock.children.map((line) => line.text).join('\n')
       this.codeCache.set(block.key, code)
     }
   }

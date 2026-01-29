@@ -14,7 +14,7 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     isAuthenticated: false,
     isLoading: true,
-    error: null
+    error: null,
   }),
 
   actions: {
@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', {
             email: result.data.user.email || '',
             name: result.data.user.user_metadata?.name as string | undefined,
             avatar_url: result.data.user.user_metadata?.avatar_url as string | undefined,
-            created_at: result.data.user.created_at
+            created_at: result.data.user.created_at,
           }
           this.isAuthenticated = true
         }
@@ -69,7 +69,7 @@ export const useAuthStore = defineStore('auth', {
             email: session.user.email || '',
             name: session.user.user_metadata?.name as string | undefined,
             avatar_url: session.user.user_metadata?.avatar_url as string | undefined,
-            created_at: session.user.created_at
+            created_at: session.user.created_at,
           }
           this.isAuthenticated = true
         } else if (event === 'SIGNED_OUT') {
@@ -159,6 +159,6 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.isLoading = false
       }
-    }
-  }
+    },
+  },
 })

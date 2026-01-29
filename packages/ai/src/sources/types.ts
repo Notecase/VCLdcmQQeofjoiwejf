@@ -16,7 +16,7 @@ export type SourceStatus = 'processing' | 'ready' | 'error'
 
 export interface Source {
   id: string
-  noteId: string  // Which note this source belongs to
+  noteId: string // Which note this source belongs to
   userId: string
   type: SourceType
 
@@ -25,13 +25,13 @@ export interface Source {
   originalFilename?: string
 
   // Extracted content
-  content: string  // Full text content
-  chunks: SourceChunk[]  // Chunked for semantic search
+  content: string // Full text content
+  chunks: SourceChunk[] // Chunked for semantic search
 
   // Metadata
   title: string
   wordCount: number
-  pageCount?: number  // For PDFs
+  pageCount?: number // For PDFs
   extractedAt: Date
 
   // Status
@@ -47,9 +47,9 @@ export interface SourceChunk {
   id: string
   sourceId: string
   content: string
-  embedding?: number[]  // For semantic search
-  pageNumber?: number  // For PDFs
-  position: number  // Order in document
+  embedding?: number[] // For semantic search
+  pageNumber?: number // For PDFs
+  position: number // Order in document
   metadata?: Record<string, unknown>
 }
 
@@ -58,9 +58,9 @@ export interface SourceChunk {
 // ============================================================================
 
 export interface ProcessingOptions {
-  chunkSize?: number  // Target chunk size in characters (default: 1000)
-  chunkOverlap?: number  // Overlap between chunks (default: 200)
-  generateEmbeddings?: boolean  // Whether to generate embeddings
+  chunkSize?: number // Target chunk size in characters (default: 1000)
+  chunkOverlap?: number // Overlap between chunks (default: 200)
+  generateEmbeddings?: boolean // Whether to generate embeddings
 }
 
 export interface ProcessingResult {
@@ -98,18 +98,18 @@ export interface LinkProcessingResult extends ProcessingResult {
 // ============================================================================
 
 export interface SourceSearchOptions {
-  noteId?: string  // Filter to specific note
+  noteId?: string // Filter to specific note
   query: string
-  limit?: number  // Max results (default: 10)
-  threshold?: number  // Similarity threshold (default: 0.7)
-  includeContent?: boolean  // Include full chunk content
+  limit?: number // Max results (default: 10)
+  threshold?: number // Similarity threshold (default: 0.7)
+  includeContent?: boolean // Include full chunk content
 }
 
 export interface SourceSearchResult {
   chunk: SourceChunk
   source: Source
-  score: number  // Similarity score
-  highlights?: string[]  // Matched text snippets
+  score: number // Similarity score
+  highlights?: string[] // Matched text snippets
 }
 
 // ============================================================================
@@ -185,7 +185,7 @@ export interface SearchSourcesResponse {
 export interface SourceProcessingProgress {
   sourceId: string
   status: 'uploading' | 'extracting' | 'chunking' | 'embedding' | 'complete' | 'error'
-  progress: number  // 0-100
+  progress: number // 0-100
   message: string
   error?: string
 }

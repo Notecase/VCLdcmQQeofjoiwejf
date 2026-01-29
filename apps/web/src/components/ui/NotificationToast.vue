@@ -11,10 +11,14 @@ const notificationsStore = useNotificationsStore()
 
 function getIcon(type: NotificationType) {
   switch (type) {
-    case 'success': return CheckCircle
-    case 'warning': return AlertTriangle
-    case 'error': return XCircle
-    default: return Info
+    case 'success':
+      return CheckCircle
+    case 'warning':
+      return AlertTriangle
+    case 'error':
+      return XCircle
+    default:
+      return Info
   }
 }
 
@@ -33,16 +37,23 @@ function getTypeClass(type: NotificationType) {
           class="toast"
           :class="getTypeClass(notification.type)"
         >
-          <component :is="getIcon(notification.type)" :size="18" class="toast-icon" />
+          <component
+            :is="getIcon(notification.type)"
+            :size="18"
+            class="toast-icon"
+          />
           <div class="toast-content">
-            <div v-if="notification.title" class="toast-title">
+            <div
+              v-if="notification.title"
+              class="toast-title"
+            >
               {{ notification.title }}
             </div>
             <div class="toast-message">
               {{ notification.message }}
             </div>
           </div>
-          <button 
+          <button
             v-if="notification.dismissible"
             class="toast-dismiss"
             @click="notificationsStore.dismiss(notification.id)"

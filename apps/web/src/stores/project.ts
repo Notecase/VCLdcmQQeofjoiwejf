@@ -38,7 +38,7 @@ export const useProjectStore = defineStore('project', () => {
   // Computed: Build hierarchical tree structure using buildProjectTree
   const projectTree = computed<ProjectTreeNode[]>(() => {
     // Convert ProjectFolder[] to Project[] format for tree building
-    const projects: Project[] = folders.value.map(folder => ({
+    const projects: Project[] = folders.value.map((folder) => ({
       id: folder.id,
       user_id: '', // Not needed for tree building
       parent_id: folder.parent_id,
@@ -55,14 +55,14 @@ export const useProjectStore = defineStore('project', () => {
       is_archived: false,
       is_deleted: false,
       created_at: folder.created_at,
-      updated_at: folder.updated_at
+      updated_at: folder.updated_at,
     }))
 
     return buildProjectTree(projects)
   })
 
   const rootFolders = computed(() => {
-    return projectTree.value.filter(item => item.parent_id === null)
+    return projectTree.value.filter((item) => item.parent_id === null)
   })
 
   // Actions
@@ -86,13 +86,13 @@ export const useProjectStore = defineStore('project', () => {
       }
 
       // Map Project type to ProjectFolder type
-      folders.value = (result.data || []).map(project => ({
+      folders.value = (result.data || []).map((project) => ({
         id: project.id,
         name: project.name,
         parent_id: project.parent_id,
         is_expanded: expandedFolderIds.value.has(project.id),
         created_at: project.created_at,
-        updated_at: project.updated_at
+        updated_at: project.updated_at,
       }))
     } catch (error) {
       console.error('Error loading folders:', error)
@@ -114,7 +114,7 @@ export const useProjectStore = defineStore('project', () => {
       // Use database service
       const result = await projectsService.createProject(authStore.user.id, {
         name,
-        parent_id: parentId ?? undefined
+        parent_id: parentId ?? undefined,
       })
 
       if (result.error) {
@@ -131,7 +131,7 @@ export const useProjectStore = defineStore('project', () => {
           parent_id: project.parent_id,
           is_expanded: false,
           created_at: project.created_at,
-          updated_at: project.updated_at
+          updated_at: project.updated_at,
         }
         folders.value.push(newFolder)
         return newFolder
@@ -153,7 +153,7 @@ export const useProjectStore = defineStore('project', () => {
       }
 
       // Update local state
-      const folder = folders.value.find(f => f.id === id)
+      const folder = folders.value.find((f) => f.id === id)
       if (folder) {
         folder.name = newName
         folder.updated_at = new Date().toISOString()
@@ -173,7 +173,7 @@ export const useProjectStore = defineStore('project', () => {
       }
 
       // Update local state
-      folders.value = folders.value.filter(f => f.id !== id)
+      folders.value = folders.value.filter((f) => f.id !== id)
       expandedFolderIds.value.delete(id)
     } catch (error) {
       console.error('Error deleting folder:', error)
@@ -205,7 +205,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function expandAll() {
-    folders.value.forEach(f => expandedFolderIds.value.add(f.id))
+    folders.value.forEach((f) => expandedFolderIds.value.add(f.id))
   }
 
   /**
@@ -231,7 +231,10 @@ export const useProjectStore = defineStore('project', () => {
   /**
    * Move a project to a new parent
    */
-  async function moveProject(projectId: string, newParentId: string | null): Promise<{ success: boolean; error?: string }> {
+  async function moveProject(
+    projectId: string,
+    newParentId: string | null
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await projectsService.moveProject(projectId, newParentId)
       if (result.error) {
@@ -277,6 +280,6 @@ export const useProjectStore = defineStore('project', () => {
     collapseAll,
     expandAll,
     loadProjectNotes,
-    moveProject
+    moveProject,
   }
 })

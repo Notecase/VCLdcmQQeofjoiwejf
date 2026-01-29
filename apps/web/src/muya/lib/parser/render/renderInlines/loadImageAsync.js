@@ -2,7 +2,7 @@ import { getUniqueId, loadImage } from '../../../utils'
 import { insertAfter, operateClassName } from '../../../utils/domManipulate'
 import { CLASS_OR_ID } from '../../../config'
 
-export default function loadImageAsync (imageInfo, attrs, className, imageClass) {
+export default function loadImageAsync(imageInfo, attrs, className, imageClass) {
   const { src, isUnknownType } = imageInfo
   let id
   let isSuccess
@@ -71,7 +71,7 @@ export default function loadImageAsync (imageInfo, attrs, className, imageClass)
           height,
           dispMsec,
           touchMsec,
-          domsrc
+          domsrc,
         })
       })
       .catch(() => {
@@ -89,7 +89,7 @@ export default function loadImageAsync (imageInfo, attrs, className, imageClass)
         }
         this.loadImageMap.set(src, {
           id,
-          isSuccess: false
+          isSuccess: false,
         })
       })
   } else {

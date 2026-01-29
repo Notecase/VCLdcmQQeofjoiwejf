@@ -1,12 +1,17 @@
-
-import { PARAGRAPH_TYPES, PREVIEW_DOMPURIFY_CONFIG, HAS_TEXT_BLOCK_REG, IMAGE_EXT_REG, URL_REG } from '../config'
+import {
+  PARAGRAPH_TYPES,
+  PREVIEW_DOMPURIFY_CONFIG,
+  HAS_TEXT_BLOCK_REG,
+  IMAGE_EXT_REG,
+  URL_REG,
+} from '../config'
 import { sanitize, getUniqueId, getImageInfo as getImageSrc, getPageTitle } from '../utils'
 import { getImageInfo } from '../utils/getImageInfo'
 
 const LIST_REG = /ul|ol/
 const LINE_BREAKS_REG = /\n/
 
-const pasteCtrl = ContentState => {
+const pasteCtrl = (ContentState) => {
   // check paste type: `MERGE` or `NEWLINE`
   ContentState.prototype.checkPasteType = function (start, fragment) {
     const fragmentType = fragment.type
@@ -58,7 +63,7 @@ const pasteCtrl = ContentState => {
         }
 
         // TODO: We could try to import HTML elements such as headings, text and lists to markdown for better UX.
-        type = PARAGRAPH_TYPES.find(type => type === tag) ? 'copyAsHtml' : type
+        type = PARAGRAPH_TYPES.find((type) => type === tag) ? 'copyAsHtml' : type
       }
     }
     return type
@@ -83,7 +88,7 @@ const pasteCtrl = ContentState => {
     for (const table of tables) {
       const row = table.querySelector('tr')
       if (row.firstElementChild.tagName !== 'TH') {
-        [...row.children].forEach(cell => {
+        ;[...row.children].forEach((cell) => {
           const th = document.createElement('th')
           th.innerHTML = cell.innerHTML
           cell.replaceWith(th)
@@ -132,12 +137,12 @@ const pasteCtrl = ContentState => {
       if (this.selectedImage) {
         this.replaceImage(this.selectedImage, {
           alt: id,
-          src: imagePath
+          src: imagePath,
         })
       } else {
         this.insertImage({
           alt: id,
-          src: imagePath
+          src: imagePath,
         })
       }
 
@@ -160,7 +165,7 @@ const pasteCtrl = ContentState => {
       if (imageWrapper) {
         const imageInfo = getImageInfo(imageWrapper)
         this.replaceImage(imageInfo, {
-          src: newSrc
+          src: newSrc,
         })
       }
       return imagePath
@@ -183,20 +188,22 @@ const pasteCtrl = ContentState => {
       if (this.selectedImage) {
         this.replaceImage(this.selectedImage, {
           alt: id,
-          src: ''
+          src: '',
         })
       } else {
         this.insertImage({
           alt: id,
-          src: ''
+          src: '',
         })
       }
 
       const reader = new FileReader()
-      reader.onload = event => {
+      reader.onload = (event) => {
         const base64 = event.target.result
         const imageWrapper = this.muya.container.querySelector(`span[data-id=${id}]`)
-        const imageContainer = this.muya.container.querySelector(`span[data-id=${id}] .ag-image-container`)
+        const imageContainer = this.muya.container.querySelector(
+          `span[data-id=${id}] .ag-image-container`
+        )
         this.stateRender.urlMap.set(id, base64)
         if (imageContainer) {
           imageWrapper.classList.remove('ag-empty-image')
@@ -227,7 +234,7 @@ const pasteCtrl = ContentState => {
       if (imageWrapper) {
         const imageInfo = getImageInfo(imageWrapper)
         this.replaceImage(imageInfo, {
-          src: newSrc
+          src: newSrc,
         })
       }
       return file
@@ -251,7 +258,12 @@ const pasteCtrl = ContentState => {
       const { selectedTableCells: stc } = this
 
       // Exactly one table cell is selected. Replace the cells text via default handler.
-      if (startBlock && startBlock.functionType === 'cellContent' && stc.row === 1 && stc.column === 1) {
+      if (
+        startBlock &&
+        startBlock.functionType === 'cellContent' &&
+        stc.row === 1 &&
+        stc.column === 1
+      ) {
         this.pasteHandler(event)
         return event.preventDefault()
       }
@@ -300,12 +312,13 @@ const pasteCtrl = ContentState => {
     }
 
     const appendHtml = (text) => {
-      startBlock.text = startBlock.text.substring(0, start.offset) + text + startBlock.text.substring(start.offset)
+      startBlock.text =
+        startBlock.text.substring(0, start.offset) + text + startBlock.text.substring(start.offset)
       const { key } = start
       const offset = start.offset + text.length
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
     }
 
@@ -331,7 +344,7 @@ const pasteCtrl = ContentState => {
       const key = startBlock.key
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       // Hide code picker float box
@@ -352,7 +365,7 @@ const pasteCtrl = ContentState => {
       const offset = start.offset + text.length
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
 
       return this.partialRender()
@@ -380,12 +393,15 @@ const pasteCtrl = ContentState => {
         this.selectedTableCells = null
       } else {
         offset += start.offset
-        startBlock.text = startBlock.text.substring(0, start.offset) + pendingText + startBlock.text.substring(end.offset)
+        startBlock.text =
+          startBlock.text.substring(0, start.offset) +
+          pendingText +
+          startBlock.text.substring(end.offset)
       }
 
       this.cursor = {
         start: { key, offset },
-        end: { key, offset }
+        end: { key, offset },
       }
       return this.partialRender()
     }
@@ -423,9 +439,10 @@ const pasteCtrl = ContentState => {
       return this.partialRender()
     }
 
-    const stateFragments = type === 'pasteAsPlainText' || copyType === 'copyAsMarkdown'
-      ? this.markdownToState(text)
-      : this.html2State(html)
+    const stateFragments =
+      type === 'pasteAsPlainText' || copyType === 'copyAsMarkdown'
+        ? this.markdownToState(text)
+        : this.html2State(html)
 
     if (stateFragments.length <= 0) {
       return
@@ -440,7 +457,7 @@ const pasteCtrl = ContentState => {
     const tailFragments = stateFragments.slice(1)
     const pasteType = this.checkPasteType(startBlock, firstFragment)
 
-    const getLastBlock = blocks => {
+    const getLastBlock = (blocks) => {
       const len = blocks.length
       const lastBlock = blocks[len - 1]
 
@@ -473,9 +490,9 @@ const pasteCtrl = ContentState => {
           // No matter copy loose list to tight list or vice versa, the result is one loose list.
           if (targetListType !== originListType) {
             if (!targetListType) {
-              firstFragment.children.forEach(item => (item.isLooseListItem = true))
+              firstFragment.children.forEach((item) => (item.isLooseListItem = true))
             } else {
-              originList.children.forEach(item => (item.isLooseListItem = true))
+              originList.children.forEach((item) => (item.isLooseListItem = true))
             }
           }
 
@@ -484,23 +501,23 @@ const pasteCtrl = ContentState => {
             startBlock.text += liChildren[0].children[0].text
             const tail = liChildren.slice(1)
             if (tail.length) {
-              tail.forEach(t => {
+              tail.forEach((t) => {
                 this.appendChild(originListItem, t)
               })
             }
             const firstFragmentTail = listItems.slice(1)
             if (firstFragmentTail.length) {
-              firstFragmentTail.forEach(t => {
+              firstFragmentTail.forEach((t) => {
                 this.appendChild(originList, t)
               })
             }
           } else {
-            listItems.forEach(c => {
+            listItems.forEach((c) => {
               this.appendChild(originList, c)
             })
           }
           let target = originList
-          tailFragments.forEach(block => {
+          tailFragments.forEach((block) => {
             this.insertAfter(block, target)
             target = block
           })
@@ -519,7 +536,7 @@ const pasteCtrl = ContentState => {
             startBlock.text += text
           }
 
-          tailFragments.forEach(block => {
+          tailFragments.forEach((block) => {
             this.insertAfter(block, target)
             target = block
           })
@@ -528,7 +545,7 @@ const pasteCtrl = ContentState => {
       }
       case 'NEWLINE': {
         let target = parent
-        stateFragments.forEach(block => {
+        stateFragments.forEach((block) => {
           this.insertAfter(block, target)
           target = block
         })
@@ -552,11 +569,13 @@ const pasteCtrl = ContentState => {
 
     this.cursor = {
       start: {
-        key, offset
+        key,
+        offset,
       },
       end: {
-        key, offset
-      }
+        key,
+        offset,
+      },
     }
     this.checkInlineUpdate(cursorBlock)
     this.partialRender()

@@ -9,9 +9,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
-        changeOrigin: true
-      }
-    }
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     vue(),
@@ -29,16 +29,16 @@ export default defineConfig({
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
+            type: 'image/png',
+          },
+        ],
+      },
+    }),
   ],
   server: {
     proxy: {
@@ -59,39 +59,43 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'muya': fileURLToPath(new URL('./src/muya', import.meta.url)),
+      muya: fileURLToPath(new URL('./src/muya', import.meta.url)),
       // Workspace packages - resolve to source for development
       // Note: Subpath must come BEFORE the main package alias
-      '@inkdown/muya/assets': fileURLToPath(new URL('../../packages/muya/src/assets', import.meta.url)),
+      '@inkdown/muya/assets': fileURLToPath(
+        new URL('../../packages/muya/src/assets', import.meta.url)
+      ),
       '@inkdown/muya': fileURLToPath(new URL('../../packages/muya/src', import.meta.url)),
       '@inkdown/editor': fileURLToPath(new URL('../../packages/editor', import.meta.url)),
       // Stubs for packages not available in web
       '@marktext/file-icons': fileURLToPath(new URL('./src/stubs/file-icons', import.meta.url)),
-      '@marktext/file-icons/build/index.css': fileURLToPath(new URL('./src/stubs/file-icons/build/index.css', import.meta.url)),
+      '@marktext/file-icons/build/index.css': fileURLToPath(
+        new URL('./src/stubs/file-icons/build/index.css', import.meta.url)
+      ),
       // Node.js polyfills for browser
-      'path': 'path-browserify',
-      'zlib': 'browserify-zlib'
-    }
+      path: 'path-browserify',
+      zlib: 'browserify-zlib',
+    },
   },
   define: {
     'process.env': {},
     'process.platform': '"web"',
-    'process.version': '"v16.0.0"'
+    'process.version': '"v16.0.0"',
   },
   optimizeDeps: {
-    include: ['snapsvg', 'underscore', 'katex', 'mermaid', 'prismjs']
+    include: ['snapsvg', 'underscore', 'katex', 'mermaid', 'prismjs'],
   },
   build: {
     commonjsOptions: {
-      transformMixedEsModules: true
+      transformMixedEsModules: true,
     },
     rollupOptions: {
       // Suppress external module warnings
       onwarn(warning, warn) {
         if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
         warn(warning)
-      }
+      },
     },
-    chunkSizeWarningLimit: 1500
-  }
+    chunkSizeWarningLimit: 1500,
+  },
 })

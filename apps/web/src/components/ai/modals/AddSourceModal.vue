@@ -9,14 +9,7 @@
  * - Text: Paste content directly
  */
 import { ref, computed } from 'vue'
-import {
-  FileText,
-  Link,
-  FileCode,
-  AlignLeft,
-  Upload,
-  Loader2,
-} from 'lucide-vue-next'
+import { FileText, Link, FileCode, AlignLeft, Upload, Loader2 } from 'lucide-vue-next'
 import BaseModal from './BaseModal.vue'
 import { useSourcesStore } from '@/stores/sources'
 
@@ -172,7 +165,10 @@ function switchTab(tab: TabType) {
           :class="{ active: activeTab === tab.id }"
           @click="switchTab(tab.id)"
         >
-          <component :is="tab.icon" :size="14" />
+          <component
+            :is="tab.icon"
+            :size="14"
+          />
           <span>{{ tab.label }}</span>
         </button>
       </div>
@@ -180,7 +176,10 @@ function switchTab(tab: TabType) {
       <!-- Tab Content -->
       <div class="tab-content">
         <!-- PDF / File Upload -->
-        <div v-if="activeTab === 'pdf' || activeTab === 'file'" class="upload-area">
+        <div
+          v-if="activeTab === 'pdf' || activeTab === 'file'"
+          class="upload-area"
+        >
           <input
             ref="fileInput"
             type="file"
@@ -195,12 +194,18 @@ function switchTab(tab: TabType) {
             @click="triggerFileSelect"
           >
             <template v-if="selectedFile">
-              <FileText :size="32" class="file-icon" />
+              <FileText
+                :size="32"
+                class="file-icon"
+              />
               <span class="file-name">{{ selectedFile.name }}</span>
               <span class="file-size">{{ (selectedFile.size / 1024).toFixed(1) }} KB</span>
             </template>
             <template v-else>
-              <Upload :size="32" class="upload-icon" />
+              <Upload
+                :size="32"
+                class="upload-icon"
+              />
               <span class="drop-text">
                 {{ activeTab === 'pdf' ? 'Click to upload PDF' : 'Click to upload file' }}
               </span>
@@ -212,7 +217,10 @@ function switchTab(tab: TabType) {
         </div>
 
         <!-- Link Input -->
-        <div v-else-if="activeTab === 'link'" class="link-input-area">
+        <div
+          v-else-if="activeTab === 'link'"
+          class="link-input-area"
+        >
           <div class="input-group">
             <label class="input-label">URL</label>
             <input
@@ -223,13 +231,14 @@ function switchTab(tab: TabType) {
               @keydown.enter="handleSubmit"
             />
           </div>
-          <p class="input-hint">
-            We'll fetch and extract the main content from the page.
-          </p>
+          <p class="input-hint">We'll fetch and extract the main content from the page.</p>
         </div>
 
         <!-- Text Input -->
-        <div v-else-if="activeTab === 'text'" class="text-input-area">
+        <div
+          v-else-if="activeTab === 'text'"
+          class="text-input-area"
+        >
           <div class="input-group">
             <label class="input-label">Title (optional)</label>
             <input
@@ -252,9 +261,15 @@ function switchTab(tab: TabType) {
       </div>
 
       <!-- Progress -->
-      <div v-if="uploadProgress" class="upload-progress">
+      <div
+        v-if="uploadProgress"
+        class="upload-progress"
+      >
         <div class="progress-info">
-          <Loader2 :size="14" class="spin" />
+          <Loader2
+            :size="14"
+            class="spin"
+          />
           <span>{{ uploadProgress.message }}</span>
         </div>
         <div class="progress-bar">
@@ -266,13 +281,19 @@ function switchTab(tab: TabType) {
       </div>
 
       <!-- Error -->
-      <div v-if="error" class="error-message">
+      <div
+        v-if="error"
+        class="error-message"
+      >
         {{ error }}
       </div>
     </div>
 
     <template #footer>
-      <button class="btn-secondary" @click="emit('close')">
+      <button
+        class="btn-secondary"
+        @click="emit('close')"
+      >
         Cancel
       </button>
       <button
@@ -280,7 +301,11 @@ function switchTab(tab: TabType) {
         :disabled="!canSubmit || uploading"
         @click="handleSubmit"
       >
-        <Loader2 v-if="uploading" :size="14" class="spin" />
+        <Loader2
+          v-if="uploading"
+          :size="14"
+          class="spin"
+        />
         <span>{{ uploading ? 'Adding...' : 'Add Source' }}</span>
       </button>
     </template>

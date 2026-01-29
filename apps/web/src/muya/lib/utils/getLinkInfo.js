@@ -1,7 +1,7 @@
 import { findNearestParagraph } from '../selection/dom'
 import { tokenizer } from '../parser'
 
-export const getLinkInfo = a => {
+export const getLinkInfo = (a) => {
   const paragraph = findNearestParagraph(a)
   const raw = a.getAttribute('data-raw')
   const start = a.getAttribute('data-start')
@@ -11,11 +11,11 @@ export const getLinkInfo = a => {
   const href = a.getAttribute('href')
   token.range = {
     start,
-    end
+    end,
   }
   return {
     key: paragraph.id,
     token,
-    href
+    href,
   }
 }

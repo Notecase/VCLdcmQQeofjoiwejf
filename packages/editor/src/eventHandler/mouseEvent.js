@@ -2,15 +2,15 @@ import { getLinkInfo } from '../utils/getLinkInfo'
 import { collectFootnotes } from '../utils'
 
 class MouseEvent {
-  constructor (muya) {
+  constructor(muya) {
     this.muya = muya
     this.mouseBinding()
     this.mouseDown()
   }
 
-  mouseBinding () {
+  mouseBinding() {
     const { container, eventCenter } = this.muya
-    const handler = event => {
+    const handler = (event) => {
       const target = event.target
       const parent = target.parentNode
       const preSibling = target.previousElementSibling
@@ -18,9 +18,9 @@ class MouseEvent {
       const { hideLinkPopup, footnote } = this.muya.options
       const rect = parent.getBoundingClientRect()
       const reference = {
-        getBoundingClientRect () {
+        getBoundingClientRect() {
           return rect
-        }
+        },
       }
 
       if (
@@ -33,7 +33,7 @@ class MouseEvent {
       ) {
         eventCenter.dispatch('muya-link-tools', {
           reference,
-          linkInfo: getLinkInfo(parent)
+          linkInfo: getLinkInfo(parent),
         })
       }
 
@@ -49,18 +49,18 @@ class MouseEvent {
         eventCenter.dispatch('muya-footnote-tool', {
           reference,
           identifier,
-          footnotes: collectFootnotes(this.muya.contentState.blocks)
+          footnotes: collectFootnotes(this.muya.contentState.blocks),
         })
       }
     }
-    const leaveHandler = event => {
+    const leaveHandler = (event) => {
       const target = event.target
       const parent = target.parentNode
       const preSibling = target.previousElementSibling
       const { footnote } = this.muya.options
       if (parent && parent.tagName === 'A' && parent.classList.contains('ag-inline-rule')) {
         eventCenter.dispatch('muya-link-tools', {
-          reference: null
+          reference: null,
         })
       }
 
@@ -73,7 +73,7 @@ class MouseEvent {
         preSibling.classList.contains('ag-hide')
       ) {
         eventCenter.dispatch('muya-footnote-tool', {
-          reference: null
+          reference: null,
         })
       }
     }
@@ -82,9 +82,9 @@ class MouseEvent {
     eventCenter.attachDOMEvent(container, 'mouseout', leaveHandler)
   }
 
-  mouseDown () {
+  mouseDown() {
     const { container, eventCenter, contentState } = this.muya
-    const handler = event => {
+    const handler = (event) => {
       const target = event.target
       if (target.classList && target.classList.contains('ag-drag-handler')) {
         contentState.handleMouseDown(event)

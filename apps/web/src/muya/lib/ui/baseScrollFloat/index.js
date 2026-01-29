@@ -2,7 +2,7 @@ import BaseFloat from '../baseFloat'
 import { EVENT_KEYS } from '../../config'
 
 class BaseScrollFloat extends BaseFloat {
-  constructor (muya, name, options = {}) {
+  constructor(muya, name, options = {}) {
     super(muya, name, options)
     this.scrollElement = null
     this.reference = null
@@ -10,27 +10,27 @@ class BaseScrollFloat extends BaseFloat {
     this.createScrollElement()
   }
 
-  createScrollElement () {
+  createScrollElement() {
     const { container } = this
     const scrollElement = document.createElement('div')
     container.appendChild(scrollElement)
     this.scrollElement = scrollElement
   }
 
-  activeEleScrollIntoView (ele) {
+  activeEleScrollIntoView(ele) {
     if (ele) {
       ele.scrollIntoView({
         behavior: 'auto',
         block: 'center',
-        inline: 'start'
+        inline: 'start',
       })
     }
   }
 
-  listen () {
+  listen() {
     super.listen()
     const { eventCenter, container } = this.muya
-    const handler = event => {
+    const handler = (event) => {
       if (!this.status) return
       switch (event.key) {
         case EVENT_KEYS.ArrowUp:
@@ -51,12 +51,12 @@ class BaseScrollFloat extends BaseFloat {
     eventCenter.attachDOMEvent(container, 'keydown', handler)
   }
 
-  hide () {
+  hide() {
     super.hide()
     this.reference = null
   }
 
-  show (reference, cb) {
+  show(reference, cb) {
     this.cb = cb
     if (reference instanceof HTMLElement) {
       if (this.reference && this.reference === reference && this.status) return
@@ -68,8 +68,8 @@ class BaseScrollFloat extends BaseFloat {
     super.show(reference, cb)
   }
 
-  step (direction) {
-    let index = this.renderArray.findIndex(item => {
+  step(direction) {
+    let index = this.renderArray.findIndex((item) => {
       return item === this.activeItem
     })
     index = direction === 'next' ? index + 1 : index - 1
@@ -82,14 +82,14 @@ class BaseScrollFloat extends BaseFloat {
     this.activeEleScrollIntoView(activeEle)
   }
 
-  selectItem (item) {
+  selectItem(item) {
     const { cb } = this
     cb(item)
     // delay hide to avoid dispatch enter hander
     setTimeout(this.hide.bind(this))
   }
 
-  getItemElement () {}
+  getItemElement() {}
 }
 
 export default BaseScrollFloat

@@ -51,56 +51,52 @@ const SaveResourceSchema = z.object({
  * Save a learning resource (upsert)
  * POST /api/learning-resources/save
  */
-learningResources.post(
-  '/save',
-  zValidator('json', SaveResourceSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const body = c.req.valid('json')
+learningResources.post('/save', zValidator('json', SaveResourceSchema), async (c) => {
+  const auth = requireAuth(c)
+  const body = c.req.valid('json')
 
-    // Verify note ownership
-    const { data: note, error: noteError } = await auth.supabase
-      .from('notes')
-      .select('id')
-      .eq('id', body.noteId)
-      .eq('user_id', auth.userId)
+  // Verify note ownership
+  const { data: note, error: noteError } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', body.noteId)
+    .eq('user_id', auth.userId)
+    .single()
+
+  if (noteError || !note) {
+    return c.json({ success: false, error: 'Note not found' }, 404)
+  }
+
+  try {
+    // Upsert the resource
+    const { data: resource, error } = await auth.supabase
+      .from('note_learning_resources')
+      .upsert(
+        {
+          note_id: body.noteId,
+          user_id: auth.userId,
+          type: body.type,
+          data: body.data,
+          item_count: body.itemCount ?? 0,
+        },
+        {
+          onConflict: 'note_id,type',
+        }
+      )
+      .select()
       .single()
 
-    if (noteError || !note) {
-      return c.json({ success: false, error: 'Note not found' }, 404)
+    if (error) {
+      console.error('[LearningResources] Save error:', error)
+      return c.json({ success: false, error: error.message }, 500)
     }
 
-    try {
-      // Upsert the resource
-      const { data: resource, error } = await auth.supabase
-        .from('note_learning_resources')
-        .upsert(
-          {
-            note_id: body.noteId,
-            user_id: auth.userId,
-            type: body.type,
-            data: body.data,
-            item_count: body.itemCount ?? 0,
-          },
-          {
-            onConflict: 'note_id,type',
-          }
-        )
-        .select()
-        .single()
-
-      if (error) {
-        console.error('[LearningResources] Save error:', error)
-        return c.json({ success: false, error: error.message }, 500)
-      }
-
-      return c.json({ success: true, data: resource })
-    } catch (error) {
-      console.error('[LearningResources] Save exception:', error)
-      return c.json({ success: false, error: String(error) }, 500)
-    }
+    return c.json({ success: true, data: resource })
+  } catch (error) {
+    console.error('[LearningResources] Save exception:', error)
+    return c.json({ success: false, error: String(error) }, 500)
   }
-)
+})
 
 // ============================================================================
 // Get Resources for Note

@@ -154,10 +154,7 @@ export class SourceStorage {
    */
   async deleteSource(sourceId: string): Promise<boolean> {
     // Delete chunks first (cascade should handle this, but be explicit)
-    await this.supabase
-      .from('source_chunks')
-      .delete()
-      .eq('source_id', sourceId)
+    await this.supabase.from('source_chunks').delete().eq('source_id', sourceId)
 
     const { error } = await this.supabase
       .from('sources')
@@ -188,10 +185,7 @@ export class SourceStorage {
       const sourceIds = sources.map((s) => s.id)
 
       // Delete chunks
-      await this.supabase
-        .from('source_chunks')
-        .delete()
-        .in('source_id', sourceIds)
+      await this.supabase.from('source_chunks').delete().in('source_id', sourceIds)
     }
 
     // Delete sources
@@ -228,9 +222,7 @@ export class SourceStorage {
       metadata: chunk.metadata,
     }))
 
-    const { error } = await this.supabase
-      .from('source_chunks')
-      .insert(chunkRows)
+    const { error } = await this.supabase.from('source_chunks').insert(chunkRows)
 
     if (error) {
       console.error('Failed to save chunks:', error)
@@ -369,9 +361,7 @@ export class SourceStorage {
     }
 
     // Sort by score and limit
-    return results
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
+    return results.sort((a, b) => b.score - a.score).slice(0, limit)
   }
 
   /**
@@ -480,20 +470,20 @@ export class SourceStorage {
   async getAllContent(noteId: string): Promise<string> {
     const sources = await this.getSourcesForNote(noteId, 'ready')
 
-    return sources
-      .map((s) => `## Source: ${s.title}\n\n${s.content}`)
-      .join('\n\n---\n\n')
+    return sources.map((s) => `## Source: ${s.title}\n\n${s.content}`).join('\n\n---\n\n')
   }
 
   /**
    * Get content with source references (for citations)
    */
-  async getContentWithRefs(noteId: string): Promise<Array<{
-    sourceId: string
-    title: string
-    content: string
-    type: SourceType
-  }>> {
+  async getContentWithRefs(noteId: string): Promise<
+    Array<{
+      sourceId: string
+      title: string
+      content: string
+      type: SourceType
+    }>
+  > {
     const sources = await this.getSourcesForNote(noteId, 'ready')
 
     return sources.map((s) => ({
@@ -508,9 +498,6 @@ export class SourceStorage {
 /**
  * Create a source storage instance
  */
-export function createSourceStorage(
-  supabase: SupabaseClient,
-  userId: string
-): SourceStorage {
+export function createSourceStorage(supabase: SupabaseClient, userId: string): SourceStorage {
   return new SourceStorage(supabase, userId)
 }

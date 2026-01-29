@@ -11,16 +11,16 @@ export const loadedLanguages = new Set(['markup', 'css', 'clike', 'javascript'])
 const { languages } = components
 
 // Look for the origin languge by alias
-export const transformAliasToOrigin = langs => {
+export const transformAliasToOrigin = (langs) => {
   const result = []
   for (const lang of langs) {
     if (languages[lang]) {
       result.push(lang)
     } else {
-      const language = Object.keys(languages).find(name => {
+      const language = Object.keys(languages).find((name) => {
         const l = languages[name]
         if (l.alias) {
-          return l.alias === lang || Array.isArray(l.alias) && l.alias.includes(lang)
+          return l.alias === lang || (Array.isArray(l.alias) && l.alias.includes(lang))
         }
         return false
       })
@@ -37,15 +37,17 @@ export const transformAliasToOrigin = langs => {
   return result
 }
 
-function initLoadLanguage (Prism) {
-  return async function loadLanguages (langs) {
+function initLoadLanguage(Prism) {
+  return async function loadLanguages(langs) {
     // If no argument is passed, load all components
     if (!langs) {
-      langs = Object.keys(languages).filter(lang => lang !== 'meta')
+      langs = Object.keys(languages).filter((lang) => lang !== 'meta')
     }
 
     if (langs && !langs.length) {
-      return Promise.reject(new Error('The first parameter should be a list of load languages or single language.'))
+      return Promise.reject(
+        new Error('The first parameter should be a list of load languages or single language.')
+      )
     }
 
     if (!Array.isArray(langs)) {
@@ -57,18 +59,18 @@ function initLoadLanguage (Prism) {
     // We don't need to validate the ids because `getLoader` will ignore invalid ones
     const loaded = [...loadedLanguages, ...Object.keys(Prism.languages)]
 
-    getLoader(components, langs, loaded).load(async lang => {
+    getLoader(components, langs, loaded).load(async (lang) => {
       const defer = getDefer()
       promises.push(defer.promise)
       if (!(lang in components.languages)) {
         defer.resolve({
           lang,
-          status: 'noexist'
+          status: 'noexist',
         })
       } else if (loadedLanguages.has(lang)) {
         defer.resolve({
           lang,
-          status: 'cached'
+          status: 'cached',
         })
       } else {
         delete Prism.languages[lang]
@@ -76,7 +78,7 @@ function initLoadLanguage (Prism) {
           await import(`prismjs/components/prism-${lang}`)
           defer.resolve({
             lang,
-            status: 'loaded'
+            status: 'loaded',
           })
           loadedLanguages.add(lang)
         } catch (error) {
@@ -84,7 +86,7 @@ function initLoadLanguage (Prism) {
           // This is expected and we just mark it as noexist
           defer.resolve({
             lang,
-            status: 'noexist'
+            status: 'noexist',
           })
         }
       }

@@ -24,9 +24,9 @@ export interface EditorOptions {
 }
 
 export interface EditorEventMap {
-  'change': { markdown: string; wordCount: { words: number; characters: number; paragraphs: number } }
+  change: { markdown: string; wordCount: { words: number; characters: number; paragraphs: number } }
   'selection-change': { anchor: any; focus: any }
-  'stateChange': { name: string; value: any }
+  stateChange: { name: string; value: any }
   'toc-change': { toc: any[] }
 }
 

@@ -32,7 +32,7 @@ export async function initializeServices(provider: ProviderType): Promise<void> 
       services = {
         auth: createSupabaseAuth(),
         database: createSupabaseDatabase(),
-        storage: createSupabaseStorage()
+        storage: createSupabaseStorage(),
       }
       break
 
@@ -50,7 +50,7 @@ export async function initializeServices(provider: ProviderType): Promise<void> 
       services = {
         auth: createLocalAuth(),
         database: createLocalDatabase(),
-        storage: createLocalStorage()
+        storage: createLocalStorage(),
       }
       break
   }

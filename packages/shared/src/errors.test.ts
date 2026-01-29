@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  AppError,
-  ErrorCode,
-  handleError,
-  isAppError,
-  ok,
-  err,
-  tryCatchSync,
-} from './errors'
+import { AppError, ErrorCode, handleError, isAppError, ok, err, tryCatchSync } from './errors'
 
 describe('AppError', () => {
   it('creates an error with default values', () => {
@@ -20,11 +12,7 @@ describe('AppError', () => {
   })
 
   it('creates an error with custom code and user message', () => {
-    const error = new AppError(
-      'Authentication failed',
-      ErrorCode.AUTH_REQUIRED,
-      'Custom message'
-    )
+    const error = new AppError('Authentication failed', ErrorCode.AUTH_REQUIRED, 'Custom message')
 
     expect(error.message).toBe('Authentication failed')
     expect(error.code).toBe(ErrorCode.AUTH_REQUIRED)

@@ -23,9 +23,7 @@ const emit = defineEmits<{
 }>()
 
 // Computed
-const concepts = computed<Concept[]>(() =>
-  store.currentRecommendations?.concepts || []
-)
+const concepts = computed<Concept[]>(() => store.currentRecommendations?.concepts || [])
 
 function handleAddConcept(concept: Concept) {
   emit('addConcept', concept)
@@ -39,9 +37,7 @@ function renderContent(text: string | undefined): string {
 // Copy all concepts as markdown
 async function copyAsMarkdown() {
   const markdown = concepts.value
-    .map((concept) =>
-      `**${concept.title}**: ${concept.description}`
-    )
+    .map((concept) => `**${concept.title}**: ${concept.description}`)
     .join('\n\n')
 
   try {
@@ -74,13 +70,22 @@ async function copyAsMarkdown() {
         @click="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
       >
-        <Check v-if="copied" :size="14" />
-        <Copy v-else :size="14" />
+        <Check
+          v-if="copied"
+          :size="14"
+        />
+        <Copy
+          v-else
+          :size="14"
+        />
         <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
-    <div class="concepts-list" v-if="concepts.length > 0">
+    <div
+      class="concepts-list"
+      v-if="concepts.length > 0"
+    >
       <div
         v-for="(concept, index) in concepts"
         :key="index"
@@ -88,19 +93,31 @@ async function copyAsMarkdown() {
       >
         <div class="concept-header">
           <span class="concept-dash">-</span>
-          <span class="concept-title math-content" v-html="renderContent(concept.title)"></span>
+          <span
+            class="concept-title math-content"
+            v-html="renderContent(concept.title)"
+          ></span>
         </div>
 
-        <p class="concept-description math-content" v-html="renderContent(concept.description)"></p>
+        <p
+          class="concept-description math-content"
+          v-html="renderContent(concept.description)"
+        ></p>
 
-        <button class="add-btn" @click="handleAddConcept(concept)">
+        <button
+          class="add-btn"
+          @click="handleAddConcept(concept)"
+        >
           <Plus :size="14" />
           Add
         </button>
       </div>
     </div>
 
-    <div class="empty-state" v-else>
+    <div
+      class="empty-state"
+      v-else
+    >
       <p>No concepts available.</p>
     </div>
   </BaseModal>

@@ -24,21 +24,11 @@ export type {
 } from './providers/interface'
 
 // Provider implementations
-export {
-  OpenAIProvider,
-  createOpenAIProvider,
-  getDefaultOpenAIProvider,
-} from './providers/openai'
+export { OpenAIProvider, createOpenAIProvider, getDefaultOpenAIProvider } from './providers/openai'
 
-export {
-  OllamaCloudProvider,
-  createOllamaCloudProvider,
-} from './providers/ollama'
+export { OllamaCloudProvider, createOllamaCloudProvider } from './providers/ollama'
 
-export {
-  GeminiProvider,
-  createGeminiProvider,
-} from './providers/gemini'
+export { GeminiProvider, createGeminiProvider } from './providers/gemini'
 
 export {
   createProvider,
@@ -68,12 +58,7 @@ export {
 } from './tools'
 
 // Core tool exports
-export {
-  coreEditingTools,
-  databaseTools,
-  artifactTools,
-  secretaryTools,
-} from './tools'
+export { coreEditingTools, databaseTools, artifactTools, secretaryTools } from './tools'
 
 // =============================================================================
 // Agent Types (to be implemented in Phase D)
@@ -100,11 +85,7 @@ export type {
   EmbeddingModel,
 } from './services'
 
-export {
-  DEFAULT_CHUNKING_OPTIONS,
-  DEFAULT_RAG_OPTIONS,
-  EMBEDDING_MODELS,
-} from './services'
+export { DEFAULT_CHUNKING_OPTIONS, DEFAULT_RAG_OPTIONS, EMBEDDING_MODELS } from './services'
 
 // =============================================================================
 // Recommendation Service
@@ -141,11 +122,7 @@ export type {
 // Orchestration Service
 // =============================================================================
 
-export {
-  OrchestrationService,
-  createOrchestrationService,
-  WORKFLOW_TEMPLATES,
-} from './services'
+export { OrchestrationService, createOrchestrationService, WORKFLOW_TEMPLATES } from './services'
 
 export type {
   WorkflowTemplate,
@@ -159,10 +136,7 @@ export type {
 // Agentic AI
 // =============================================================================
 
-export {
-  AgenticAgent,
-  createAgenticAgent,
-} from './agents/agentic.agent'
+export { AgenticAgent, createAgenticAgent } from './agents/agentic.agent'
 
 export type {
   AgentStep,
@@ -181,28 +155,13 @@ export type {
 // Slide Themes and Prompts
 // =============================================================================
 
-export {
-  THEMES,
-  THEME_LIST,
-  getTheme,
-  getDefaultTheme,
-  detectTheme,
-} from './slides/themes'
+export { THEMES, THEME_LIST, getTheme, getDefaultTheme, detectTheme } from './slides/themes'
 
-export type {
-  ThemeName,
-  SlideTheme,
-} from './slides/themes'
+export type { ThemeName, SlideTheme } from './slides/themes'
 
-export {
-  getSlidePrompt,
-  buildSlidePrompt,
-  buildOutlinePrompt,
-} from './slides/prompts'
+export { getSlidePrompt, buildSlidePrompt, buildOutlinePrompt } from './slides/prompts'
 
-export type {
-  SlideVisualStyle,
-} from './slides/prompts'
+export type { SlideVisualStyle } from './slides/prompts'
 
 // =============================================================================
 // Sources Module
@@ -253,11 +212,7 @@ export type {
 // Workflows Module
 // =============================================================================
 
-export {
-  WorkflowActions,
-  createWorkflowActions,
-  WORKFLOW_ACTIONS,
-} from './workflows'
+export { WorkflowActions, createWorkflowActions, WORKFLOW_ACTIONS } from './workflows'
 
 export type {
   WorkflowActionType,

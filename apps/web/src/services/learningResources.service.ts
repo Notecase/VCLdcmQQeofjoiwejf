@@ -292,10 +292,7 @@ export function resourceToMarkdown(resource: LearningResource): string {
     case 'flashcards': {
       const cards = (data as FlashcardsData).cards || []
       return cards
-        .map(
-          (card, i) =>
-            `### Card ${i + 1}\n**Q:** ${card.question}\n**A:** ${card.answer}`
-        )
+        .map((card, i) => `### Card ${i + 1}\n**Q:** ${card.question}\n**A:** ${card.answer}`)
         .join('\n\n')
     }
 
@@ -399,7 +396,11 @@ export function getResourceTypeInfo(type: LearningResourceType): {
 } {
   switch (type) {
     case 'flashcards':
-      return { icon: '🎴', label: 'Flashcards', description: 'Question and answer cards for review' }
+      return {
+        icon: '🎴',
+        label: 'Flashcards',
+        description: 'Question and answer cards for review',
+      }
     case 'mindmap':
       return { icon: '🧠', label: 'Mind Map', description: 'Visual concept map of the content' }
     case 'key_terms':

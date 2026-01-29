@@ -138,23 +138,19 @@ export const useSourcesStore = defineStore('sources', () => {
     return sourcesByNote.value.get(currentNoteId.value) || []
   })
 
-  const readySources = computed(() =>
-    currentSources.value.filter(s => s.status === 'ready')
-  )
+  const readySources = computed(() => currentSources.value.filter((s) => s.status === 'ready'))
 
   const sourceCount = computed(() => currentSources.value.length)
   const readySourceCount = computed(() => readySources.value.length)
 
-  const totalWordCount = computed(() =>
-    readySources.value.reduce((sum, s) => sum + s.wordCount, 0)
-  )
+  const totalWordCount = computed(() => readySources.value.reduce((sum, s) => sum + s.wordCount, 0))
 
   const hasSources = computed(() => sourceCount.value > 0)
   const hasReadySources = computed(() => readySourceCount.value > 0)
 
   const isUploading = computed(() => uploadStatus.value === 'uploading')
   const isExecutingAction = computed(() =>
-    Object.values(actionStatus.value).some(s => s === 'executing')
+    Object.values(actionStatus.value).some((s) => s === 'executing')
   )
 
   const canCompare = computed(() => readySourceCount.value >= 2)
@@ -181,7 +177,7 @@ export const useSourcesStore = defineStore('sources', () => {
 
   function updateSource(sourceId: string, updates: Partial<Source>) {
     for (const [noteId, sources] of sourcesByNote.value) {
-      const index = sources.findIndex(s => s.id === sourceId)
+      const index = sources.findIndex((s) => s.id === sourceId)
       if (index !== -1) {
         sources[index] = { ...sources[index], ...updates }
         sourcesByNote.value.set(noteId, [...sources])
@@ -192,7 +188,7 @@ export const useSourcesStore = defineStore('sources', () => {
 
   function removeSource(sourceId: string) {
     for (const [noteId, sources] of sourcesByNote.value) {
-      const filtered = sources.filter(s => s.id !== sourceId)
+      const filtered = sources.filter((s) => s.id !== sourceId)
       if (filtered.length !== sources.length) {
         sourcesByNote.value.set(noteId, filtered)
         break
@@ -276,11 +272,7 @@ export const useSourcesStore = defineStore('sources', () => {
   /**
    * Upload a file
    */
-  async function uploadFile(
-    noteId: string,
-    file: File,
-    useSSE = true
-  ): Promise<Source | null> {
+  async function uploadFile(noteId: string, file: File, useSSE = true): Promise<Source | null> {
     uploadStatus.value = 'uploading'
     uploadError.value = null
     uploadProgress.value = {
@@ -550,7 +542,11 @@ export const useSourcesStore = defineStore('sources', () => {
   /**
    * Search sources
    */
-  async function searchSources(noteId: string, query: string, limit = 10): Promise<SourceSearchResult[]> {
+  async function searchSources(
+    noteId: string,
+    query: string,
+    limit = 10
+  ): Promise<SourceSearchResult[]> {
     isSearching.value = true
 
     try {
@@ -688,7 +684,9 @@ export const useSourcesStore = defineStore('sources', () => {
   /**
    * Get source content
    */
-  async function getSourceContent(sourceId: string): Promise<{ content: string; chunks: unknown[] } | null> {
+  async function getSourceContent(
+    sourceId: string
+  ): Promise<{ content: string; chunks: unknown[] } | null> {
     try {
       const response = await authFetch(`/api/sources/content/${sourceId}`)
 
@@ -733,7 +731,7 @@ export const useSourcesStore = defineStore('sources', () => {
     actionProgress.value = null
     actionResults.value.clear()
     actionErrors.value = {}
-    Object.keys(actionStatus.value).forEach(key => {
+    Object.keys(actionStatus.value).forEach((key) => {
       actionStatus.value[key as WorkflowActionType] = 'idle'
     })
     activeModal.value = null

@@ -53,9 +53,7 @@ export interface StorageError {
   statusCode?: number
 }
 
-export type StorageResult<T> =
-  | { data: T; error: null }
-  | { data: null; error: StorageError }
+export type StorageResult<T> = { data: T; error: null } | { data: null; error: StorageError }
 
 /**
  * Storage Provider Interface
@@ -63,7 +61,10 @@ export type StorageResult<T> =
  */
 export interface IStorageProvider {
   // Bucket operations
-  createBucket(name: string, options?: { public?: boolean }): Promise<StorageResult<{ name: string }>>
+  createBucket(
+    name: string,
+    options?: { public?: boolean }
+  ): Promise<StorageResult<{ name: string }>>
   getBucket(name: string): Promise<StorageResult<{ name: string; public: boolean }>>
   deleteBucket(name: string): Promise<StorageResult<void>>
   listBuckets(): Promise<StorageResult<{ name: string; public: boolean }[]>>
@@ -76,32 +77,16 @@ export interface IStorageProvider {
     options?: UploadOptions
   ): Promise<StorageResult<StorageFile>>
 
-  download(
-    bucket: string,
-    path: string,
-    options?: DownloadOptions
-  ): Promise<StorageResult<Blob>>
+  download(bucket: string, path: string, options?: DownloadOptions): Promise<StorageResult<Blob>>
 
   delete(bucket: string, paths: string[]): Promise<StorageResult<StorageFile[]>>
 
-  move(
-    bucket: string,
-    fromPath: string,
-    toPath: string
-  ): Promise<StorageResult<{ path: string }>>
+  move(bucket: string, fromPath: string, toPath: string): Promise<StorageResult<{ path: string }>>
 
-  copy(
-    bucket: string,
-    fromPath: string,
-    toPath: string
-  ): Promise<StorageResult<{ path: string }>>
+  copy(bucket: string, fromPath: string, toPath: string): Promise<StorageResult<{ path: string }>>
 
   // Listing
-  list(
-    bucket: string,
-    path?: string,
-    options?: ListOptions
-  ): Promise<StorageResult<StorageFile[]>>
+  list(bucket: string, path?: string, options?: ListOptions): Promise<StorageResult<StorageFile[]>>
 
   // URLs
   getPublicUrl(bucket: string, path: string, options?: ImageTransformOptions): string
@@ -133,7 +118,7 @@ export const STORAGE_BUCKETS = {
   AVATARS: 'avatars',
   DOCUMENTS: 'documents',
   IMAGES: 'images',
-  EXPORTS: 'exports'
+  EXPORTS: 'exports',
 } as const
 
-export type StorageBucket = typeof STORAGE_BUCKETS[keyof typeof STORAGE_BUCKETS]
+export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS]

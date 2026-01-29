@@ -8,16 +8,16 @@ const defaultOptions = {
   placement: 'top',
   modifiers: {
     offset: {
-      offset: '0, 5'
-    }
+      offset: '0, 5',
+    },
   },
-  showArrow: false
+  showArrow: false,
 }
 
 class FormatPicker extends BaseFloat {
   static pluginName = 'formatPicker'
 
-  constructor (muya, options = {}) {
+  constructor(muya, options = {}) {
     const name = 'ag-format-picker'
     const opts = Object.assign({}, defaultOptions, options)
     super(muya, name, opts)
@@ -25,13 +25,13 @@ class FormatPicker extends BaseFloat {
     this.formats = null
     this.options = opts
     this.icons = icons
-    const formatContainer = this.formatContainer = document.createElement('div')
+    const formatContainer = (this.formatContainer = document.createElement('div'))
     this.container.appendChild(formatContainer)
     this.floatBox.classList.add('ag-format-picker-container')
     this.listen()
   }
 
-  listen () {
+  listen() {
     const { eventCenter } = this.muya
     super.listen()
     eventCenter.subscribe('muya-format-picker', ({ reference, formats }) => {
@@ -47,37 +47,48 @@ class FormatPicker extends BaseFloat {
     })
   }
 
-  render () {
+  render() {
     const { icons, oldVnode, formatContainer, formats } = this
-    const children = icons.map(i => {
+    const children = icons.map((i) => {
       let icon
       let iconWrapperSelector
       if (i.icon) {
         // SVG icon Asset
         iconWrapperSelector = 'div.icon-wrapper'
-        icon = h('i.icon', h('i.icon-inner', {
-          style: {
-            background: `url(${i.icon}) no-repeat`,
-            'background-size': '100%'
-          }
-        }, ''))
+        icon = h(
+          'i.icon',
+          h(
+            'i.icon-inner',
+            {
+              style: {
+                background: `url(${i.icon}) no-repeat`,
+                'background-size': '100%',
+              },
+            },
+            ''
+          )
+        )
       }
       const iconWrapper = h(iconWrapperSelector, icon)
 
       let itemSelector = `li.item.${i.type}`
-      if (formats.some(f => f.type === i.type || f.type === 'html_tag' && f.tag === i.type)) {
+      if (formats.some((f) => f.type === i.type || (f.type === 'html_tag' && f.tag === i.type))) {
         itemSelector += '.active'
       }
-      return h(itemSelector, {
-        attrs: {
-          title: `${i.tooltip} ${i.shortcut}`
+      return h(
+        itemSelector,
+        {
+          attrs: {
+            title: `${i.tooltip} ${i.shortcut}`,
+          },
+          on: {
+            click: (event) => {
+              this.selectItem(event, i)
+            },
+          },
         },
-        on: {
-          click: event => {
-            this.selectItem(event, i)
-          }
-        }
-      }, [iconWrapper])
+        [iconWrapper]
+      )
     })
 
     const vnode = h('ul', children)
@@ -90,7 +101,7 @@ class FormatPicker extends BaseFloat {
     this.oldVnode = vnode
   }
 
-  selectItem (event, item) {
+  selectItem(event, item) {
     event.preventDefault()
     event.stopPropagation()
     const { contentState } = this.muya

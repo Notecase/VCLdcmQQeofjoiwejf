@@ -29,8 +29,15 @@ import ResourcesModal from './modals/ResourcesModal.vue'
 import SlidesModal from './modals/SlidesModal.vue'
 
 import {
-  Search, Minimize2, Plus, Loader2,
-  Paperclip, Globe, AtSign, ArrowUp, FileText
+  Search,
+  Minimize2,
+  Plus,
+  Loader2,
+  Paperclip,
+  Globe,
+  AtSign,
+  ArrowUp,
+  FileText,
 } from 'lucide-vue-next'
 
 // Props
@@ -61,18 +68,21 @@ const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
 
 // Watch for note changes and update recommendation store
-watch(() => activeNote.value?.id, (id) => {
-  if (id) {
-    recommendStore.setCurrentNote(id)
+watch(
+  () => activeNote.value?.id,
+  (id) => {
+    if (id) {
+      recommendStore.setCurrentNote(id)
+    }
   }
-})
+)
 
 // Quick Commands for Agent tab
 const quickCommands = [
   { cmd: '/artifact', desc: 'Create live code' },
   { cmd: '/database', desc: 'Create table' },
   { cmd: '/tasks', desc: 'Create task list' },
-  { cmd: '@NoteName', desc: 'Reference another note' }
+  { cmd: '@NoteName', desc: 'Reference another note' },
 ]
 
 // Handle submit
@@ -144,16 +154,26 @@ function handleAddToNote(content: string) {
           Resources
         </button>
       </nav>
-      <button class="expand-btn" @click="closeSidebar" title="Close">
+      <button
+        class="expand-btn"
+        @click="closeSidebar"
+        title="Close"
+      >
         <Minimize2 :size="14" />
       </button>
     </header>
 
     <!-- Agent Tab -->
-    <div v-if="activeTab === 'agent'" class="tab-content">
+    <div
+      v-if="activeTab === 'agent'"
+      class="tab-content"
+    >
       <!-- New chat & Search row -->
       <div class="agent-search-row">
-        <div class="new-chat-btn" title="New Chat">
+        <div
+          class="new-chat-btn"
+          title="New Chat"
+        >
           <Plus :size="14" />
         </div>
         <div class="search-input">
@@ -173,7 +193,8 @@ function handleAddToNote(content: string) {
           <div class="welcome-section">
             <span class="ai-label">AI AGENT</span>
             <p class="welcome-text">
-              Hi! I'm your AI assistant. I can help you understand your notes and answer questions about them.
+              Hi! I'm your AI assistant. I can help you understand your notes and answer questions
+              about them.
             </p>
             <p class="welcome-text">
               Select a note from the sidebar and ask me anything about its content!
@@ -184,7 +205,11 @@ function handleAddToNote(content: string) {
           <div class="quick-commands-box">
             <div class="commands-header">Quick Commands</div>
             <div class="commands-list">
-              <div v-for="cmd in quickCommands" :key="cmd.cmd" class="command-row">
+              <div
+                v-for="cmd in quickCommands"
+                :key="cmd.cmd"
+                class="command-row"
+              >
                 <code class="command-code">{{ cmd.cmd }}</code>
                 <span class="command-desc">{{ cmd.desc }}</span>
               </div>
@@ -202,25 +227,40 @@ function handleAddToNote(content: string) {
         </template>
 
         <!-- Loading -->
-        <div v-if="isProcessing" class="loading-indicator">
-          <Loader2 :size="14" class="spin" />
+        <div
+          v-if="isProcessing"
+          class="loading-indicator"
+        >
+          <Loader2
+            :size="14"
+            class="spin"
+          />
           <span>Thinking...</span>
         </div>
       </div>
     </div>
 
     <!-- Recommend Tab -->
-    <div v-else-if="activeTab === 'recommend'" class="tab-content tab-content-no-padding">
+    <div
+      v-else-if="activeTab === 'recommend'"
+      class="tab-content tab-content-no-padding"
+    >
       <RecommendTab />
     </div>
 
     <!-- Workflows Tab -->
-    <div v-else-if="activeTab === 'workflows'" class="tab-content tab-content-no-padding">
+    <div
+      v-else-if="activeTab === 'workflows'"
+      class="tab-content tab-content-no-padding"
+    >
       <WorkflowsTab />
     </div>
 
     <!-- Learning Resources Tab -->
-    <div v-else-if="activeTab === 'resources'" class="tab-content tab-content-no-padding">
+    <div
+      v-else-if="activeTab === 'resources'"
+      class="tab-content tab-content-no-padding"
+    >
       <LearningResourcesTab />
     </div>
 
@@ -228,15 +268,23 @@ function handleAddToNote(content: string) {
     <div class="ai-input-wrapper">
       <div class="ai-input-box">
         <!-- Note Context Inside Input Box -->
-        <div class="input-context" v-if="activeNote">
-          <FileText :size="12" class="context-icon" />
+        <div
+          class="input-context"
+          v-if="activeNote"
+        >
+          <FileText
+            :size="12"
+            class="context-icon"
+          />
           <span class="context-title">{{ activeNote.title }}</span>
         </div>
 
         <div class="input-area">
           <textarea
             v-model="inputValue"
-            :placeholder="activeNote ? 'Ask about this note... (@ to reference)' : 'What\'s on your mind?'"
+            :placeholder="
+              activeNote ? 'Ask about this note... (@ to reference)' : 'What\'s on your mind?'
+            "
             :disabled="isProcessing"
             @keydown="handleKeydown"
             rows="1"
@@ -245,7 +293,10 @@ function handleAddToNote(content: string) {
 
         <div class="input-footer">
           <div class="footer-left">
-            <button class="footer-btn" title="Attach">
+            <button
+              class="footer-btn"
+              title="Attach"
+            >
               <Paperclip :size="14" />
             </button>
             <button class="footer-btn labeled">
@@ -264,8 +315,15 @@ function handleAddToNote(content: string) {
             :disabled="!inputValue.trim() || isProcessing"
             @click="handleSubmit"
           >
-            <ArrowUp v-if="!isProcessing" :size="16" />
-            <Loader2 v-else :size="16" class="spin" />
+            <ArrowUp
+              v-if="!isProcessing"
+              :size="16"
+            />
+            <Loader2
+              v-else
+              :size="16"
+              class="spin"
+            />
           </button>
         </div>
       </div>
@@ -533,7 +591,14 @@ function handleAddToNote(content: string) {
 }
 
 .command-code {
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Consolas,
+    Liberation Mono,
+    monospace;
   font-size: 11px;
   color: #e6edf3;
   background: #0d1117;
@@ -591,7 +656,9 @@ function handleAddToNote(content: string) {
   padding: 12px;
   text-align: left;
   box-shadow: var(--ai-card-shadow);
-  transition: transform 0.2s, box-shadow 0.3s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.3s;
 }
 
 .recommendation-card:hover {
@@ -625,7 +692,7 @@ function handleAddToNote(content: string) {
 
 .card-badge.new {
   background: rgba(34, 197, 94, 0.15);
-  color: #16A34A;
+  color: #16a34a;
 }
 
 .card-badge.update {
@@ -843,7 +910,9 @@ function handleAddToNote(content: string) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Scrollbar styling */

@@ -8,16 +8,16 @@ const defaultOptions = {
   placement: 'top',
   modifiers: {
     offset: {
-      offset: '0, 10'
-    }
+      offset: '0, 10',
+    },
   },
-  showArrow: false
+  showArrow: false,
 }
 
 class ImageToolbar extends BaseFloat {
   static pluginName = 'imageToolbar'
 
-  constructor (muya, options = {}) {
+  constructor(muya, options = {}) {
     const name = 'ag-image-toolbar'
     const opts = Object.assign({}, defaultOptions, options)
     super(muya, name, opts)
@@ -26,13 +26,13 @@ class ImageToolbar extends BaseFloat {
     this.options = opts
     this.icons = icons
     this.reference = null
-    const toolbarContainer = this.toolbarContainer = document.createElement('div')
+    const toolbarContainer = (this.toolbarContainer = document.createElement('div'))
     this.container.appendChild(toolbarContainer)
     this.floatBox.classList.add('ag-image-toolbar-container')
     this.listen()
   }
 
-  listen () {
+  listen() {
     const { eventCenter } = this.muya
     super.listen()
     eventCenter.subscribe('muya-image-toolbar', ({ reference, imageInfo }) => {
@@ -49,39 +49,50 @@ class ImageToolbar extends BaseFloat {
     })
   }
 
-  render () {
+  render() {
     const { icons, oldVnode, toolbarContainer, imageInfo } = this
     const { attrs } = imageInfo.token
     const dataAlign = attrs['data-align']
-    const children = icons.map(i => {
+    const children = icons.map((i) => {
       let icon
       let iconWrapperSelector
       if (i.icon) {
         // SVG icon Asset
         iconWrapperSelector = 'div.icon-wrapper'
-        icon = h('i.icon', h('i.icon-inner', {
-          style: {
-            background: `url(${i.icon}) no-repeat`,
-            'background-size': '100%'
-          }
-        }, ''))
+        icon = h(
+          'i.icon',
+          h(
+            'i.icon-inner',
+            {
+              style: {
+                background: `url(${i.icon}) no-repeat`,
+                'background-size': '100%',
+              },
+            },
+            ''
+          )
+        )
       }
       const iconWrapper = h(iconWrapperSelector, icon)
       let itemSelector = `li.item.${i.type}`
 
-      if (i.type === dataAlign || !dataAlign && i.type === 'inline') {
+      if (i.type === dataAlign || (!dataAlign && i.type === 'inline')) {
         itemSelector += '.active'
       }
-      return h(itemSelector, {
-        dataset: {
-          tip: i.tooltip
+      return h(
+        itemSelector,
+        {
+          dataset: {
+            tip: i.tooltip,
+          },
+          on: {
+            click: (event) => {
+              this.selectItem(event, i)
+            },
+          },
         },
-        on: {
-          click: event => {
-            this.selectItem(event, i)
-          }
-        }
-      }, [h('div.tooltip', i.tooltip), iconWrapper])
+        [h('div.tooltip', i.tooltip), iconWrapper]
+      )
     })
 
     const vnode = h('ul', children)
@@ -94,7 +105,7 @@ class ImageToolbar extends BaseFloat {
     this.oldVnode = vnode
   }
 
-  selectItem (event, item) {
+  selectItem(event, item) {
     event.preventDefault()
     event.stopPropagation()
 
@@ -105,26 +116,26 @@ class ImageToolbar extends BaseFloat {
         this.muya.contentState.deleteImage(imageInfo)
         // Hide image transformer
         this.muya.eventCenter.dispatch('muya-transformer', {
-          reference: null
+          reference: null,
         })
         return this.hide()
       // Edit image, for example: editor alt and title, replace image.
       case 'edit': {
         const rect = this.reference.getBoundingClientRect()
         const reference = {
-          getBoundingClientRect () {
+          getBoundingClientRect() {
             rect.height = 0
             return rect
-          }
+          },
         }
         // Hide image transformer
         this.muya.eventCenter.dispatch('muya-transformer', {
-          reference: null
+          reference: null,
         })
         this.muya.eventCenter.dispatch('muya-image-selector', {
           reference,
           imageInfo,
-          cb: () => {}
+          cb: () => {},
         })
         return this.hide()
       }

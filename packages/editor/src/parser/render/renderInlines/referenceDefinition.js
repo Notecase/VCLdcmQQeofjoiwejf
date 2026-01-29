@@ -1,6 +1,6 @@
 import { CLASS_OR_ID } from '../../../config'
 
-export default function referenceDefinition (h, cursor, block, token, outerClass) {
+export default function referenceDefinition(h, cursor, block, token, outerClass) {
   const className = CLASS_OR_ID.AG_REFERENCE_MARKER
   const {
     leftBracket,
@@ -12,11 +12,17 @@ export default function referenceDefinition (h, cursor, block, token, outerClass
     // rightHrefMarker,
     titleMarker,
     title,
-    rightTitleSpace
+    rightTitleSpace,
   } = token
   const { start, end } = token.range
   const leftBracketContent = this.highlight(h, block, start, start + leftBracket.length, token)
-  const labelContent = this.highlight(h, block, start + leftBracket.length, start + leftBracket.length + label.length, token)
+  const labelContent = this.highlight(
+    h,
+    block,
+    start + leftBracket.length,
+    start + leftBracket.length + label.length,
+    token
+  )
   const middleContent = this.highlight(
     h,
     block,
@@ -42,22 +48,34 @@ export default function referenceDefinition (h, cursor, block, token, outerClass
 
   return [
     h(`span.${className}`, leftBracketContent),
-    h(`span.${CLASS_OR_ID.AG_REFERENCE_LABEL}`, {
-      attrs: {
-        spellcheck: 'false'
-      }
-    }, labelContent),
+    h(
+      `span.${CLASS_OR_ID.AG_REFERENCE_LABEL}`,
+      {
+        attrs: {
+          spellcheck: 'false',
+        },
+      },
+      labelContent
+    ),
     ...this.backlashInToken(h, backlash, CLASS_OR_ID.AG_GRAY, backlashStart, token),
-    h(`span.${className}`, {
-      attrs: {
-        spellcheck: 'false'
-      }
-    }, middleContent),
+    h(
+      `span.${className}`,
+      {
+        attrs: {
+          spellcheck: 'false',
+        },
+      },
+      middleContent
+    ),
     h(`span.${CLASS_OR_ID.AG_REFERENCE_TITLE}`, titleContent),
-    h(`span.${className}`, {
-      attrs: {
-        spellcheck: 'false'
-      }
-    }, rightContent)
+    h(
+      `span.${className}`,
+      {
+        attrs: {
+          spellcheck: 'false',
+        },
+      },
+      rightContent
+    ),
   ]
 }

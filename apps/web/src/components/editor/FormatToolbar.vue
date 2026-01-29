@@ -12,10 +12,21 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { usePreferencesStore } from '@/stores'
 import {
-  Bold, Italic, Underline, Strikethrough,
-  Code, Link2, List, ListOrdered, Quote,
-  Image, CheckSquare, Table2,
-  Heading1, Heading2, Heading3
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Code,
+  Link2,
+  List,
+  ListOrdered,
+  Quote,
+  Image,
+  CheckSquare,
+  Table2,
+  Heading1,
+  Heading2,
+  Heading3,
 } from 'lucide-vue-next'
 
 const preferencesStore = usePreferencesStore()
@@ -132,12 +143,15 @@ onUnmounted(() => {
 })
 
 // Re-attach if container changes
-watch(() => props.scrollContainer, () => {
-  if (scrollElement) {
-    scrollElement.removeEventListener('scroll', handleScroll)
+watch(
+  () => props.scrollContainer,
+  () => {
+    if (scrollElement) {
+      scrollElement.removeEventListener('scroll', handleScroll)
+    }
+    scrollElement = attachScrollListener()
   }
-  scrollElement = attachScrollListener()
-})
+)
 
 // Toolbar visibility from preferences
 const showToolbar = computed(() => !preferencesStore.hideToolbar)
@@ -155,17 +169,45 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
       <div class="floating-toolbar">
         <!-- Text Formatting -->
         <div class="toolbar-group">
-          <button class="toolbar-btn" @click="format('strong')" title="Bold (⌘B)">
-            <Bold :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="format('strong')"
+            title="Bold (⌘B)"
+          >
+            <Bold
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="format('em')" title="Italic (⌘I)">
-            <Italic :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="format('em')"
+            title="Italic (⌘I)"
+          >
+            <Italic
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="format('u')" title="Underline">
-            <Underline :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="format('u')"
+            title="Underline"
+          >
+            <Underline
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="format('del')" title="Strikethrough">
-            <Strikethrough :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="format('del')"
+            title="Strikethrough"
+          >
+            <Strikethrough
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
         </div>
 
@@ -173,14 +215,35 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
 
         <!-- Headings -->
         <div class="toolbar-group">
-          <button class="toolbar-btn" @click="updateParagraph('heading 1')" title="Heading 1">
-            <Heading1 :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('heading 1')"
+            title="Heading 1"
+          >
+            <Heading1
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="updateParagraph('heading 2')" title="Heading 2">
-            <Heading2 :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('heading 2')"
+            title="Heading 2"
+          >
+            <Heading2
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="updateParagraph('heading 3')" title="Heading 3">
-            <Heading3 :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('heading 3')"
+            title="Heading 3"
+          >
+            <Heading3
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
         </div>
 
@@ -188,20 +251,55 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
 
         <!-- Lists & Blocks -->
         <div class="toolbar-group">
-          <button class="toolbar-btn" @click="updateParagraph('ul-bullet')" title="Bullet List">
-            <List :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('ul-bullet')"
+            title="Bullet List"
+          >
+            <List
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="updateParagraph('ol-order')" title="Numbered List">
-            <ListOrdered :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('ol-order')"
+            title="Numbered List"
+          >
+            <ListOrdered
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="insertTaskList" title="Task List">
-            <CheckSquare :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="insertTaskList"
+            title="Task List"
+          >
+            <CheckSquare
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="updateParagraph('blockquote')" title="Quote">
-            <Quote :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="updateParagraph('blockquote')"
+            title="Quote"
+          >
+            <Quote
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="insertCodeBlock" title="Code Block">
-            <Code :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="insertCodeBlock"
+            title="Code Block"
+          >
+            <Code
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
         </div>
 
@@ -209,17 +307,37 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
 
         <!-- Media & Links -->
         <div class="toolbar-group">
-          <button class="toolbar-btn" @click="insertImage" title="Insert Image">
-            <Image :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="insertImage"
+            title="Insert Image"
+          >
+            <Image
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="format('link')" title="Insert Link">
-            <Link2 :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="format('link')"
+            title="Insert Link"
+          >
+            <Link2
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
-          <button class="toolbar-btn" @click="insertTable" title="Insert Table">
-            <Table2 :size="15" :stroke-width="2.5" />
+          <button
+            class="toolbar-btn"
+            @click="insertTable"
+            title="Insert Table"
+          >
+            <Table2
+              :size="15"
+              :stroke-width="2.5"
+            />
           </button>
         </div>
-
       </div>
     </div>
   </Transition>

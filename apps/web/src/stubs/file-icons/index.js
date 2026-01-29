@@ -13,7 +13,7 @@ const fileIcons = {
   },
   getClassByLanguage: function (lang) {
     return null
-  }
+  },
 }
 
 export default fileIcons

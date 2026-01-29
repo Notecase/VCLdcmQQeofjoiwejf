@@ -355,6 +355,9 @@ recommend.post('/slides', zValidator('json', GenerateSlidesSchema), async (c) =>
     return c.json({ error: 'Note content not available' }, 400)
   }
 
+  // Capture validated content for use in async callback
+  const validatedContent = noteContent
+
   // Check Accept header for SSE
   const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
 
@@ -365,7 +368,7 @@ recommend.post('/slides', zValidator('json', GenerateSlidesSchema), async (c) =>
       try {
         const slides = await generateSlides(
           body.noteId,
-          noteContent!,
+          validatedContent,
           geminiApiKey,
           body.numSlides,
           async (progress: {

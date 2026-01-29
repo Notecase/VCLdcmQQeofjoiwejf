@@ -12,7 +12,7 @@
  */
 
 import { ref, computed, type PropType } from 'vue'
-import type { FlashcardDeck, Flashcard } from '@/services/recommendation.service'
+import type { FlashcardDeck } from '@/services/recommendation.service'
 
 const props = defineProps({
   deck: {
@@ -22,7 +22,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{
-  (e: 'complete', stats: { known: number; review: number; total: number }): void
+  // eslint-disable-next-line no-unused-vars
+  (event: 'complete', stats: { known: number; review: number; total: number }): void
 }>()
 
 // State
@@ -116,15 +117,15 @@ function restart() {
       <h3>{{ deck.title }}</h3>
       <div class="deck-controls">
         <button
-          @click="toggleShuffle"
           :class="{ active: shuffled }"
           title="Shuffle"
+          @click="toggleShuffle"
         >
           🔀
         </button>
         <button
-          @click="restart"
           title="Restart"
+          @click="restart"
         >
           🔄
         </button>
@@ -166,8 +167,8 @@ function restart() {
         <div class="card-face back">
           <p class="card-content">{{ currentCard.back }}</p>
           <div
-            class="tags"
             v-if="currentCard.tags.length"
+            class="tags"
           >
             <span
               v-for="tag in currentCard.tags"
@@ -212,8 +213,8 @@ function restart() {
     >
       <button
         class="nav-btn"
-        @click="prevCard"
         :disabled="currentIndex === 0"
+        @click="prevCard"
       >
         ← Prev
       </button>

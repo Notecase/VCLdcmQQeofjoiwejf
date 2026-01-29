@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global window */
 /**
  * Chat Message Component
  * Renders a single message with markdown and action buttons
@@ -19,7 +20,7 @@ const displayContent = computed(() => props.message.content || '')
 const renderedContent = computed(() => renderMathContent(displayContent.value))
 
 function copyMessage() {
-  navigator.clipboard.writeText(displayContent.value)
+  window.navigator.clipboard.writeText(displayContent.value)
 }
 </script>
 
@@ -47,8 +48,8 @@ function copyMessage() {
         class="message-actions"
       >
         <button
-          @click="copyMessage"
           title="Copy"
+          @click="copyMessage"
         >
           <svg
             width="14"

@@ -96,7 +96,7 @@ async function handleSubmit() {
 }
 
 // Handle enter key
-function handleKeydown(e: KeyboardEvent) {
+function handleKeydown(e: globalThis.KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     handleSubmit()
@@ -113,9 +113,9 @@ function closeModal() {
   recommendStore.closeModal()
 }
 
-function handleAddToNote(content: string) {
+// eslint-disable-next-line no-unused-vars
+function handleAddToNote(_content: string) {
   // TODO: Integrate with editor to add content
-  console.log('Adding to note:', content)
   closeModal()
 }
 </script>
@@ -156,8 +156,8 @@ function handleAddToNote(content: string) {
       </nav>
       <button
         class="expand-btn"
-        @click="closeSidebar"
         title="Close"
+        @click="closeSidebar"
       >
         <Minimize2 :size="14" />
       </button>
@@ -269,8 +269,8 @@ function handleAddToNote(content: string) {
       <div class="ai-input-box">
         <!-- Note Context Inside Input Box -->
         <div
-          class="input-context"
           v-if="activeNote"
+          class="input-context"
         >
           <FileText
             :size="12"
@@ -286,8 +286,8 @@ function handleAddToNote(content: string) {
               activeNote ? 'Ask about this note... (@ to reference)' : 'What\'s on your mind?'
             "
             :disabled="isProcessing"
-            @keydown="handleKeydown"
             rows="1"
+            @keydown="handleKeydown"
           />
         </div>
 

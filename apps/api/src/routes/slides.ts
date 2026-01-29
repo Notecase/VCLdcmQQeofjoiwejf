@@ -153,6 +153,9 @@ slides.post('/generate', zValidator('json', GenerateSlidesSchema), async (c) => 
     return c.json({ error: 'Note content is too short' }, 400)
   }
 
+  // Capture validated content for use in async callback
+  const validatedContent = noteContent
+
   // Check Accept header for SSE
   const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
 
@@ -163,7 +166,7 @@ slides.post('/generate', zValidator('json', GenerateSlidesSchema), async (c) => 
     return streamSSE(c, async (stream) => {
       try {
         const slides = await provider.generateSlideImages(
-          noteContent!,
+          validatedContent,
           {
             maxSlides: body.maxSlides,
             theme: body.theme,

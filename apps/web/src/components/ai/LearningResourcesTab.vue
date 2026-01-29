@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global setTimeout, confirm, document */
 /**
  * LearningResourcesTab - Saved Learning Resources
  *
@@ -21,9 +22,6 @@ import { useRecommendationsStore } from '@/stores/recommendations'
 import BaseModal from './modals/BaseModal.vue'
 import FlashcardsModal from './modals/FlashcardsModal.vue'
 import MindmapModal from './modals/MindmapModal.vue'
-import ConceptsModal from './modals/ConceptsModal.vue'
-import ExercisesModal from './modals/ExercisesModal.vue'
-import ResourcesModal from './modals/ResourcesModal.vue'
 import {
   Loader2,
   Plus,
@@ -31,7 +29,6 @@ import {
   Copy,
   Trash2,
   PlayCircle,
-  RefreshCw,
   Check,
   BookOpen,
   Brain,
@@ -55,7 +52,6 @@ const noteId = computed(() => activeNote.value?.id)
 const resources = computed(() => learningStore.currentResources)
 const hasResources = computed(() => learningStore.hasResources)
 const isLoading = computed(() => learningStore.isLoading)
-const isSaving = computed(() => learningStore.isSaving)
 const successMessage = computed(() => learningStore.successMessage)
 
 // State
@@ -318,8 +314,8 @@ onMounted(async () => {
   <div class="learning-resources-tab">
     <!-- No Note Selected -->
     <div
-      class="context-indicator"
       v-if="!activeNote"
+      class="context-indicator"
     >
       <span class="radio-dot"></span>
       <span>Select a note to view learning resources</span>
@@ -331,8 +327,8 @@ onMounted(async () => {
       <div class="tab-header">
         <h3 class="tab-title">Learning Resources</h3>
         <span
-          class="note-context"
           v-if="activeNote"
+          class="note-context"
         >
           {{ activeNote.title }}
         </span>
@@ -340,8 +336,8 @@ onMounted(async () => {
 
       <!-- Success Message -->
       <div
-        class="success-toast"
         v-if="successMessage"
+        class="success-toast"
       >
         <Check :size="14" />
         <span>{{ successMessage }}</span>
@@ -349,8 +345,8 @@ onMounted(async () => {
 
       <!-- Loading State -->
       <div
-        class="loading-state"
         v-if="isLoading"
+        class="loading-state"
       >
         <Loader2
           :size="20"
@@ -361,8 +357,8 @@ onMounted(async () => {
 
       <!-- Empty State -->
       <div
-        class="empty-state"
         v-else-if="!hasResources"
+        class="empty-state"
       >
         <div class="empty-icon">
           <BookOpen :size="32" />
@@ -379,8 +375,8 @@ onMounted(async () => {
 
       <!-- Resources List -->
       <div
-        class="resources-list"
         v-else
+        class="resources-list"
       >
         <div
           v-for="resource in resources"
@@ -396,8 +392,8 @@ onMounted(async () => {
             <div class="resource-info">
               <span class="resource-type">{{ getTypeInfo(resource.type).label }}</span>
               <span
-                class="resource-count"
                 v-if="resource.item_count > 0"
+                class="resource-count"
               >
                 ({{ resource.item_count }} {{ resource.item_count === 1 ? 'item' : 'items' }})
               </span>
@@ -410,8 +406,8 @@ onMounted(async () => {
             <button
               v-if="canPractice(resource.type)"
               class="action-btn primary"
-              @click="handlePractice(resource)"
               title="Practice"
+              @click="handlePractice(resource)"
             >
               <PlayCircle :size="14" />
               <span>Practice</span>
@@ -420,8 +416,8 @@ onMounted(async () => {
             <!-- View Button -->
             <button
               class="action-btn"
-              @click="handleView(resource)"
               title="View"
+              @click="handleView(resource)"
             >
               <Eye :size="14" />
               <span>View</span>
@@ -430,8 +426,8 @@ onMounted(async () => {
             <!-- Copy Button -->
             <button
               class="action-btn"
-              @click="handleCopy(resource)"
               :title="copiedId === resource.id ? 'Copied!' : 'Copy as Markdown'"
+              @click="handleCopy(resource)"
             >
               <Check
                 v-if="copiedId === resource.id"
@@ -447,8 +443,8 @@ onMounted(async () => {
             <!-- Delete Button -->
             <button
               class="action-btn danger"
-              @click="handleDelete(resource)"
               title="Delete"
+              @click="handleDelete(resource)"
             >
               <Trash2 :size="14" />
             </button>
@@ -458,8 +454,8 @@ onMounted(async () => {
 
       <!-- Generate More Button -->
       <div
-        class="generate-more"
         v-if="hasResources"
+        class="generate-more"
       >
         <button
           class="generate-btn"
@@ -489,8 +485,8 @@ onMounted(async () => {
       <template #header-right>
         <button
           class="modal-action-btn"
-          @click="handleCopy(viewingResource)"
           :title="copiedId === viewingResource.id ? 'Copied!' : 'Copy as Markdown'"
+          @click="handleCopy(viewingResource)"
         >
           <Check
             v-if="copiedId === viewingResource.id"

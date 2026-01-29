@@ -10,7 +10,8 @@
  * Phase 3.4 Implementation
  */
 
-import { ref, computed, onMounted, watch, type PropType } from 'vue'
+/* global SVGSVGElement, MouseEvent, WheelEvent */
+import { ref, computed, type PropType } from 'vue'
 import type { Mindmap, MindmapNode } from '@/services/recommendation.service'
 
 const props = defineProps({
@@ -61,7 +62,7 @@ const positionedNodes = computed(() => {
   })
 
   // Position leaves
-  levels[1].forEach((branch, branchIdx) => {
+  levels[1].forEach((branch) => {
     const leaves = levels[2].filter((l) => l.parentId === branch.id)
     const branchPos = positions.get(branch.id)!
     leaves.forEach((leaf, i) => {
@@ -164,8 +165,8 @@ function resetView() {
   <div class="mindmap-viewer">
     <div class="mindmap-controls">
       <button
-        @click="resetView"
         title="Reset View"
+        @click="resetView"
       >
         🔄
       </button>

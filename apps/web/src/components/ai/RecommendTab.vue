@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global setInterval, clearInterval, setTimeout, console, fetch, AbortSignal */
 /**
  * RecommendTab - AI-powered recommendations panel
  *
@@ -499,15 +500,15 @@ function isSaved(type: RecommendationType): boolean {
   <div class="recommend-tab">
     <!-- Analysis Header with Circle Trigger -->
     <div
-      class="analysis-header"
       v-if="activeNote"
+      class="analysis-header"
     >
       <span class="analysis-label">AI Analysis</span>
       <span
         class="analysis-trigger"
         :class="{ pulse: isAnalyzing || recommendStore.isGenerating, clickable: !!activeNote }"
-        @click="handleManualAnalysis"
         title="Analyze note content and generate all recommendations"
+        @click="handleManualAnalysis"
       >
         ○
       </span>
@@ -515,8 +516,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- Thinking Animation -->
     <div
-      class="thinking-indicator"
       v-if="isAnalyzing"
+      class="thinking-indicator"
     >
       <div class="thinking-dots">
         <span class="dot"></span>
@@ -528,8 +529,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- API Status Warning -->
     <div
-      class="api-warning"
       v-if="apiStatus === 'offline'"
+      class="api-warning"
     >
       <span class="warning-icon">⚠️</span>
       <div class="warning-content">
@@ -546,8 +547,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- Content Too Short Warning -->
     <div
-      class="content-warning"
       v-if="contentTooShort && activeNote"
+      class="content-warning"
     >
       <span class="warning-icon">📝</span>
       <div class="warning-content">
@@ -561,8 +562,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- Context Indicator -->
     <div
-      class="context-indicator"
       v-if="!activeNote"
+      class="context-indicator"
     >
       <span class="radio-dot"></span>
       <span>Select a note to get AI recommendations</span>
@@ -570,8 +571,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- Slides Progress -->
     <div
-      class="slides-progress"
       v-if="recommendStore.slidesProgress"
+      class="slides-progress"
     >
       <div class="progress-header">
         <Presentation :size="16" />
@@ -594,8 +595,8 @@ function isSaved(type: RecommendationType): boolean {
 
     <!-- Recommendations List -->
     <div
-      class="recommendations-list"
       v-if="activeNote"
+      class="recommendations-list"
     >
       <div
         v-for="card in visibleCards"
@@ -623,8 +624,8 @@ function isSaved(type: RecommendationType): boolean {
 
         <!-- Error message -->
         <div
-          class="card-error"
           v-if="getError(card.id)"
+          class="card-error"
         >
           {{ getError(card.id) }}
         </div>
@@ -665,9 +666,9 @@ function isSaved(type: RecommendationType): boolean {
             v-if="card.hasData && mapToResourceType(card.id)"
             class="action-btn save"
             :class="{ saved: isSaved(card.id) }"
+            :title="isSaved(card.id) ? 'Saved!' : 'Save to Resources'"
             :disabled="isSaving(card.id)"
             @click="handleSave(card.id)"
-            :title="isSaved(card.id) ? 'Saved!' : 'Save to Resources'"
           >
             <Loader2
               v-if="isSaving(card.id)"
@@ -695,8 +696,8 @@ function isSaved(type: RecommendationType): boolean {
 
       <!-- Empty state when all dismissed -->
       <div
-        class="empty-state"
         v-if="visibleCards.length === 0"
+        class="empty-state"
       >
         <p>All recommendations have been dismissed.</p>
         <button

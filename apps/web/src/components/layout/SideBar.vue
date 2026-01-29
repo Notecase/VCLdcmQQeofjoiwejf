@@ -133,6 +133,12 @@ const activeTab = computed({
 const sidebarVisible = computed(() => layoutStore.sidebarVisible)
 const sidebarWidth = computed(() => layoutStore.sidebarWidth)
 
+// Handle collapsed tab click - set tab and toggle sidebar
+function handleCollapsedTabClick(tabId: SidebarTab) {
+  activeTab.value = tabId
+  layoutStore.toggleSidebar()
+}
+
 // Project editing state
 const editingProjectId = ref<string | null>(null)
 const editingProjectName = ref('')
@@ -618,10 +624,7 @@ const tabs = [
         class="collapsed-tab-btn"
         :class="{ active: activeTab === tab.id }"
         :title="tab.label"
-        @click="
-          activeTab = tab.id
-          layoutStore.toggleSidebar()
-        "
+        @click="handleCollapsedTabClick(tab.id)"
       >
         <component
           :is="tab.icon"

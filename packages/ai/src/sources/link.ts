@@ -138,7 +138,7 @@ async function processHTMLContent(
 /**
  * Extract content and metadata from HTML
  */
-function extractFromHTML(html: string, parsedUrl: URL): {
+function extractFromHTML(html: string, _parsedUrl: URL): {
   content: string
   title?: string
   description?: string

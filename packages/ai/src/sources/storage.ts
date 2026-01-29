@@ -284,7 +284,7 @@ export class SourceStorage {
    * Requires the pgvector extension and a match_source_chunks function
    */
   async searchSources(options: SourceSearchOptions): Promise<SourceSearchResult[]> {
-    const { noteId, query, limit = 10, threshold = 0.7 } = options
+    const { noteId, query, limit = 10, threshold: _threshold = 0.7 } = options
 
     // First, we need to get the embedding for the query
     // This should be done by the caller and passed in, but for now

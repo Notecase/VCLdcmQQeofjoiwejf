@@ -120,7 +120,7 @@ orchestration.post(
   '/execute',
   zValidator('json', ExecuteWorkflowSchema),
   async (c) => {
-    const auth = requireAuth(c)
+    requireAuth(c)
     const body = c.req.valid('json')
     const openaiApiKey = process.env.OPENAI_API_KEY
 
@@ -236,7 +236,7 @@ orchestration.post('/execution/:id/cancel', async (c) => {
  * POST /api/orchestration/quick/expense-tracker
  */
 orchestration.post('/quick/expense-tracker', async (c) => {
-  const auth = requireAuth(c)
+  requireAuth(c)
   const openaiApiKey = process.env.OPENAI_API_KEY
 
   if (!openaiApiKey) {
@@ -257,7 +257,7 @@ orchestration.post('/quick/expense-tracker', async (c) => {
  * POST /api/orchestration/quick/todo-list
  */
 orchestration.post('/quick/todo-list', async (c) => {
-  const auth = requireAuth(c)
+  requireAuth(c)
   const openaiApiKey = process.env.OPENAI_API_KEY
 
   if (!openaiApiKey) {
@@ -278,7 +278,7 @@ orchestration.post('/quick/todo-list', async (c) => {
  * POST /api/orchestration/quick/project-dashboard
  */
 orchestration.post('/quick/project-dashboard', async (c) => {
-  const auth = requireAuth(c)
+  requireAuth(c)
   const openaiApiKey = process.env.OPENAI_API_KEY
 
   if (!openaiApiKey) {
@@ -299,7 +299,7 @@ orchestration.post('/quick/project-dashboard', async (c) => {
  * POST /api/orchestration/quick/meeting-notes
  */
 orchestration.post('/quick/meeting-notes', async (c) => {
-  const auth = requireAuth(c)
+  requireAuth(c)
   const openaiApiKey = process.env.OPENAI_API_KEY
 
   if (!openaiApiKey) {
@@ -320,7 +320,7 @@ orchestration.post('/quick/meeting-notes', async (c) => {
  * POST /api/orchestration/quick/habit-tracker
  */
 orchestration.post('/quick/habit-tracker', async (c) => {
-  const auth = requireAuth(c)
+  requireAuth(c)
   const openaiApiKey = process.env.OPENAI_API_KEY
 
   if (!openaiApiKey) {

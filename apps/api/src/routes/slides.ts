@@ -231,25 +231,13 @@ slides.post(
       return c.json({ error: 'Google AI API key not configured' }, 500)
     }
 
-    const { createGeminiProvider } = await import('@inkdown/ai')
-    const provider = createGeminiProvider({ apiKey: geminiApiKey })
+    // Gemini provider will be used for image generation in the future
+    // const { createGeminiProvider } = await import('@inkdown/ai')
+    // const provider = createGeminiProvider({ apiKey: geminiApiKey })
+    void geminiApiKey // Marked as used for future implementation
 
     try {
-      // Generate outline for single slide
-      const outline = {
-        index: 1,
-        title: body.topic,
-        content: body.topic,
-        visualStyle: body.type,
-        visualStyleConfig: body.theme ? {
-          theme: body.theme,
-          primaryColor: '#001f3f',
-          accentColor: '#FFD700',
-          backgroundTexture: 'clean light background',
-        } : undefined,
-      }
-
-      // For now, return text-based slide
+      // For now, return text-based slide (image generation requires Gemini Image API)
       return c.json({
         success: true,
         slide: {

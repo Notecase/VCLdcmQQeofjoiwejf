@@ -108,7 +108,7 @@ function parsePages(text: string, numPages: number): PDFPage[] {
  * Respects page boundaries when possible
  */
 function chunkContent(
-  fullContent: string,
+  _fullContent: string,
   pages: PDFPage[],
   chunkSize: number,
   chunkOverlap: number
@@ -181,7 +181,7 @@ function findSentenceEnd(text: string): number {
 /**
  * Extract a title from PDF metadata or content
  */
-function extractTitle(metadataTitle: string | undefined, buffer: Buffer): string {
+function extractTitle(metadataTitle: string | undefined, _buffer: Buffer): string {
   if (metadataTitle && metadataTitle.trim()) {
     return metadataTitle.trim()
   }

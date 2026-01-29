@@ -28,8 +28,8 @@ export class WorkflowActions {
   private storage: ReturnType<typeof createSourceStorage>
 
   constructor(
-    private supabase: SupabaseClient,
-    private userId: string,
+    supabase: SupabaseClient,
+    userId: string,
     private openaiApiKey: string
   ) {
     this.storage = createSourceStorage(supabase, userId)
@@ -41,7 +41,7 @@ export class WorkflowActions {
   async execute(
     noteId: string,
     actionType: WorkflowActionType,
-    options: Record<string, unknown> = {},
+    _options: Record<string, unknown> = {},
     onProgress?: (progress: ActionProgress) => void
   ): Promise<ActionResult | null> {
     try {
@@ -765,7 +765,7 @@ Provide your response as JSON with events sorted chronologically:
       throw new Error(`OpenAI API error: ${error}`)
     }
 
-    const data = await response.json()
+    const data = await response.json() as { choices: Array<{ message?: { content?: string } }> }
     return data.choices[0]?.message?.content || ''
   }
 }

@@ -29,13 +29,15 @@ const DEFAULT_OPTIONS: ProcessingOptions = {
  */
 export class SourceProcessor {
   private storage: SourceStorage
+  private supabase: SupabaseClient
   private embedFn?: (text: string) => Promise<number[]>
 
   constructor(
-    private supabase: SupabaseClient,
-    private userId: string,
+    supabase: SupabaseClient,
+    userId: string,
     embedFunction?: (text: string) => Promise<number[]>
   ) {
+    this.supabase = supabase
     this.storage = createSourceStorage(supabase, userId)
     this.embedFn = embedFunction
   }
@@ -420,7 +422,7 @@ export class SourceProcessor {
     noteId: string,
     buffer: Buffer,
     filename: string,
-    mimeType: string,
+    _mimeType: string,
     options: ProcessingOptions = {},
     onProgress?: (progress: SourceProcessingProgress) => void
   ): Promise<Source | null> {

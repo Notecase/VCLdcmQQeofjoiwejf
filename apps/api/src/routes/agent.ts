@@ -435,7 +435,7 @@ agent.post(
   '/agentic/task',
   zValidator('json', AgenticTaskSchema),
   async (c) => {
-    const auth = requireAuth(c)
+    requireAuth(c)
     const body = c.req.valid('json')
     const openaiApiKey = process.env.OPENAI_API_KEY
 

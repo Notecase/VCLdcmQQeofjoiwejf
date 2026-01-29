@@ -15,48 +15,48 @@
       "types": "./dist/providers/index.d.ts"
     },
     "./providers/gemini": {
-      "import": "./src/providers/gemini.ts",
-      "types": "./src/providers/gemini.ts"
+      "import": "./dist/providers/gemini.js",
+      "types": "./dist/providers/gemini.d.ts"
     },
     "./agents": {
       "import": "./dist/agents/index.js",
       "types": "./dist/agents/index.d.ts"
     },
     "./agents/agentic.agent": {
-      "import": "./src/agents/agentic.agent.ts",
-      "types": "./src/agents/agentic.agent.ts"
+      "import": "./dist/agents/agentic.agent.js",
+      "types": "./dist/agents/agentic.agent.d.ts"
     },
     "./services": {
       "import": "./dist/services/index.js",
       "types": "./dist/services/index.d.ts"
     },
     "./services/recommendations": {
-      "import": "./src/services/recommendations.ts",
-      "types": "./src/services/recommendations.ts"
+      "import": "./dist/services/recommendations.js",
+      "types": "./dist/services/recommendations.d.ts"
     },
     "./services/orchestration": {
-      "import": "./src/services/orchestration.ts",
-      "types": "./src/services/orchestration.ts"
+      "import": "./dist/services/orchestration.js",
+      "types": "./dist/services/orchestration.d.ts"
     },
     "./tools": {
       "import": "./dist/tools/index.js",
       "types": "./dist/tools/index.d.ts"
     },
     "./slides/themes": {
-      "import": "./src/slides/themes.ts",
-      "types": "./src/slides/themes.ts"
+      "import": "./dist/slides/themes.js",
+      "types": "./dist/slides/themes.d.ts"
     },
     "./slides/prompts": {
-      "import": "./src/slides/prompts.ts",
-      "types": "./src/slides/prompts.ts"
+      "import": "./dist/slides/prompts.js",
+      "types": "./dist/slides/prompts.d.ts"
     },
     "./sources": {
-      "import": "./src/sources/index.ts",
-      "types": "./src/sources/index.ts"
+      "import": "./dist/sources/index.js",
+      "types": "./dist/sources/index.d.ts"
     },
     "./workflows": {
-      "import": "./src/workflows/index.ts",
-      "types": "./src/workflows/index.ts"
+      "import": "./dist/workflows/index.js",
+      "types": "./dist/workflows/index.d.ts"
     }
   },
   "scripts": {

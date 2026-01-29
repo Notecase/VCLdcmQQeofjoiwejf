@@ -3,7 +3,7 @@
  * SideBar - Enhanced sidebar with Projects and Documents tree
  * Features: Create/rename/delete projects, hierarchical tree view, drag-drop, subnotes
  */
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   FileText,
   List,
@@ -191,6 +191,7 @@ const generalDocuments = computed(() => {
 })
 
 // Build note tree for general notes
+// eslint-disable-next-line no-unused-vars
 const generalNoteTree = computed((): NoteTreeNode[] => {
   const generalNotes = editorStore.documents.filter((d) => !d.project_id)
   return buildNoteTree(generalNotes)
@@ -207,6 +208,7 @@ const getProjectDocuments = (projectId: string) => {
 }
 
 // Build note tree for a project
+// eslint-disable-next-line no-unused-vars
 const getProjectNoteTree = (projectId: string): NoteTreeNode[] => {
   const projectNotes = editorStore.documents.filter((d) => d.project_id === projectId)
   return buildNoteTree(projectNotes)
@@ -615,8 +617,8 @@ const tabs = [
   >
     <!-- Collapsed state - icon buttons -->
     <div
-      class="sidebar-collapsed"
       v-if="!sidebarVisible"
+      class="sidebar-collapsed"
     >
       <button
         v-for="tab in tabs"
@@ -634,8 +636,8 @@ const tabs = [
       <div class="spacer"></div>
       <button
         class="collapsed-tab-btn"
-        @click="toggleSidebar"
         title="Expand Sidebar"
+        @click="toggleSidebar"
       >
         <ChevronRight :size="18" />
       </button>
@@ -643,8 +645,8 @@ const tabs = [
 
     <!-- Expanded state -->
     <div
-      class="sidebar-expanded"
       v-else
+      class="sidebar-expanded"
     >
       <!-- Navigation Dock (Integrated) -->
       <NavigationDock />
@@ -653,15 +655,15 @@ const tabs = [
       <div class="quick-actions">
         <button
           class="quick-action-btn primary"
-          @click="createNewDocument()"
           title="New Document"
+          @click="createNewDocument()"
         >
           <FilePlus :size="14" />
         </button>
         <button
           class="quick-action-btn"
-          @click="createProject(null)"
           title="New Project"
+          @click="createProject(null)"
         >
           <FolderPlus :size="14" />
         </button>
@@ -737,8 +739,8 @@ const tabs = [
 
                 <button
                   class="more-btn"
-                  @click.stop="showContextMenu($event, 'project', project.id)"
                   title="More actions"
+                  @click.stop="showContextMenu($event, 'project', project.id)"
                 >
                   <MoreHorizontal :size="14" />
                 </button>
@@ -850,8 +852,8 @@ const tabs = [
                       <span class="item-name">{{ doc.title }}</span>
                       <button
                         class="delete-btn"
-                        @click.stop="deleteDocument(doc, $event)"
                         title="Delete"
+                        @click.stop="deleteDocument(doc, $event)"
                       >
                         <Trash2 :size="12" />
                       </button>
@@ -923,8 +925,8 @@ const tabs = [
 
                     <button
                       class="delete-btn"
-                      @click.stop="deleteDocument(doc, $event)"
                       title="Delete"
+                      @click.stop="deleteDocument(doc, $event)"
                     >
                       <Trash2 :size="12" />
                     </button>
@@ -981,8 +983,8 @@ const tabs = [
 
                         <button
                           class="delete-btn"
-                          @click.stop="deleteDocument(subnote, $event)"
                           title="Delete"
+                          @click.stop="deleteDocument(subnote, $event)"
                         >
                           <Trash2 :size="12" />
                         </button>
@@ -1112,8 +1114,8 @@ const tabs = [
 
                   <button
                     class="delete-btn"
-                    @click.stop="deleteDocument(doc, $event)"
                     title="Delete"
+                    @click.stop="deleteDocument(doc, $event)"
                   >
                     <Trash2 :size="12" />
                   </button>
@@ -1170,8 +1172,8 @@ const tabs = [
 
                       <button
                         class="delete-btn"
-                        @click.stop="deleteDocument(subnote, $event)"
                         title="Delete"
+                        @click.stop="deleteDocument(subnote, $event)"
                       >
                         <Trash2 :size="12" />
                       </button>
@@ -1202,8 +1204,8 @@ const tabs = [
 
       <!-- User Profile Section -->
       <div
-        class="user-section"
         ref="userMenuRef"
+        class="user-section"
       >
         <button
           class="user-profile-btn"

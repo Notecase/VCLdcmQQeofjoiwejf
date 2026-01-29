@@ -4,7 +4,7 @@
  * TypeScript component with fuzzy search
  */
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { Command, Search, X, ChevronRight } from 'lucide-vue-next'
+import { Command, X, ChevronRight } from 'lucide-vue-next'
 import { useLayoutStore } from '@/stores/layout'
 import { useEditorStore } from '@/stores/editor'
 import { usePreferencesStore } from '@/stores/preferences'
@@ -162,7 +162,8 @@ const groupedCommands = computed(() => {
   return groups
 })
 
-// Flat list for navigation
+// Flat list for navigation (kept for future keyboard navigation)
+// eslint-disable-next-line no-unused-vars
 const flatList = computed(() => {
   const items: (CommandItem | { type: 'header'; label: string })[] = []
 

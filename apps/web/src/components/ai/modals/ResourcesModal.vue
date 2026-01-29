@@ -122,8 +122,8 @@ async function copyAsMarkdown() {
       <button
         class="copy-btn"
         :class="{ copied }"
-        @click.stop="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
+        @click.stop="copyAsMarkdown"
       >
         <Check
           v-if="copied"
@@ -138,8 +138,8 @@ async function copyAsMarkdown() {
     </template>
 
     <div
-      class="resources-list"
       v-if="resources.length > 0"
+      class="resources-list"
     >
       <div
         v-for="(resource, index) in resources"
@@ -179,8 +179,8 @@ async function copyAsMarkdown() {
     </div>
 
     <div
-      class="empty-state"
       v-else
+      class="empty-state"
     >
       <p>No resources available.</p>
     </div>

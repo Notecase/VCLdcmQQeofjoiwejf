@@ -97,8 +97,8 @@ function renderContent(text: string | undefined): string {
     </template>
 
     <div
-      class="mindmap-container"
       v-if="mindmap"
+      class="mindmap-container"
     >
       <!-- Central Node -->
       <div
@@ -154,8 +154,8 @@ function renderContent(text: string | undefined): string {
     </div>
 
     <div
-      class="empty-state"
       v-else
+      class="empty-state"
     >
       <p>No mindmap data available.</p>
     </div>

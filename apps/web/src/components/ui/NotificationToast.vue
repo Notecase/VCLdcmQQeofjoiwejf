@@ -3,7 +3,6 @@
  * NotificationToast - Toast notification display system
  * TypeScript component with animations
  */
-import { computed } from 'vue'
 import { Info, CheckCircle, AlertTriangle, XCircle, X } from 'lucide-vue-next'
 import { useNotificationsStore, type NotificationType } from '@/stores/notifications'
 

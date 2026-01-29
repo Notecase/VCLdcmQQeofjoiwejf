@@ -44,8 +44,8 @@ function scrollToHeading(heading: any) {
       >
         <div class="outline-header">Outline</div>
         <div
-          class="outline-list"
           v-if="tocItems.length > 0"
+          class="outline-list"
         >
           <button
             v-for="(item, index) in tocItems"

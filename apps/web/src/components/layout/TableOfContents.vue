@@ -4,7 +4,7 @@
  * TypeScript component with tree structure
  */
 import { computed } from 'vue'
-import { List, ChevronRight } from 'lucide-vue-next'
+import { List } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores'
 
 interface TocItem {
@@ -30,12 +30,14 @@ function scrollToHeading(item: TocItem) {
   window.dispatchEvent(event)
 }
 
+// eslint-disable-next-line no-unused-vars
 function getIndentStyle(level: number) {
   return {
     paddingLeft: `${(level - 1) * 16 + 12}px`,
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function getHeadingClass(level: number) {
   return `toc-h${Math.min(level, 6)}`
 }
@@ -49,8 +51,8 @@ function getHeadingClass(level: number) {
     </div>
 
     <div
-      class="toc-content"
       v-if="!isEmpty"
+      class="toc-content"
     >
       <div
         v-for="item in toc"
@@ -66,8 +68,8 @@ function getHeadingClass(level: number) {
     </div>
 
     <div
-      class="toc-empty"
       v-else
+      class="toc-empty"
     >
       <div class="empty-icon">
         <List :size="48" />

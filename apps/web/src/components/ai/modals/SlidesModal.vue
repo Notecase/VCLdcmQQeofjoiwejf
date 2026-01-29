@@ -123,8 +123,8 @@ function renderContent(text: string | undefined): string {
     </template>
 
     <div
-      class="slides-container"
       v-if="slides.length > 0"
+      class="slides-container"
     >
       <!-- Main slide preview -->
       <div class="slide-preview">
@@ -186,8 +186,8 @@ function renderContent(text: string | undefined): string {
     </div>
 
     <div
-      class="empty-state"
       v-else
+      class="empty-state"
     >
       <p>No slides available.</p>
     </div>

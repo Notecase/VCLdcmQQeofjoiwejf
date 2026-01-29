@@ -49,8 +49,8 @@ watch(
         class="save-btn"
         :class="{ saved: isSaved }"
         :disabled="isSaved || editorStore.isSaving"
-        @click="saveDocument"
         :title="isSaved ? 'Saved' : 'Save (Cmd+S)'"
+        @click="saveDocument"
       >
         <Save :size="16" />
       </button>
@@ -59,8 +59,8 @@ watch(
 
     <!-- Tabs Zone -->
     <div
-      class="tabs-zone"
       ref="tabsContainerRef"
+      class="tabs-zone"
     >
       <!-- Tabs -->
       <div
@@ -91,8 +91,8 @@ watch(
       <!-- New Tab Button -->
       <button
         class="new-tab-btn"
-        @click="createNewDocument"
         title="New Document"
+        @click="createNewDocument"
       >
         <Plus :size="16" />
       </button>

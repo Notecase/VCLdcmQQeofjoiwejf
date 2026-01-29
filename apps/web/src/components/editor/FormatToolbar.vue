@@ -171,8 +171,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
         <div class="toolbar-group">
           <button
             class="toolbar-btn"
-            @click="format('strong')"
             title="Bold (⌘B)"
+            @click="format('strong')"
           >
             <Bold
               :size="15"
@@ -181,8 +181,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="format('em')"
             title="Italic (⌘I)"
+            @click="format('em')"
           >
             <Italic
               :size="15"
@@ -191,8 +191,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="format('u')"
             title="Underline"
+            @click="format('u')"
           >
             <Underline
               :size="15"
@@ -201,8 +201,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="format('del')"
             title="Strikethrough"
+            @click="format('del')"
           >
             <Strikethrough
               :size="15"
@@ -217,8 +217,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
         <div class="toolbar-group">
           <button
             class="toolbar-btn"
-            @click="updateParagraph('heading 1')"
             title="Heading 1"
+            @click="updateParagraph('heading 1')"
           >
             <Heading1
               :size="15"
@@ -227,8 +227,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="updateParagraph('heading 2')"
             title="Heading 2"
+            @click="updateParagraph('heading 2')"
           >
             <Heading2
               :size="15"
@@ -237,8 +237,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="updateParagraph('heading 3')"
             title="Heading 3"
+            @click="updateParagraph('heading 3')"
           >
             <Heading3
               :size="15"
@@ -253,8 +253,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
         <div class="toolbar-group">
           <button
             class="toolbar-btn"
-            @click="updateParagraph('ul-bullet')"
             title="Bullet List"
+            @click="updateParagraph('ul-bullet')"
           >
             <List
               :size="15"
@@ -263,8 +263,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="updateParagraph('ol-order')"
             title="Numbered List"
+            @click="updateParagraph('ol-order')"
           >
             <ListOrdered
               :size="15"
@@ -273,8 +273,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="insertTaskList"
             title="Task List"
+            @click="insertTaskList"
           >
             <CheckSquare
               :size="15"
@@ -283,8 +283,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="updateParagraph('blockquote')"
             title="Quote"
+            @click="updateParagraph('blockquote')"
           >
             <Quote
               :size="15"
@@ -293,8 +293,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="insertCodeBlock"
             title="Code Block"
+            @click="insertCodeBlock"
           >
             <Code
               :size="15"
@@ -309,8 +309,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
         <div class="toolbar-group">
           <button
             class="toolbar-btn"
-            @click="insertImage"
             title="Insert Image"
+            @click="insertImage"
           >
             <Image
               :size="15"
@@ -319,8 +319,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="format('link')"
             title="Insert Link"
+            @click="format('link')"
           >
             <Link2
               :size="15"
@@ -329,8 +329,8 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
           <button
             class="toolbar-btn"
-            @click="insertTable"
             title="Insert Table"
+            @click="insertTable"
           >
             <Table2
               :size="15"

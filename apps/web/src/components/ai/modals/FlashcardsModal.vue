@@ -115,8 +115,8 @@ async function copyAsMarkdown() {
       <button
         class="copy-btn"
         :class="{ copied }"
-        @click="copyAsMarkdown"
         :title="copied ? 'Copied!' : 'Copy all as Markdown'"
+        @click="copyAsMarkdown"
       >
         <Check
           v-if="copied"
@@ -131,8 +131,8 @@ async function copyAsMarkdown() {
     </template>
 
     <div
-      class="flashcards-container"
       v-if="flashcards.length > 0"
+      class="flashcards-container"
     >
       <!-- Card -->
       <div
@@ -175,8 +175,8 @@ async function copyAsMarkdown() {
     </div>
 
     <div
-      class="empty-state"
       v-else
+      class="empty-state"
     >
       <p>No flashcards available.</p>
     </div>

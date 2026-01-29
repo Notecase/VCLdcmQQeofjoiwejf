@@ -3,8 +3,8 @@
  * SourceCodeEditor - Raw markdown editing with CodeMirror 6
  * Toggle between WYSIWYG (Muya) and source code mode
  */
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { EditorState, StateEffect } from '@codemirror/state'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { EditorState } from '@codemirror/state'
 import {
   EditorView,
   keymap,
@@ -18,21 +18,17 @@ import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { syntaxHighlighting, defaultHighlightStyle, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
-import { useEditorStore } from '@/stores/editor'
-import { usePreferencesStore } from '@/stores/preferences'
 
 const props = defineProps<{
   markdown: string
+  // eslint-disable-next-line no-unused-vars
   onUpdate?: (content: string) => void
 }>()
 
 const emit = defineEmits<{
-  (e: 'change', content: string): void
-  (e: 'cursor-change', cursor: { line: number; ch: number }): void
+  change: [content: string]
+  'cursor-change': [cursor: { line: number; ch: number }]
 }>()
-
-const editorStore = useEditorStore()
-const preferencesStore = usePreferencesStore()
 
 const containerRef = ref<HTMLDivElement>()
 let editorView: EditorView | null = null
@@ -210,8 +206,8 @@ defineExpose({
 
 <template>
   <div
-    class="source-code-editor"
     ref="containerRef"
+    class="source-code-editor"
   ></div>
 </template>
 

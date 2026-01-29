@@ -53,6 +53,6 @@
     "@types/plantuml-encoder": "^1.4.2",
     "@types/prismjs": "^1.26.3",
     "@types/turndown": "^5.0.4",
-    "typescript": "^5.7.0"
+    "typescript": "~5.7.0"
   }
 }

@@ -13,7 +13,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { X } from 'lucide-vue-next'
 
 // Props
-const props = defineProps<{
+defineProps<{
   title: string
   subtitle?: string
   size?: 'sm' | 'md' | 'lg'
@@ -62,9 +62,9 @@ function handleOverlayClick(e: MouseEvent) {
       >
         <!-- Close button -->
         <button
+          aria-label="Close"
           class="close-btn"
           @click="emit('close')"
-          aria-label="Close"
         >
           <X :size="18" />
         </button>
@@ -93,8 +93,8 @@ function handleOverlayClick(e: MouseEvent) {
 
         <!-- Footer -->
         <footer
-          class="modal-footer"
           v-if="$slots.footer"
+          class="modal-footer"
         >
           <slot name="footer" />
         </footer>

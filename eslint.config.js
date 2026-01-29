@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 import prettierConfig from 'eslint-config-prettier'
+import globals from 'globals'
 
 export default [
   // Ignore patterns
@@ -55,6 +56,9 @@ export default [
         parser: tseslint.parser,
         ecmaVersion: 'latest',
         sourceType: 'module',
+      },
+      globals: {
+        ...globals.browser,
       },
     },
     plugins: {

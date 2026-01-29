@@ -310,25 +310,14 @@ function handleAddToNote(content: string) {
 .ai-sidebar {
   width: 320px;
   height: 100%;
-<<<<<<< HEAD
   position: relative;
   background: var(--ai-sidebar-bg);
   border-left: 1px solid var(--border-color);
-=======
-  background: radial-gradient(
-    circle at top left,
-    rgba(13, 71, 161, 0.2) 0%,
-    rgba(30, 136, 229, 0.1) 40%,
-    #010409 80%
-  );
-  border-left: 1px solid #30363d;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-<<<<<<< HEAD
 /* Subtle blue gradient overlay */
 .ai-sidebar::before {
   content: '';
@@ -343,14 +332,10 @@ function handleAddToNote(content: string) {
 }
 
 /* Header with glassmorphism */
-=======
-/* Header - Transparent to let gradient show through */
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-<<<<<<< HEAD
   padding: 0 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--ai-header-bg);
@@ -359,12 +344,6 @@ function handleAddToNote(content: string) {
   height: 44px;
   position: relative;
   z-index: 1;
-=======
-  padding: 0 16px;
-  height: 48px;
-  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
-  background: transparent;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
 }
 
 .sidebar-tabs {
@@ -380,13 +359,8 @@ function handleAddToNote(content: string) {
   height: 100%;
   background: none;
   border: none;
-<<<<<<< HEAD
   color: var(--ai-tab-color);
   font-size: 12px;
-=======
-  color: #8b949e;
-  font-size: 13px;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
   font-weight: 500;
   cursor: pointer;
   position: relative;
@@ -434,17 +408,13 @@ function handleAddToNote(content: string) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-<<<<<<< HEAD
   padding: 24px 16px 12px;
   position: relative;
   z-index: 1;
-=======
-  padding: 24px 20px 12px;
 }
 
 .tab-content-no-padding {
   padding: 0;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
 }
 
 /* Agent Tab specific */
@@ -525,13 +495,8 @@ function handleAddToNote(content: string) {
 }
 
 .welcome-text {
-<<<<<<< HEAD
   font-size: 12px;
   color: var(--text-color-secondary);
-=======
-  font-size: 13px;
-  color: #e6edf3;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
   line-height: 1.5;
   margin-bottom: 10px;
 }
@@ -582,7 +547,6 @@ function handleAddToNote(content: string) {
   color: #e6edf3;
 }
 
-<<<<<<< HEAD
 /* Recommend Tab */
 .recommend-tab {
   padding: 16px;
@@ -742,12 +706,6 @@ function handleAddToNote(content: string) {
   background: var(--ai-sidebar-bg);
   position: relative;
   z-index: 1;
-=======
-/* Input Area - Bottom Fixed, transparent for gradient flow */
-.ai-input-wrapper {
-  padding: 12px;
-  background: transparent;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
 }
 
 /* Note Context Indicator - Inside input box */
@@ -859,24 +817,15 @@ function handleAddToNote(content: string) {
 }
 
 .send-cirle-btn.active {
-<<<<<<< HEAD
   background: var(--primary-gradient);
   color: white;
-=======
-  background: #238636;
-  color: #ffffff;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .send-cirle-btn.active:hover {
-<<<<<<< HEAD
   opacity: 0.95;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-=======
-  background: #2ea043;
->>>>>>> 4519743 (Add learning resources, sources, and AI workflow features)
 }
 
 /* Loading indicator */

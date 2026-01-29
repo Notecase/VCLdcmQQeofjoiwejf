@@ -415,6 +415,194 @@ agent.post(
 )
 
 // ============================================================================
+// Agentic AI (Autonomous Task Execution)
+// ============================================================================
+
+/**
+ * Agentic task schema
+ */
+const AgenticTaskSchema = z.object({
+  task: z.string().min(1).max(5000),
+  noteId: z.string().uuid().optional(),
+  dryRun: z.boolean().optional().default(false),
+})
+
+/**
+ * Execute autonomous task
+ * POST /api/agent/agentic/task
+ */
+agent.post(
+  '/agentic/task',
+  zValidator('json', AgenticTaskSchema),
+  async (c) => {
+    const auth = requireAuth(c)
+    const body = c.req.valid('json')
+    const openaiApiKey = process.env.OPENAI_API_KEY
+
+    if (!openaiApiKey) {
+      return c.json({ error: 'OpenAI API key not configured' }, 500)
+    }
+
+    const { createAgenticAgent } = await import('@inkdown/ai')
+    const agenticAgent = createAgenticAgent(openaiApiKey)
+
+    // Check Accept header for SSE
+    const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
+
+    if (acceptSSE) {
+      return streamSSE(c, async (stream) => {
+        try {
+          const result = await agenticAgent.executeTask(
+            body.task,
+            body.noteId,
+            async (progress: { taskId: string; status: string; currentStep?: string; currentStepIndex: number; totalSteps: number; message: string }) => {
+              await stream.writeSSE({
+                data: JSON.stringify({ type: 'progress', ...progress }),
+              })
+            }
+          )
+
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'complete', result }),
+          })
+        } catch (error) {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'error', error: String(error) }),
+          })
+        }
+      })
+    }
+
+    try {
+      const result = await agenticAgent.executeTask(body.task, body.noteId)
+      return c.json(result)
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
+  }
+)
+
+/**
+ * Preview task plan without executing
+ * POST /api/agent/agentic/plan
+ */
+agent.post(
+  '/agentic/plan',
+  zValidator('json', z.object({
+    task: z.string().min(1).max(5000),
+  })),
+  async (c) => {
+    const body = c.req.valid('json')
+    const openaiApiKey = process.env.OPENAI_API_KEY
+
+    if (!openaiApiKey) {
+      return c.json({ error: 'OpenAI API key not configured' }, 500)
+    }
+
+    const { createAgenticAgent } = await import('@inkdown/ai')
+    const agenticAgent = createAgenticAgent(openaiApiKey)
+
+    try {
+      const steps = await agenticAgent.planTask(body.task)
+      return c.json({
+        task: body.task,
+        steps,
+        stepCount: steps.length,
+        formattedPlan: agenticAgent.formatPlan(steps),
+      })
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
+  }
+)
+
+/**
+ * Get task status
+ * GET /api/agent/agentic/task/:id
+ */
+agent.get('/agentic/task/:id', async (c) => {
+  const taskId = c.req.param('id')
+  const openaiApiKey = process.env.OPENAI_API_KEY
+
+  if (!openaiApiKey) {
+    return c.json({ error: 'OpenAI API key not configured' }, 500)
+  }
+
+  const { createAgenticAgent } = await import('@inkdown/ai')
+  const agenticAgent = createAgenticAgent(openaiApiKey)
+
+  const task = agenticAgent.getTask(taskId)
+
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  return c.json({
+    taskId: task.id,
+    description: task.description,
+    status: task.status,
+    stepCount: task.steps.length,
+    completedSteps: task.steps.filter((s: { status: string }) => s.status === 'Completed').length,
+    failedSteps: task.steps.filter((s: { status: string }) => s.status === 'Failed').length,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  })
+})
+
+/**
+ * Cancel running task
+ * POST /api/agent/agentic/task/:id/cancel
+ */
+agent.post('/agentic/task/:id/cancel', async (c) => {
+  const taskId = c.req.param('id')
+  const openaiApiKey = process.env.OPENAI_API_KEY
+
+  if (!openaiApiKey) {
+    return c.json({ error: 'OpenAI API key not configured' }, 500)
+  }
+
+  const { createAgenticAgent } = await import('@inkdown/ai')
+  const agenticAgent = createAgenticAgent(openaiApiKey)
+
+  const cancelled = agenticAgent.cancelTask(taskId)
+
+  if (!cancelled) {
+    return c.json({ error: 'Task not found or already completed' }, 400)
+  }
+
+  return c.json({ success: true, message: 'Task cancelled' })
+})
+
+/**
+ * Research a topic
+ * POST /api/agent/agentic/research
+ */
+agent.post(
+  '/agentic/research',
+  zValidator('json', z.object({
+    query: z.string().min(1).max(1000),
+  })),
+  async (c) => {
+    const body = c.req.valid('json')
+    const openaiApiKey = process.env.OPENAI_API_KEY
+
+    if (!openaiApiKey) {
+      return c.json({ error: 'OpenAI API key not configured' }, 500)
+    }
+
+    const { createAgenticAgent } = await import('@inkdown/ai')
+    const agenticAgent = createAgenticAgent(openaiApiKey)
+
+    try {
+      const result = await agenticAgent.research(body.query)
+      return c.json(result)
+    } catch (error) {
+      return c.json({ error: String(error) }, 500)
+    }
+  }
+)
+
+// ============================================================================
 // Capabilities Endpoint
 // ============================================================================
 

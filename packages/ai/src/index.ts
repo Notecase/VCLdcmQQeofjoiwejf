@@ -4,7 +4,10 @@
  * This package provides:
  * - AI provider abstraction (OpenAI, Ollama Cloud, Gemini)
  * - LangGraph-based agents for various tasks
- * - Tool definitions for agent actions (26 tools)
+ * - Tool definitions for agent actions (30 tools)
+ * - Recommendation system (mindmaps, flashcards, concepts, exercises, resources, slides)
+ * - Agentic AI for autonomous task execution
+ * - Workflow orchestration with pre-built templates
  */
 
 // =============================================================================
@@ -85,7 +88,7 @@ export type {
 } from './agents'
 
 // =============================================================================
-// Service Types (to be implemented)
+// Service Types
 // =============================================================================
 
 export type {
@@ -102,3 +105,174 @@ export {
   DEFAULT_RAG_OPTIONS,
   EMBEDDING_MODELS,
 } from './services'
+
+// =============================================================================
+// Recommendation Service
+// =============================================================================
+
+export {
+  RecommendationService,
+  generateMindmap,
+  generateFlashcards,
+  generateConcepts,
+  generateExercises,
+  generateResources,
+  generateSlides,
+  analyzeNoteForRecommendations,
+  generateRecommendation,
+  clearRecommendationCache,
+  clearAllRecommendationCache,
+} from './services'
+
+export type {
+  MindmapData,
+  MindmapNode,
+  FlashcardData,
+  ConceptData,
+  ExerciseData,
+  ResourceData,
+  SlideData,
+  RecommendationData,
+  RecommendationCache,
+  RecommendationType,
+} from './services'
+
+// =============================================================================
+// Orchestration Service
+// =============================================================================
+
+export {
+  OrchestrationService,
+  createOrchestrationService,
+  WORKFLOW_TEMPLATES,
+} from './services'
+
+export type {
+  WorkflowTemplate,
+  WorkflowResult,
+  WorkflowState,
+  WorkflowProgress,
+  OrchestrationRequest,
+} from './services'
+
+// =============================================================================
+// Agentic AI
+// =============================================================================
+
+export {
+  AgenticAgent,
+  createAgenticAgent,
+} from './agents/agentic.agent'
+
+export type {
+  AgentStep,
+  AgentStepType,
+  AgenticResult,
+  AgenticStatus,
+  AgenticProgress,
+  AgenticTask,
+  ResearchResult,
+  ValidationResult,
+  DataSchema,
+  DatabaseColumn,
+} from './agents/agentic.types'
+
+// =============================================================================
+// Slide Themes and Prompts
+// =============================================================================
+
+export {
+  THEMES,
+  THEME_LIST,
+  getTheme,
+  getDefaultTheme,
+  detectTheme,
+} from './slides/themes'
+
+export type {
+  ThemeName,
+  SlideTheme,
+} from './slides/themes'
+
+export {
+  getSlidePrompt,
+  buildSlidePrompt,
+  buildOutlinePrompt,
+} from './slides/prompts'
+
+export type {
+  SlideVisualStyle,
+} from './slides/prompts'
+
+// =============================================================================
+// Sources Module
+// =============================================================================
+
+export {
+  SourceStorage,
+  createSourceStorage,
+  SourceProcessor,
+  createSourceProcessor,
+  extractPDFContent,
+  isPDFBuffer,
+  getPDFInfo,
+  fetchLinkContent,
+  isValidURL,
+  isYouTubeURL,
+  extractYouTubeVideoId,
+  sourceRowToSource,
+  chunkRowToChunk,
+} from './sources'
+
+export type {
+  Source,
+  SourceType,
+  SourceStatus,
+  SourceChunk,
+  ProcessingOptions,
+  ProcessingResult,
+  PDFProcessingResult,
+  PDFPage,
+  LinkProcessingResult,
+  SourceSearchOptions,
+  SourceSearchResult,
+  AddSourceRequest,
+  AddSourceResponse,
+  ListSourcesRequest,
+  ListSourcesResponse,
+  DeleteSourceRequest,
+  DeleteSourceResponse,
+  GetSourceContentRequest,
+  GetSourceContentResponse,
+  SearchSourcesRequest,
+  SearchSourcesResponse,
+  SourceProcessingProgress,
+} from './sources'
+
+// =============================================================================
+// Workflows Module
+// =============================================================================
+
+export {
+  WorkflowActions,
+  createWorkflowActions,
+  WORKFLOW_ACTIONS,
+} from './workflows'
+
+export type {
+  WorkflowActionType,
+  WorkflowAction,
+  ExecuteActionRequest,
+  ExecuteActionResponse,
+  ActionResult,
+  StudyNoteResult,
+  SummaryResult,
+  KeyTerm,
+  KeyTermsResult,
+  ComparisonResult,
+  QAResult,
+  ConflictsResult,
+  CitationsResult,
+  TimelineResult,
+  ActionProgress,
+} from './workflows'

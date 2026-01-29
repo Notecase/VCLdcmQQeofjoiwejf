@@ -6,6 +6,13 @@ node_modules/
 dist/
 .next/
 .turbo/
+.vite/
+
+# Compiled TypeScript output (don't commit .js next to .ts)
+# Exclude muya which is legitimate JavaScript
+apps/web/src/**/*.js
+!apps/web/src/muya/**
+!apps/web/src/stubs/**
 
 # Environment
 .env

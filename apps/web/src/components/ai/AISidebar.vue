@@ -1,20 +1,35 @@
 <script setup lang="ts">
 /**
- * AI Sidebar - Exact Note3 Design
- * 3-tab structure: Agent, Recommend, Settings
+ * AI Sidebar - Note3 Design with Full Feature Integration
+ *
+ * 3-tab structure: Agent, Recommend, Workflows
  * Features:
- * - Tab navigation
- * - Agent: Search knowledge base, Quick Commands (purple box)
- * - Recommend: billboard cards (Resources, Slides)
+ * - Tab navigation with blue underline
+ * - Agent: Search knowledge base, Quick Commands, Chat
+ * - Recommend: AI-generated content cards with modals
+ * - Workflows: Template-based content generation
  * - Bottom input with @ Mention and attachments
  */
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAIStore } from '@/stores/ai'
+import { useRecommendationsStore } from '@/stores/recommendations'
 import { useAIChat } from '@/services/ai.service'
 import { useEditorStore, useLayoutStore } from '@/stores'
 import ChatMessage from './ChatMessage.vue'
+import RecommendTab from './RecommendTab.vue'
+import WorkflowsTab from './WorkflowsTab.vue'
+import LearningResourcesTab from './LearningResourcesTab.vue'
+
+// Modal components
+import MindmapModal from './modals/MindmapModal.vue'
+import FlashcardsModal from './modals/FlashcardsModal.vue'
+import ConceptsModal from './modals/ConceptsModal.vue'
+import ExercisesModal from './modals/ExercisesModal.vue'
+import ResourcesModal from './modals/ResourcesModal.vue'
+import SlidesModal from './modals/SlidesModal.vue'
+
 import {
-  Search, Maximize2, Minimize2, Plus, X, Loader2, Send,
+  Search, Minimize2, Plus, Loader2,
   Paperclip, Globe, AtSign, ArrowUp, FileText
 } from 'lucide-vue-next'
 
@@ -28,12 +43,13 @@ defineProps<{
 
 // Store and composable
 const store = useAIStore()
+const recommendStore = useRecommendationsStore()
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
 const { sendMessage, isProcessing } = useAIChat()
 
 // Tab state
-type TabId = 'agent' | 'recommend' | 'settings'
+type TabId = 'agent' | 'recommend' | 'workflows' | 'resources'
 const activeTab = ref<TabId>('agent')
 
 // Local state
@@ -44,6 +60,13 @@ const searchQuery = ref('')
 const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
 
+// Watch for note changes and update recommendation store
+watch(() => activeNote.value?.id, (id) => {
+  if (id) {
+    recommendStore.setCurrentNote(id)
+  }
+})
+
 // Quick Commands for Agent tab
 const quickCommands = [
   { cmd: '/artifact', desc: 'Create live code' },
@@ -52,49 +75,9 @@ const quickCommands = [
   { cmd: '@NoteName', desc: 'Reference another note' }
 ]
 
-// Recommendations for Recommend tab - matching Note3 design
-const recommendations = [
-  {
-    id: 'mindmap',
-    title: 'Generate Mindmap',
-    badge: 'NEW',
-    description: 'Visualize your study guide as an interactive mindmap. See connections between concepts and understand the big picture.',
-    tags: ['Visual', 'Structure', 'Overview'],
-    primaryAction: 'View',
-    secondaryAction: 'Dismiss'
-  },
-  {
-    id: 'advanced',
-    title: 'Advanced Concepts',
-    description: 'Explore advanced topics and related concepts. Each concept builds on your current understanding.',
-    tags: ['Deep Dive', 'Learning', 'Theory'],
-    primaryAction: 'View',
-    secondaryAction: 'Dismiss'
-  },
-  {
-    id: 'flashcards',
-    title: 'Flashcards',
-    description: 'Interactive flashcards to memorize key concepts and test your knowledge.',
-    tags: ['Memory', 'Practice', 'Quiz'],
-    primaryAction: 'Start',
-    secondaryAction: 'Dismiss'
-  }
-]
-
-const dismissedCards = ref<Set<string>>(new Set())
-const activeCard = ref<string | null>(null)
-
-function dismissCard(id: string) {
-  dismissedCards.value.add(id)
-}
-
-const visibleRecommendations = computed(() => 
-  recommendations.filter(r => !dismissedCards.value.has(r.id))
-)
-
 // Handle submit
 async function handleSubmit() {
-  if (!inputValue.value.trim() || isProcessing.value) return
+  if (!inputValue.value.trim() || isProcessing) return
 
   const msg = inputValue.value
   inputValue.value = ''
@@ -114,6 +97,17 @@ function handleKeydown(e: KeyboardEvent) {
 function closeSidebar() {
   layoutStore.toggleRightPanel()
 }
+
+// Modal handlers
+function closeModal() {
+  recommendStore.closeModal()
+}
+
+function handleAddToNote(content: string) {
+  // TODO: Integrate with editor to add content
+  console.log('Adding to note:', content)
+  closeModal()
+}
 </script>
 
 <template>
@@ -121,26 +115,33 @@ function closeSidebar() {
     <!-- Header with tabs -->
     <header class="sidebar-header">
       <nav class="sidebar-tabs">
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'agent' }"
           @click="activeTab = 'agent'"
         >
           Agent
         </button>
-        <button 
-          class="tab-btn" 
+        <button
+          class="tab-btn"
           :class="{ active: activeTab === 'recommend' }"
           @click="activeTab = 'recommend'"
         >
           Recommend
         </button>
-        <button 
-          class="tab-btn" 
-          :class="{ active: activeTab === 'settings' }"
-          @click="activeTab = 'settings'"
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'workflows' }"
+          @click="activeTab = 'workflows'"
         >
-          Settings
+          Workflows
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'resources' }"
+          @click="activeTab = 'resources'"
+        >
+          Resources
         </button>
       </nav>
       <button class="expand-btn" @click="closeSidebar" title="Close">
@@ -157,9 +158,9 @@ function closeSidebar() {
         </div>
         <div class="search-input">
           <Search :size="14" />
-          <input 
-            v-model="searchQuery" 
-            type="text" 
+          <input
+            v-model="searchQuery"
+            type="text"
             placeholder="Search knowledge base..."
           />
         </div>
@@ -209,48 +210,18 @@ function closeSidebar() {
     </div>
 
     <!-- Recommend Tab -->
-    <div v-else-if="activeTab === 'recommend'" class="tab-content recommend-tab">
-      <!-- Context Indicator -->
-      <div class="context-indicator" v-if="!activeNote">
-        <span class="radio-dot"></span>
-        <span>Select a note to get recommendations</span>
-      </div>
-
-      <!-- Recommendations List -->
-      <div class="recommendations-list">
-        <div
-          v-for="rec in visibleRecommendations"
-          :key="rec.id"
-          class="recommendation-card"
-        >
-          <div class="card-header">
-            <span class="card-title">{{ rec.title }}</span>
-            <span v-if="rec.badge" class="card-badge" :class="rec.badge.toLowerCase()">{{ rec.badge }}</span>
-          </div>
-
-          <p class="card-desc">{{ rec.description }}</p>
-
-          <div class="card-tags">
-            <span v-for="tag in rec.tags" :key="tag" class="card-tag">
-              {{ tag }}
-            </span>
-          </div>
-
-          <div class="card-actions">
-            <button class="action-btn primary">{{ rec.primaryAction }}</button>
-            <button class="action-btn secondary" @click="dismissCard(rec.id)">
-              {{ rec.secondaryAction }}
-            </button>
-          </div>
-        </div>
-      </div>
+    <div v-else-if="activeTab === 'recommend'" class="tab-content tab-content-no-padding">
+      <RecommendTab />
     </div>
 
-    <!-- Settings Tab -->
-    <div v-else-if="activeTab === 'settings'" class="tab-content">
-      <div class="settings-placeholder">
-        <p>Settings coming soon...</p>
-      </div>
+    <!-- Workflows Tab -->
+    <div v-else-if="activeTab === 'workflows'" class="tab-content tab-content-no-padding">
+      <WorkflowsTab />
+    </div>
+
+    <!-- Learning Resources Tab -->
+    <div v-else-if="activeTab === 'resources'" class="tab-content tab-content-no-padding">
+      <LearningResourcesTab />
     </div>
 
     <!-- Bottom Input Area -->
@@ -299,16 +270,43 @@ function closeSidebar() {
         </div>
       </div>
     </div>
+
+    <!-- Modals -->
+    <MindmapModal
+      v-if="recommendStore.activeModal === 'mindmap'"
+      @close="closeModal"
+      @add-to-note="handleAddToNote"
+    />
+    <FlashcardsModal
+      v-if="recommendStore.activeModal === 'flashcards'"
+      @close="closeModal"
+    />
+    <ConceptsModal
+      v-if="recommendStore.activeModal === 'concepts'"
+      @close="closeModal"
+    />
+    <ExercisesModal
+      v-if="recommendStore.activeModal === 'exercises'"
+      @close="closeModal"
+    />
+    <ResourcesModal
+      v-if="recommendStore.activeModal === 'resources'"
+      @close="closeModal"
+    />
+    <SlidesModal
+      v-if="recommendStore.activeModal === 'slides'"
+      @close="closeModal"
+    />
   </aside>
 </template>
 
 <style scoped>
 /* ============================================
- * AI SIDEBAR - Theme-aware using CSS variables
- * Supports light and dark themes
+ * AI SIDEBAR - Note3 Design
+ * Neutral dark backgrounds with blue accents
  * ============================================ */
 
-/* Sidebar container */
+/* Sidebar container - Docked mode gradient */
 .ai-sidebar {
   width: 320px;
   height: 100%;
@@ -371,14 +369,14 @@ function closeSidebar() {
 }
 
 .tab-btn:hover {
-  color: var(--ai-tab-active);
+  color: #c9d1d9;
 }
 
 .tab-btn.active {
-  color: var(--ai-tab-active);
+  color: #ffffff;
 }
 
-/* Active tab indicator */
+/* Simple underline - NO gradient, NO glow */
 .tab-btn.active::after {
   content: '';
   position: absolute;
@@ -386,22 +384,22 @@ function closeSidebar() {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--primary-color);
-  border-radius: 2px 2px 0 0;
+  background: #58a6ff;
+  border-radius: 0;
 }
 
 .expand-btn {
   padding: 6px;
   background: none;
   border: none;
-  color: var(--ai-tab-color);
+  color: #6e7681;
   cursor: pointer;
   border-radius: 4px;
 }
 
 .expand-btn:hover {
-  color: var(--ai-tab-active);
-  background: var(--hover-bg);
+  color: #58a6ff;
+  background: #21262d;
 }
 
 /* Content Area */
@@ -413,6 +411,10 @@ function closeSidebar() {
   padding: 24px 16px 12px;
   position: relative;
   z-index: 1;
+}
+
+.tab-content-no-padding {
+  padding: 0;
 }
 
 /* Agent Tab specific */
@@ -429,33 +431,33 @@ function closeSidebar() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ai-tab-color);
+  color: #6e7681;
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
 }
 
 .new-chat-btn:hover {
-  background: var(--hover-bg);
-  color: var(--ai-tab-active);
+  background: #21262d;
+  color: #58a6ff;
 }
 
+/* Search Input - 60% opacity per spec */
 .search-input {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--ai-input-bg);
-  border: 1px solid var(--ai-input-border);
+  background: rgba(22, 27, 34, 0.6);
+  border: 1px solid #30363d;
   border-radius: 8px;
-  padding: 6px 12px;
-  color: var(--ai-tab-color);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 6px 10px;
+  color: #6e7681;
+  transition: border-color 0.2s;
 }
 
 .search-input:focus-within {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--ai-input-focus);
+  border-color: rgba(48, 54, 61, 0.7);
 }
 
 .search-input input {
@@ -463,12 +465,18 @@ function closeSidebar() {
   background: none;
   border: none;
   outline: none;
-  color: var(--text-color);
+  color: #e6edf3;
   font-size: 13px;
 }
 
 .search-input input::placeholder {
-  color: var(--text-color-secondary);
+  color: #6e7681;
+}
+
+/* Messages Area */
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* Welcome Area */
@@ -480,7 +488,7 @@ function closeSidebar() {
   display: block;
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-color-secondary);
+  color: #8b949e;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 8px;
@@ -493,20 +501,19 @@ function closeSidebar() {
   margin-bottom: 10px;
 }
 
-/* Quick Commands Box */
+/* Quick Commands Box - Semi-transparent to blend with gradient */
 .quick-commands-box {
-  background: var(--ai-card-bg);
-  border: 1px solid var(--ai-card-border);
+  background: rgba(22, 27, 34, 0.7);
+  border: 1px solid rgba(48, 54, 61, 0.6);
   border-radius: 10px;
   padding: 10px 12px;
   margin: 12px 0;
-  box-shadow: var(--ai-card-shadow);
 }
 
 .commands-header {
   font-size: 10px;
   font-weight: 600;
-  color: var(--ai-cmd-header);
+  color: #58a6ff;
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -528,8 +535,8 @@ function closeSidebar() {
 .command-code {
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
   font-size: 11px;
-  color: var(--text-color);
-  background: var(--ai-cmd-bg);
+  color: #e6edf3;
+  background: #0d1117;
   padding: 3px 8px;
   border-radius: 4px;
   min-width: 80px;
@@ -537,7 +544,7 @@ function closeSidebar() {
 
 .command-desc {
   font-size: 11px;
-  color: var(--text-color);
+  color: #e6edf3;
 }
 
 /* Recommend Tab */
@@ -710,13 +717,13 @@ function closeSidebar() {
 }
 
 .context-icon {
-  color: var(--primary-color);
+  color: #58a6ff;
   flex-shrink: 0;
 }
 
 .context-title {
   font-size: 13px;
-  color: var(--text-color-secondary);
+  color: #8b949e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -727,7 +734,7 @@ function closeSidebar() {
   background: none;
   border: none;
   outline: none;
-  color: var(--text-color);
+  color: #e6edf3;
   font-size: 14px;
   resize: none;
   min-height: 24px;
@@ -736,23 +743,26 @@ function closeSidebar() {
 }
 
 .input-area textarea::placeholder {
-  color: var(--text-color-secondary);
+  color: #6e7681;
 }
 
+/* Input Box - Glass morphism effect */
 .ai-input-box {
-  background: var(--ai-input-bg);
-  border: 1px solid var(--ai-input-border);
+  background: rgba(22, 27, 34, 0.65);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid #21262d;
   border-radius: 12px;
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s;
 }
 
 .ai-input-box:focus-within {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--ai-input-focus);
+  border-color: rgba(88, 166, 255, 0.15);
 }
 
 .input-footer {
@@ -771,7 +781,7 @@ function closeSidebar() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ai-tab-color);
+  color: #6e7681;
   background: none;
   border: none;
   padding: 4px;
@@ -781,8 +791,8 @@ function closeSidebar() {
 }
 
 .footer-btn:hover {
-  color: var(--ai-tab-active);
-  background: var(--hover-bg);
+  color: #58a6ff;
+  background: rgba(33, 38, 45, 0.5);
 }
 
 .footer-btn.labeled {
@@ -791,12 +801,13 @@ function closeSidebar() {
   font-size: 12px;
 }
 
+/* Send Button - GREEN when active */
 .send-cirle-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--ai-send-bg);
-  color: var(--text-color-secondary);
+  background: #21262d;
+  color: #6e7681;
   border: none;
   display: flex;
   align-items: center;
@@ -822,7 +833,7 @@ function closeSidebar() {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-color-secondary);
+  color: #8b949e;
   font-size: 13px;
   padding: 12px 0;
 }
@@ -843,7 +854,7 @@ function closeSidebar() {
   background: transparent;
 }
 .tab-content::-webkit-scrollbar-thumb {
-  background: var(--ai-scrollbar-thumb);
+  background: #30363d;
   border-radius: 3px;
 }
 </style>

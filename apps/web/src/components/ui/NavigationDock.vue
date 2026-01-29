@@ -38,7 +38,7 @@ const isNoteActive = computed(() => {
     <!-- Left Sidebar Toggle -->
     <button 
       class="dock-item toggle-btn"
-      :class="{ active: layoutStore.isSidebarVisible }"
+      :class="{ active: layoutStore.sidebarVisible }"
       title="Toggle Sidebar (Cmd+B)"
       @click="layoutStore.toggleSidebar"
     >
@@ -88,7 +88,7 @@ const isNoteActive = computed(() => {
     <!-- Right Sidebar (AI) Toggle -->
     <button 
       class="dock-item toggle-btn"
-      :class="{ active: layoutStore.isRightPanelVisible }"
+      :class="{ active: layoutStore.rightPanelVisible }"
       title="Toggle AI Sidebar (Cmd+J)"
       @click="layoutStore.toggleRightPanel"
     >
@@ -138,19 +138,19 @@ const isNoteActive = computed(() => {
 }
 
 .dock-item:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08));
+  background: transparent;
   color: #e6edf3;
 }
 
-/* Active state - green accent */
+/* Active state - icon color only, no background */
 .dock-item.active {
-  background: rgba(63, 185, 80, 0.15);
-  border-color: rgba(63, 185, 80, 0.4);
+  background: transparent;
+  border-color: transparent;
   color: #3fb950;
 }
 
 .dock-item.active:hover {
-  background: rgba(63, 185, 80, 0.2);
+  background: transparent;
 }
 
 /* Toggle buttons styling */
@@ -160,8 +160,8 @@ const isNoteActive = computed(() => {
 
 .toggle-btn.active {
   color: #3fb950;
-  background: rgba(63, 185, 80, 0.15);
-  border-color: rgba(63, 185, 80, 0.4);
+  background: transparent;
+  border-color: transparent;
 }
 
 /* Divider */

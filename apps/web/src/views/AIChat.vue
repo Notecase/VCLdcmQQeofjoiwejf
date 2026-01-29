@@ -42,7 +42,7 @@ function scrollToBottom() {
 // Handle submit with animation
 async function handleSubmit() {
   const value = inputValue.value.trim()
-  if (!value || isProcessing.value) return
+  if (!value || isProcessing) return
 
   // Trigger exit animation if first message
   if (!hasMessages.value) {
@@ -607,14 +607,14 @@ onMounted(() => {
 }
 
 .send-btn.active {
-  background: #58a6ff;
+  background: #238636;
   color: white;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
 }
 
 .send-btn.active:hover {
-  background: #4f98e8;
+  background: #2ea043;
 }
 
 .spin {

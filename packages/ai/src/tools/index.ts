@@ -1,12 +1,12 @@
 /**
  * AI Tools exports
  *
- * Complete 26-tool system for LangGraph agents.
- * 
+ * Complete 30-tool system for LangGraph agents.
+ *
  * Tool Categories:
  * - Core Editing (8): read_block, read_note, edit_block, search_web, create_artifact, create_database, read_memory_file, write_memory_file
  * - Database (10): db_add_row, db_update_rows, db_delete_rows, db_query_rows, db_aggregate, db_group_by, db_column_stats, db_sort_rows, db_get_schema, db_create_chart_data
- * - Artifact (6): artifact_modify_html, artifact_modify_css, artifact_modify_js, artifact_parse_structure, artifact_get_css_rules, artifact_validate
+ * - Artifact (10): artifact_modify_html, artifact_modify_css, artifact_modify_js, artifact_parse_structure, artifact_get_css_rules, artifact_validate, artifact_get_js_functions, artifact_extract_dependencies, artifact_optimize, artifact_get_colors
  * - Secretary (7): create_roadmap, save_roadmap, list_memory_files, delete_memory_file, get_roadmap, advance_roadmap_week, get_current_week_tasks
  */
 
@@ -108,6 +108,10 @@ export {
   ArtifactParseStructureSchema,
   ArtifactGetCssRulesSchema,
   ArtifactValidateSchema,
+  ArtifactGetJsFunctionsSchema,
+  ArtifactExtractDependenciesSchema,
+  ArtifactOptimizeSchema,
+  ArtifactGetColorsSchema,
   // Types
   type ArtifactModifyHtmlInput,
   type ArtifactModifyCssInput,
@@ -115,6 +119,10 @@ export {
   type ArtifactParseStructureInput,
   type ArtifactGetCssRulesInput,
   type ArtifactValidateInput,
+  type ArtifactGetJsFunctionsInput,
+  type ArtifactExtractDependenciesInput,
+  type ArtifactOptimizeInput,
+  type ArtifactGetColorsInput,
   // Functions
   artifactModifyHtml,
   artifactModifyCss,
@@ -122,6 +130,10 @@ export {
   artifactParseStructure,
   artifactGetCssRules,
   artifactValidate,
+  artifactGetJsFunctions,
+  artifactExtractDependencies,
+  artifactOptimize,
+  artifactGetColors,
   // Tool definitions
   artifactTools,
 } from './artifact.tools'
@@ -277,6 +289,10 @@ export const TOOL_METADATA: Record<string, { label: string; description: string;
   artifact_parse_structure: { label: 'Parse Structure', description: 'Parse HTML structure', category: 'artifact' },
   artifact_get_css_rules: { label: 'Get CSS Rules', description: 'Extract CSS rules', category: 'artifact' },
   artifact_validate: { label: 'Validate', description: 'Validate artifact syntax', category: 'artifact' },
+  artifact_get_js_functions: { label: 'Get JS Functions', description: 'Extract JavaScript functions', category: 'artifact' },
+  artifact_extract_dependencies: { label: 'Extract Dependencies', description: 'Find imports and CDN links', category: 'artifact' },
+  artifact_optimize: { label: 'Optimize', description: 'Optimize code for size/performance/a11y', category: 'artifact' },
+  artifact_get_colors: { label: 'Get Colors', description: 'Extract color palette from CSS', category: 'artifact' },
   // Secretary
   create_roadmap: { label: 'Create Roadmap', description: 'Create learning roadmap', category: 'secretary' },
   save_roadmap: { label: 'Save Roadmap', description: 'Save roadmap changes', category: 'secretary' },

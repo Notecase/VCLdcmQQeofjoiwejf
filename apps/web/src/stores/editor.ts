@@ -386,6 +386,25 @@ export const useEditorStore = defineStore('editor', {
     },
 
     /**
+     * Get the current note content - combines live editor content with stored content
+     * This is the primary method for getting note content for AI features
+     */
+    getCurrentNoteContent(): string {
+      // Priority 1: Get content from the active tab (most up-to-date)
+      const tab = this.activeTab
+      if (tab?.document?.content) {
+        return tab.document.content
+      }
+
+      // Priority 2: Get from currentDocument
+      if (this.currentDocument?.content) {
+        return this.currentDocument.content
+      }
+
+      return ''
+    },
+
+    /**
      * Start real-time sync for notes
      */
     startRealtimeSync() {

@@ -1,9 +1,68 @@
 /**
  * AI Services exports
  *
- * This module provides services for embedding, RAG, and chunking.
- * Full implementations will be added in Phase 1-2.
+ * This module provides services for embedding, RAG, chunking,
+ * recommendations, and workflow orchestration.
  */
+
+// Recommendation Service
+export {
+  RecommendationService,
+  generateMindmap,
+  generateFlashcards,
+  generateConcepts,
+  generateExercises,
+  generateResources,
+  generateSlides,
+  analyzeNoteForRecommendations,
+  generateRecommendation,
+  clearRecommendationCache,
+  clearAllRecommendationCache,
+} from './recommendations'
+
+export type {
+  MindmapData,
+  MindmapNode,
+  FlashcardData,
+  ConceptData,
+  ExerciseData,
+  ResourceData,
+  SlideData,
+  SlideOutline,
+  SlideGenerationProgress,
+  RecommendationData,
+  RecommendationCache,
+  RecommendationType,
+  ResourceType,
+  SlideType,
+  GenerateRecommendationRequest,
+  GenerateRecommendationResponse,
+  GenerateSlidesRequest,
+  GenerateSlidesResponse,
+} from './recommendations.types'
+
+// Orchestration Service
+export {
+  OrchestrationService,
+  createOrchestrationService,
+  WORKFLOW_TEMPLATES,
+} from './orchestration'
+
+export type {
+  WorkflowTemplate,
+  WorkflowResult,
+  WorkflowState,
+  WorkflowExecution,
+  WorkflowProgress,
+  OrchestrationRequest,
+  TemplateStep,
+  TemplateParameter,
+  DataMapping,
+  Transformation,
+  BlockInfo,
+  StepType,
+  ParameterType,
+} from './orchestration.types'
 
 // Services (to be implemented)
 // export { EmbeddingService } from './embedding'

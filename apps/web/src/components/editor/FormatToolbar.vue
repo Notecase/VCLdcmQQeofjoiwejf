@@ -10,16 +10,15 @@
  * - Smooth spring-like animations
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { usePreferencesStore, useLayoutStore } from '@/stores'
+import { usePreferencesStore } from '@/stores'
 import {
   Bold, Italic, Underline, Strikethrough,
   Code, Link2, List, ListOrdered, Quote,
-  Image, CheckSquare, Table2, Sparkles,
+  Image, CheckSquare, Table2,
   Heading1, Heading2, Heading3
 } from 'lucide-vue-next'
 
 const preferencesStore = usePreferencesStore()
-const layoutStore = useLayoutStore()
 
 const props = defineProps<{
   muyaInstance?: any
@@ -64,10 +63,6 @@ function insertTaskList() {
 function insertCodeBlock() {
   if (!props.muyaInstance) return
   props.muyaInstance.updateParagraph('pre')
-}
-
-function handleAI() {
-  layoutStore.toggleRightPanel()
 }
 
 // Smart scroll behavior
@@ -225,13 +220,6 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
           </button>
         </div>
 
-        <div class="toolbar-divider" />
-
-        <!-- AI Button - Special gradient pill -->
-        <button class="toolbar-btn ai-btn" @click="handleAI" title="AI Assistant">
-          <Sparkles :size="14" :stroke-width="2.5" />
-          <span>AI</span>
-        </button>
       </div>
     </div>
   </Transition>
@@ -351,44 +339,6 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
 }
 
 /* ============================================
- * AI BUTTON - Special gradient styling
- * ============================================ */
-.ai-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  width: auto;
-  padding: 0 14px;
-  height: 34px;
-
-  /* Gradient background */
-  background: linear-gradient(135deg, #A78BFA 0%, #818CF8 50%, #6366F1 100%);
-  color: white;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-
-  /* Subtle glow */
-  box-shadow:
-    0 2px 8px rgba(129, 140, 248, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.ai-btn:hover {
-  background: linear-gradient(135deg, #9775FA 0%, #7072E8 50%, #5558E8 100%);
-  color: white;
-  transform: scale(1.05);
-  box-shadow:
-    0 4px 16px rgba(129, 140, 248, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.ai-btn:active {
-  transform: scale(0.98);
-}
-
-/* ============================================
  * ENTRANCE/EXIT ANIMATION
  * ============================================ */
 .toolbar-float-enter-active {
@@ -442,12 +392,6 @@ const showToolbar = computed(() => !preferencesStore.hideToolbar)
   .toolbar-divider {
     height: 18px;
     margin: 0 4px;
-  }
-
-  .ai-btn {
-    padding: 0 10px;
-    height: 30px;
-    font-size: 11px;
   }
 
   /* Hide some buttons on very small screens */

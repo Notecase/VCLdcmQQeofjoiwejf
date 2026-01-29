@@ -226,7 +226,7 @@ onMounted(async () => {
 
 .tab.active {
   background: var(--card-bg, #FFFFFF);
-  color: var(--primary-color, #7C9EF8);
+  color: #58a6ff;
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -244,7 +244,7 @@ onMounted(async () => {
 }
 
 .tab-unsaved {
-  color: var(--primary-color, #7C9EF8);
+  color: #58a6ff;
   font-size: 16px;
   line-height: 1;
 }

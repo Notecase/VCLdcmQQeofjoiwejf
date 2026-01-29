@@ -5,6 +5,7 @@
  */
 import { computed } from 'vue'
 import type { ChatMessage } from '@/stores/ai'
+import { renderMathContent } from '@/utils/mathRenderer'
 
 const props = defineProps<{
   message: ChatMessage
@@ -14,35 +15,8 @@ const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const displayContent = computed(() => props.message.content || '')
 
-// Simple markdown to HTML conversion for code blocks
-function renderContent(content: string): string {
-  // Escape HTML
-  let html = content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  
-  // Code blocks
-  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre class="code-block" data-lang="${lang || ''}"><code>${code.trim()}</code></pre>`
-  })
-  
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  
-  // Bold
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  
-  // Italic
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  
-  // Line breaks
-  html = html.replace(/\n/g, '<br>')
-  
-  return html
-}
-
-const renderedContent = computed(() => renderContent(displayContent.value))
+// Use math renderer for assistant messages, basic for user
+const renderedContent = computed(() => renderMathContent(displayContent.value))
 
 function copyMessage() {
   navigator.clipboard.writeText(displayContent.value)
@@ -148,7 +122,8 @@ function copyMessage() {
 }
 
 /* Code Blocks */
-.message-text :deep(.code-block) {
+.message-text :deep(.code-block),
+.message-text :deep(.math-code-block) {
   display: block;
   margin: 0.5rem 0;
   padding: 0.75rem;
@@ -161,12 +136,33 @@ function copyMessage() {
 }
 
 /* Inline Code */
-.message-text :deep(.inline-code) {
+.message-text :deep(.inline-code),
+.message-text :deep(.math-inline-code) {
   padding: 0.125rem 0.375rem;
   background: var(--ai-cmd-bg);
   border-radius: 4px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.875em;
+}
+
+/* Math Styles */
+.message-text :deep(.math-display) {
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.message-text :deep(.math-inline) {
+  display: inline;
+}
+
+.message-text :deep(.katex) {
+  font-size: 1.05em;
+}
+
+.message-text :deep(.katex-display) {
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* Action Buttons */

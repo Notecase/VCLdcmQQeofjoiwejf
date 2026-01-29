@@ -14,17 +14,49 @@
       "import": "./dist/providers/index.js",
       "types": "./dist/providers/index.d.ts"
     },
+    "./providers/gemini": {
+      "import": "./src/providers/gemini.ts",
+      "types": "./src/providers/gemini.ts"
+    },
     "./agents": {
       "import": "./dist/agents/index.js",
       "types": "./dist/agents/index.d.ts"
+    },
+    "./agents/agentic.agent": {
+      "import": "./src/agents/agentic.agent.ts",
+      "types": "./src/agents/agentic.agent.ts"
     },
     "./services": {
       "import": "./dist/services/index.js",
       "types": "./dist/services/index.d.ts"
     },
+    "./services/recommendations": {
+      "import": "./src/services/recommendations.ts",
+      "types": "./src/services/recommendations.ts"
+    },
+    "./services/orchestration": {
+      "import": "./src/services/orchestration.ts",
+      "types": "./src/services/orchestration.ts"
+    },
     "./tools": {
       "import": "./dist/tools/index.js",
       "types": "./dist/tools/index.d.ts"
+    },
+    "./slides/themes": {
+      "import": "./src/slides/themes.ts",
+      "types": "./src/slides/themes.ts"
+    },
+    "./slides/prompts": {
+      "import": "./src/slides/prompts.ts",
+      "types": "./src/slides/prompts.ts"
+    },
+    "./sources": {
+      "import": "./src/sources/index.ts",
+      "types": "./src/sources/index.ts"
+    },
+    "./workflows": {
+      "import": "./src/workflows/index.ts",
+      "types": "./src/workflows/index.ts"
     }
   },
   "scripts": {
@@ -36,6 +68,8 @@
     "@ai-sdk/anthropic": "^0.0.55",
     "@ai-sdk/google": "^0.0.55",
     "@ai-sdk/openai": "^0.0.70",
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@google/genai": "^1.0.0",
     "@google/generative-ai": "^0.21.0",
     "@langchain/anthropic": "^0.3.0",
     "@langchain/core": "^0.3.0",
@@ -44,7 +78,8 @@
     "@langchain/openai": "^0.3.0",
     "@supabase/supabase-js": "^2.90.1",
     "ai": "^3.4.0",
-    "openai": "^4.70.0",
+    "openai": "^4.80.0",
+    "pdf-parse": "^1.1.4",
     "zod": "^3.23.0"
   },
   "peerDependencies": {

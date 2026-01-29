@@ -1,8 +1,8 @@
 /**
  * OpenAI Provider
- * 
+ *
  * Primary provider for chat, agents, and embeddings.
- * Uses GPT-5.2 for agents (as specified by user from Note3).
+ * Uses GPT-5.2 for agents and chat operations.
  */
 
 import OpenAI from 'openai'
@@ -27,7 +27,7 @@ export interface OpenAIProviderConfig {
     maxRetries?: number
 }
 
-// Default models from Note3 analysis
+// Default models - using GPT-5.2 (released December 2025)
 export const DEFAULT_CHAT_MODEL = 'gpt-5.2'
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-large'
 export const EMBEDDING_DIMENSIONS = 1536  // Reduced from 3072 for Supabase pgvector
@@ -73,7 +73,7 @@ export class OpenAIProvider implements AIProvider {
             model: this.model,
             messages,
             temperature: options?.temperature ?? 0.7,
-            max_tokens: options?.maxTokens ?? 1000,
+            max_completion_tokens: options?.maxTokens ?? 1000,
             stop: options?.stopSequences,
             stream: true,
         })
@@ -127,7 +127,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
             model: this.model,
             messages,
             temperature: 0.7,
-            max_tokens: 2000,
+            max_completion_tokens: 2000,
             stream: true,
         })
 
@@ -159,7 +159,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
             model: this.model,
             messages: openAIMessages,
             temperature: 0.7,
-            max_tokens: 4000,
+            max_completion_tokens: 16000,  // Increased for longer recommendation outputs
             stream: true,
         })
 
@@ -206,7 +206,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
             model: this.model,
             messages,
             temperature: 0.5,
-            max_tokens: 1000,
+            max_completion_tokens: 1000,
             stream: true,
         })
 
@@ -243,7 +243,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
             tools: tools.length > 0 ? tools : undefined,
             tool_choice: tools.length > 0 ? (options?.toolChoice ?? 'auto') : undefined,
             temperature: options?.temperature ?? 0.7,
-            max_tokens: options?.maxTokens ?? 4000,
+            max_completion_tokens: options?.maxTokens ?? 16000,
         })
 
         this.lastUsage = {
@@ -273,7 +273,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
             tools: tools.length > 0 ? tools : undefined,
             tool_choice: tools.length > 0 ? 'auto' : undefined,
             temperature: options?.temperature ?? 0.7,
-            max_tokens: options?.maxTokens ?? 4000,
+            max_completion_tokens: options?.maxTokens ?? 16000,
             stream: true,
         })
 

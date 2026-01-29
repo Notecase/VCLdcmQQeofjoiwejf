@@ -76,22 +76,23 @@
   --glass-btn-bg-active: rgba(255, 255, 255, 0.12);
   --glass-divider: rgba(255, 255, 255, 0.1);
 
-  /* AI Sidebar - Dark */
-  --ai-sidebar-bg: #161b22;
-  --ai-header-bg: rgba(22, 27, 34, 0.85);
+  /* AI Sidebar - Dark (Note3 exact) */
+  --ai-sidebar-bg: #010409;
+  --ai-header-bg: rgba(13, 17, 23, 0.6);
   --ai-tab-color: #8b949e;
-  --ai-tab-active: #e6edf3;
-  --ai-card-bg: #21262d;
+  --ai-tab-active: #ffffff;
+  --ai-tab-underline: #58a6ff;
+  --ai-card-bg: #161b22;
   --ai-card-border: #30363d;
   --ai-card-shadow: none;
-  --ai-input-bg: #21262d;
-  --ai-input-border: #30363d;
-  --ai-input-focus: rgba(124, 158, 248, 0.3);
-  --ai-cmd-header: #a371f7;
-  --ai-cmd-bg: #30363d;
+  --ai-input-bg: #0d1117;
+  --ai-input-border: #21262d;
+  --ai-input-focus: #30363d;
+  --ai-cmd-header: #d8b4fe;
+  --ai-cmd-bg: #0d1117;
   --ai-send-bg: #30363d;
-  --ai-send-active-bg: #e6edf3;
-  --ai-send-active-color: #161b22;
+  --ai-send-active-bg: #238636;
+  --ai-send-active-color: #ffffff;
   --ai-scrollbar-thumb: #30363d;
 }
 
@@ -182,7 +183,7 @@
   --ai-cmd-header: #7C9EF8;
   --ai-cmd-bg: #F1F5F9;
   --ai-send-bg: #E2E8F0;
-  --ai-send-active-bg: #7C9EF8;
-  --ai-send-active-color: #FFFFFF;
+  --ai-send-active-bg: #238636;
+  --ai-send-active-color: #ffffff;
   --ai-scrollbar-thumb: #CBD5E1;
 }

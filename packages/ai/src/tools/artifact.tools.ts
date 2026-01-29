@@ -96,6 +96,28 @@ export const ArtifactValidateSchema = z.object({
     validateJs: z.boolean().optional().default(true).describe('Validate JavaScript syntax'),
 })
 
+// New tools from Note3 migration
+export const ArtifactGetJsFunctionsSchema = z.object({
+    noteId: z.string().uuid().describe('Note containing the artifact'),
+    artifactId: z.string().uuid().describe('ID of the artifact'),
+})
+
+export const ArtifactExtractDependenciesSchema = z.object({
+    noteId: z.string().uuid().describe('Note containing the artifact'),
+    artifactId: z.string().uuid().describe('ID of the artifact'),
+})
+
+export const ArtifactOptimizeSchema = z.object({
+    noteId: z.string().uuid().describe('Note containing the artifact'),
+    artifactId: z.string().uuid().describe('ID of the artifact'),
+    type: z.enum(['size', 'performance', 'a11y']).describe('Optimization type'),
+})
+
+export const ArtifactGetColorsSchema = z.object({
+    noteId: z.string().uuid().describe('Note containing the artifact'),
+    artifactId: z.string().uuid().describe('ID of the artifact'),
+})
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -106,6 +128,10 @@ export type ArtifactModifyJsInput = z.infer<typeof ArtifactModifyJsSchema>
 export type ArtifactParseStructureInput = z.infer<typeof ArtifactParseStructureSchema>
 export type ArtifactGetCssRulesInput = z.infer<typeof ArtifactGetCssRulesSchema>
 export type ArtifactValidateInput = z.infer<typeof ArtifactValidateSchema>
+export type ArtifactGetJsFunctionsInput = z.infer<typeof ArtifactGetJsFunctionsSchema>
+export type ArtifactExtractDependenciesInput = z.infer<typeof ArtifactExtractDependenciesSchema>
+export type ArtifactOptimizeInput = z.infer<typeof ArtifactOptimizeSchema>
+export type ArtifactGetColorsInput = z.infer<typeof ArtifactGetColorsSchema>
 
 // ============================================================================
 // Helper Functions
@@ -479,6 +505,420 @@ export async function artifactValidate(
 }
 
 // ============================================================================
+// New Tool Implementations (from Note3 migration)
+// ============================================================================
+
+interface JsFunction {
+    name: string
+    params: string[]
+    async: boolean
+    lineStart: number
+}
+
+/**
+ * Extract JavaScript function names and signatures
+ */
+export async function artifactGetJsFunctions(
+    input: ArtifactGetJsFunctionsInput,
+    ctx: ToolContext
+): Promise<ToolResult<{ functions: JsFunction[] }>> {
+    try {
+        const result = await getArtifact(ctx.supabase, ctx.userId, input.noteId, input.artifactId)
+        if (!result) return { success: false, error: 'Artifact not found' }
+
+        const js = result.artifact.js || ''
+        const functions: JsFunction[] = []
+
+        // Match function declarations: function name(params) or async function name(params)
+        const funcDeclRegex = /(?:^|\n)\s*(async\s+)?function\s+(\w+)\s*\(([^)]*)\)/g
+        let match: RegExpExecArray | null
+        let lineNum = 1
+
+        while ((match = funcDeclRegex.exec(js)) !== null) {
+            const beforeMatch = js.substring(0, match.index)
+            lineNum = (beforeMatch.match(/\n/g) || []).length + 1
+
+            functions.push({
+                name: match[2],
+                params: match[3].split(',').map(p => p.trim()).filter(Boolean),
+                async: !!match[1],
+                lineStart: lineNum,
+            })
+        }
+
+        // Match arrow functions: const name = (params) => or const name = async (params) =>
+        const arrowRegex = /(?:const|let|var)\s+(\w+)\s*=\s*(async\s+)?\(?([^)=]*)\)?\s*=>/g
+        while ((match = arrowRegex.exec(js)) !== null) {
+            const beforeMatch = js.substring(0, match.index)
+            lineNum = (beforeMatch.match(/\n/g) || []).length + 1
+
+            functions.push({
+                name: match[1],
+                params: match[3].split(',').map(p => p.trim()).filter(Boolean),
+                async: !!match[2],
+                lineStart: lineNum,
+            })
+        }
+
+        // Match method definitions in objects: name(params) { or name: function(params) {
+        const methodRegex = /(\w+)\s*(?::\s*(?:async\s+)?function\s*)?\(([^)]*)\)\s*\{/g
+        while ((match = methodRegex.exec(js)) !== null) {
+            // Avoid duplicates from function declarations
+            if (!functions.some(f => f.name === match![1])) {
+                const beforeMatch = js.substring(0, match.index)
+                lineNum = (beforeMatch.match(/\n/g) || []).length + 1
+
+                functions.push({
+                    name: match[1],
+                    params: match[2].split(',').map(p => p.trim()).filter(Boolean),
+                    async: js.substring(Math.max(0, match.index - 10), match.index).includes('async'),
+                    lineStart: lineNum,
+                })
+            }
+        }
+
+        return { success: true, data: { functions } }
+    } catch (err) {
+        return { success: false, error: String(err) }
+    }
+}
+
+interface Dependency {
+    type: 'import' | 'cdn' | 'external'
+    name: string
+    source: string
+    version?: string
+}
+
+/**
+ * Extract dependencies from artifact (imports, CDN links, external resources)
+ */
+export async function artifactExtractDependencies(
+    input: ArtifactExtractDependenciesInput,
+    ctx: ToolContext
+): Promise<ToolResult<{ dependencies: Dependency[] }>> {
+    try {
+        const result = await getArtifact(ctx.supabase, ctx.userId, input.noteId, input.artifactId)
+        if (!result) return { success: false, error: 'Artifact not found' }
+
+        const dependencies: Dependency[] = []
+        const { artifact } = result
+
+        // Parse HTML for external resources
+        const html = artifact.html || artifact.content || ''
+
+        // Find CDN script sources
+        const scriptSrcRegex = /<script[^>]+src=["']([^"']+)["']/gi
+        let match
+        while ((match = scriptSrcRegex.exec(html)) !== null) {
+            const src = match[1]
+            if (src.includes('cdn') || src.startsWith('http')) {
+                // Extract version from common CDN patterns
+                const versionMatch = src.match(/@([\d.]+)|[/-]([\d.]+)(?:[./]|$)/)
+                dependencies.push({
+                    type: 'cdn',
+                    name: extractLibraryName(src),
+                    source: src,
+                    version: versionMatch?.[1] || versionMatch?.[2],
+                })
+            }
+        }
+
+        // Find CSS link sources
+        const linkHrefRegex = /<link[^>]+href=["']([^"']+\.css[^"']*)["']/gi
+        while ((match = linkHrefRegex.exec(html)) !== null) {
+            const href = match[1]
+            if (href.includes('cdn') || href.startsWith('http')) {
+                dependencies.push({
+                    type: 'cdn',
+                    name: extractLibraryName(href),
+                    source: href,
+                })
+            }
+        }
+
+        // Parse JS for imports
+        const js = artifact.js || ''
+
+        // ES6 imports
+        const importRegex = /import\s+(?:{[^}]+}|\*\s+as\s+\w+|\w+)\s+from\s+['"]([^'"]+)['"]/g
+        while ((match = importRegex.exec(js)) !== null) {
+            dependencies.push({
+                type: 'import',
+                name: match[1],
+                source: match[1],
+            })
+        }
+
+        // CommonJS requires
+        const requireRegex = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g
+        while ((match = requireRegex.exec(js)) !== null) {
+            dependencies.push({
+                type: 'import',
+                name: match[1],
+                source: match[1],
+            })
+        }
+
+        return { success: true, data: { dependencies } }
+    } catch (err) {
+        return { success: false, error: String(err) }
+    }
+}
+
+function extractLibraryName(url: string): string {
+    // Extract library name from CDN URL
+    const patterns = [
+        /\/([^/@]+)@[\d.]+/,  // npm CDN pattern: /library@version
+        /\/([^/]+)\.min\./,    // minified file pattern
+        /\/([^/]+)-[\d.]+\./,  // versioned file pattern
+        /\/([^/]+)\.(?:js|css)$/, // simple file pattern
+    ]
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern)
+        if (match) return match[1]
+    }
+
+    // Fallback: get filename without extension
+    const parts = url.split('/')
+    const filename = parts[parts.length - 1]
+    return filename.replace(/\.(?:min\.)?(?:js|css)$/, '')
+}
+
+interface OptimizationResult {
+    originalSize: number
+    optimizedSize: number
+    savings: number
+    savingsPercent: number
+    suggestions: string[]
+}
+
+/**
+ * Optimize artifact code (minify/optimize)
+ */
+export async function artifactOptimize(
+    input: ArtifactOptimizeInput,
+    ctx: ToolContext
+): Promise<ToolResult<OptimizationResult>> {
+    try {
+        const result = await getArtifact(ctx.supabase, ctx.userId, input.noteId, input.artifactId)
+        if (!result) return { success: false, error: 'Artifact not found' }
+
+        const { artifact, artifacts } = result
+        const suggestions: string[] = []
+        let originalSize = 0
+        let optimizedSize = 0
+
+        // Calculate original size
+        originalSize += (artifact.html || artifact.content || '').length
+        originalSize += (artifact.css || '').length
+        originalSize += (artifact.js || '').length
+
+        switch (input.type) {
+            case 'size': {
+                // Basic minification (whitespace removal)
+                if (artifact.html) {
+                    artifact.html = artifact.html
+                        .replace(/>\s+</g, '><')
+                        .replace(/\s{2,}/g, ' ')
+                        .trim()
+                }
+                if (artifact.css) {
+                    artifact.css = artifact.css
+                        .replace(/\/\*[\s\S]*?\*\//g, '')  // Remove comments
+                        .replace(/\s*{\s*/g, '{')
+                        .replace(/\s*}\s*/g, '}')
+                        .replace(/\s*:\s*/g, ':')
+                        .replace(/\s*;\s*/g, ';')
+                        .replace(/;\}/g, '}')
+                        .trim()
+                }
+                if (artifact.js) {
+                    artifact.js = artifact.js
+                        .replace(/\/\/[^\n]*/g, '')       // Remove single-line comments
+                        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+                        .replace(/\s{2,}/g, ' ')
+                        .trim()
+                }
+                suggestions.push('Removed whitespace and comments')
+                break
+            }
+
+            case 'performance': {
+                const js = artifact.js || ''
+                const css = artifact.css || ''
+
+                // Check for performance issues
+                if (js.includes('document.querySelectorAll') && !js.includes('const ')) {
+                    suggestions.push('Consider caching DOM queries in variables')
+                }
+                if (js.includes('innerHTML') && js.includes('+=')) {
+                    suggestions.push('Avoid innerHTML += in loops, use DocumentFragment instead')
+                }
+                if (css.includes('*')) {
+                    suggestions.push('Avoid universal selector (*) for better CSS performance')
+                }
+                if (css.includes('!important')) {
+                    suggestions.push('Reduce use of !important for maintainable CSS')
+                }
+                if (js.includes('setTimeout') || js.includes('setInterval')) {
+                    suggestions.push('Consider using requestAnimationFrame for animations')
+                }
+                break
+            }
+
+            case 'a11y': {
+                const html = artifact.html || artifact.content || ''
+
+                // Check accessibility issues
+                if (html.includes('<img') && !html.includes('alt=')) {
+                    suggestions.push('Add alt attributes to images for accessibility')
+                }
+                if (html.includes('<button') && !html.includes('aria-')) {
+                    suggestions.push('Consider adding ARIA labels to interactive elements')
+                }
+                if (!html.includes('role=') && html.includes('<div') && html.includes('onclick')) {
+                    suggestions.push('Add role="button" to clickable divs')
+                }
+                if (html.includes('<input') && !html.includes('<label')) {
+                    suggestions.push('Associate labels with form inputs')
+                }
+                if (html.includes('color:') && !html.includes('background')) {
+                    suggestions.push('Ensure sufficient color contrast for readability')
+                }
+                break
+            }
+        }
+
+        // Calculate optimized size
+        optimizedSize += (artifact.html || artifact.content || '').length
+        optimizedSize += (artifact.css || '').length
+        optimizedSize += (artifact.js || '').length
+
+        artifact.updatedAt = new Date().toISOString()
+        await saveArtifact(ctx.supabase, ctx.userId, input.noteId, artifacts)
+
+        const savings = originalSize - optimizedSize
+        const savingsPercent = originalSize > 0 ? Math.round((savings / originalSize) * 100) : 0
+
+        return {
+            success: true,
+            data: {
+                originalSize,
+                optimizedSize,
+                savings,
+                savingsPercent,
+                suggestions,
+            },
+        }
+    } catch (err) {
+        return { success: false, error: String(err) }
+    }
+}
+
+interface ColorInfo {
+    value: string
+    format: 'hex' | 'rgb' | 'rgba' | 'hsl' | 'hsla' | 'named'
+    usageCount: number
+    selectors: string[]
+}
+
+/**
+ * Extract color palette from artifact CSS
+ */
+export async function artifactGetColors(
+    input: ArtifactGetColorsInput,
+    ctx: ToolContext
+): Promise<ToolResult<{ colors: ColorInfo[] }>> {
+    try {
+        const result = await getArtifact(ctx.supabase, ctx.userId, input.noteId, input.artifactId)
+        if (!result) return { success: false, error: 'Artifact not found' }
+
+        const css = result.artifact.css || ''
+        const colorMap = new Map<string, ColorInfo>()
+
+        // Named colors
+        const namedColors = [
+            'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple',
+            'pink', 'gray', 'grey', 'cyan', 'magenta', 'lime', 'navy', 'teal',
+            'aqua', 'fuchsia', 'silver', 'maroon', 'olive', 'transparent',
+        ]
+
+        // Parse CSS rules to get selectors and their colors
+        const ruleRegex = /([^{]+)\{([^}]+)\}/g
+        let ruleMatch
+
+        while ((ruleMatch = ruleRegex.exec(css)) !== null) {
+            const selector = ruleMatch[1].trim()
+            const properties = ruleMatch[2]
+
+            // Hex colors
+            const hexRegex = /#([0-9a-fA-F]{3,8})\b/g
+            let colorMatch
+            while ((colorMatch = hexRegex.exec(properties)) !== null) {
+                const color = colorMatch[0].toLowerCase()
+                addColor(colorMap, color, 'hex', selector)
+            }
+
+            // RGB/RGBA colors
+            const rgbRegex = /rgba?\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi
+            while ((colorMatch = rgbRegex.exec(properties)) !== null) {
+                const color = colorMatch[0].toLowerCase().replace(/\s/g, '')
+                const format = color.startsWith('rgba') ? 'rgba' : 'rgb'
+                addColor(colorMap, color, format, selector)
+            }
+
+            // HSL/HSLA colors
+            const hslRegex = /hsla?\s*\(\s*\d+\s*,\s*\d+%?\s*,\s*\d+%?(?:\s*,\s*[\d.]+)?\s*\)/gi
+            while ((colorMatch = hslRegex.exec(properties)) !== null) {
+                const color = colorMatch[0].toLowerCase().replace(/\s/g, '')
+                const format = color.startsWith('hsla') ? 'hsla' : 'hsl'
+                addColor(colorMap, color, format, selector)
+            }
+
+            // Named colors
+            for (const namedColor of namedColors) {
+                const namedRegex = new RegExp(`\\b${namedColor}\\b`, 'gi')
+                if (namedRegex.test(properties)) {
+                    addColor(colorMap, namedColor, 'named', selector)
+                }
+            }
+        }
+
+        // Convert map to array and sort by usage count
+        const colors = Array.from(colorMap.values())
+            .sort((a, b) => b.usageCount - a.usageCount)
+
+        return { success: true, data: { colors } }
+    } catch (err) {
+        return { success: false, error: String(err) }
+    }
+}
+
+function addColor(
+    colorMap: Map<string, ColorInfo>,
+    value: string,
+    format: ColorInfo['format'],
+    selector: string
+): void {
+    const existing = colorMap.get(value)
+    if (existing) {
+        existing.usageCount++
+        if (!existing.selectors.includes(selector)) {
+            existing.selectors.push(selector)
+        }
+    } else {
+        colorMap.set(value, {
+            value,
+            format,
+            usageCount: 1,
+            selectors: [selector],
+        })
+    }
+}
+
+// ============================================================================
 // Tool Definitions for LangGraph
 // ============================================================================
 
@@ -489,4 +929,9 @@ export const artifactTools = [
     { name: 'artifact_parse_structure', description: 'Parse and analyze the HTML structure of an artifact', schema: ArtifactParseStructureSchema, execute: artifactParseStructure },
     { name: 'artifact_get_css_rules', description: 'Extract CSS rules from an artifact', schema: ArtifactGetCssRulesSchema, execute: artifactGetCssRules },
     { name: 'artifact_validate', description: 'Validate HTML/CSS/JS syntax of an artifact', schema: ArtifactValidateSchema, execute: artifactValidate },
+    // New tools from Note3 migration
+    { name: 'artifact_get_js_functions', description: 'Parse JavaScript AST to extract function names and signatures', schema: ArtifactGetJsFunctionsSchema, execute: artifactGetJsFunctions },
+    { name: 'artifact_extract_dependencies', description: 'Find imports, CDN links, and external resources', schema: ArtifactExtractDependenciesSchema, execute: artifactExtractDependencies },
+    { name: 'artifact_optimize', description: 'Minify/optimize code for size, performance, or accessibility', schema: ArtifactOptimizeSchema, execute: artifactOptimize },
+    { name: 'artifact_get_colors', description: 'Extract color palette from CSS', schema: ArtifactGetColorsSchema, execute: artifactGetColors },
 ] as const

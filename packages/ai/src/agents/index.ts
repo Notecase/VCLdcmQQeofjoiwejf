@@ -145,6 +145,40 @@ export {
 } from './planner.agent'
 
 // ============================================================================
+// Agentic Agent (Autonomous Task Execution)
+// ============================================================================
+
+export {
+  AgenticAgent,
+  createAgenticAgent,
+} from './agentic.agent'
+
+export type {
+  AgentStep,
+  AgentStepType,
+  AgenticResult,
+  AgenticStatus,
+  AgenticProgress,
+  AgenticTask,
+  ResearchResult,
+  ValidationResult,
+  DataSchema,
+  DatabaseColumn,
+  ColumnSpec,
+  Constraint,
+  ConstraintType,
+  DataSource,
+  StepStatus,
+  StepResult,
+  Source,
+  ValidationIssue,
+  IssueSeverity,
+  BlockInfo,
+  PlanTaskRequest,
+  ExecuteTaskRequest,
+} from './agentic.types'
+
+// ============================================================================
 // Agent Factory
 // ============================================================================
 
@@ -153,8 +187,9 @@ import { ChatAgent } from './chat.agent'
 import { NoteAgent } from './note.agent'
 import { SecretaryAgent } from './secretary.agent'
 import { PlannerAgent } from './planner.agent'
+import { AgenticAgent } from './agentic.agent'
 
-export type AgentType = 'chat' | 'note' | 'secretary' | 'planner'
+export type AgentType = 'chat' | 'note' | 'secretary' | 'planner' | 'agentic'
 
 export interface AgentConfig {
   supabase: SupabaseClient
@@ -211,5 +246,10 @@ export const AGENT_METADATA: Record<AgentType, {
     name: 'Planner Agent',
     description: 'Goal decomposition and task planning',
     capabilities: ['plan', 'decompose', 'track', 'guide'],
+  },
+  agentic: {
+    name: 'Agentic Agent',
+    description: 'Autonomous task execution with research and creation',
+    capabilities: ['research', 'extract', 'create', 'populate', 'validate'],
   },
 }

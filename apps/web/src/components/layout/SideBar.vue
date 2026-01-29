@@ -1370,7 +1370,11 @@ const tabs = [
 }
 
 .tree-item:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.05));
+  background: transparent;
+}
+
+.tree-item:hover .item-name {
+  color: var(--text-color);
 }
 
 .tree-item:hover .more-btn,
@@ -1379,7 +1383,16 @@ const tabs = [
 }
 
 .tree-item.active {
-  background: var(--selection-bg, rgba(101, 185, 244, 0.15));
+  background: transparent;
+}
+
+.tree-item.active .item-name {
+  color: #58a6ff;
+  font-weight: 500;
+}
+
+.tree-item.active .item-icon {
+  color: #58a6ff;
 }
 
 .tree-children {
@@ -1593,7 +1606,7 @@ const tabs = [
 .general-section {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-color, #333);
+  border-top: none;
 }
 
 .section-header {
@@ -1677,7 +1690,7 @@ const tabs = [
 .user-section {
   position: relative;
   padding: 8px 12px;
-  border-top: 1px solid var(--border-color, #333);
+  border-top: none;
   margin-top: auto;
 }
 

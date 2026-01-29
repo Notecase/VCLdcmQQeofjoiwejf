@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useEditorStore, usePreferencesStore, useAuthStore } from '@/stores'
 import * as attachmentsService from '@/services/attachments.service'
 
@@ -217,7 +217,7 @@ function initializeMuya() {
   })
 
   // Handle selection changes
-  muyaInstance.on('selectionChange', (changes: any) => {
+  muyaInstance.on('selectionChange', () => {
     // Could dispatch to store for toolbar state
   })
 
@@ -317,7 +317,7 @@ onUnmounted(() => {
   if (muyaInstance) {
     try {
       muyaInstance.destroy()
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
     muyaInstance = null

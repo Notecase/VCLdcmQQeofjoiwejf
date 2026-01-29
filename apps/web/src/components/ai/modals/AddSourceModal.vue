@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* global HTMLInputElement, File, URL, Event */
 /**
  * AddSourceModal - Modal for adding sources
  *

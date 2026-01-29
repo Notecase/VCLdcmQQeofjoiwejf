@@ -30,10 +30,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'navigate', match: SearchMatch): void
-  (e: 'replace', replacement: { from: number; to: number; text: string }): void
-  (e: 'replace-all', replacements: { from: number; to: number; text: string }[]): void
+  close: []
+  navigate: [match: SearchMatch]
+  replace: [replacement: { from: number; to: number; text: string }]
+  'replace-all': [replacements: { from: number; to: number; text: string }[]]
 }>()
 
 // Search state
@@ -271,24 +271,24 @@ onUnmounted(() => {
           <button
             class="option-btn"
             :class="{ active: caseSensitive }"
-            @click="caseSensitive = !caseSensitive"
             title="Case Sensitive (Alt+C)"
+            @click="caseSensitive = !caseSensitive"
           >
             <CaseSensitive :size="16" />
           </button>
           <button
             class="option-btn"
             :class="{ active: wholeWord }"
-            @click="wholeWord = !wholeWord"
             title="Whole Word (Alt+W)"
+            @click="wholeWord = !wholeWord"
           >
             <WholeWord :size="16" />
           </button>
           <button
             class="option-btn"
             :class="{ active: useRegex }"
-            @click="useRegex = !useRegex"
             title="Regular Expression (Alt+R)"
+            @click="useRegex = !useRegex"
           >
             <Regex :size="16" />
           </button>
@@ -298,17 +298,17 @@ onUnmounted(() => {
           <span class="match-count">{{ matchCountText }}</span>
           <button
             class="nav-btn"
-            @click="navigatePrev"
             :disabled="matches.length === 0"
             title="Previous (Shift+Enter)"
+            @click="navigatePrev"
           >
             <ChevronUp :size="16" />
           </button>
           <button
             class="nav-btn"
-            @click="navigateNext"
             :disabled="matches.length === 0"
             title="Next (Enter)"
+            @click="navigateNext"
           >
             <ChevronDown :size="16" />
           </button>
@@ -316,16 +316,16 @@ onUnmounted(() => {
 
         <button
           class="toggle-replace-btn"
-          @click="showReplace = !showReplace"
           title="Toggle Replace"
+          @click="showReplace = !showReplace"
         >
           <Replace :size="16" />
         </button>
 
         <button
           class="close-btn"
-          @click="closePanel"
           title="Close (Esc)"
+          @click="closePanel"
         >
           <X :size="16" />
         </button>
@@ -351,17 +351,17 @@ onUnmounted(() => {
 
           <button
             class="replace-btn"
-            @click="replaceCurrentMatch"
             :disabled="!currentMatch"
             title="Replace"
+            @click="replaceCurrentMatch"
           >
             Replace
           </button>
           <button
             class="replace-btn"
-            @click="replaceAllMatches"
             :disabled="matches.length === 0"
             title="Replace All"
+            @click="replaceAllMatches"
           >
             Replace All
           </button>

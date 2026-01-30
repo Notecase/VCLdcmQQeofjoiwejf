@@ -438,7 +438,7 @@ export class SourceProcessor {
 
       // Determine file type and extract content
       let content: string
-      let title = filename.replace(/\.[^.]+$/, '')
+      const title = filename.replace(/\.[^.]+$/, '')
 
       const ext = filename.split('.').pop()?.toLowerCase()
 

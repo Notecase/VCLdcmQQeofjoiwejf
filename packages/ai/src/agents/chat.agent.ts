@@ -265,7 +265,7 @@ export class ChatAgent {
     const queryEmbedding = embeddingResponse.data[0].embedding
 
     // Search for similar chunks
-    let searchQuery = this.supabase.rpc('search_embeddings', {
+    const searchQuery = this.supabase.rpc('search_embeddings', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: maxChunks,

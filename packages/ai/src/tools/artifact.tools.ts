@@ -465,7 +465,7 @@ export async function artifactValidate(
       const html = artifact.html || artifact.content || ''
 
       // Check for unclosed tags (simple check)
-      const openTags = html.match(/<(\w+)(?:\s[^>]*)?(?<!\/)\>/g) || []
+      const openTags = html.match(/<(\w+)(?:\s[^>]*)?(?<!\/)>/g) || []
       const closeTags = html.match(/<\/(\w+)>/g) || []
 
       const selfClosing = [

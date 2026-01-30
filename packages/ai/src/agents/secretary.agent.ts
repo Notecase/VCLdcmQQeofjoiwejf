@@ -355,7 +355,7 @@ export class SecretaryAgent {
       case 'database_action':
         return await this.handleDatabaseAction(intent, message, toolContext)
 
-      case 'read_memory':
+      case 'read_memory': {
         const memoryType = (intent.parameters.memoryType as string) || 'preferences'
         const readResult = await executeTool(
           'read_memory_file',
@@ -372,6 +372,7 @@ export class SecretaryAgent {
             : 'Could not read memory.',
           toolResults,
         }
+      }
 
       case 'write_memory':
         return await this.handleWriteMemory(intent, message, toolContext)
@@ -429,15 +430,16 @@ export class SecretaryAgent {
         yield* this.streamArtifactCreation(intent, message)
         break
 
-      case 'database_action':
+      case 'database_action': {
         yield { type: 'thinking', data: 'Processing database operation...' }
         const dbResult = await this.handleDatabaseAction(intent, message, toolContext)
         yield { type: 'tool-result', data: dbResult.toolResults }
         yield { type: 'text-delta', data: dbResult.response }
         break
+      }
 
       case 'read_memory':
-      case 'write_memory':
+      case 'write_memory': {
         yield {
           type: 'thinking',
           data: `${intent.intent === 'read_memory' ? 'Reading' : 'Writing'} memory...`,
@@ -448,6 +450,7 @@ export class SecretaryAgent {
         }
         yield { type: 'text-delta', data: memResult.response }
         break
+      }
 
       default:
         yield* this.streamChat(message)

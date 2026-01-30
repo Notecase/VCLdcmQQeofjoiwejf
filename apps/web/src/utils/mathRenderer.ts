@@ -98,7 +98,7 @@ export function renderMathContent(content: string): string {
   // Step 4: Extract and process inline math ($...$)
   // Match $ followed by non-$ non-newline content, followed by $
   // This avoids matching $$ and handles most common cases
-  html = html.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+  html = html.replace(/\$([^$\n]+?)\$/g, (match, math) => {
     // Skip if this looks like it might be currency (e.g., "$100")
     if (/^\d+\.?\d*$/.test(math.trim())) {
       return match

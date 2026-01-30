@@ -9,7 +9,6 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useAIStore } from '@/stores/ai'
 import { useAIChat } from '@/services/ai.service'
-import { useEditorStore } from '@/stores'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import {
   ArrowUp,
@@ -26,7 +25,6 @@ import {
 
 // Store and composable
 const store = useAIStore()
-const editorStore = useEditorStore()
 const { sendMessage, clearChat, isProcessing, error, clearError } = useAIChat()
 
 // Local state

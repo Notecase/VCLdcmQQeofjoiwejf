@@ -372,21 +372,23 @@ async function processSSEResponseV2(
                 })
                 break
 
-              case 'tool-result':
+              case 'tool-result': {
                 // Complete the last thinking step
                 const runningSteps = store.thinkingSteps.filter((s) => s.status === 'running')
                 if (runningSteps.length > 0) {
                   store.completeThinkingStep(runningSteps[runningSteps.length - 1].id)
                 }
                 break
+              }
 
-              case 'finish':
+              case 'finish': {
                 store.setStatus('idle')
                 // Extract noteId/title from finish data if present
                 const finishData = chunk.data as { noteId?: string; title?: string }
                 if (finishData?.noteId) noteId = finishData.noteId
                 if (finishData?.title) title = finishData.title
                 break
+              }
 
               case 'error':
                 store.setError(chunk.data as string)

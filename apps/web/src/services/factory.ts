@@ -24,7 +24,7 @@ export async function initializeServices(provider: ProviderType): Promise<void> 
   currentProvider = provider
 
   switch (provider) {
-    case 'supabase':
+    case 'supabase': {
       const { createSupabaseAuth } = await import('./supabase/auth.adapter')
       const { createSupabaseDatabase } = await import('./supabase/database.adapter')
       const { createSupabaseStorage } = await import('./supabase/storage.adapter')
@@ -35,13 +35,14 @@ export async function initializeServices(provider: ProviderType): Promise<void> 
         storage: createSupabaseStorage(),
       }
       break
+    }
 
     case 'firebase':
       // TODO: Implement Firebase adapters
       throw new Error('Firebase provider not implemented yet')
 
     case 'local':
-    default:
+    default: {
       // Local storage fallback (already implemented)
       const { createLocalAuth } = await import('./local/auth.adapter')
       const { createLocalDatabase } = await import('./local/database.adapter')
@@ -53,6 +54,7 @@ export async function initializeServices(provider: ProviderType): Promise<void> 
         storage: createLocalStorage(),
       }
       break
+    }
   }
 
   console.log(`[Services] Initialized with ${provider} provider`)

@@ -161,9 +161,10 @@ class LocalQueryBuilder<T> implements IQueryBuilder<T> {
           case 'lte':
             return (val as number) <= (filter.value as number)
           case 'like':
-          case 'ilike':
+          case 'ilike': {
             const pattern = String(filter.value).replace(/%/g, '.*')
             return new RegExp(pattern, 'i').test(String(val))
+          }
           case 'in':
             return (filter.value as unknown[]).includes(val)
           case 'is':

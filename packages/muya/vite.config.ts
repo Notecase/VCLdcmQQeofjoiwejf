@@ -5,7 +5,6 @@ import { defineConfig } from 'vitest/config'
 
 import pkg from './package.json'
 
-// eslint-disable-next-line node/prefer-global/process
 const dirname = process.cwd()
 
 export default defineConfig({

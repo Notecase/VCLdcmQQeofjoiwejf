@@ -449,7 +449,6 @@ class Clipboard {
     }
   }
 
-   
   async pasteHandler(event: ClipboardEvent): Promise<void> {
     event.preventDefault()
     event.stopPropagation()

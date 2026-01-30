@@ -76,9 +76,7 @@ export async function loadImage(
 }> {
   if (detectContentType) {
     const isImage = await checkImageContentType(url)
-    if (!isImage)
-       
-      return Promise.reject('not an image.')
+    if (!isImage) return Promise.reject('not an image.')
   }
 
   return new Promise((resolve, reject) => {

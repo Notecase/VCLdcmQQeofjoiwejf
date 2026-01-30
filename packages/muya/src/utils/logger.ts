@@ -6,10 +6,7 @@ let level: TLevel = 'log'
 type Ilogger = Record<TLevel, (...args: string[]) => void>
 
 function debug(method: TLevel, ...args: unknown[]) {
-  if (
-    levels.indexOf(method) <= levels.indexOf(level) &&
-    process.env.NODE_ENV !== 'production'
-  ) {
+  if (levels.indexOf(method) <= levels.indexOf(level) && process.env.NODE_ENV !== 'production') {
     console[method](...args)
   }
 }

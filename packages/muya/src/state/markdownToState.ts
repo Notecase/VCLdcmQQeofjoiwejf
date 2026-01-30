@@ -32,7 +32,6 @@ export class MarkdownToState {
     return this._convertMarkdownToState(markdown)
   }
 
-   
   private _convertMarkdownToState(markdown: string): TState[] {
     const {
       footnote = false,
@@ -55,7 +54,6 @@ export class MarkdownToState {
     let value
     const parentList: TState[][] = [states]
 
-     
     while ((token = tokens.shift())) {
       switch (token.type) {
         // Marks the end of the children's traversal and a return to the previous level

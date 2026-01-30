@@ -1,5 +1,3 @@
- 
- 
 import type { BeginRules, InlineRules } from './rules'
 import type { ITokenizerFacOptions, ITokenizerOptions, Labels, Token } from './types'
 import { isLengthEven, union } from '../utils'
@@ -481,12 +479,7 @@ function tokenizerFac(
       continue
     }
 
-    if (
-      htmlTo &&
-      !disallowedHtmlTag.test(htmlTo[3]) &&
-       
-      (attrs = getAttributes(htmlTo[0]))
-    ) {
+    if (htmlTo && !disallowedHtmlTag.test(htmlTo[3]) && (attrs = getAttributes(htmlTo[0]))) {
       const tag = htmlTo[3]
       const html = htmlTo[0]
       const len = htmlTo[0].length

@@ -255,7 +255,7 @@ class Content extends TreeNode {
    * used in input handler
    * @param {input event} event
    */
-   
+
   autoPair(
     event: Event,
     text: string,

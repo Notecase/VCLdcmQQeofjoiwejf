@@ -626,7 +626,6 @@ class ParagraphContent extends Format {
     })
     let result = null
 
-     
     const walkTokens = (ts: Token[]) => {
       for (const token of ts) {
         const { type, range } = token

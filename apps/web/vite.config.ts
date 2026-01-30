@@ -7,9 +7,17 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   server: {
     proxy: {
+      // Proxy API requests to the backend server
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        secure: false,
+      },
+      // Also proxy health endpoint
+      '/health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
       },
     },
   },
@@ -40,23 +48,9 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    proxy: {
-      // Proxy API requests to the backend server
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-      // Also proxy health endpoint
-      '/health': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
-  },
   resolve: {
+    // Prioritize .js over .ts for muya lib which uses JS implementations
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       muya: fileURLToPath(new URL('./src/muya', import.meta.url)),

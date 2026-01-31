@@ -1,0 +1,69 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/hooks.json",
+  "hooks": [
+    {
+      "name": "validate-ts-file-creation",
+      "description": "Validate TypeScript file creation follows Inkdown conventions",
+      "trigger": {
+        "type": "PreToolUse",
+        "toolName": "Write"
+      },
+      "condition": {
+        "type": "file_pattern",
+        "pattern": "**/*.ts"
+      },
+      "action": {
+        "type": "prompt",
+        "promptFile": ".claude/hooks/validate-ts-file.md"
+      }
+    },
+    {
+      "name": "validate-package-json-changes",
+      "description": "Validate package.json changes for version conflicts",
+      "trigger": {
+        "type": "PreToolUse",
+        "toolName": "Edit"
+      },
+      "condition": {
+        "type": "file_pattern",
+        "pattern": "**/package.json"
+      },
+      "action": {
+        "type": "prompt",
+        "promptFile": ".claude/hooks/validate-package-json.md"
+      }
+    },
+    {
+      "name": "post-ts-write-verification",
+      "description": "Verify TypeScript files after write/edit operations",
+      "trigger": {
+        "type": "PostToolUse",
+        "toolName": "Write"
+      },
+      "condition": {
+        "type": "file_pattern",
+        "pattern": "**/*.ts"
+      },
+      "action": {
+        "type": "prompt",
+        "promptFile": ".claude/hooks/post-ts-write.md"
+      }
+    },
+    {
+      "name": "validate-error-handling-patterns",
+      "description": "Check for proper AppError usage in new TypeScript code",
+      "trigger": {
+        "type": "PreToolUse",
+        "toolName": "Write"
+      },
+      "condition": {
+        "type": "content_pattern",
+        "pattern": "throw new Error|console\\.error"
+      },
+      "action": {
+        "type": "prompt",
+        "promptFile": ".claude/hooks/validate-error-handling.md"
+      }
+    }
+  ]
+}

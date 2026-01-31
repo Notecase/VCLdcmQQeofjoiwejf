@@ -19,18 +19,17 @@ export default function inlineMath(
       : `span.${CLASS_NAMES.MU_MATH}`
 
   const { start, end } = token.range
-  const { marker } = token
+  const { content: math, type, marker } = token
 
   const startMarker = this.highlight(h, block, start, start + marker.length, token)
   const endMarker = this.highlight(h, block, end - marker.length, end, token)
   const content = this.highlight(h, block, start + marker.length, end - marker.length, token)
 
-  const { content: math, type } = token
-
   const { loadMathMap } = this
 
-  const displayMode = false
-  const key = `${math}_${type}`
+  // Display mode when using $$ markers
+  const displayMode = marker === '$$'
+  const key = `${math}_${type}_${displayMode}`
   let mathVnode = null
   let previewSelector = `span.${CLASS_NAMES.MU_MATH_RENDER}`
   if (loadMathMap.has(key)) {
@@ -63,8 +62,8 @@ export default function inlineMath(
         {
           attrs: { contenteditable: 'false' },
           dataset: {
-            start: String(start + 1), // '$'.length
-            end: String(end - 1), // '$'.length
+            start: String(start + marker.length),
+            end: String(end - marker.length),
           },
         },
         mathVnode

@@ -258,14 +258,14 @@ onMounted(async () => {
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tab.active {
-  background: var(--card-bg, #ffffff);
+  background: rgba(255, 255, 255, 0.06);
   color: #58a6ff;
   font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .tab-icon {
@@ -304,7 +304,7 @@ onMounted(async () => {
 
 .tab-close:hover {
   opacity: 1;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .new-tab-btn {
@@ -322,8 +322,8 @@ onMounted(async () => {
 }
 
 .new-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--text-color, #334155);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color, #e2e8f0);
 }
 
 /* Note Container - Elevated Card */
@@ -331,9 +331,7 @@ onMounted(async () => {
   flex: 1;
   background: var(--editorBgColor, var(--card-bg, #ffffff));
   border-radius: 16px;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   position: relative;

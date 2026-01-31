@@ -563,28 +563,64 @@ class Clipboard {
     }
   }
 
-  copyAsMarkdown() {
+  async copyAsMarkdown() {
     this.copyType = 'copyAsMarkdown'
-    document.execCommand('copy')
+    const { text } = this.getClipboardData()
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Fallback for older browsers or when clipboard API is not available
+      document.execCommand('copy')
+    }
     this.copyType = 'normal'
   }
 
-  copyAsHtml() {
+  async copyAsHtml() {
     this.copyType = 'copyAsHtml'
-    document.execCommand('copy')
+    const { html, text } = this.getClipboardData()
+    try {
+      const clipboardItem = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+      })
+      await navigator.clipboard.write([clipboardItem])
+    } catch {
+      // Fallback for older browsers or when clipboard API is not available
+      document.execCommand('copy')
+    }
     this.copyType = 'normal'
   }
 
-  pasteAsPlainText() {
+  async pasteAsPlainText() {
     this.pasteType = 'pasteAsPlainText'
-    document.execCommand('paste')
+    try {
+      const text = await navigator.clipboard.readText()
+      // Trigger a synthetic paste event with the plain text
+      const { domNode } = this.muya
+      if (domNode) {
+        const event = new ClipboardEvent('paste', {
+          clipboardData: new DataTransfer(),
+        })
+        event.clipboardData?.setData('text/plain', text)
+        domNode.dispatchEvent(event)
+      }
+    } catch {
+      // Fallback for older browsers or when clipboard API is not available
+      document.execCommand('paste')
+    }
     this.pasteType = 'normal'
   }
 
-  copy(type: string, info: string) {
+  async copy(type: string, info: string) {
     this.copyType = type
     this.copyInfo = info
-    document.execCommand('copy')
+    const { text } = this.getClipboardData()
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Fallback for older browsers or when clipboard API is not available
+      document.execCommand('copy')
+    }
     this.copyType = 'normal'
   }
 }

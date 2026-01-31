@@ -72,13 +72,12 @@ async function copyAsMarkdown() {
       >
         <Check
           v-if="copied"
-          :size="14"
+          :size="16"
         />
         <Copy
           v-else
-          :size="14"
+          :size="16"
         />
-        <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
@@ -150,12 +149,12 @@ async function copyAsMarkdown() {
 .concept-title {
   font-size: 14px;
   font-weight: 500;
-  color: #e6edf3;
+  color: var(--text-color);
 }
 
 .concept-description {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   line-height: 1.6;
   margin-bottom: 12px;
 }
@@ -222,31 +221,31 @@ async function copyAsMarkdown() {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
-/* Copy button */
+/* Copy button - icon only, matches close button */
 .copy-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: transparent;
-  color: #8b949e;
-  font-size: 12px;
+  justify-content: center;
+  background: var(--modal-btn-secondary-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-color-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 36px;
 }
 
 .copy-btn:hover {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 .copy-btn.copied {
-  border-color: #3fb950;
   color: #3fb950;
 }
 </style>

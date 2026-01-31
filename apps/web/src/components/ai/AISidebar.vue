@@ -10,7 +10,7 @@
  * - Workflows: Template-based content generation
  * - Bottom input with @ Mention and attachments
  */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useAIStore } from '@/stores/ai'
 import { useRecommendationsStore } from '@/stores/recommendations'
 import { useAIChat } from '@/services/ai.service'
@@ -19,6 +19,8 @@ import ChatMessage from './ChatMessage.vue'
 import RecommendTab from './RecommendTab.vue'
 import WorkflowsTab from './WorkflowsTab.vue'
 import LearningResourcesTab from './LearningResourcesTab.vue'
+import ThinkingStepsAccordion from './ThinkingStepsAccordion.vue'
+import EditProposalCard from './EditProposalCard.vue'
 
 // Modal components
 import MindmapModal from './modals/MindmapModal.vue'
@@ -59,6 +61,40 @@ const { sendMessage, isProcessing } = useAIChat()
 type TabId = 'agent' | 'recommend' | 'workflows' | 'resources'
 const activeTab = ref<TabId>('agent')
 
+// Resize functionality
+const sidebarRef = ref<HTMLElement | null>(null)
+const isResizing = ref(false)
+
+function startResize(e: MouseEvent) {
+  e.preventDefault()
+  isResizing.value = true
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onResize(e: MouseEvent) {
+  if (!isResizing.value || !sidebarRef.value) return
+  const newWidth = window.innerWidth - e.clientX
+  if (newWidth >= 260 && newWidth <= 500) {
+    sidebarRef.value.style.width = `${newWidth}px`
+  }
+}
+
+function stopResize() {
+  isResizing.value = false
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+})
+
 // Local state
 const inputValue = ref('')
 const searchQuery = ref('')
@@ -66,6 +102,8 @@ const searchQuery = ref('')
 // Computed
 const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
+const pendingEdits = computed(() => store.pendingEdits.filter((e) => e.status === 'pending'))
+const error = computed(() => store.error)
 
 // Watch for note changes and update recommendation store
 watch(
@@ -92,7 +130,14 @@ async function handleSubmit() {
   const msg = inputValue.value
   inputValue.value = ''
 
-  await sendMessage(msg, 'secretary')
+  // Pass current note context so the AI can read the note content
+  const context = activeNote.value
+    ? {
+        currentNoteId: activeNote.value.id,
+      }
+    : undefined
+
+  await sendMessage(msg, 'secretary', context)
 }
 
 // Handle enter key
@@ -121,7 +166,17 @@ function handleAddToNote(_content: string) {
 </script>
 
 <template>
-  <aside class="ai-sidebar">
+  <aside
+    ref="sidebarRef"
+    class="ai-sidebar"
+  >
+    <!-- Resize Handle -->
+    <div
+      class="resize-handle"
+      :class="{ active: isResizing }"
+      @mousedown="startResize"
+    />
+
     <!-- Header with tabs -->
     <header class="sidebar-header">
       <nav class="sidebar-tabs">
@@ -186,22 +241,53 @@ function handleAddToNote(_content: string) {
         </div>
       </div>
 
+      <!-- Thinking Steps Accordion -->
+      <ThinkingStepsAccordion />
+
+      <!-- Pending Edit Proposals -->
+      <div
+        v-if="pendingEdits.length > 0"
+        class="pending-edits"
+      >
+        <EditProposalCard
+          v-for="edit in pendingEdits"
+          :key="edit.id"
+          :edit="edit"
+        />
+      </div>
+
+      <!-- Error state -->
+      <div
+        v-if="error"
+        class="error-banner"
+      >
+        <div class="error-content">
+          <span class="error-icon">!</span>
+          <div class="error-text">
+            <span class="error-title">Connection Error</span>
+            <span class="error-message">{{ error }}</span>
+          </div>
+        </div>
+        <button
+          class="error-dismiss"
+          @click="store.clearError()"
+        >
+          Dismiss
+        </button>
+      </div>
+
       <!-- Messages or welcome -->
       <div class="messages-area">
         <template v-if="messages.length === 0">
-          <!-- Welcome message -->
+          <!-- Welcome message - simplified -->
           <div class="welcome-section">
-            <span class="ai-label">AI AGENT</span>
             <p class="welcome-text">
-              Hi! I'm your AI assistant. I can help you understand your notes and answer questions
-              about them.
-            </p>
-            <p class="welcome-text">
-              Select a note from the sidebar and ask me anything about its content!
+              Ask me anything about your notes. I can help you understand, summarize, or expand on
+              your content.
             </p>
           </div>
 
-          <!-- Quick Commands - Box style matching Note3 -->
+          <!-- Quick Commands -->
           <div class="quick-commands-box">
             <div class="commands-header">Quick Commands</div>
             <div class="commands-list">
@@ -364,13 +450,16 @@ function handleAddToNote(_content: string) {
  * Neutral dark backgrounds with blue accents
  * ============================================ */
 
-/* Sidebar container - Docked mode gradient */
+/* Sidebar container - Docked mode with shadow instead of border */
 .ai-sidebar {
   width: 320px;
+  min-width: 260px;
+  max-width: 500px;
   height: 100%;
   position: relative;
   background: var(--ai-sidebar-bg);
-  border-left: 1px solid var(--border-color);
+  border-left: none;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -389,13 +478,32 @@ function handleAddToNote(_content: string) {
   z-index: 0;
 }
 
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 200;
+  transition: background 0.15s ease;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--primary-color);
+  opacity: 0.4;
+}
+
 /* Header with glassmorphism */
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--ai-divider);
   background: var(--ai-header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -434,7 +542,7 @@ function handleAddToNote(_content: string) {
   color: #ffffff;
 }
 
-/* Simple underline - NO gradient, NO glow */
+/* Simple underline */
 .tab-btn.active::after {
   content: '';
   position: absolute;
@@ -531,6 +639,78 @@ function handleAddToNote(_content: string) {
   color: #6e7681;
 }
 
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 8px;
+}
+
+.error-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #f85149;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.error-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.error-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f85149;
+}
+
+.error-message {
+  font-size: 11px;
+  color: #ffa198;
+  word-break: break-word;
+}
+
+.error-dismiss {
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #8b949e;
+  background: none;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.error-dismiss:hover {
+  color: #e6edf3;
+  background: #21262d;
+}
+
+/* Pending Edits */
+.pending-edits {
+  margin-bottom: 12px;
+}
+
 /* Messages Area */
 .messages-area {
   flex: 1;
@@ -539,24 +719,18 @@ function handleAddToNote(_content: string) {
 
 /* Welcome Area */
 .welcome-section {
-  margin-bottom: 20px;
-}
-
-.ai-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 600;
-  color: #8b949e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(22, 27, 34, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(48, 54, 61, 0.4);
 }
 
 .welcome-text {
-  font-size: 12px;
-  color: var(--text-color-secondary);
+  font-size: 13px;
+  color: #8b949e;
   line-height: 1.5;
-  margin-bottom: 10px;
+  margin: 0;
 }
 
 /* Quick Commands Box - Semi-transparent to blend with gradient */
@@ -818,13 +992,13 @@ function handleAddToNote(_content: string) {
   background: rgba(22, 27, 34, 0.65);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid #21262d;
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 12px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
   transition: border-color 0.2s;
 }
 

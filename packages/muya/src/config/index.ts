@@ -177,6 +177,9 @@ export const CLASS_NAMES = genUpper2LowerKeyHash([
   'MU_VEGA_LITE',
   'MU_WARN',
   'MU_SHOW_QUICK_INSERT_HINT',
+  // Diff visualization classes
+  'MU_DIFF_ADDITION',
+  'MU_DIFF_DELETION',
 ])
 
 export const PARAGRAPH_TYPES = [

@@ -79,10 +79,9 @@ export class OpenAIProvider implements AIProvider {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
-        outputTokens++
       }
 
-      // Track usage from final chunk
+      // Track usage from final chunk (don't manually count - chunks ≠ tokens)
       if (chunk.usage) {
         inputTokens = chunk.usage.prompt_tokens
         outputTokens = chunk.usage.completion_tokens
@@ -103,7 +102,7 @@ export class OpenAIProvider implements AIProvider {
   async *rewrite(
     text: string,
     instruction: string,
-    context?: AIContext
+    _context?: AIContext
   ): AsyncGenerator<string, void, unknown> {
     const messages: OpenAI.ChatCompletionMessageParam[] = [
       {
@@ -161,9 +160,9 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
-        outputTokens++
       }
 
+      // Track usage from final chunk (don't manually count - chunks ≠ tokens)
       if (chunk.usage) {
         inputTokens = chunk.usage.prompt_tokens
         outputTokens = chunk.usage.completion_tokens
@@ -372,12 +371,19 @@ ${context.documentContent.slice(0, 8000)}
 
     openAIMessages.push({ role: 'system', content: systemContent })
 
-    // Add conversation messages
+    // Add conversation messages, filtering out null/empty content
     for (const msg of messages) {
+      // Skip messages with null or empty content to avoid API errors
+      if (msg.content == null || msg.content === '') continue
       openAIMessages.push({
         role: msg.role,
         content: msg.content,
       })
+    }
+
+    // Validate that we have messages to send (at least system message)
+    if (openAIMessages.length === 0) {
+      throw new Error('No valid messages to send to API')
     }
 
     return openAIMessages

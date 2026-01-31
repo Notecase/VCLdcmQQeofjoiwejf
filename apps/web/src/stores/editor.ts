@@ -411,6 +411,9 @@ export const useEditorStore = defineStore('editor', {
       const authStore = useAuthStore()
       if (!authStore.user?.id || this.isRealtimeSyncEnabled) return
 
+      // Set flag BEFORE starting subscription to prevent race condition
+      this.isRealtimeSyncEnabled = true
+
       notesUnsubscribe = subscriptionsService.subscribeToNotes(
         authStore.user.id,
         (event: NoteChangeEvent) => {
@@ -418,7 +421,6 @@ export const useEditorStore = defineStore('editor', {
         }
       )
 
-      this.isRealtimeSyncEnabled = true
       console.log('Real-time sync started')
     },
 

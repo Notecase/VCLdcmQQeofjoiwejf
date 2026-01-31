@@ -5,7 +5,9 @@
  * Handles SSE streaming and state management.
  */
 
-import { useAIStore } from '@/stores/ai'
+import { useAIStore, type DiffHunk, type ThinkingStep } from '@/stores/ai'
+import { authFetch, authFetchSSE } from '@/utils/api'
+import * as Diff from 'diff'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
 
@@ -32,9 +34,17 @@ export interface StreamChunk {
     | 'tool-result'
     | 'intent'
     | 'citation'
+    | 'edit-proposal'
     | 'finish'
     | 'error'
   data: unknown
+}
+
+export interface EditProposalData {
+  noteId: string
+  blockId?: string
+  original: string
+  proposed: string
 }
 
 // ============================================================================
@@ -54,9 +64,8 @@ export async function sendToSecretary(options: AgentRequestOptions): Promise<str
       return await streamFromAgent('secretary', options)
     }
 
-    const response = await fetch(`${API_BASE}/secretary`, {
+    const response = await authFetch(`${API_BASE}/secretary`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         input: options.input,
         context: options.context,
@@ -91,9 +100,8 @@ export async function sendToChat(options: AgentRequestOptions): Promise<string> 
       return await streamFromAgent('chat', options)
     }
 
-    const response = await fetch(`${API_BASE}/chat`, {
+    const response = await authFetch(`${API_BASE}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         input: options.input,
         context: options.context,
@@ -129,9 +137,8 @@ export async function sendToNoteAgent(
   try {
     store.setStatus('streaming')
 
-    const response = await fetch(`${API_BASE}/note/action`, {
+    const response = await authFetchSSE(`${API_BASE}/note/action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action,
         input,
@@ -161,9 +168,8 @@ export async function createPlan(
   context?: string,
   constraints?: string[]
 ): Promise<{ success: boolean; plan?: unknown; message: string }> {
-  const response = await fetch(`${API_BASE}/planner/plan`, {
+  const response = await authFetch(`${API_BASE}/planner/plan`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       goal,
       context,
@@ -191,11 +197,107 @@ export async function getAgentCapabilities(): Promise<{
     status: string
   }>
 }> {
-  const response = await fetch(`${API_BASE}/capabilities`)
+  const response = await authFetch(`${API_BASE}/capabilities`)
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
   }
   return response.json()
+}
+
+// ============================================================================
+// Diff Computation
+// ============================================================================
+
+/**
+ * Compute diff hunks from original and proposed content
+ * Uses jsdiff to compute structural changes and groups them into logical hunks
+ */
+export function computeDiffHunks(original: string, proposed: string): DiffHunk[] {
+  const hunks: DiffHunk[] = []
+
+  // Use structuredPatch to get unified diff hunks
+  const patch = Diff.structuredPatch('original', 'proposed', original, proposed, '', '', {
+    context: 3, // Include 3 lines of context around changes
+  })
+
+  for (const hunk of patch.hunks) {
+    let oldLineNum = hunk.oldStart
+    let newLineNum = hunk.newStart
+
+    // Group consecutive changes into logical blocks
+    let currentHunk: {
+      oldStart: number
+      oldLines: string[]
+      newLines: string[]
+      type: 'add' | 'remove' | 'modify' | 'context'
+    } | null = null
+
+    const flushHunk = () => {
+      if (!currentHunk) return
+
+      const hunkType: 'add' | 'remove' | 'modify' | 'context' =
+        currentHunk.oldLines.length === 0
+          ? 'add'
+          : currentHunk.newLines.length === 0
+            ? 'remove'
+            : 'modify'
+
+      hunks.push({
+        id: crypto.randomUUID(),
+        oldStart: currentHunk.oldStart,
+        oldLines: currentHunk.oldLines.length,
+        newStart: newLineNum - currentHunk.newLines.length,
+        newLines: currentHunk.newLines.length,
+        oldContent: currentHunk.oldLines.join('\n'),
+        newContent: currentHunk.newLines.join('\n'),
+        type: hunkType,
+        status: 'pending',
+      })
+
+      currentHunk = null
+    }
+
+    for (const line of hunk.lines) {
+      const prefix = line[0]
+      const content = line.slice(1)
+
+      if (prefix === ' ') {
+        // Context line - flush any pending hunk
+        flushHunk()
+        oldLineNum++
+        newLineNum++
+      } else if (prefix === '-') {
+        // Removed line
+        if (!currentHunk) {
+          currentHunk = {
+            oldStart: oldLineNum,
+            oldLines: [],
+            newLines: [],
+            type: 'remove',
+          }
+        }
+        currentHunk.oldLines.push(content)
+        oldLineNum++
+      } else if (prefix === '+') {
+        // Added line
+        if (!currentHunk) {
+          currentHunk = {
+            oldStart: oldLineNum,
+            oldLines: [],
+            newLines: [],
+            type: 'add',
+          }
+        }
+        currentHunk.newLines.push(content)
+        newLineNum++
+      }
+    }
+
+    // Flush any remaining hunk
+    flushHunk()
+  }
+
+  return hunks
 }
 
 // ============================================================================
@@ -208,9 +310,8 @@ export async function getAgentCapabilities(): Promise<{
 async function streamFromAgent(agentType: string, options: AgentRequestOptions): Promise<string> {
   const store = useAIStore()
 
-  const response = await fetch(`${API_BASE}/${agentType}`, {
+  const response = await authFetchSSE(`${API_BASE}/${agentType}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       input: options.input,
       context: options.context,
@@ -278,13 +379,85 @@ async function processSSEResponse(
                 store.setError(chunk.data as string)
                 break
 
-              // Skip thinking/tool-call for now - can be added later
-              case 'thinking':
-              case 'tool-call':
-              case 'tool-result':
+              case 'thinking': {
+                // Add thinking step to store
+                const thinkingData = chunk.data as { description: string; type?: ThinkingStep['type'] }
+                const runningThoughts = store.thinkingSteps.filter(
+                  (step) => step.status === 'running' && step.type !== 'tool'
+                )
+                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+                if (lastRunningThought) {
+                  store.completeThinkingStep(lastRunningThought.id)
+                }
+                store.addThinkingStep({
+                  type: thinkingData.type || 'thought',
+                  description: thinkingData.description || (thinkingData as unknown as string),
+                  status: 'running',
+                })
+                store.setStatus('thinking')
+                break
+              }
+
+              case 'tool-call': {
+                // Add tool call as thinking step
+                // Backend may send 'tool' or 'name' depending on the source
+                const toolData = chunk.data as {
+                  name?: string
+                  tool?: string
+                  arguments?: Record<string, unknown>
+                }
+                const toolName = toolData.name || toolData.tool || 'unknown'
+                const runningThoughts = store.thinkingSteps.filter(
+                  (step) => step.status === 'running' && step.type !== 'tool'
+                )
+                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+                if (lastRunningThought) {
+                  store.completeThinkingStep(lastRunningThought.id)
+                }
+                store.addThinkingStep({
+                  type: 'tool',
+                  description: `Calling ${toolName}...`,
+                  status: 'running',
+                })
+                store.setStatus('tool-calling')
+                break
+              }
+
+              case 'tool-result': {
+                // Complete the last tool thinking step
+                const runningTools = store.thinkingSteps.filter(
+                  (step) => step.status === 'running' && step.type === 'tool'
+                )
+                const stepToComplete =
+                  runningTools[runningTools.length - 1] ||
+                  store.thinkingSteps.filter((step) => step.status === 'running').slice(-1)[0]
+                if (stepToComplete) {
+                  store.completeThinkingStep(stepToComplete.id)
+                }
+                store.setStatus('streaming')
+                break
+              }
+
+              case 'edit-proposal': {
+                // Handle edit proposal - compute diff hunks and add to store
+                const editData = chunk.data as EditProposalData
+                const diffHunks = computeDiffHunks(editData.original, editData.proposed)
+
+                const pendingEdit = store.addPendingEdit({
+                  blockId: editData.blockId || '',
+                  noteId: editData.noteId,
+                  originalContent: editData.original,
+                  proposedContent: editData.proposed,
+                  diffHunks,
+                })
+
+                // Automatically activate this edit for inline visualization
+                store.setActiveEdit(pendingEdit.id)
+                break
+              }
+
               case 'intent':
               case 'citation':
-                // Future: display these in UI
                 console.log(`[AI] ${chunk.type}:`, chunk.data)
                 break
             }
@@ -294,12 +467,15 @@ async function processSSEResponse(
         }
       }
     }
+    store.setStatus('idle')
+    return fullContent
+  } catch (error) {
+    // Handle stream errors - ensure store state is updated
+    store.setError(error instanceof Error ? error.message : 'Stream error')
+    throw error
   } finally {
     reader.releaseLock()
   }
-
-  store.setStatus('idle')
-  return fullContent
 }
 
 // ============================================================================
@@ -314,6 +490,10 @@ export function useAIChat() {
     agentType: 'secretary' | 'chat' = 'secretary',
     context?: AgentRequestOptions['context']
   ) {
+    // Clear any previous error
+    store.clearError()
+    store.clearThinkingSteps()
+
     // Get or create session
     const session = store.getOrCreateSession(undefined, { agentType })
 
@@ -345,7 +525,6 @@ export function useAIChat() {
         })
       }
     } catch (err) {
-      // Error already set in store
       console.error('Chat error:', err)
     }
   }

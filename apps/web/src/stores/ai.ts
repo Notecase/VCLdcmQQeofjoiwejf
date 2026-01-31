@@ -92,16 +92,23 @@ export interface PendingEdit {
   createdAt: Date
 }
 
+export type DiffHunkStatus = 'pending' | 'accepted' | 'rejected'
+
 export interface DiffHunk {
+  id: string
   oldStart: number
   oldLines: number
   newStart: number
   newLines: number
-  content: string
-  type: 'add' | 'remove' | 'context'
+  oldContent: string
+  newContent: string
+  type: 'add' | 'remove' | 'modify' | 'context'
+  status: DiffHunkStatus
 }
 
 export type AIStatus = 'idle' | 'streaming' | 'tool-calling' | 'thinking' | 'error'
+
+export type DiffViewMode = 'inline' | 'sidebar'
 
 // ============================================================================
 // Store Definition
@@ -129,6 +136,13 @@ export const useAIStore = defineStore('ai', () => {
   // Pending edits (proposed changes from Note agent)
   const pendingEdits = ref<PendingEdit[]>([])
 
+  // Active edit for inline diff visualization
+  const activeEditId = ref<string | null>(null)
+  const focusedHunkIndex = ref<number>(0)
+
+  // Diff view mode (inline vs sidebar)
+  const diffViewMode = ref<DiffViewMode>('inline')
+
   // Error state
   const error = ref<string | null>(null)
 
@@ -153,6 +167,21 @@ export const useAIStore = defineStore('ai', () => {
   const pendingEditCount = computed(
     () => pendingEdits.value.filter((e) => e.status === 'pending').length
   )
+
+  const activeEdit = computed(() => {
+    if (!activeEditId.value) return null
+    return pendingEdits.value.find((e) => e.id === activeEditId.value) || null
+  })
+
+  const focusedHunk = computed(() => {
+    if (!activeEdit.value) return null
+    return activeEdit.value.diffHunks[focusedHunkIndex.value] || null
+  })
+
+  const pendingHunksInActiveEdit = computed(() => {
+    if (!activeEdit.value) return []
+    return activeEdit.value.diffHunks.filter((h) => h.status === 'pending')
+  })
 
   // ---------------------------------------------------------------------------
   // Session Actions
@@ -337,6 +366,187 @@ export const useAIStore = defineStore('ai', () => {
     } else {
       pendingEdits.value = []
     }
+    // Clear active edit if it was removed
+    if (activeEditId.value && !pendingEdits.value.find((e) => e.id === activeEditId.value)) {
+      activeEditId.value = null
+      focusedHunkIndex.value = 0
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hunk-Level Actions (for inline diff visualization)
+  // ---------------------------------------------------------------------------
+
+  function setActiveEdit(editId: string | null) {
+    activeEditId.value = editId
+    focusedHunkIndex.value = 0
+  }
+
+  function focusNextHunk() {
+    if (!activeEdit.value) return
+    const hunks = activeEdit.value.diffHunks
+    const pendingHunks = hunks.filter((h) => h.status === 'pending')
+    if (pendingHunks.length === 0) return
+
+    // Find next pending hunk after current index
+    for (let i = focusedHunkIndex.value + 1; i < hunks.length; i++) {
+      if (hunks[i].status === 'pending') {
+        focusedHunkIndex.value = i
+        return
+      }
+    }
+    // Wrap around to start
+    for (let i = 0; i <= focusedHunkIndex.value; i++) {
+      if (hunks[i].status === 'pending') {
+        focusedHunkIndex.value = i
+        return
+      }
+    }
+  }
+
+  function focusPreviousHunk() {
+    if (!activeEdit.value) return
+    const hunks = activeEdit.value.diffHunks
+    const pendingHunks = hunks.filter((h) => h.status === 'pending')
+    if (pendingHunks.length === 0) return
+
+    // Find previous pending hunk before current index
+    for (let i = focusedHunkIndex.value - 1; i >= 0; i--) {
+      if (hunks[i].status === 'pending') {
+        focusedHunkIndex.value = i
+        return
+      }
+    }
+    // Wrap around to end
+    for (let i = hunks.length - 1; i >= focusedHunkIndex.value; i--) {
+      if (hunks[i].status === 'pending') {
+        focusedHunkIndex.value = i
+        return
+      }
+    }
+  }
+
+  function acceptHunk(editId: string, hunkId: string) {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (!edit) return
+
+    const hunk = edit.diffHunks.find((h) => h.id === hunkId)
+    if (hunk) {
+      hunk.status = 'accepted'
+    }
+
+    // Auto-advance to next pending hunk
+    focusNextHunk()
+  }
+
+  function rejectHunk(editId: string, hunkId: string) {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (!edit) return
+
+    const hunk = edit.diffHunks.find((h) => h.id === hunkId)
+    if (hunk) {
+      hunk.status = 'rejected'
+    }
+
+    // Auto-advance to next pending hunk
+    focusNextHunk()
+  }
+
+  function acceptAllHunks(editId: string) {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (!edit) return
+
+    edit.diffHunks.forEach((hunk) => {
+      if (hunk.status === 'pending') {
+        hunk.status = 'accepted'
+      }
+    })
+  }
+
+  function rejectAllHunks(editId: string) {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (!edit) return
+
+    edit.diffHunks.forEach((hunk) => {
+      if (hunk.status === 'pending') {
+        hunk.status = 'rejected'
+      }
+    })
+  }
+
+  /**
+   * Apply accepted hunks and return the final content
+   * This merges only accepted changes into the original content
+   */
+  function applyAcceptedHunks(editId: string): string | null {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (!edit) return null
+
+    const originalLines = edit.originalContent.split('\n')
+    const resultLines: string[] = []
+    let originalIndex = 0
+
+    // Sort hunks by oldStart to process in order
+    const sortedHunks = [...edit.diffHunks].sort((a, b) => a.oldStart - b.oldStart)
+
+    for (const hunk of sortedHunks) {
+      // Add unchanged lines before this hunk
+      while (originalIndex < hunk.oldStart - 1) {
+        resultLines.push(originalLines[originalIndex])
+        originalIndex++
+      }
+
+      if (hunk.status === 'accepted') {
+        // Apply the new content
+        if (hunk.newContent) {
+          resultLines.push(...hunk.newContent.split('\n'))
+        }
+        // Skip the old lines
+        originalIndex += hunk.oldLines
+      } else {
+        // Keep the old content (rejected or context)
+        for (let i = 0; i < hunk.oldLines; i++) {
+          if (originalIndex < originalLines.length) {
+            resultLines.push(originalLines[originalIndex])
+            originalIndex++
+          }
+        }
+      }
+    }
+
+    // Add remaining lines
+    while (originalIndex < originalLines.length) {
+      resultLines.push(originalLines[originalIndex])
+      originalIndex++
+    }
+
+    // Mark edit as accepted
+    edit.status = 'accepted'
+
+    return resultLines.join('\n')
+  }
+
+  function discardEdit(editId: string) {
+    const edit = pendingEdits.value.find((e) => e.id === editId)
+    if (edit) {
+      edit.status = 'rejected'
+    }
+    if (activeEditId.value === editId) {
+      activeEditId.value = null
+      focusedHunkIndex.value = 0
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Diff View Mode Actions
+  // ---------------------------------------------------------------------------
+
+  function setDiffViewMode(mode: DiffViewMode) {
+    diffViewMode.value = mode
+  }
+
+  function toggleDiffViewMode() {
+    diffViewMode.value = diffViewMode.value === 'inline' ? 'sidebar' : 'inline'
   }
 
   // ---------------------------------------------------------------------------
@@ -398,6 +608,8 @@ export const useAIStore = defineStore('ai', () => {
     thinkingSteps,
     citations,
     pendingEdits,
+    activeEditId,
+    focusedHunkIndex,
     error,
 
     // Computed
@@ -405,6 +617,9 @@ export const useAIStore = defineStore('ai', () => {
     isProcessing,
     currentThinkingStep,
     pendingEditCount,
+    activeEdit,
+    focusedHunk,
+    pendingHunksInActiveEdit,
 
     // Session actions
     createSession,
@@ -432,6 +647,22 @@ export const useAIStore = defineStore('ai', () => {
     acceptEdit,
     rejectEdit,
     clearPendingEdits,
+
+    // Hunk-level actions
+    setActiveEdit,
+    focusNextHunk,
+    focusPreviousHunk,
+    acceptHunk,
+    rejectHunk,
+    acceptAllHunks,
+    rejectAllHunks,
+    applyAcceptedHunks,
+    discardEdit,
+
+    // Diff view mode
+    diffViewMode,
+    setDiffViewMode,
+    toggleDiffViewMode,
 
     // Status
     setStatus,

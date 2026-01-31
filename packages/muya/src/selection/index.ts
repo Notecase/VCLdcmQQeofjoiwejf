@@ -81,7 +81,7 @@ class Selection {
   }
 
   get isSelectionInSameBlock() {
-    const { anchorBlock, focusBlock, anchor } = this
+    const { anchorBlock, focusBlock, anchor, focus } = this
 
     if (anchor === null || focus === null) return false
 

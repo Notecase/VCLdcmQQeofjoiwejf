@@ -566,23 +566,23 @@ onMounted(async () => {
           v-if="canSaveResult()"
           class="save-result-btn"
           :class="{ saved: resultSaved }"
+          :title="resultSaved ? 'Saved!' : 'Save to Resources'"
           :disabled="isSavingResult || resultSaved"
           @click="handleSaveResult"
         >
           <Loader2
             v-if="isSavingResult"
-            :size="14"
+            :size="16"
             class="spin"
           />
           <Check
             v-else-if="resultSaved"
-            :size="14"
+            :size="16"
           />
           <Save
             v-else
-            :size="14"
+            :size="16"
           />
-          <span>{{ resultSaved ? 'Saved!' : 'Save to Resources' }}</span>
         </button>
       </template>
 
@@ -776,11 +776,16 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
+/* Section headers - lighter */
 .section-title {
-  font-size: 13px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   font-weight: 600;
   color: #e6edf3;
+  opacity: 0.5;
   margin: 0;
+  border-bottom: none;
 }
 
 .section-desc {
@@ -816,25 +821,27 @@ onMounted(async () => {
   gap: 8px;
 }
 
+/* Source type buttons - borderless */
 .type-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   padding: 16px 8px;
-  border: 1px dashed #30363d;
+  border: none;
   border-radius: 8px;
   background: transparent;
   color: #8b949e;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s ease;
+  opacity: 0.7;
 }
 
 .type-btn:hover {
-  border-color: #58a6ff;
+  opacity: 1;
   color: #58a6ff;
-  background: rgba(88, 166, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* Sources List */
@@ -872,13 +879,14 @@ onMounted(async () => {
   gap: 8px;
 }
 
+/* Action cards - borderless */
 .action-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
   padding: 12px;
-  border: 1px solid #30363d;
+  border: none;
   border-radius: 8px;
   background: transparent;
   text-align: left;
@@ -887,8 +895,7 @@ onMounted(async () => {
 }
 
 .action-card:hover:not(.disabled) {
-  border-color: #58a6ff;
-  background: rgba(88, 166, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .action-card.disabled {
@@ -1291,25 +1298,25 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
-/* Save Result Button */
+/* Save Result Button - icon only, next to close button */
 .save-result-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(63, 185, 80, 0.15);
-  border: 1px solid rgba(63, 185, 80, 0.3);
-  border-radius: 6px;
-  color: #3fb950;
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: center;
+  background: var(--modal-btn-secondary-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-color-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 36px;
 }
 
 .save-result-btn:hover:not(:disabled) {
-  background: rgba(63, 185, 80, 0.25);
-  border-color: #3fb950;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 .save-result-btn:disabled {
@@ -1318,8 +1325,7 @@ onMounted(async () => {
 }
 
 .save-result-btn.saved {
-  background: rgba(63, 185, 80, 0.2);
-  border-color: #3fb950;
+  color: #3fb950;
 }
 
 /* Spinner */

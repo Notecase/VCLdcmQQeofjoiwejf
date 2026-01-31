@@ -179,7 +179,7 @@ export class ChatAgent {
       model: this.model,
       messages,
       temperature: 0.7,
-      max_tokens: 4000,
+      max_completion_tokens: 4000,
       stream: true,
     })
 
@@ -336,6 +336,8 @@ cite it using [1], [2], etc. to reference the source.`
     ]
 
     for (const msg of this.state.messages) {
+      // Skip messages with null or empty content
+      if (msg.content == null || msg.content === '') continue
       messages.push({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
@@ -356,7 +358,7 @@ cite it using [1], [2], etc. to reference the source.`
       model: this.model,
       messages,
       temperature: 0.7,
-      max_tokens: 4000,
+      max_completion_tokens: 4000,
     })
 
     return {

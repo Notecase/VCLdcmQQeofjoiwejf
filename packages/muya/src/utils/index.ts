@@ -8,6 +8,9 @@ interface IUnion {
   start: number
   end: number
   active?: boolean
+  // Optional diff visualization fields
+  diffType?: 'addition' | 'deletion'
+  hunkId?: string
 }
 
 type Constructor = new (...args: any[]) => object
@@ -55,7 +58,7 @@ export function conflict(arr1: [number, number], arr2: [number, number]) {
 
 export function union(
   { start: tStart, end: tEnd }: IUnion,
-  { start: lStart, end: lEnd, active }: IUnion
+  { start: lStart, end: lEnd, active, diffType, hunkId }: IUnion
 ) {
   if (!(tEnd <= lStart || lEnd <= tStart)) {
     if (lStart < tStart) {
@@ -63,12 +66,16 @@ export function union(
         start: tStart,
         end: tEnd < lEnd ? tEnd : lEnd,
         active,
+        diffType,
+        hunkId,
       }
     } else {
       return {
         start: lStart,
         end: tEnd < lEnd ? tEnd : lEnd,
         active,
+        diffType,
+        hunkId,
       }
     }
   }
@@ -175,25 +182,6 @@ export function wordCount(markdown: string) {
 export function sanitize(html: string, purifyOptions: Config, disableHtml: boolean) {
   if (disableHtml) return runSanitize(escapeHTML(html), purifyOptions)
   else return runSanitize(escapeInBlockHtml(html), purifyOptions)
-}
-
-/**
- * TODO: @jocs remove in the future, because it's not used.
- * @param ele
- * @param id
- * @returns
- */
-export function getParagraphReference(ele: HTMLElement, id: string) {
-  const { x, y, left, top, bottom, height } = ele.getBoundingClientRect()
-
-  return {
-    getBoundingClientRect() {
-      return { x, y, left, top, bottom, height, width: 0, right: left }
-    },
-    clientWidth: 0,
-    clientHeight: height,
-    id,
-  }
 }
 
 function visibleLength(str: string) {

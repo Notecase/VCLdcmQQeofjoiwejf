@@ -184,7 +184,7 @@ import { ChatAgent } from './chat.agent'
 import { NoteAgent } from './note.agent'
 import { SecretaryAgent } from './secretary.agent'
 import { PlannerAgent } from './planner.agent'
-import { AgenticAgent } from './agentic.agent'
+// AgenticAgent is exported above but not used in factory (standalone usage)
 
 export type AgentType = 'chat' | 'note' | 'secretary' | 'planner' | 'agentic'
 

@@ -163,7 +163,7 @@ export class PlannerAgent {
           { role: 'user', content: userContent },
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
       })
 
       const content = response.choices[0]?.message?.content || '{}'
@@ -238,7 +238,7 @@ export class PlannerAgent {
           { role: 'user', content: userContent },
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
       })
 
       const content = response.choices[0]?.message?.content || '{}'
@@ -373,7 +373,7 @@ export class PlannerAgent {
         },
       ],
       temperature: 0.7,
-      max_tokens: 500,
+      max_completion_tokens: 500,
     })
 
     return {

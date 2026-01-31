@@ -1,6 +1,5 @@
 import type { VNode } from 'snabbdom'
 import type Parent from '../../block/base/parent'
-import type AtxHeading from '../../block/commonMark/atxHeading'
 import type { Muya } from '../../index'
 import type {
   IAtxHeadingState,
@@ -16,8 +15,12 @@ import { deepClone } from '../../utils'
 import { h, patch } from '../../utils/snabbdom'
 import BaseFloat from '../baseFloat'
 import { replaceBlockByLabel } from '../paragraphQuickInsertMenu/config'
-import { canTurnIntoMenu, FRONT_MENU } from './config'
+import { FRONT_MENU, getBlockLabel, getSubMenu } from './config'
 import './index.css'
+
+const MAX_SUBMENU_HEIGHT = 400
+const ITEM_HEIGHT = 28
+const PADDING = 10
 
 function renderIcon({ label, icon }: { label: string; icon: string }) {
   return h(
@@ -26,8 +29,9 @@ function renderIcon({ label, icon }: { label: string; icon: string }) {
       `i.icon-${label.replace(/\s/g, '-')}`,
       {
         style: {
-          background: `url(${icon}) no-repeat`,
-          'background-size': '100%',
+          // Use mask-image for cross-browser colored icons
+          '-webkit-mask-image': `url(${icon})`,
+          'mask-image': `url(${icon})`,
         },
       },
       ''
@@ -38,7 +42,7 @@ function renderIcon({ label, icon }: { label: string; icon: string }) {
 const defaultOptions = {
   placement: 'bottom' as const,
   offsetOptions: {
-    mainAxis: 0,
+    mainAxis: 10,
     crossAxis: 0,
     alignmentAxis: 0,
   },
@@ -89,31 +93,49 @@ export class ParagraphFrontMenu extends BaseFloat {
     eventCenter.attachDOMEvent(container!, 'mouseleave', enterLeaveHandler)
   }
 
+  /**
+   * Render the submenu (Turn Into options) - shows on hover
+   */
   renderSubMenu(subMenu: IQuickInsertMenuItem['children']) {
-    const { block } = this
+    const { block, reference } = this
     const { i18n } = this.muya
+    const currentLabel = getBlockLabel(block!)
+
+    // Calculate submenu position
+    const rect = reference?.getBoundingClientRect()
+    const windowHeight = document.documentElement.clientHeight
+    let subMenuSelector = 'div.submenu'
+    if (rect && windowHeight - rect.bottom < MAX_SUBMENU_HEIGHT - (ITEM_HEIGHT + PADDING)) {
+      subMenuSelector += '.align-bottom'
+    }
+
     const children = subMenu.map((menuItem) => {
-      const { title, label, subTitle } = menuItem
+      const { icon, title, label, shortCut } = menuItem
       const iconWrapperSelector = 'div.icon-wrapper'
       const iconWrapper = h(
         iconWrapperSelector,
-        {
-          props: {
-            title: `${i18n.t(title)}\n${subTitle}`,
-          },
-        },
-        renderIcon(menuItem)
+        h(
+          'i.icon',
+          h(
+            `i.icon-${label.replace(/\s/g, '-')}`,
+            {
+              style: {
+                // Use mask-image for cross-browser colored icons
+                '-webkit-mask-image': `url(${icon})`,
+                'mask-image': `url(${icon})`,
+              },
+            },
+            ''
+          )
+        )
       )
 
-      let itemSelector = `div.turn-into-item.${label}`
-      if (block?.blockName === 'atx-heading') {
-        if (
-          label.startsWith(block.blockName) &&
-          label.endsWith(String((block as AtxHeading).meta.level))
-        ) {
-          itemSelector += '.active'
-        }
-      } else if (label === block?.blockName) {
+      const textWrapper = h('span', i18n.t(title))
+      const shortCutWrapper = h('div.short-cut', [h('span', shortCut || '')])
+
+      // Highlight current block type
+      let itemSelector = `li.item.${label.replace(/\s/g, '-')}`
+      if (label === currentLabel) {
         itemSelector += '.active'
       }
 
@@ -126,25 +148,44 @@ export class ParagraphFrontMenu extends BaseFloat {
             },
           },
         },
-        [iconWrapper]
+        [iconWrapper, textWrapper, shortCutWrapper]
       )
     })
-    const subMenuSelector = 'li.turn-into-menu'
 
-    return h(subMenuSelector, children)
+    return h(subMenuSelector, h('ul', children))
   }
 
   render() {
     const { oldVNode, frontMenuContainer, block } = this
     const { i18n } = this.muya
     const { blockName } = block!
+
+    // Get submenu items for Turn Into
+    const subMenu = getSubMenu(block!)
+
     const children = FRONT_MENU.map(({ icon, label, text, shortCut }) => {
       const iconWrapperSelector = 'div.icon-wrapper'
       const iconWrapper = h(iconWrapperSelector, renderIcon({ icon, label }))
-      const textWrapper = h('span.text', i18n.t(text))
+      const textWrapper = h('span', i18n.t(text))
       const shortCutWrapper = h('div.short-cut', [h('span', shortCut)])
-      const itemSelector = `li.item.${label}`
+
+      let itemSelector = `li.item.${label}`
       const itemChildren = [iconWrapper, textWrapper, shortCutWrapper]
+
+      // Handle Turn Into menu item with submenu
+      if (label === 'turnInto' && subMenu.length !== 0) {
+        itemChildren.push(this.renderSubMenu(subMenu))
+      }
+
+      // Disable Turn Into if no options available
+      if (label === 'turnInto' && subMenu.length === 0) {
+        itemSelector += '.disabled'
+      }
+
+      // Frontmatter cannot be duplicated
+      if (label === 'duplicate' && blockName === 'frontmatter') {
+        itemSelector += '.disabled'
+      }
 
       return h(
         itemSelector,
@@ -158,16 +199,6 @@ export class ParagraphFrontMenu extends BaseFloat {
         itemChildren
       )
     })
-
-    // Frontmatter can not be duplicated
-    if (blockName === 'frontmatter') children.splice(0, 1)
-
-    const subMenu = canTurnIntoMenu(block!)
-    if (subMenu.length) {
-      const line = h('li.divider')
-      children.unshift(line)
-      children.unshift(this.renderSubMenu(subMenu))
-    }
 
     const vnode = h('ul', children)
 
@@ -185,6 +216,18 @@ export class ParagraphFrontMenu extends BaseFloat {
 
     const { block, muya } = this
     const { editor } = muya
+    const { blockName } = block
+
+    // Frontmatter cannot be duplicated
+    if (label === 'duplicate' && blockName === 'frontmatter') {
+      return
+    }
+
+    // Turn Into - do nothing, submenu handles it
+    if (label === 'turnInto') {
+      return
+    }
+
     const oldState = block.getState()
     let cursorBlock = null
     let state = null
@@ -223,9 +266,9 @@ export class ParagraphFrontMenu extends BaseFloat {
         }
       }
     } else {
+      // Handle block type conversion (from submenu)
       switch (block.blockName) {
         case 'paragraph':
-        // fall through
         case 'atx-heading': {
           if (block.blockName === 'paragraph' && block.blockName === label) break
 
@@ -251,9 +294,7 @@ export class ParagraphFrontMenu extends BaseFloat {
         }
 
         case 'order-list':
-        // fall through
         case 'bullet-list':
-        // fall through
         case 'task-list': {
           if (block.blockName === label) break
 
@@ -291,7 +332,6 @@ export class ParagraphFrontMenu extends BaseFloat {
               loose,
             }
           }
-          // TODO: @JOCS, remove use this.selection directly.
           const { anchorPath, anchor, focus, isSelectionInSameBlock } = editor.selection
           const listBlock = ScrollPage.loadBlock(label).create(muya, state)
           block.replaceWith(listBlock)
@@ -299,7 +339,6 @@ export class ParagraphFrontMenu extends BaseFloat {
           if (guessCursorBlock && isSelectionInSameBlock) {
             const begin = Math.min(anchor!.offset, focus!.offset)
             const end = Math.max(anchor!.offset, focus!.offset)
-            // Make guessCursorBlock active
             guessCursorBlock.setCursor(begin, end, true)
           } else {
             cursorBlock = listBlock.firstContentInDescendant()
@@ -310,7 +349,6 @@ export class ParagraphFrontMenu extends BaseFloat {
     }
 
     if (cursorBlock) {
-      // mock cursorBlock focus
       cursorBlock.setCursor(0, 0, true)
     }
     // Delay hide to avoid dispatch enter handler

@@ -367,8 +367,13 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 
 /* table */
 .mu-table {
+  position: relative;
+
   margin: 0.5em 0 0;
   padding: 0.5em 0;
+
+  /* Enable horizontal scrolling when table is too wide */
+  overflow-x: auto;
 }
 
 .mu-table-inner {
@@ -377,6 +382,10 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
   word-break: initial;
 
   border-collapse: collapse;
+
+  /* Allow table to expand beyond container width */
+  width: max-content;
+  min-width: 100%;
 }
 
 .mu-table-inner tr {
@@ -428,15 +437,18 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
   margin-bottom: 0;
 }
 
-.mu-table-inner td[data-align='left'] {
+.mu-table-inner td[data-align='left'],
+.mu-table-inner td[data-align='left'] > .mu-table-cell-content {
   text-align: left;
 }
 
-.mu-table-inner td[data-align='center'] {
+.mu-table-inner td[data-align='center'],
+.mu-table-inner td[data-align='center'] > .mu-table-cell-content {
   text-align: center;
 }
 
-.mu-table-inner td[data-align='right'] {
+.mu-table-inner td[data-align='right'],
+.mu-table-inner td[data-align='right'] > .mu-table-cell-content {
   text-align: right;
 }
 

@@ -1,5 +1,5 @@
 export const toolList = {
-  right: [
+  left: [
     {
       label: 'Insert Row Above',
       action: 'insert',
@@ -41,4 +41,4 @@ export const toolList = {
   ],
 }
 
-export type MenuItem = (typeof toolList)['right'][number]
+export type MenuItem = (typeof toolList)['left'][number]

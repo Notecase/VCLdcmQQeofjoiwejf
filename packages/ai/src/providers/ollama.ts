@@ -44,7 +44,8 @@ interface OllamaChatRequest {
   }
 }
 
-interface OllamaChatResponse {
+// OllamaChatResponse is the non-streaming response type (currently using streaming only)
+interface _OllamaChatResponse {
   model: string
   message: {
     role: 'assistant'
@@ -399,10 +400,17 @@ Output only valid ${language} code without any explanation. Include helpful comm
     ollamaMessages.push({ role: 'system', content: systemContent })
 
     for (const msg of messages) {
+      // Skip messages with null or empty content to avoid API errors
+      if (msg.content == null || msg.content === '') continue
       ollamaMessages.push({
         role: msg.role,
         content: msg.content,
       })
+    }
+
+    // Validate that we have messages to send (at least system message)
+    if (ollamaMessages.length === 0) {
+      throw new Error('No valid messages to send to API')
     }
 
     return ollamaMessages

@@ -660,21 +660,20 @@ onMounted(async () => {
   overflow-y: auto;
 }
 
-/* Resource Card */
+/* Resource Card - thin line border */
 .resource-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  background: rgba(22, 27, 34, 0.6);
-  border: 1px solid #30363d;
+  background: transparent;
+  border: 1px solid var(--ai-divider);
   border-radius: 10px;
   transition: all 0.15s ease;
 }
 
 .resource-card:hover {
-  border-color: #58a6ff;
-  background: rgba(88, 166, 255, 0.05);
+  border-color: rgba(88, 166, 255, 0.2);
 }
 
 .resource-header {
@@ -711,11 +710,17 @@ onMounted(async () => {
   color: #6e7681;
 }
 
-/* Resource Actions */
+/* Resource Actions - show on hover */
 .resource-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.resource-card:hover .resource-actions {
+  opacity: 1;
 }
 
 .action-btn {

@@ -190,7 +190,7 @@ slides.post('/generate', zValidator('json', GenerateSlidesSchema), async (c) => 
   }
 
   try {
-    const slides = await provider.generateSlideImages(noteContent, {
+    const slides = await provider.generateSlideImages(validatedContent, {
       maxSlides: body.maxSlides,
       theme: body.theme,
     })

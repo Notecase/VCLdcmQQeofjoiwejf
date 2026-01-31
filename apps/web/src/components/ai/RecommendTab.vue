@@ -718,14 +718,14 @@ function isSaved(type: RecommendationType): boolean {
   gap: 16px;
 }
 
-/* Analysis Header */
+/* Analysis Header - borderless */
 .analysis-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 8px 0 20px;
   margin-bottom: 8px;
-  border-bottom: 1px solid #30363d;
+  border-bottom: none;
 }
 
 .analysis-label {
@@ -969,23 +969,41 @@ function isSaved(type: RecommendationType): boolean {
 .recommendations-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
 }
 
-/* Cards */
+/* Cards - borderless with dividers */
 .recommendation-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 20px 0;
   text-align: left;
   transition: opacity 0.2s;
 }
 
+/* Subtle divider between cards */
+.recommendation-card + .recommendation-card {
+  border-top: 1px solid var(--ai-divider);
+}
+
 .recommendation-card.is-loading {
   opacity: 0.7;
+}
+
+/* Card with data - subtle highlight */
+.recommendation-card.has-data {
+  background: rgba(63, 185, 80, 0.03);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 4px -12px;
+  border-top: none;
+}
+
+.recommendation-card.has-data + .recommendation-card {
+  border-top: none;
 }
 
 .recommendation-card.has-data .card-icon {
@@ -1053,17 +1071,28 @@ function isSaved(type: RecommendationType): boolean {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 0;
   margin-top: 4px;
 }
 
+/* Tags - minimal style with dot separators */
 .card-tag {
-  font-size: 12px;
+  font-size: 11px;
   color: #8b949e;
   background: transparent;
-  padding: 4px 12px;
-  border-radius: 16px;
-  border: 1px solid #30363d;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  opacity: 0.6;
+}
+
+.card-tag::before {
+  content: ' · ';
+  opacity: 0.4;
+}
+
+.card-tag:first-child::before {
+  content: '';
 }
 
 .card-actions {

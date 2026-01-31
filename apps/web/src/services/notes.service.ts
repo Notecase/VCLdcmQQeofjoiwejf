@@ -148,6 +148,7 @@ export async function updateNote(
 
   const updateData: Record<string, unknown> = {}
 
+
   if (data.title !== undefined) updateData.title = data.title
   if (data.content !== undefined) updateData.content = data.content
   if (data.word_count !== undefined) updateData.word_count = data.word_count

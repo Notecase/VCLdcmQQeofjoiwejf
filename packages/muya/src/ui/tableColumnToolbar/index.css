@@ -56,38 +56,38 @@
 
 .mu-table-column-tools li.item .icon-wrapper {
   display: flex;
+  align-items: center;
+  justify-content: center;
   width: 14px;
   height: 14px;
 }
 
 .mu-table-column-tools li.item .icon-wrapper i.icon {
-  position: relative;
-
-  display: inline-block;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-
-  color: var(--icon-color);
-
-  transition: all 0.25s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
 }
 
+/* Icon using mask-image approach - works in all browsers */
 .mu-table-column-tools li.item .icon-wrapper i.icon > i[class^='icon-'] {
-  position: relative;
-  left: -14px;
-
-  display: inline-block;
-  width: 100%;
-  height: 100%;
-
-  filter: drop-shadow(14px 0 currentcolor);
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: var(--icon-color);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
-.mu-table-column-tools li.item.active .icon-wrapper i.icon {
-  color: var(--theme-color);
+.mu-table-column-tools li.item.active .icon-wrapper i.icon > i[class^='icon-'] {
+  background-color: var(--theme-color);
 }
 
-.mu-table-column-tools li.item.delete .icon-wrapper i.icon {
-  color: var(--delete-color);
+.mu-table-column-tools li.item.delete .icon-wrapper i.icon > i[class^='icon-'] {
+  background-color: var(--delete-color);
 }

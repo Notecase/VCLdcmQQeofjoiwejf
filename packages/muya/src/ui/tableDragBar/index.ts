@@ -9,7 +9,7 @@ import { isMouseEvent, throttle } from '../../utils'
 import BaseFloat from '../baseFloat'
 import './index.css'
 
-type BarType = 'bottom' | 'right'
+type BarType = 'bottom' | 'left'
 
 interface IDragInfo {
   table: Table
@@ -56,7 +56,7 @@ function getDragCells(tableBlock: Table, barType: BarType, index: number) {
   const table = tableBlock.firstChild!.domNode!
   const dragCells = []
 
-  if (barType === 'right') {
+  if (barType === 'left') {
     const row = [...table.querySelectorAll('tr')][index]
     dragCells.push(...row.children)
   } else {
@@ -72,8 +72,8 @@ function getDragCells(tableBlock: Table, barType: BarType, index: number) {
 
 const OFFSET = 20
 
-const rightOptions = {
-  placement: 'right' as const,
+const leftOptions = {
+  placement: 'left' as const,
   offsetOptions: {
     mainAxis: 0,
     crossAxis: 0,
@@ -98,7 +98,7 @@ export class TableDragBar extends BaseFloat {
   private mouseTimer: ReturnType<typeof setTimeout> | null = null
   private dragEventIds: string[] = []
   private isDragTableBar: boolean = false
-  private barType: 'bottom' | 'right' | null = null
+  private barType: 'bottom' | 'left' | null = null
   private dragInfo: IDragInfo | null = null
 
   constructor(muya: Muya, options = {}) {
@@ -121,7 +121,7 @@ export class TableDragBar extends BaseFloat {
       const { x, y } = event
       const els = [...document.elementsFromPoint(x, y)]
       const aboveEls = [...document.elementsFromPoint(x, y - OFFSET)]
-      const leftEls = [...document.elementsFromPoint(x - OFFSET, y)]
+      const rightEls = [...document.elementsFromPoint(x + OFFSET, y)]
 
       const hasTableCell = (els: Element[]) =>
         els.some(
@@ -131,15 +131,15 @@ export class TableDragBar extends BaseFloat {
       if (
         !this.isDragTableBar &&
         !hasTableCell(els) &&
-        (hasTableCell(aboveEls) || hasTableCell(leftEls))
+        (hasTableCell(aboveEls) || hasTableCell(rightEls))
       ) {
-        const tableCellEl = [...aboveEls, ...leftEls].find(
+        const tableCellEl = [...aboveEls, ...rightEls].find(
           (ele) => ele[BLOCK_DOM_PROPERTY] && ele[BLOCK_DOM_PROPERTY].blockName === 'table.cell'
         )
         const cellBlock = tableCellEl![BLOCK_DOM_PROPERTY] as TableBodyCell
-        const barType = hasTableCell(aboveEls) ? 'bottom' : 'right'
+        const barType = hasTableCell(aboveEls) ? 'bottom' : 'left'
 
-        this.options = Object.assign({}, barType === 'right' ? rightOptions : bottomOptions)
+        this.options = Object.assign({}, barType === 'left' ? leftOptions : bottomOptions)
         this.barType = barType
         this.block = cellBlock
         this.show(tableCellEl!)
@@ -172,17 +172,16 @@ export class TableDragBar extends BaseFloat {
     if (this.mouseTimer) {
       clearTimeout(this.mouseTimer)
       this.mouseTimer = null
-      if (barType === 'right') {
-        eventCenter.emit('muya-table-bar', {
-          reference: {
-            getBoundingClientRect: () => container!.getBoundingClientRect(),
-          },
-          tableInfo: {
-            barType,
-          },
-          block: this.block,
-        })
-      }
+      // Emit for both row (left) and column (bottom) bars to show the menu
+      eventCenter.emit('muya-table-bar', {
+        reference: {
+          getBoundingClientRect: () => container!.getBoundingClientRect(),
+        },
+        tableInfo: {
+          barType,
+        },
+        block: this.block,
+      })
     }
   }
 

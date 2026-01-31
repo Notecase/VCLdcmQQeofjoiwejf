@@ -204,8 +204,9 @@ export class InlineFormatToolbar extends BaseFloat {
         'i.icon-inner',
         {
           style: {
-            background: `url(${icon.icon}) no-repeat`,
-            'background-size': '100%',
+            // Use mask-image for cross-browser colored icons
+            '-webkit-mask-image': `url(${icon.icon})`,
+            'mask-image': `url(${icon.icon})`,
           },
         },
         ''

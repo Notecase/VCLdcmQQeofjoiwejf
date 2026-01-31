@@ -1,27 +1,33 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useEditorStore, usePreferencesStore, useAuthStore } from '@/stores'
-import * as attachmentsService from '@/services/attachments.service'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useEditorStore, usePreferencesStore } from '@/stores'
+import { useAIStore } from '@/stores/ai'
+import InlineDiffOverlay from '@/components/ai/InlineDiffOverlay.vue'
+import InlineDiffController from '@/components/ai/InlineDiffController.vue'
+// InlineDiffRenderer is deprecated - replaced by InlineDiffController for true Muya integration
 
-// Import Muya and plugins
-import Muya from '@/muya/lib'
-import TablePicker from '@/muya/lib/ui/tablePicker'
-import QuickInsert from '@/muya/lib/ui/quickInsert'
-import CodePicker from '@/muya/lib/ui/codePicker'
-import EmojiPicker from '@/muya/lib/ui/emojiPicker'
-import ImagePathPicker from '@/muya/lib/ui/imagePicker'
-import ImageSelector from '@/muya/lib/ui/imageSelector'
-import ImageToolbar from '@/muya/lib/ui/imageToolbar'
-import Transformer from '@/muya/lib/ui/transformer'
-import FormatPicker from '@/muya/lib/ui/formatPicker'
-import LinkTools from '@/muya/lib/ui/linkTools'
-import FootnoteTool from '@/muya/lib/ui/footnoteTool'
-import TableBarTools from '@/muya/lib/ui/tableTools'
-import FrontMenu from '@/muya/lib/ui/frontMenu'
+// Import Muya and plugins from TS package
+import {
+  Muya,
+  ParagraphFrontButton,
+  ParagraphFrontMenu,
+  ParagraphQuickInsertMenu,
+  CodeBlockLanguageSelector,
+  EmojiSelector,
+  ImageToolBar,
+  ImageResizeBar,
+  InlineFormatToolbar,
+  TableColumnToolbar,
+  TableRowColumMenu,
+  TableDragBar,
+  TablePicker,
+  LinkTools,
+  FootnoteTool,
+} from '@inkdown/muya'
 
 // Import Muya styles directly from the package
 import '@inkdown/muya/assets/styles/index.css'
-import '@/muya/themes/default.css'
+import '@/assets/themes/editor/default.css'
 
 // Import KaTeX CSS for math rendering
 import 'katex/dist/katex.min.css'
@@ -32,53 +38,75 @@ import 'prismjs/themes/prism.css'
 // Platform utilities
 import { openExternal } from '@/utils/platform'
 
+// Interface for TOC heading items
+interface TocItem {
+  lvl: number
+  content: string
+  slug: string
+}
+
+// Helper function to create a slug from heading text
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special chars
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Remove consecutive hyphens
+    .trim()
+}
+
+// Helper function to extract headings from Muya state
+function extractHeadingsFromState(state: any[]): TocItem[] {
+  const headings: TocItem[] = []
+
+  function traverse(blocks: any[]) {
+    for (const block of blocks) {
+      // Check for ATX heading (# Heading)
+      if (block.name === 'atx-heading') {
+        const text = block.text?.replace(/^#+\s*/, '') || '' // Remove leading # markers
+        headings.push({
+          lvl: block.meta?.level || 1,
+          content: text,
+          slug: slugify(text),
+        })
+      }
+      // Check for Setext heading (underlined heading)
+      else if (block.name === 'setext-heading') {
+        headings.push({
+          lvl: block.meta?.level || 1,
+          content: block.text || '',
+          slug: slugify(block.text || ''),
+        })
+      }
+      // Recursively check children (for block quotes, lists, etc.)
+      else if (block.children && Array.isArray(block.children)) {
+        traverse(block.children)
+      }
+    }
+  }
+
+  traverse(state)
+  return headings
+}
+
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
-const authStore = useAuthStore()
+const aiStore = useAIStore()
 
 const editorRef = ref<HTMLElement>()
-let muyaInstance: any = null
+let muyaInstance: InstanceType<typeof Muya> | null = null
 const autoSaveTimer = ref<ReturnType<typeof setTimeout>>()
+const tocUpdateTimer = ref<ReturnType<typeof setTimeout>>()
 const isEditorReady = ref(false)
 const isUploadingImage = ref(false)
 
-/**
- * Handle image upload from paste/drop
- * Returns the URL to use in the editor
- */
-async function handleImageUpload(file: File): Promise<string> {
-  if (!authStore.user?.id) {
-    console.warn('Cannot upload image: user not authenticated')
-    return URL.createObjectURL(file) // Fallback to local URL
-  }
+// AI Edit overlay state
+const showDiffOverlay = computed(() => aiStore.activeEdit !== null)
+const diffViewMode = computed(() => aiStore.diffViewMode)
 
-  isUploadingImage.value = true
-
-  try {
-    const noteId = editorStore.currentDocument?.id
-    const result = await attachmentsService.uploadAttachment(file, authStore.user.id, noteId)
-
-    if (result.error) {
-      console.error('Failed to upload image:', result.error)
-      return URL.createObjectURL(file) // Fallback to local URL
-    }
-
-    const attachment = Array.isArray(result.data) ? result.data[0] : result.data
-    if (attachment) {
-      // Get signed URL for the uploaded image
-      const urlResult = await attachmentsService.getAttachmentUrl(attachment.storage_path)
-      if (urlResult.url) {
-        return urlResult.url
-      }
-    }
-
-    return URL.createObjectURL(file) // Fallback to local URL
-  } catch (error) {
-    console.error('Error uploading image:', error)
-    return URL.createObjectURL(file) // Fallback to local URL
-  } finally {
-    isUploadingImage.value = false
-  }
+// Toggle between inline and sidebar diff views
+function toggleDiffView() {
+  aiStore.toggleDiffViewMode()
 }
 
 // Register Muya plugins once
@@ -86,29 +114,41 @@ let pluginsRegistered = false
 function registerPlugins() {
   if (pluginsRegistered) return
 
+  // Front button (ghost icon) and menu (Turn Into dropdown)
+  Muya.use(ParagraphFrontButton)
+  Muya.use(ParagraphFrontMenu)
+
+  // Quick insert menu (triggered by /)
+  Muya.use(ParagraphQuickInsertMenu)
+
+  // Code block language selector
+  Muya.use(CodeBlockLanguageSelector)
+
+  // Emoji selector
+  Muya.use(EmojiSelector)
+
+  // Image tools
+  Muya.use(ImageToolBar)
+  Muya.use(ImageResizeBar)
+
+  // Inline format toolbar (bold, italic, etc.)
+  Muya.use(InlineFormatToolbar)
+
+  // Table tools
   Muya.use(TablePicker)
-  Muya.use(QuickInsert)
-  Muya.use(CodePicker)
-  Muya.use(EmojiPicker)
-  Muya.use(ImagePathPicker)
-  Muya.use(ImageSelector, {
-    unsplashAccessKey: import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '',
-    // Image upload handler for paste/drop
-    imageAction: async (file: File) => {
-      return await handleImageUpload(file)
-    },
-  })
-  Muya.use(Transformer)
-  Muya.use(ImageToolbar)
-  Muya.use(FormatPicker)
-  Muya.use(FrontMenu)
+  Muya.use(TableColumnToolbar)
+  Muya.use(TableRowColumMenu)
+  Muya.use(TableDragBar)
+
+  // Link tools
   Muya.use(LinkTools, {
     jumpClick: (linkInfo: { href: string }) => {
       openExternal(linkInfo.href)
     },
   })
+
+  // Footnote tool
   Muya.use(FootnoteTool)
-  Muya.use(TableBarTools)
 
   pluginsRegistered = true
 }
@@ -174,24 +214,31 @@ function initializeMuya() {
     })
   }
 
-  // Handle content changes
-  muyaInstance.on('change', (changes: any) => {
-    const { markdown, wordCount: wc, cursor, toc } = changes
+  // Handle content changes - TS Muya uses 'json-change' event
+  muyaInstance.on('json-change', () => {
+    const markdown = muyaInstance?.getMarkdown() || ''
+    const state = muyaInstance?.getState() || []
+
+    // Calculate word count from markdown
+    const words = markdown.split(/\s+/).filter((w: string) => w.length > 0).length
+    const characters = markdown.length
+    const paragraphs = state.length
 
     // Update store
     editorStore.updateContent(markdown, {
-      words: wc?.word || 0,
-      characters: wc?.character || 0,
-      paragraphs: wc?.paragraph || 0,
+      words,
+      characters,
+      paragraphs,
     })
 
-    if (cursor) {
-      editorStore.updateCursor(cursor)
+    // Debounce TOC update to avoid excessive store updates
+    if (tocUpdateTimer.value) {
+      clearTimeout(tocUpdateTimer.value)
     }
-
-    if (toc) {
+    tocUpdateTimer.value = setTimeout(() => {
+      const toc = extractHeadingsFromState(state)
       editorStore.updateToc(toc)
-    }
+    }, 500)
 
     // Auto-save with debounce
     if (autoSaveTimer.value) {
@@ -205,23 +252,19 @@ function initializeMuya() {
     }
   })
 
-  // Handle link clicks
-  muyaInstance.on('format-click', ({ event, formatType, data }: any) => {
-    const ctrlOrMeta =
-      (navigator.platform.includes('Mac') && event.metaKey) ||
-      (!navigator.platform.includes('Mac') && event.ctrlKey)
-
-    if (formatType === 'link' && ctrlOrMeta && data?.href) {
-      openExternal(data.href)
-    }
-  })
-
   // Handle selection changes
-  muyaInstance.on('selectionChange', () => {
+  muyaInstance.on('selection-change', () => {
     // Could dispatch to store for toolbar state
   })
 
   isEditorReady.value = true
+
+  // Extract initial TOC after editor is ready
+  nextTick(() => {
+    const state = muyaInstance?.getState() || []
+    const toc = extractHeadingsFromState(state)
+    editorStore.updateToc(toc)
+  })
 }
 
 // Watch for document changes
@@ -231,6 +274,13 @@ watch(
     if (newDoc && muyaInstance && newDoc.id !== oldDoc?.id) {
       // Switch to new document content, restoring cursor position if available
       muyaInstance.setMarkdown(newDoc.content, newDoc.editor_state?.cursor)
+
+      // Update TOC after document switch
+      nextTick(() => {
+        const state = muyaInstance?.getState() || []
+        const toc = extractHeadingsFromState(state)
+        editorStore.updateToc(toc)
+      })
     }
   }
 )
@@ -314,6 +364,10 @@ onUnmounted(() => {
     clearTimeout(autoSaveTimer.value)
   }
 
+  if (tocUpdateTimer.value) {
+    clearTimeout(tocUpdateTimer.value)
+  }
+
   if (muyaInstance) {
     try {
       muyaInstance.destroy()
@@ -323,6 +377,31 @@ onUnmounted(() => {
     muyaInstance = null
   }
 })
+
+// AI Edit handlers
+function handleDiffApply(content: string) {
+  if (muyaInstance) {
+    // Set the new content
+    muyaInstance.setMarkdown(content)
+
+    // Trigger save
+    editorStore.updateContent(content, {
+      words: 0,
+      characters: content.length,
+      paragraphs: content.split('\n\n').length,
+    })
+
+    if (preferencesStore.autoSave) {
+      editorStore.saveDocument()
+    }
+  }
+}
+
+function handleDiffDiscard() {
+  // The store already handles clearing the active edit
+  // Just reset focus to the editor
+  editorRef.value?.focus()
+}
 
 // Expose Muya instance for parent components (e.g., format toolbar)
 const getMuya = () => muyaInstance
@@ -336,18 +415,83 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
       'typewriter-mode': preferencesStore.typewriter,
       'focus-mode': preferencesStore.focus,
       'source-mode': preferencesStore.sourceCode,
+      'has-diff-overlay': showDiffOverlay && diffViewMode === 'sidebar',
+      'has-inline-diff': showDiffOverlay && diffViewMode === 'inline',
     }"
     :style="{
       '--editor-font-size': `${preferencesStore.fontSize}px`,
       '--editor-line-height': preferencesStore.lineHeight,
     }"
   >
+    <!-- View toggle button (when diff is active) -->
+    <button
+      v-if="showDiffOverlay"
+      class="diff-view-toggle"
+      :title="diffViewMode === 'inline' ? 'Switch to sidebar view' : 'Switch to inline view'"
+      @click="toggleDiffView"
+    >
+      <svg
+        v-if="diffViewMode === 'sidebar'"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="2"
+        />
+        <path d="M9 3v18" />
+      </svg>
+      <svg
+        v-else
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="2"
+        />
+        <path d="M3 9h18" />
+        <path d="M3 15h18" />
+      </svg>
+      {{ diffViewMode === 'inline' ? 'Sidebar' : 'Inline' }}
+    </button>
+
     <!-- Muya Editor Container -->
     <div
       ref="editorRef"
       class="muya-editor"
       :dir="preferencesStore.textDirection"
     ></div>
+
+    <!-- True Inline Diff Controller (Muya-integrated approach) -->
+    <InlineDiffController
+      v-if="showDiffOverlay && diffViewMode === 'inline'"
+      :get-muya="getMuya"
+      @apply="handleDiffApply"
+      @discard="handleDiffDiscard"
+    />
+
+    <!-- Sidebar Diff Overlay (fallback view) -->
+    <InlineDiffOverlay
+      v-if="showDiffOverlay && diffViewMode === 'sidebar'"
+      :editor-element="editorRef"
+      @apply="handleDiffApply"
+      @discard="handleDiffDiscard"
+    />
 
     <!-- Loading state -->
     <div
@@ -367,6 +511,54 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   flex-direction: column;
   overflow: hidden;
   background: transparent;
+  position: relative;
+}
+
+/* When sidebar diff overlay is shown, make room for it */
+.editor-area.has-diff-overlay .muya-editor {
+  margin-right: 400px;
+}
+
+/* When inline diff is shown, no margin needed but add padding for suggestions */
+.editor-area.has-inline-diff .muya-editor {
+  padding-bottom: 100px; /* Space for floating action bar */
+}
+
+/* Diff view toggle button */
+.diff-view-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--float-btn-bg, rgba(22, 27, 34, 0.9));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color, rgba(48, 54, 61, 0.8));
+  border-radius: 8px;
+  color: var(--text-color-secondary, #8b949e);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.diff-view-toggle:hover {
+  background: var(--float-btn-bg-hover, rgba(33, 38, 45, 0.95));
+  color: var(--text-color, #e6edf3);
+  border-color: var(--border-color-hover, #484f58);
+}
+
+.diff-view-toggle svg {
+  opacity: 0.8;
+}
+
+/* When in sidebar mode, position toggle away from sidebar */
+.editor-area.has-diff-overlay .diff-view-toggle {
+  right: 412px;
 }
 
 .muya-editor {
@@ -388,8 +580,8 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   outline: none;
 }
 
-/* Muya editor overrides */
-.muya-editor :deep(.ag-container-block) {
+/* Muya editor overrides - TS Muya uses 'mu-' prefix */
+.muya-editor :deep(.mu-container-block) {
   max-width: 100%;
   width: 100%;
 }
@@ -452,7 +644,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Focus mode */
-.focus-mode .muya-editor :deep(.ag-paragraph:not(.ag-active)) {
+.focus-mode .muya-editor :deep(.mu-paragraph:not(.mu-active)) {
   opacity: 0.3;
 }
 
@@ -495,19 +687,19 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * ============================================ */
 
 /* Inline math container - keep inline with text */
-.muya-editor :deep(span.ag-math) {
+.muya-editor :deep(span.mu-math) {
   display: inline !important;
   vertical-align: baseline;
   font-family: inherit;
 }
 
 /* Inline math when hidden (showing rendered output) */
-.muya-editor :deep(span.ag-math.ag-hide) {
+.muya-editor :deep(span.mu-math.mu-hide) {
   display: inline !important;
 }
 
 /* Inline math rendered output - stay inline, NO background (simple like text) */
-.muya-editor :deep(span.ag-math.ag-hide > .ag-math-render) {
+.muya-editor :deep(span.mu-math.mu-hide > .mu-math-render) {
   display: inline !important;
   position: relative !important;
   top: 0 !important;
@@ -521,14 +713,14 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Inline KaTeX styling */
-.muya-editor :deep(span.ag-math.ag-hide > .ag-math-render .katex) {
+.muya-editor :deep(span.mu-math.mu-hide > .mu-math-render .katex) {
   font-size: 1em;
   vertical-align: baseline;
   white-space: nowrap;
 }
 
 /* When editing inline math (not hidden) - show input with popup preview */
-.muya-editor :deep(span.ag-math:not(.ag-hide) > .ag-math-render) {
+.muya-editor :deep(span.mu-math:not(.mu-hide) > .mu-math-render) {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -541,13 +733,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Source text when editing */
-.muya-editor :deep(span.ag-math:not(.ag-hide) > .ag-math-text) {
+.muya-editor :deep(span.mu-math:not(.mu-hide) > .mu-math-text) {
   padding: 2px 4px;
   background: rgba(100, 100, 100, 0.15);
   border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9em;
-  color: var(--editorColor); /* Changed from --themeColor for better contrast */
+  color: var(--editorColor);
 }
 
 /* ============================================
@@ -561,7 +753,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   background: transparent;
 }
 
-.muya-editor :deep(pre.ag-multiple-math) {
+.muya-editor :deep(pre.mu-multiple-math) {
   margin: 0;
   padding: 12px;
   background: var(--codeBlockBgColor, rgba(0, 0, 0, 0.2));
@@ -569,17 +761,17 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Block math preview container */
-.muya-editor :deep(.ag-container-preview) {
+.muya-editor :deep(.mu-container-preview) {
   padding: 8px;
   text-align: center;
 }
 
-.muya-editor :deep(.ag-container-preview .katex-display) {
+.muya-editor :deep(.mu-container-preview .katex-display) {
   margin: 0;
   padding: 8px 0;
 }
 
-.muya-editor :deep(.ag-container-preview .katex) {
+.muya-editor :deep(.mu-container-preview .katex) {
   font-size: 1.2em;
 }
 
@@ -587,7 +779,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * CODE BLOCKS - improved styling
  * ============================================ */
 
-.muya-editor :deep(pre.ag-fence-code) {
+.muya-editor :deep(pre.mu-fence-code) {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color, #333);
   border-radius: 8px;
@@ -596,13 +788,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   overflow-x: auto;
 }
 
-.muya-editor :deep(pre.ag-fence-code code) {
+.muya-editor :deep(pre.mu-fence-code code) {
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   font-size: 14px;
   line-height: 1.5;
 }
 
-.muya-editor :deep(.ag-language-input) {
+.muya-editor :deep(.mu-language-input) {
   font-size: 12px;
   color: var(--text-color-secondary, #888);
   background: transparent;
@@ -686,13 +878,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * TASK LISTS
  * ============================================ */
 
-.muya-editor :deep(li.ag-task-list-item) {
+.muya-editor :deep(li.mu-task-list-item) {
   list-style-type: none;
   position: relative;
   margin-left: -1.2em;
 }
 
-.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']) {
+.muya-editor :deep(li.mu-task-list-item > input[type='checkbox']) {
   margin-right: 8px;
   cursor: pointer;
 }
@@ -701,14 +893,14 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * FOOTNOTES
  * ============================================ */
 
-.muya-editor :deep(.ag-inline-footnote-identifier) {
+.muya-editor :deep(.mu-inline-footnote-identifier) {
   vertical-align: super;
   font-size: 0.75em;
   color: var(--primary-color, #65b9f4);
   cursor: pointer;
 }
 
-.muya-editor :deep(.ag-inline-footnote-identifier:hover) {
+.muya-editor :deep(.mu-inline-footnote-identifier:hover) {
   text-decoration: underline;
 }
 
@@ -717,13 +909,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * ============================================ */
 
 .muya-editor :deep(a),
-.muya-editor :deep(.ag-link) {
+.muya-editor :deep(.mu-link) {
   color: var(--primary-color, #65b9f4);
   text-decoration: none;
 }
 
 .muya-editor :deep(a:hover),
-.muya-editor :deep(.ag-link:hover) {
+.muya-editor :deep(.mu-link:hover) {
   text-decoration: underline;
 }
 
@@ -742,89 +934,27 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * IMAGES
  * ============================================ */
 
-.muya-editor :deep(.ag-inline-image img) {
+.muya-editor :deep(.mu-inline-image img) {
   max-width: 100%;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
- * SAFARI ICON FIXES - Override drop-shadow filter
+ * FRONT BUTTON & MENU STYLING
  * ============================================ */
 
-/* 
- * The Muya icon system uses a trick where:
- * 1. Icon text is positioned at left: -16px (hidden)
- * 2. drop-shadow(16px 0) creates a visible copy
- * Safari doesn't support this well, so we need to:
- * - Disable the filter
- * - Position the icon content directly
- * - Make sure overflow is visible
- */
-
-/* Front icon container - make sure it's visible */
-.muya-editor :deep(.ag-front-icon) {
-  overflow: visible !important;
-  opacity: 0.6 !important;
+/* Front button icon fixes */
+.muya-editor :deep(.mu-front-button) {
+  opacity: 0.6;
 }
 
-.muya-editor :deep(.ag-front-icon:hover) {
-  opacity: 1 !important;
-  background: var(--selectionColor, rgba(100, 100, 200, 0.2)) !important;
-}
-
-/* Icon wrapper - visible overflow */
-.muya-editor :deep(.ag-front-icon i.icon) {
-  overflow: visible !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* Icon content - position it directly, no filter */
-.muya-editor :deep(.ag-front-icon i.icon > i[class^='icon-']) {
-  filter: none !important;
-  -webkit-filter: none !important;
-  left: 0 !important;
-  position: relative !important;
-  display: block !important;
-  overflow: visible !important;
-  color: var(--iconColor, #888) !important;
-}
-
-/* Same fix for all other Muya icons */
-.muya-editor :deep(i.icon > i[class^='icon-']),
-:deep(.ag-front-menu i.icon > i[class^='icon-']),
-:deep(.ag-tool-bar i.icon > i[class^='icon-']),
-:deep(.ag-container-icon i.icon > i[class^='icon-']) {
-  filter: none !important;
-  -webkit-filter: none !important;
-  left: 0 !important;
-  position: relative !important;
-  display: block !important;
-  overflow: visible !important;
-}
-
-/* General icon wrapper styling */
-:deep(.ag-front-menu li.item .icon-wrapper) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
-  margin-right: 8px;
-  overflow: visible;
-}
-
-:deep(.ag-front-menu li.item .icon-wrapper img) {
-  width: 16px;
-  height: 16px;
-  opacity: 0.8;
+.muya-editor :deep(.mu-front-button:hover) {
+  opacity: 1;
 }
 
 /* Front menu styling */
-:deep(.ag-front-menu) {
+:deep(.mu-front-menu) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
   border-radius: 6px !important;
@@ -832,34 +962,27 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   color: var(--editorColor, #d4d4d4) !important;
 }
 
-:deep(.ag-front-menu ul li:hover) {
+:deep(.mu-front-menu ul li:hover) {
   background: var(--floatHoverColor, rgba(255, 255, 255, 0.08)) !important;
 }
 
-:deep(.ag-front-menu ul li > span) {
+:deep(.mu-front-menu ul li > span) {
   color: var(--editorColor, #d4d4d4) !important;
 }
 
-:deep(.ag-front-menu .submenu) {
-  background: var(--floatBgColor, #2d2d30) !important;
-  border: 1px solid var(--floatBorderColor, #454545) !important;
-}
-
 /* ============================================
- * CHECKBOX - Task List Item Fixes (MarkText Style)
- * Muya uses ::before for the checkbox shape
- * We must override ::before to make it SQUARE, not circular
+ * CHECKBOX - Task List Item Fixes
  * ============================================ */
 
 /* Container positioning */
-.muya-editor :deep(li.ag-task-list-item) {
+.muya-editor :deep(li.mu-task-list-item) {
   position: relative;
   list-style-type: none;
   padding-left: 8px;
 }
 
 /* Hide the actual input - Muya uses ::before/::after */
-.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']) {
+.muya-editor :deep(li.mu-task-list-item > input[type='checkbox']) {
   -webkit-appearance: none;
   appearance: none;
   position: absolute;
@@ -873,13 +996,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* OVERRIDE ::before - Make it SQUARE (not circle) */
-.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']::before) {
+.muya-editor :deep(li.mu-task-list-item > input[type='checkbox']::before) {
   content: '' !important;
   width: 18px !important;
   height: 18px !important;
   display: inline-block !important;
   border: 2px solid var(--editorColor50, rgba(128, 128, 128, 0.5)) !important;
-  border-radius: 3px !important; /* SQUARE with slight rounding, NOT 50% circle */
+  border-radius: 3px !important;
   background-color: var(--editorBgColor, #1e1e1e) !important;
   position: absolute !important;
   top: -2px !important;
@@ -889,19 +1012,19 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Hover state */
-.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']:hover::before) {
+.muya-editor :deep(li.mu-task-list-item > input[type='checkbox']:hover::before) {
   border-color: #6b8a73 !important;
 }
 
 /* CHECKED state - Sage green background */
-.muya-editor :deep(li.ag-task-list-item > input.ag-checkbox-checked::before) {
+.muya-editor :deep(li.mu-task-list-item > input.mu-checkbox-checked::before) {
   background-color: #6b8a73 !important;
   border-color: #6b8a73 !important;
   box-shadow: none !important;
 }
 
 /* Checkmark styling */
-.muya-editor :deep(li.ag-task-list-item > input[type='checkbox']::after) {
+.muya-editor :deep(li.mu-task-list-item > input[type='checkbox']::after) {
   content: '' !important;
   transform: rotate(-45deg) scale(0) !important;
   width: 8px !important;
@@ -918,17 +1041,17 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Checkmark visible when checked */
-.muya-editor :deep(li.ag-task-list-item > input.ag-checkbox-checked::after) {
+.muya-editor :deep(li.mu-task-list-item > input.mu-checkbox-checked::after) {
   transform: rotate(-45deg) scale(1) !important;
 }
 
 /* Strikethrough text when checked */
-.muya-editor :deep(li.ag-task-list-item > input.ag-checkbox-checked ~ *) {
+.muya-editor :deep(li.mu-task-list-item > input.mu-checkbox-checked ~ *) {
   color: var(--editorColor50, rgba(128, 128, 128, 0.5)) !important;
 }
 
 /* ============================================
- * TABLE - Improved styling
+ * TABLE STYLING
  * ============================================ */
 
 .muya-editor :deep(table) {
@@ -938,13 +1061,11 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   background: transparent;
 }
 
-/* Let Muya's ::before pseudo-element handle borders - no direct cell borders */
 .muya-editor :deep(table th),
 .muya-editor :deep(table td) {
-  padding: 6px 13px; /* Match MarkText padding */
+  padding: 6px 13px;
   text-align: left;
-  position: relative; /* Required for ::before border system */
-  /* NO border property - Muya uses ::before for borders */
+  position: relative;
 }
 
 .muya-editor :deep(table th) {
@@ -957,20 +1078,20 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 }
 
 /* Table toolbar */
-.muya-editor :deep(.ag-tool-bar) {
+.muya-editor :deep(.mu-tool-bar) {
   background: var(--floatBgColor, #2d2d30);
   border: 1px solid var(--floatBorderColor, #454545);
   border-radius: 4px;
   padding: 4px;
 }
 
-.muya-editor :deep(.ag-tool-bar ul li) {
+.muya-editor :deep(.mu-tool-bar ul li) {
   background: transparent;
   border-radius: 4px;
   color: var(--iconColor, #ccc);
 }
 
-.muya-editor :deep(.ag-tool-bar ul li:hover) {
+.muya-editor :deep(.mu-tool-bar ul li:hover) {
   background: var(--floatHoverColor, rgba(255, 255, 255, 0.1));
 }
 
@@ -978,96 +1099,24 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * QUICK INSERT MENU
  * ============================================ */
 
-:deep(.ag-float-wrapper) {
+:deep(.mu-float-wrapper) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
   border-radius: 6px !important;
   box-shadow: var(--floatShadow, 0 4px 16px rgba(0, 0, 0, 0.4)) !important;
 }
 
-/* Quick Insert icon fixes - disable filter trick for Safari */
-:deep(.ag-quick-insert .icon-container) {
-  overflow: visible !important;
-}
-
-:deep(.ag-quick-insert .icon-container > i.icon) {
-  overflow: visible !important;
-  opacity: 1 !important;
-}
-
-/* CRITICAL: Fix the filter trick that breaks Safari */
-:deep(.ag-quick-insert .icon-container > i.icon > i[class^='icon-']) {
-  filter: none !important;
-  -webkit-filter: none !important;
-  left: 0 !important;
-  position: relative !important;
-  display: block !important;
-  width: 20px !important;
-  height: 20px !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-}
-
-/* Same fix for ALL Muya components using this icon pattern */
-:deep(.icon-container > i.icon > i[class^='icon-']),
-:deep(.ag-tool-bar .icon-container > i.icon > i[class^='icon-']),
-:deep(.ag-front-menu .icon-wrapper > i.icon > i[class^='icon-']) {
-  filter: none !important;
-  -webkit-filter: none !important;
-  left: 0 !important;
-  position: relative !important;
-}
-
-/* Image picker/selector popup */
-:deep(.ag-image-picker),
-:deep(.ag-image-selector) {
-  background: var(--floatBgColor, #2d2d30) !important;
-  border: 1px solid var(--floatBorderColor, #454545) !important;
-  border-radius: 6px !important;
-}
-
-:deep(.ag-image-picker input),
-:deep(.ag-image-selector input) {
-  background: var(--editorBgColor, #1e1e1e) !important;
-  border: 1px solid var(--floatBorderColor, #454545) !important;
-  color: var(--editorColor, #d4d4d4) !important;
-  border-radius: 4px;
-  padding: 8px 12px;
-}
-
-/* ============================================
- * FRONT ICON (paragraph menu indicator)
- * ============================================ */
-
-.muya-editor :deep(.ag-front-icon) {
-  opacity: 0.5;
-  cursor: pointer;
-  color: var(--iconColor, #ccc);
-  transition: opacity 0.2s;
-}
-
-.muya-editor :deep(.ag-front-icon:hover) {
-  opacity: 1;
-}
-
-/* Add visible icon indicator when hovering */
-.muya-editor :deep(.ag-paragraph:hover .ag-front-icon::before) {
-  content: '⋮';
-  font-size: 14px;
-  color: var(--iconColor, #ccc);
-}
-
 /* ============================================
  * CODE PICKER / LANGUAGE SELECTOR
  * ============================================ */
 
-:deep(.ag-code-picker) {
+:deep(.mu-code-picker) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
   color: var(--editorColor, #d4d4d4) !important;
 }
 
-:deep(.ag-code-picker li:hover) {
+:deep(.mu-code-picker li:hover) {
   background: var(--floatHoverColor, rgba(255, 255, 255, 0.08)) !important;
 }
 
@@ -1075,7 +1124,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * EMOJI PICKER
  * ============================================ */
 
-:deep(.ag-emoji-picker) {
+:deep(.mu-emoji-picker) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
 }
@@ -1084,35 +1133,152 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * TABLE PICKER
  * ============================================ */
 
-:deep(.ag-table-picker) {
+:deep(.mu-table-picker) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
 }
 
-:deep(.ag-table-picker td) {
+:deep(.mu-table-picker td) {
   border: 1px solid var(--floatBorderColor, #454545) !important;
 }
 
-:deep(.ag-table-picker td.selected) {
+:deep(.mu-table-picker td.selected) {
   background: var(--themeColor, #0078d4) !important;
 }
 
 /* ============================================
- * FORMAT PICKER
+ * INLINE DIFF VISUALIZATION
+ * Styles for AI-proposed edits shown inline
  * ============================================ */
 
-:deep(.ag-format-picker) {
+/* Diff highlighting - additions */
+.muya-editor :deep(.mu-diff-addition) {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+  border-radius: 2px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  position: relative;
+  display: inline;
+}
+
+.muya-editor :deep(.mu-diff-addition.pending) {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+
+.muya-editor :deep(.mu-diff-addition.accepted) {
+  background: transparent;
+  color: inherit;
+}
+
+.muya-editor :deep(.mu-diff-addition.rejected) {
+  opacity: 0.4;
+  text-decoration: line-through;
+  text-decoration-color: #f85149;
+}
+
+/* Diff highlighting - deletions */
+.muya-editor :deep(.mu-diff-deletion) {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  border-radius: 2px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  position: relative;
+  display: inline;
+}
+
+.muya-editor :deep(.mu-diff-deletion.pending) {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+  text-decoration: line-through;
+}
+
+.muya-editor :deep(.mu-diff-deletion.accepted) {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.muya-editor :deep(.mu-diff-deletion.rejected) {
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Action button group container */
+.muya-editor :deep(.mu-diff-action-group) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* Action buttons - injected after highlight spans */
+.muya-editor :deep(.mu-diff-action) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  vertical-align: middle;
+  transition:
+    transform 0.1s ease,
+    filter 0.1s ease;
+  line-height: 1;
+}
+
+.muya-editor :deep(.mu-diff-action:hover) {
+  transform: scale(1.15);
+  filter: brightness(1.1);
+}
+
+.muya-editor :deep(.mu-diff-action.accept) {
+  background: #3fb950;
+  color: white;
+}
+
+.muya-editor :deep(.mu-diff-action.reject) {
+  background: #f85149;
+  color: white;
+}
+
+/* Hide action buttons when decision is made */
+.muya-editor :deep(.mu-diff-addition.accepted .mu-diff-action-group),
+.muya-editor :deep(.mu-diff-addition.rejected .mu-diff-action-group),
+.muya-editor :deep(.mu-diff-deletion.accepted .mu-diff-action-group),
+.muya-editor :deep(.mu-diff-deletion.rejected .mu-diff-action-group) {
+  display: none;
+}
+
+/* ============================================
+ * FORMAT PICKER / INLINE TOOLBAR
+ * ============================================ */
+
+:deep(.mu-format-picker),
+:deep(.mu-inline-format-toolbar) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
 }
 
-:deep(.ag-format-picker button) {
+:deep(.mu-format-picker button),
+:deep(.mu-inline-format-toolbar button) {
   color: var(--editorColor, #d4d4d4) !important;
   background: transparent !important;
   border: none !important;
 }
 
-:deep(.ag-format-picker button:hover) {
+:deep(.mu-format-picker button:hover),
+:deep(.mu-inline-format-toolbar button:hover) {
   background: var(--floatHoverColor, rgba(255, 255, 255, 0.1)) !important;
 }
 
@@ -1120,22 +1286,82 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
  * LINK TOOLS POPUP
  * ============================================ */
 
-:deep(.ag-link-tools) {
+:deep(.mu-link-tools) {
   background: var(--floatBgColor, #2d2d30) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
   border-radius: 6px !important;
 }
 
-:deep(.ag-link-tools input) {
+:deep(.mu-link-tools input) {
   background: var(--editorBgColor, #1e1e1e) !important;
   border: 1px solid var(--floatBorderColor, #454545) !important;
   color: var(--editorColor, #d4d4d4) !important;
 }
 
-:deep(.ag-link-tools button) {
+:deep(.mu-link-tools button) {
   background: var(--themeColor, #0078d4) !important;
   color: white !important;
   border: none !important;
   border-radius: 4px !important;
+}
+</style>
+
+<!-- Global styles for Muya float elements (appended to document.body, outside Vue scope) -->
+<style>
+/* ============================================
+ * ICON COLOR FIX FOR MUYA FLOAT ELEMENTS
+ * Float boxes are appended to document.body via BaseFloat,
+ * so we need GLOBAL (non-scoped) styles to override Muya defaults
+ * ============================================ */
+
+/* Dark theme icon colors for all float elements */
+:root[data-theme='dark'] .mu-float-wrapper,
+:root[data-theme='one-dark'] .mu-float-wrapper,
+:root[data-theme='material-dark'] .mu-float-wrapper {
+  --icon-color: rgba(255, 255, 255, 0.7);
+  --editor-color: rgba(255, 255, 255, 0.7);
+  --editor-color-10: rgba(255, 255, 255, 0.1);
+  --editor-color-30: rgba(255, 255, 255, 0.3);
+  --editor-color-50: rgba(255, 255, 255, 0.5);
+  --theme-color: #7c9ef8;
+  --float-bg-color: #3f3f3f;
+  --float-hover-color: rgba(255, 255, 255, 0.08);
+  --float-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --delete-color: #ff6969;
+}
+
+/* Dark theme icon colors for front button (ghost icon next to blocks) */
+:root[data-theme='dark'] .mu-front-button-wrapper,
+:root[data-theme='one-dark'] .mu-front-button-wrapper,
+:root[data-theme='material-dark'] .mu-front-button-wrapper {
+  --icon-color: rgba(255, 255, 255, 0.7);
+  --button-bg-color-hover: linear-gradient(#4a4a4a, #404040);
+  --button-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme icon colors */
+:root[data-theme='light'] .mu-float-wrapper,
+:root[data-theme='ulysses-light'] .mu-float-wrapper,
+:root[data-theme='graphite-light'] .mu-float-wrapper,
+:root[data-theme='cadmium-light'] .mu-float-wrapper {
+  --icon-color: rgba(0, 0, 0, 0.54);
+  --editor-color: rgba(0, 0, 0, 0.7);
+  --editor-color-10: rgba(0, 0, 0, 0.1);
+  --editor-color-30: rgba(0, 0, 0, 0.3);
+  --editor-color-50: rgba(0, 0, 0, 0.5);
+  --theme-color: #7c9ef8;
+  --float-bg-color: #ffffff;
+  --float-hover-color: rgba(0, 0, 0, 0.04);
+  --float-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --delete-color: #f44336;
+}
+
+:root[data-theme='light'] .mu-front-button-wrapper,
+:root[data-theme='ulysses-light'] .mu-front-button-wrapper,
+:root[data-theme='graphite-light'] .mu-front-button-wrapper,
+:root[data-theme='cadmium-light'] .mu-front-button-wrapper {
+  --icon-color: rgba(0, 0, 0, 0.54);
+  --button-bg-color-hover: linear-gradient(#f9f9f9, #f2f2f2);
+  --button-border: 1px solid #dcdfe6;
 }
 </style>

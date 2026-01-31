@@ -104,13 +104,12 @@ async function copyAsMarkdown() {
       >
         <Check
           v-if="copied"
-          :size="14"
+          :size="16"
         />
         <Copy
           v-else
-          :size="14"
+          :size="16"
         />
-        <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
@@ -202,9 +201,9 @@ async function copyAsMarkdown() {
 }
 
 .exercise-item {
-  background: rgba(22, 27, 34, 0.5);
-  border: 1px solid #21262d;
-  border-radius: 8px;
+  background: var(--modal-card-bg);
+  border: 1px solid var(--modal-card-border);
+  border-radius: var(--modal-radius-sm);
   overflow: hidden;
 }
 
@@ -218,7 +217,7 @@ async function copyAsMarkdown() {
 }
 
 .exercise-header:hover {
-  background: rgba(33, 38, 45, 0.5);
+  background: var(--modal-card-bg-hover);
 }
 
 .exercise-bullet {
@@ -237,7 +236,7 @@ async function copyAsMarkdown() {
 
 .exercise-question {
   font-size: 13px;
-  color: #e6edf3;
+  color: var(--text-color);
   line-height: 1.5;
   margin: 0;
 }
@@ -255,7 +254,7 @@ async function copyAsMarkdown() {
 .expand-btn {
   background: none;
   border: none;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -265,7 +264,7 @@ async function copyAsMarkdown() {
 }
 
 .expand-btn:hover {
-  color: #e6edf3;
+  color: var(--text-color);
 }
 
 /* Expanded details */
@@ -274,7 +273,7 @@ async function copyAsMarkdown() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-top: 1px solid #21262d;
+  border-top: 1px solid var(--modal-card-border);
   margin-top: 0;
   padding-top: 16px;
 }
@@ -288,14 +287,14 @@ async function copyAsMarkdown() {
 .detail-label {
   font-size: 10px;
   font-weight: 600;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .detail-text {
   font-size: 13px;
-  color: #c9d1d9;
+  color: var(--text-color);
   line-height: 1.5;
   margin: 0;
 }
@@ -363,31 +362,31 @@ async function copyAsMarkdown() {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
-/* Copy button */
+/* Copy button - icon only, matches close button */
 .copy-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: transparent;
-  color: #8b949e;
-  font-size: 12px;
+  justify-content: center;
+  background: var(--modal-btn-secondary-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-color-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 36px;
 }
 
 .copy-btn:hover {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 .copy-btn.copied {
-  border-color: #3fb950;
   color: #3fb950;
 }
 </style>

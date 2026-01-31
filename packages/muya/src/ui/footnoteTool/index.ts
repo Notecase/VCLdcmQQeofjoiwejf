@@ -120,8 +120,9 @@ class FootnoteTool extends BaseFloat {
         'i.icon-inner',
         {
           style: {
-            background: `url(${WarningIcon}) no-repeat`,
-            'background-size': '100%',
+            // Use mask-image for cross-browser colored icons
+            '-webkit-mask-image': `url(${WarningIcon})`,
+            'mask-image': `url(${WarningIcon})`,
           },
         },
         ''

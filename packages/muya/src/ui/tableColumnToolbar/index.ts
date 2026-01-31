@@ -88,8 +88,9 @@ export class TableColumnToolbar extends BaseFloat {
           'i.icon-inner',
           {
             style: {
-              background: `url(${i.icon}) no-repeat`,
-              'background-size': '100%',
+              // Use mask-image for cross-browser colored icons
+              '-webkit-mask-image': `url(${i.icon})`,
+              'mask-image': `url(${i.icon})`,
             },
           },
           ''

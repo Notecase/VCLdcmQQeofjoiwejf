@@ -16,6 +16,9 @@ export interface IHighlight {
   start: number
   end: number
   active: boolean | undefined
+  // Optional diff visualization fields
+  diffType?: 'addition' | 'deletion'
+  hunkId?: string
 }
 
 export type Labels = Map<

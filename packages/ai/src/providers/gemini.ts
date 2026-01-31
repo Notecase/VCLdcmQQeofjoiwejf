@@ -660,6 +660,9 @@ Only output valid JSON.`
 
     // Convert messages to Gemini format
     for (const msg of messages) {
+      // Skip messages with null or empty content to avoid API errors
+      if (msg.content == null || msg.content === '') continue
+
       const role = msg.role === 'assistant' ? 'model' : 'user'
 
       // Prepend system context to first user message
@@ -672,6 +675,11 @@ Only output valid JSON.`
         role,
         parts: [{ text: content }],
       })
+    }
+
+    // Validate that we have messages to send
+    if (contents.length === 0) {
+      throw new Error('No valid messages to send to API')
     }
 
     return contents

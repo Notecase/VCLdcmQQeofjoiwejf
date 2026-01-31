@@ -115,7 +115,7 @@ function tokenizerFac(
           end: pos + backTo[1].length,
         },
       })
-      pending += pending + backTo[2]
+      pending += backTo[2]
       pendingStartPos = pos + backTo[1].length
       src = src.substring(backTo[0].length)
       pos = pos + backTo[0].length
@@ -162,8 +162,9 @@ function tokenizerFac(
     }
     if (inChunk) continue
 
-    // emoji | inline_code | del | inline_math
-    const chunks = ['inline_code', 'del', 'emoji', 'inline_math'] as const
+    // emoji | inline_code | del | display_math | inline_math
+    // Note: display_math must come before inline_math to match $$ before $
+    const chunks = ['inline_code', 'del', 'emoji', 'display_math', 'inline_math'] as const
 
     for (const rule of chunks) {
       const to = inlineRules[rule].exec(src)
@@ -178,15 +179,15 @@ function tokenizerFac(
           end: pos + to[0].length,
         }
         const marker = to[1]
-        if (rule === 'inline_code' || rule === 'emoji' || rule === 'inline_math') {
+        if (rule === 'inline_code' || rule === 'emoji' || rule === 'inline_math' || rule === 'display_math') {
           tokens.push({
-            type: rule,
+            type: rule === 'display_math' ? 'inline_math' : rule, // Treat display_math as inline_math for rendering
             raw: to[0],
             range,
             marker,
             parent: tokens,
             content: to[2],
-            backlash: to[3],
+            backlash: to[3] || '',
           })
         } else {
           tokens.push({

@@ -120,8 +120,21 @@ class Renderer {
     )
   }
 
-  getHighlightClassName(active: boolean) {
-    return active ? CLASS_NAMES.MU_HIGHLIGHT : CLASS_NAMES.MU_SELECTION
+  getHighlightClassName(highlight: { active?: boolean; diffType?: 'addition' | 'deletion' } | boolean) {
+    // Backward compatibility: if just boolean passed
+    if (typeof highlight === 'boolean') {
+      return highlight ? CLASS_NAMES.MU_HIGHLIGHT : CLASS_NAMES.MU_SELECTION
+    }
+
+    // New logic for diff highlights
+    if (highlight.diffType === 'addition') {
+      return CLASS_NAMES.MU_DIFF_ADDITION
+    } else if (highlight.diffType === 'deletion') {
+      return CLASS_NAMES.MU_DIFF_DELETION
+    }
+
+    // Default highlight logic
+    return highlight.active ? CLASS_NAMES.MU_HIGHLIGHT : CLASS_NAMES.MU_SELECTION
   }
 
   output(tokens: Token[], block: Format, cursor: ICursor) {

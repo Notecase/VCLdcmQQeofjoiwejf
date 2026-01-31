@@ -20,7 +20,7 @@ const defaultOptions = {
 }
 
 interface ITableInfo {
-  barType: 'bottom' | 'right'
+  barType: 'bottom' | 'left'
 }
 
 export class TableRowColumMenu extends BaseFloat {

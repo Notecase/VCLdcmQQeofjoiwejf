@@ -5,11 +5,10 @@ import type { Muya } from '../../index'
 import type { IBaseOptions } from '../types'
 import { autoUpdate, computePosition, flip, offset } from '@floating-ui/dom'
 
-import dragIcon from '../../assets/icons/drag/2.png'
 import BulletList from '../../block/commonMark/bulletList'
 import OrderList from '../../block/commonMark/orderList'
 import { BLOCK_DOM_PROPERTY } from '../../config'
-import { isMouseEvent, throttle, verticalPositionInRect } from '../../utils'
+import { throttle } from '../../utils'
 import { h, patch } from '../../utils/snabbdom'
 import { getIcon } from './config'
 
@@ -29,15 +28,16 @@ function defaultOptions() {
   }
 }
 
-function renderIcon(i: string, className: string) {
+function renderIcon(iconSrc: string) {
   return h(
-    `i.icon${className ? `.${className}` : ''}`,
+    'i.icon',
     h(
       'i.icon-inner',
       {
         style: {
-          background: `url(${i}) no-repeat`,
-          'background-size': '100%',
+          // Use mask-image for cross-browser colored icons
+          '-webkit-mask-image': `url(${iconSrc})`,
+          'mask-image': `url(${iconSrc})`,
         },
       },
       ''
@@ -60,17 +60,6 @@ export class ParagraphFrontButton {
   private _container: HTMLDivElement = document.createElement('div')
   private _iconWrapper: HTMLDivElement = document.createElement('div')
   private _cleanup: (() => void) | null = null
-  private _dragTimer: ReturnType<typeof setTimeout> | null = null
-  private _dragInfo: {
-    block: Parent
-    target?: Parent | null
-    position?: 'down' | 'up' | null
-  } | null = null
-
-  private _ghost: HTMLDivElement | null = null
-  private _shadow: HTMLDivElement | null = null
-  private _disableListen: boolean = false
-  private _dragEvents: string[] = []
 
   constructor(
     public muya: Muya,
@@ -114,8 +103,6 @@ export class ParagraphFrontButton {
     const { eventCenter } = this.muya
 
     const mousemoveHandler = throttle((event: MouseEvent) => {
-      if (this._disableListen) return
-
       const { x, y } = event
       const els = [
         ...document.elementsFromPoint(x, y),
@@ -125,8 +112,12 @@ export class ParagraphFrontButton {
         (ele) => ele[BLOCK_DOM_PROPERTY] && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock
       )
       if (outMostElement) {
-        this.show(outMostElement[BLOCK_DOM_PROPERTY] as Parent)
-        this.render()
+        const block = outMostElement[BLOCK_DOM_PROPERTY] as Parent
+        // Only show/render if block changed to avoid unnecessary work
+        if (this._block !== block) {
+          this.show(block)
+          this.render()
+        }
       } else {
         this.hide()
       }
@@ -141,176 +132,8 @@ export class ParagraphFrontButton {
       })
     }
 
-    eventCenter.attachDOMEvent(container, 'mousedown', this.dragBarMouseDown)
-    eventCenter.attachDOMEvent(container, 'mouseup', this.dragBarMouseUp)
     eventCenter.attachDOMEvent(document, 'mousemove', mousemoveHandler)
     eventCenter.attachDOMEvent(container, 'click', clickHandler)
-  }
-
-  dragBarMouseDown = (event: Event) => {
-    event.preventDefault()
-    event.stopPropagation()
-    this._dragTimer = setTimeout(() => {
-      this.startDrag()
-      this._dragTimer = null
-    }, 300)
-  }
-
-  dragBarMouseUp = () => {
-    if (this._dragTimer) {
-      clearTimeout(this._dragTimer)
-      this._dragTimer = null
-    }
-  }
-
-  mouseMove = (event: Event) => {
-    if (!this._dragInfo || !isMouseEvent(event)) return
-
-    event.preventDefault()
-
-    const { x, y } = event
-    const els = [
-      ...document.elementsFromPoint(x, y),
-      ...document.elementsFromPoint(x + LEFT_OFFSET, y),
-    ]
-    const outMostElement = els.find(
-      (ele) => ele[BLOCK_DOM_PROPERTY] && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock
-    )
-    this.moveShadow(event)
-
-    if (
-      outMostElement &&
-      outMostElement[BLOCK_DOM_PROPERTY] !== this._dragInfo.block &&
-      (outMostElement[BLOCK_DOM_PROPERTY] as Parent).blockName !== 'frontmatter'
-    ) {
-      const block = outMostElement[BLOCK_DOM_PROPERTY]
-      const rect = outMostElement.getBoundingClientRect()
-      const position = verticalPositionInRect(event, rect)
-      this.createStyledGhost(rect, position)
-
-      Object.assign(this._dragInfo, {
-        target: block,
-        position,
-      })
-    } else {
-      if (this._ghost) {
-        this._ghost.remove()
-        this._ghost = null
-        this._dragInfo.target = null
-        this._dragInfo.position = null
-      }
-    }
-  }
-
-  mouseUp = (event: Event) => {
-    event.preventDefault()
-    event.stopPropagation()
-
-    this._disableListen = false
-    const { eventCenter } = this.muya
-    this._dragEvents.forEach((eventId) => eventCenter.detachDOMEvent(eventId))
-    this._dragEvents = []
-    if (this._ghost) this._ghost.remove()
-
-    this.destroyShadow()
-    document.body.style.cursor = 'auto'
-    this._dragTimer = null
-    const { block, target, position } = this._dragInfo || {}
-
-    if (target && position && block) {
-      if (
-        (position === 'down' && block.prev === target) ||
-        (position === 'up' && block.next === target)
-      ) {
-        return
-      }
-
-      if (position === 'up') block.insertInto(block.parent!, target)
-      else block.insertInto(block.parent!, target.next)
-
-      // TODO: @JOCS, remove use this.selection directly.
-      const { anchorBlock, anchor, focus, isSelectionInSameBlock } =
-        block.muya.editor.selection ?? {}
-
-      if (isSelectionInSameBlock && anchorBlock && anchorBlock.isInBlock(block)) {
-        const begin = Math.min(anchor!.offset, focus!.offset)
-        const end = Math.max(anchor!.offset, focus!.offset)
-        anchorBlock.setCursor(begin, end)
-      }
-    }
-
-    this._dragInfo = null
-  }
-
-  startDrag = () => {
-    const { _block: block } = this
-    // Frontmatter should not be drag.
-    if (!block || (block && block.blockName === 'frontmatter')) return
-
-    this._disableListen = true
-    this._dragInfo = {
-      block,
-    }
-    this.createStyledShadow()
-    this.hide()
-    const { eventCenter } = this.muya
-
-    document.body.style.cursor = 'grabbing'
-
-    this._dragEvents = [
-      eventCenter.attachDOMEvent(document, 'mousemove', throttle(this.mouseMove, 100)),
-      eventCenter.attachDOMEvent(document, 'mouseup', this.mouseUp),
-    ]
-  }
-
-  createStyledGhost(rect: DOMRect, position: 'down' | 'up') {
-    let ghost = this._ghost
-    if (!ghost) {
-      ghost = document.createElement('div')
-      document.body.appendChild(ghost)
-      ghost.classList.add('mu-line-ghost')
-      this._ghost = ghost
-    }
-
-    Object.assign(ghost.style, {
-      width: `${rect.width}px`,
-      left: `${rect.left}px`,
-      top: position === 'up' ? `${rect.top}px` : `${rect.top + rect.height}px`,
-    })
-  }
-
-  createStyledShadow() {
-    const { domNode } = this._block!
-    const { width, top, left } = domNode!.getBoundingClientRect()
-    const shadow = document.createElement('div')
-    shadow.classList.add('mu-shadow')
-    Object.assign(shadow.style, {
-      width: `${width}px`,
-      top: `${top}px`,
-      left: `${left}px`,
-    })
-    shadow.appendChild(domNode!.cloneNode(true))
-    document.body.appendChild(shadow)
-    this._shadow = shadow
-  }
-
-  moveShadow(event: Event) {
-    const { _shadow: shadow } = this
-    // The shadow already be removed.
-    if (!shadow || !isMouseEvent(event)) return
-
-    const { y } = event
-    Object.assign(shadow.style, {
-      top: `${y}px`,
-    })
-  }
-
-  destroyShadow() {
-    const { _shadow: shadow } = this
-    if (shadow) {
-      shadow.remove()
-      this._shadow = null
-    }
   }
 
   render() {
@@ -322,11 +145,10 @@ export class ParagraphFrontButton {
     } = this
 
     const iconWrapperSelector = 'div.mu-icon-wrapper'
-    const i = getIcon(block!)
-    const iconParagraph = renderIcon(i, 'paragraph')
-    const iconDrag = renderIcon(dragIcon, 'drag')
+    const iconSrc = getIcon(block!)
+    const iconVNode = renderIcon(iconSrc)
 
-    const vnode = h(iconWrapperSelector, [iconParagraph, iconDrag])
+    const vnode = h(iconWrapperSelector, [iconVNode])
 
     if (oldVNode) patch(oldVNode, vnode)
     else patch(iconWrapper, vnode)

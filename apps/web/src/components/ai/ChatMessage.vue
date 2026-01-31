@@ -1,217 +1,395 @@
 <script setup lang="ts">
 /**
- * Chat Message Component
- * Renders a single message with markdown and action buttons
+ * ChatMessage - Claude.ai Style Card Design
+ *
+ * Features:
+ * - Card-based layout with subtle background
+ * - Spacious padding (20px)
+ * - Role indicator as small pill badge
+ * - Model chip next to role
+ * - Timestamp on far right (subtle)
+ * - Hover actions slide in from right
+ * - Streaming state with glowing border
+ * - Inline tool call cards
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { ChatMessage } from '@/stores/ai'
+import { useAIStore } from '@/stores/ai'
 import { renderMathContent } from '@/utils/mathRenderer'
+import {
+  Copy,
+  Check,
+  RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
+} from 'lucide-vue-next'
+import StreamingCursor from './shared/StreamingCursor.vue'
+import ToolCallCard from './ToolCallCard.vue'
 
 const props = defineProps<{
   message: ChatMessage
 }>()
 
+const emit = defineEmits<{
+  retry: []
+}>()
+
+const store = useAIStore()
+
+// Computed properties
 const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const displayContent = computed(() => props.message.content || '')
-
-// Use math renderer for assistant messages, basic for user
 const renderedContent = computed(() => renderMathContent(displayContent.value))
+
+// Check if this message is currently streaming
+const isStreaming = computed(() => {
+  if (!isAssistant.value) return false
+  const session = store.activeSession
+  if (!session) return false
+  const messages = session.messages
+  const lastMessage = messages[messages.length - 1]
+  return store.isProcessing && lastMessage?.id === props.message.id
+})
+
+// Tool calls from message (if any)
+const toolCalls = computed(() => props.message.toolCalls || [])
+
+// Format timestamp
+const formattedTime = computed(() => {
+  if (!props.message.createdAt) return ''
+  const date = new Date(props.message.createdAt)
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+})
+
+// Role display
+const roleLabel = computed(() => (isUser.value ? 'You' : 'AI'))
+const roleClass = computed(() => (isUser.value ? 'user' : 'assistant'))
+
+// Hover state for actions
+const isHovered = ref(false)
+const showActions = computed(() => isHovered.value && isAssistant.value && displayContent.value)
+
+// Copy functionality
+const copied = ref(false)
 
 function copyMessage() {
   window.navigator.clipboard.writeText(displayContent.value)
+  copied.value = true
+  setTimeout(() => {
+    copied.value = false
+  }, 2000)
+}
+
+function handleRetry() {
+  emit('retry')
+}
+
+// Feedback (placeholder for future implementation)
+function handleFeedback(type: 'up' | 'down') {
+  console.log('Feedback:', type, props.message.id)
+  // TODO: Implement feedback functionality
 }
 </script>
 
 <template>
   <div
-    class="chat-message"
-    :class="{ 'user-message': isUser, 'assistant-message': isAssistant }"
+    class="message-card"
+    :class="{
+      user: isUser,
+      assistant: isAssistant,
+      streaming: isStreaming,
+    }"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
-    <!-- Avatar -->
-    <div class="message-avatar">
-      <span v-if="isUser">👤</span>
-      <span v-else>✨</span>
+    <!-- Header row -->
+    <div class="message-header">
+      <div class="header-left">
+        <span class="role-pill" :class="roleClass">{{ roleLabel }}</span>
+        <span v-if="message.model" class="model-chip">{{ message.model }}</span>
+      </div>
+      <span v-if="formattedTime" class="timestamp">{{ formattedTime }}</span>
     </div>
+
+    <!-- Inline tool calls -->
+    <ToolCallCard
+      v-for="tool in toolCalls"
+      :key="tool.id"
+      :tool="tool"
+      class="embedded-tool"
+    />
 
     <!-- Content -->
-    <div class="message-content">
-      <div
-        class="message-text"
-        v-html="renderedContent"
-      ></div>
+    <div class="message-body">
+      <div class="prose" v-html="renderedContent" />
+      <StreamingCursor v-if="isStreaming" />
+    </div>
 
-      <!-- Actions (only for assistant) -->
-      <div
-        v-if="isAssistant && displayContent"
-        class="message-actions"
-      >
+    <!-- Hover actions -->
+    <Transition name="slide-in">
+      <div v-if="showActions" class="message-actions">
         <button
-          title="Copy"
+          class="action-btn"
+          :title="copied ? 'Copied!' : 'Copy'"
           @click="copyMessage"
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-          >
-            <path
-              d="M2 5C2 3.89543 2.89543 3 4 3H10C11.1046 3 12 3.89543 12 5V11C12 12.1046 11.1046 13 10 13H4C2.89543 13 2 12.1046 2 11V5Z"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-            <path
-              d="M4 3V2C4 1.44772 4.44772 1 5 1H12C13.1046 1 14 1.89543 14 3V12C14 12.5523 13.5523 13 13 13H12"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-          </svg>
+          <Check v-if="copied" :size="14" />
+          <Copy v-else :size="14" />
+        </button>
+        <button class="action-btn" title="Retry" @click="handleRetry">
+          <RotateCcw :size="14" />
+        </button>
+        <button class="action-btn" title="Good response" @click="handleFeedback('up')">
+          <ThumbsUp :size="14" />
+        </button>
+        <button class="action-btn" title="Bad response" @click="handleFeedback('down')">
+          <ThumbsDown :size="14" />
         </button>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
 /* ============================================
- * CHAT MESSAGE - Theme-aware styling
- * Uses CSS variables from variables.css
+ * MESSAGE CARD - Claude.ai Style
  * ============================================ */
-.chat-message {
-  display: flex;
-  gap: 0.75rem;
-  padding: 1rem 0;
+
+.message-card {
+  background: var(--chat-card-bg);
+  border: 1px solid var(--chat-card-border);
+  border-radius: var(--chat-card-radius);
+  padding: var(--chat-card-padding);
+  margin-bottom: var(--chat-message-gap);
+  transition:
+    border-color var(--transition-normal) ease,
+    box-shadow var(--transition-normal) ease;
+  position: relative;
 }
 
-.user-message {
-  flex-direction: row-reverse;
+.message-card:hover {
+  border-color: var(--chat-card-border-hover);
 }
 
-.user-message .message-content {
-  align-items: flex-end;
+.message-card.streaming {
+  border-color: var(--stream-cursor);
+  box-shadow: var(--stream-glow);
 }
 
-/* Avatar */
-.message-avatar {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+/* ============================================
+ * HEADER
+ * ============================================ */
+
+.message-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--ai-card-bg);
-  border: 1px solid var(--ai-card-border);
-  font-size: 1rem;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-.user-message .message-avatar {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-/* Message Content Container */
-.message-content {
+.header-left {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-width: 80%;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Message Text Bubble */
-.message-text {
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--text-color);
+.role-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.user-message .message-text {
-  background: var(--primary-color);
-  color: white;
-  border-bottom-right-radius: 4px;
+.role-pill.user {
+  background: var(--role-user-bg);
+  color: var(--role-user-color);
 }
 
-.assistant-message .message-text {
-  background: var(--ai-card-bg);
-  border: 1px solid var(--ai-card-border);
-  border-bottom-left-radius: 4px;
+.role-pill.assistant {
+  background: var(--role-assistant-bg);
+  color: var(--role-assistant-color);
 }
 
-/* Code Blocks */
-.message-text :deep(.code-block),
-.message-text :deep(.math-code-block) {
-  display: block;
-  margin: 0.5rem 0;
-  padding: 0.75rem;
-  background: var(--app-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow-x: auto;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.8125rem;
+.model-chip {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
 }
 
-/* Inline Code */
-.message-text :deep(.inline-code),
-.message-text :deep(.math-inline-code) {
-  padding: 0.125rem 0.375rem;
-  background: var(--ai-cmd-bg);
-  border-radius: 4px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.875em;
-}
-
-/* Math Styles */
-.message-text :deep(.math-display) {
-  margin: 0.5rem 0;
-  overflow-x: auto;
-}
-
-.message-text :deep(.math-inline) {
-  display: inline;
-}
-
-.message-text :deep(.katex) {
-  font-size: 1.05em;
-}
-
-.message-text :deep(.katex-display) {
-  margin: 0.5rem 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-/* Action Buttons */
-.message-actions {
-  display: flex;
-  gap: 0.25rem;
+.timestamp {
+  font-size: 11px;
+  color: var(--text-muted);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast) ease;
 }
 
-.chat-message:hover .message-actions {
+.message-card:hover .timestamp {
   opacity: 1;
 }
 
-.message-actions button {
+/* ============================================
+ * EMBEDDED TOOL CALLS
+ * ============================================ */
+
+.embedded-tool {
+  margin-bottom: 12px;
+}
+
+/* ============================================
+ * MESSAGE BODY
+ * ============================================ */
+
+.message-body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  word-wrap: break-word;
+}
+
+.message-card.user .message-body {
+  color: var(--text-secondary);
+}
+
+/* Prose styling */
+.prose :deep(p) {
+  margin: 0 0 0.85em 0;
+}
+
+.prose :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.prose :deep(code) {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.2em 0.45em;
+  background: var(--surface-2);
+  border-radius: 5px;
+  color: #f0883e;
+}
+
+.prose :deep(pre) {
+  margin: 1em 0;
+  padding: 14px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.prose :deep(pre code) {
+  padding: 0;
+  background: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.prose :deep(ul),
+.prose :deep(ol) {
+  margin: 0.6em 0;
+  padding-left: 1.6em;
+}
+
+.prose :deep(li) {
+  margin: 0.3em 0;
+}
+
+.prose :deep(blockquote) {
+  margin: 1em 0;
+  padding: 0.6em 1.2em;
+  border-left: 3px solid var(--stream-cursor);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border-radius: 0 6px 6px 0;
+}
+
+.prose :deep(a) {
+  color: var(--stream-cursor);
+  text-decoration: none;
+}
+
+.prose :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.prose :deep(strong) {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prose :deep(em) {
+  font-style: italic;
+}
+
+/* Math */
+.prose :deep(.math-display) {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.prose :deep(.katex) {
+  font-size: 1.05em;
+}
+
+/* ============================================
+ * HOVER ACTIONS
+ * ============================================ */
+
+.message-actions {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: none;
+  background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--text-color-secondary);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast) ease;
 }
 
-.message-actions button:hover {
-  background: var(--ai-card-bg);
-  color: var(--text-color);
+.action-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+ * TRANSITIONS
+ * ============================================ */
+
+.slide-in-enter-active,
+.slide-in-leave-active {
+  transition: all var(--transition-normal) var(--ease-out-expo);
+}
+
+.slide-in-enter-from,
+.slide-in-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
 }
 </style>

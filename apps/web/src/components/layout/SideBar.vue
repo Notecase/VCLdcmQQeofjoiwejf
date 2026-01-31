@@ -1379,8 +1379,7 @@ const tabs = [
 <style scoped>
 .sidebar {
   height: 100%;
-  background: var(--sidebar-bg, #1e1e1e);
-  border-right: 1px solid var(--border-color, #333);
+  background: var(--sidebar-bg, #010409);
   display: flex;
   flex-direction: column;
   transition: width 0.2s ease;
@@ -1405,14 +1404,14 @@ const tabs = [
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--text-color-secondary, #888);
+  color: #8b949e;
   cursor: pointer;
 }
 
 .collapsed-tab-btn:hover,
 .collapsed-tab-btn.active {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.1));
-  color: var(--text-color, #fff);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
 }
 
 .spacer {
@@ -1450,9 +1449,9 @@ const tabs = [
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid var(--border-color, #333);
-  background: var(--bg-color, #252525);
-  color: var(--text-color-secondary, #888);
+  border: 1px solid #30363d;
+  background: transparent;
+  color: var(--text-color-secondary, #8b949e);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1462,9 +1461,9 @@ const tabs = [
 }
 
 .quick-action-btn:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08));
-  color: var(--text-color, #fff);
-  border-color: var(--text-color-secondary, #666);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
+  border-color: #8b949e;
 }
 
 .quick-action-btn.primary {
@@ -1498,10 +1497,10 @@ const tabs = [
 .inline-search input {
   width: 100%;
   padding: 5px 8px 5px 26px;
-  background: var(--bg-color, #252525);
-  border: 1px solid var(--border-color, #333);
+  background: rgba(22, 27, 34, 0.6);
+  border: 1px solid #30363d;
   border-radius: 6px;
-  color: var(--text-color, #fff);
+  color: #e6edf3;
   font-size: 12px;
   height: 28px;
   box-sizing: border-box;
@@ -1509,11 +1508,11 @@ const tabs = [
 
 .inline-search input:focus {
   outline: none;
-  border-color: var(--primary-color, #65b9f4);
+  border-color: #58a6ff;
 }
 
 .inline-search input::placeholder {
-  color: var(--text-color-secondary, #666);
+  color: #6e7681;
 }
 
 /* Panels */
@@ -1542,9 +1541,9 @@ const tabs = [
   gap: 6px;
   flex: 1;
   padding: 8px 12px;
-  background: var(--bg-color, #252525);
-  color: var(--text-color, #fff);
-  border: 1px solid var(--border-color, #333);
+  background: transparent;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -1553,18 +1552,18 @@ const tabs = [
 }
 
 .action-btn:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.05));
-  border-color: var(--text-color-secondary, #666);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #8b949e;
 }
 
 .action-btn.primary {
-  background: var(--primary-color, #65b9f4);
-  border-color: var(--primary-color, #65b9f4);
+  background: #238636;
+  border-color: #238636;
   color: white;
 }
 
 .action-btn.primary:hover {
-  background: var(--primary-hover, #4da3e0);
+  background: #2ea043;
 }
 
 /* Tree View */
@@ -1664,8 +1663,8 @@ const tabs = [
 
 .item-count {
   font-size: 11px;
-  color: var(--text-color-secondary, #666);
-  background: var(--bg-color, #252525);
+  color: #8b949e;
+  background: rgba(255, 255, 255, 0.04);
   padding: 1px 6px;
   border-radius: 10px;
   flex-shrink: 0;
@@ -1696,8 +1695,8 @@ const tabs = [
 }
 
 .more-btn:hover {
-  background: var(--floatHoverColor);
-  color: var(--text-color);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
 }
 
 .delete-btn:hover {
@@ -1735,29 +1734,29 @@ const tabs = [
 /* Drag and drop styles */
 .tree-item.dragging {
   opacity: 0.5;
-  background: var(--selection-bg, rgba(101, 185, 244, 0.15));
+  background: rgba(88, 166, 255, 0.15);
 }
 
 .tree-item.drag-over,
 .tree-section.drag-over {
-  outline: 2px solid var(--primary-color, #65b9f4);
+  outline: 2px solid #58a6ff;
   outline-offset: -2px;
-  background: rgba(101, 185, 244, 0.15);
+  background: rgba(88, 166, 255, 0.15);
 }
 
 .general-section.drag-over {
-  background: rgba(101, 185, 244, 0.1);
+  background: rgba(88, 166, 255, 0.1);
   border-radius: 6px;
 }
 
 /* Inline edit */
 .inline-edit {
   flex: 1;
-  background: var(--bg-color, #252525);
-  border: 1px solid var(--primary-color, #65b9f4);
+  background: #0d1117;
+  border: 1px solid #58a6ff;
   border-radius: 4px;
   padding: 2px 6px;
-  color: var(--text-color, #fff);
+  color: #e6edf3;
   font-size: 13px;
   outline: none;
 }
@@ -1776,11 +1775,11 @@ const tabs = [
 
 .new-item-input input {
   flex: 1;
-  background: var(--bg-color, #252525);
-  border: 1px solid var(--primary-color, #65b9f4);
+  background: #0d1117;
+  border: 1px solid #58a6ff;
   border-radius: 4px;
   padding: 4px 8px;
-  color: var(--text-color, #fff);
+  color: #e6edf3;
   font-size: 13px;
   outline: none;
 }
@@ -1801,18 +1800,18 @@ const tabs = [
   gap: 4px;
   padding: 2px 8px;
   background: transparent;
-  border: 1px dashed var(--border-color, #444);
+  border: 1px dashed #30363d;
   border-radius: 4px;
-  color: var(--text-color-secondary, #888);
+  color: #8b949e;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .add-doc-btn:hover {
-  background: var(--floatHoverColor);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #58a6ff;
+  color: #58a6ff;
 }
 
 .empty-state {
@@ -1859,10 +1858,10 @@ const tabs = [
   position: fixed;
   z-index: 10000;
   min-width: 160px;
-  background: var(--bg-color, #252525);
-  border: 1px solid var(--border-color, #444);
+  background: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   padding: 4px;
   animation: fadeIn 0.1s ease;
 }
@@ -1895,7 +1894,7 @@ const tabs = [
 }
 
 .context-menu button:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .context-menu button.danger {
@@ -1908,7 +1907,7 @@ const tabs = [
 
 .menu-divider {
   height: 1px;
-  background: var(--border-color, #444);
+  background: #21262d;
   margin: 4px 8px;
 }
 
@@ -1934,7 +1933,7 @@ const tabs = [
 }
 
 .user-profile-btn:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .user-avatar {
@@ -1976,8 +1975,8 @@ const tabs = [
   margin-top: 2px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--text-color-secondary);
-  background: var(--bg-color);
+  color: #8b949e;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 4px;
 }
 
@@ -2001,10 +2000,10 @@ const tabs = [
   left: 12px;
   right: 12px;
   margin-bottom: 8px;
-  background: var(--floatBgColor, #3f3f3f);
-  border: 1px solid var(--floatBorderColor, rgba(255, 255, 255, 0.1));
+  background: #161b22;
+  border: 1px solid #30363d;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   padding: 8px;
   z-index: 100;
 }
@@ -2012,7 +2011,7 @@ const tabs = [
 /* Theme Toggle */
 .theme-toggle {
   display: flex;
-  background: var(--bg-color, #252525);
+  background: rgba(22, 27, 34, 0.8);
   border-radius: 8px;
   padding: 4px;
   gap: 2px;
@@ -2036,13 +2035,13 @@ const tabs = [
 }
 
 .theme-toggle button:hover {
-  color: var(--text-color);
+  color: #e6edf3;
 }
 
 .theme-toggle button.active {
-  background: var(--card-bg, var(--editorBgColor, #ffffff));
-  color: var(--text-color);
-  box-shadow: 0 1px 3px var(--floatShadow, rgba(0, 0, 0, 0.1));
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6edf3;
+  box-shadow: none;
 }
 
 /* Menu Items */
@@ -2063,14 +2062,14 @@ const tabs = [
 }
 
 .menu-item:hover {
-  background: var(--floatHoverColor, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .menu-item .shortcut {
   margin-left: auto;
   font-size: 11px;
-  color: var(--text-color-secondary);
-  background: var(--bg-color);
+  color: #8b949e;
+  background: rgba(255, 255, 255, 0.04);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -2084,11 +2083,11 @@ const tabs = [
 }
 
 .menu-item.primary {
-  color: var(--primary-color);
+  color: #58a6ff;
 }
 
 .menu-item.primary:hover {
-  background: rgba(101, 185, 244, 0.15);
+  background: rgba(88, 166, 255, 0.15);
 }
 
 /* Slide up animation */

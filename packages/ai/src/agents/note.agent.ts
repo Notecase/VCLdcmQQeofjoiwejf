@@ -63,6 +63,8 @@ export const NoteAgentInputSchema = z.object({
       style: z.enum(['concise', 'detailed', 'bullet-points', 'academic']).optional(),
       language: z.string().optional(),
       preserveFormat: z.boolean().optional(),
+      // When true, skip auto-saving - let frontend handle saving after user approves diff
+      skipAutoSave: z.boolean().optional(),
     })
     .optional(),
 })
@@ -170,21 +172,35 @@ export class NoteAgent {
   /**
    * Stream the note agent response
    */
-  async *stream(input: NoteAgentInput): AsyncGenerator<{
+  async *stream(rawInput: NoteAgentInput): AsyncGenerator<{
     type: 'text-delta' | 'thinking' | 'title' | 'finish'
     data: string | { title?: string; noteId?: string; success: boolean }
   }> {
-    this.state.action = input.action
+    // Runtime validation - ensure input is valid before processing
+    const parseResult = NoteAgentInputSchema.safeParse(rawInput)
+    if (!parseResult.success) {
+      console.error('[NoteAgent] Invalid input:', parseResult.error.flatten())
+      yield { type: 'text-delta', data: 'Error: Invalid input for note processing.' }
+      yield { type: 'finish', data: { success: false } }
+      return
+    }
+    const input = parseResult.data
+
+    // Validate and normalize action
+    const validActions: NoteAction[] = ['create', 'update', 'organize', 'summarize', 'expand']
+    const action: NoteAction = validActions.includes(input.action) ? input.action : 'update'
+
+    this.state.action = action
     this.state.noteId = input.noteId
     this.state.projectId = input.projectId
 
-    yield { type: 'thinking', data: `Processing ${input.action} action...` }
+    yield { type: 'thinking', data: `Processing ${action} action...` }
 
     // Get existing note content if needed
     let existingContent = ''
     let existingTitle = ''
 
-    if (input.noteId && ['update', 'organize', 'summarize', 'expand'].includes(input.action)) {
+    if (input.noteId && ['update', 'organize', 'summarize', 'expand'].includes(action)) {
       yield { type: 'thinking', data: 'Loading note content...' }
 
       const { data: note, error } = await this.supabase
@@ -203,30 +219,77 @@ export class NoteAgent {
       existingTitle = (note as { title: string; content: string }).title || ''
     }
 
-    // Build prompt
-    const systemPrompt = ACTION_PROMPTS[input.action]
-    let userContent = input.input
+    // Build prompt with EXPLICIT null checks
+    const systemPrompt: string = ACTION_PROMPTS[action] ?? ACTION_PROMPTS.update
 
-    if (existingContent && input.action !== 'create') {
-      userContent = `Current note content:\n\n${existingContent}\n\n---\n\nUser instructions: ${input.input}`
+    // Ensure input.input is a string (not null/undefined)
+    const inputText = input.input
+    const safeInput: string =
+      typeof inputText === 'string' && inputText.trim() ? inputText : 'Please process this note'
+
+    let userContent: string
+
+    if (existingContent && action !== 'create') {
+      userContent = `Current note content:\n\n${existingContent}\n\n---\n\nUser instructions: ${safeInput}`
+    } else if (existingContent) {
+      userContent = existingContent
+    } else {
+      userContent = safeInput
     }
 
-    // Stream response
+    // Final validation - explicit string check with strict null coalescing
+    // This is critical because OpenAI SDK throws 400 error if content is null/undefined
+    const validatedSystemPrompt: string = (typeof systemPrompt === 'string' && systemPrompt.trim())
+      ? systemPrompt
+      : ACTION_PROMPTS.update
+    const validatedUserContent: string = (typeof userContent === 'string' && userContent.trim())
+      ? userContent
+      : safeInput
+
+    if (!validatedSystemPrompt || !validatedUserContent) {
+      console.error('[NoteAgent] Content validation failed after fallback:', {
+        systemPromptEmpty: !validatedSystemPrompt,
+        userContentEmpty: !validatedUserContent,
+      })
+      yield { type: 'text-delta', data: 'Error: Unable to process note - no valid content.' }
+      yield { type: 'finish', data: { success: false } }
+      return
+    }
+
+    // Debug logging (can be removed after verification)
+    console.log('[NoteAgent] OpenAI call params:', {
+      model: this.model,
+      systemPromptLength: validatedSystemPrompt.length,
+      userContentLength: validatedUserContent.length,
+      systemPromptType: typeof validatedSystemPrompt,
+      userContentType: typeof validatedUserContent,
+    })
+
+    // Stream response with try-catch for error handling
     const OpenAI = (await import('openai')).default
     const client = new OpenAI({ apiKey: this.openaiApiKey })
 
     yield { type: 'thinking', data: 'Generating content...' }
 
-    const stream = await client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-      stream: true,
-    })
+    let stream
+    try {
+      stream = await client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: validatedSystemPrompt },
+          { role: 'user', content: validatedUserContent },
+        ],
+        temperature: 0.7,
+        max_completion_tokens: 4000,
+        stream: true,
+      })
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error('[NoteAgent] OpenAI API error:', errMsg)
+      yield { type: 'text-delta', data: `AI processing error: ${errMsg}` }
+      yield { type: 'finish', data: { success: false } }
+      return
+    }
 
     let fullContent = ''
     let extractedTitle = ''
@@ -248,11 +311,13 @@ export class NoteAgent {
       }
     }
 
-    // Save the note
+    // Save the note (unless skipAutoSave is true for update actions)
     let noteId = input.noteId
     const title = extractedTitle || existingTitle || 'Untitled Note'
+    const skipAutoSave = input.options?.skipAutoSave === true
 
-    if (input.action === 'create') {
+    if (action === 'create') {
+      // Always save for create action
       const { data: newNote, error } = await this.supabase
         .from('notes')
         .insert({
@@ -270,7 +335,9 @@ export class NoteAgent {
       }
 
       noteId = (newNote as { id: string }).id
-    } else if (noteId) {
+    } else if (noteId && !skipAutoSave) {
+      // Only save for update/organize/expand if skipAutoSave is not set
+      // When skipAutoSave is true, the frontend will handle saving after user approves diff
       await this.supabase
         .from('notes')
         .update({
@@ -344,6 +411,7 @@ export class NoteAgent {
 
     const content = await this.generateContent(ACTION_PROMPTS.update, prompt)
     const title = this.extractTitle(content)
+
 
     const updateData: Record<string, string> = { content }
     if (title) updateData.title = title
@@ -462,14 +530,18 @@ export class NoteAgent {
     const OpenAI = (await import('openai')).default
     const client = new OpenAI({ apiKey: this.openaiApiKey })
 
+    // Ensure inputs are valid strings
+    const validSystemPrompt = systemPrompt || 'You are a helpful assistant.'
+    const validUserInput = userInput || 'Please help with this note.'
+
     const response = await client.chat.completions.create({
       model: this.model,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userInput },
+        { role: 'system', content: validSystemPrompt },
+        { role: 'user', content: validUserInput },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_completion_tokens: 4000,
     })
 
     return response.choices[0]?.message?.content || ''

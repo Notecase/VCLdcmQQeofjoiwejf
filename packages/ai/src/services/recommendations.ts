@@ -193,7 +193,7 @@ function parseAIResponse<T>(response: string, fallback: T): T {
     let parsed: T
     try {
       parsed = JSON.parse(jsonString) as T
-    } catch (firstError) {
+    } catch (_firstError) {
       // Second attempt: try to repair truncated JSON
       console.log('[RecommendationService] Attempting JSON repair...')
       const repaired = repairJSON(jsonString)

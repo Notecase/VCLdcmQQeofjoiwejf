@@ -324,8 +324,8 @@ function switchTab(tab: TabType) {
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: #0d1117;
-  border-radius: 8px;
+  background: var(--modal-card-bg);
+  border-radius: var(--modal-radius-sm);
 }
 
 .tab-btn {
@@ -336,22 +336,22 @@ function switchTab(tab: TabType) {
   gap: 6px;
   padding: 10px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   background: transparent;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tab-btn:hover {
-  color: #e6edf3;
+  color: var(--text-color);
 }
 
 .tab-btn.active {
-  background: #21262d;
-  color: #e6edf3;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 /* Upload Area */
@@ -368,10 +368,11 @@ function switchTab(tab: TabType) {
   justify-content: center;
   gap: 8px;
   padding: 40px 20px;
-  border: 2px dashed #30363d;
-  border-radius: 8px;
+  border: 2px dashed var(--modal-border);
+  border-radius: var(--modal-radius-sm);
+  background: var(--modal-card-bg);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .drop-zone:hover {
@@ -385,7 +386,7 @@ function switchTab(tab: TabType) {
 }
 
 .upload-icon {
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 .file-icon {
@@ -395,23 +396,23 @@ function switchTab(tab: TabType) {
 .drop-text {
   font-size: 14px;
   font-weight: 500;
-  color: #e6edf3;
+  color: var(--text-color);
 }
 
 .drop-hint {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 .file-name {
   font-size: 14px;
   font-weight: 500;
-  color: #e6edf3;
+  color: var(--text-color);
 }
 
 .file-size {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 /* Link Input */
@@ -431,42 +432,46 @@ function switchTab(tab: TabType) {
 .input-label {
   font-size: 12px;
   font-weight: 500;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 .text-input {
   padding: 10px 12px;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  color: #e6edf3;
+  background: var(--modal-card-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius-sm);
+  color: var(--text-color);
   font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .text-input:focus {
   outline: none;
   border-color: #58a6ff;
+  background: var(--modal-card-bg-hover);
 }
 
 .text-area {
   padding: 10px 12px;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  color: #e6edf3;
+  background: var(--modal-card-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius-sm);
+  color: var(--text-color);
   font-size: 14px;
   resize: vertical;
   min-height: 160px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .text-area:focus {
   outline: none;
   border-color: #58a6ff;
+  background: var(--modal-card-bg-hover);
 }
 
 .input-hint {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 /* Progress */
@@ -476,7 +481,7 @@ function switchTab(tab: TabType) {
   gap: 8px;
   padding: 12px;
   background: rgba(88, 166, 255, 0.1);
-  border-radius: 6px;
+  border-radius: var(--modal-radius-sm);
 }
 
 .progress-info {
@@ -489,7 +494,7 @@ function switchTab(tab: TabType) {
 
 .progress-bar {
   height: 4px;
-  background: #21262d;
+  background: var(--modal-card-bg);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -507,26 +512,26 @@ function switchTab(tab: TabType) {
   color: #f85149;
   background: rgba(248, 81, 73, 0.1);
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: var(--modal-radius-sm);
   border-left: 3px solid #f85149;
 }
 
 /* Footer Buttons */
 .btn-secondary {
-  padding: 8px 16px;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: transparent;
-  color: #8b949e;
+  padding: 10px 20px;
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius-sm);
+  background: var(--modal-btn-secondary-bg);
+  color: var(--text-color-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-secondary:hover {
-  color: #e6edf3;
-  border-color: #8b949e;
+  color: var(--text-color);
+  background: var(--modal-btn-secondary-hover);
 }
 
 .btn-primary {
@@ -534,19 +539,21 @@ function switchTab(tab: TabType) {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 6px;
-  background: #238636;
+  border-radius: var(--modal-radius-sm);
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
   color: #ffffff;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2ea043;
+  background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
 }
 
 .btn-primary:disabled {

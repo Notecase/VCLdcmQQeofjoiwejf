@@ -9,11 +9,30 @@ const tocItems = computed(() => {
   return editorStore.toc || []
 })
 
-function scrollToHeading(heading: any) {
-  // Use Muya's scrollToHeading if available, otherwise scroll to element
-  const headingEl = document.querySelector(`[data-head="${heading.slug}"]`)
-  if (headingEl) {
-    headingEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function scrollToHeading(heading: any, index: number) {
+  // Find all heading elements in the Muya editor
+  // TS Muya uses class 'mu-atx-heading' for ATX headings and 'mu-setext-heading' for setext
+  const headingEls = document.querySelectorAll('.mu-atx-heading, .mu-setext-heading')
+
+  // Get the heading at the specified index (based on TOC position)
+  // We need to count headings to match the index
+  let headingCount = 0
+  for (const el of headingEls) {
+    // Check if this heading matches our target
+    if (headingCount === index) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    headingCount++
+  }
+
+  // Fallback: try to find by text content
+  for (const el of headingEls) {
+    const textContent = el.textContent?.replace(/^#+\s*/, '').trim()
+    if (textContent === heading.content) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
   }
 }
 </script>
@@ -55,7 +74,7 @@ function scrollToHeading(heading: any) {
               active: item.active,
               [`level-${item.lvl || item.level || 1}`]: true,
             }"
-            @click="scrollToHeading(item)"
+            @click="scrollToHeading(item, index)"
           >
             {{ item.content || item.title }}
           </button>

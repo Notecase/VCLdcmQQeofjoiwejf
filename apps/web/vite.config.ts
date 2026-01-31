@@ -49,11 +49,9 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    // Prioritize .js over .ts for muya lib which uses JS implementations
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      muya: fileURLToPath(new URL('./src/muya', import.meta.url)),
       // Workspace packages - resolve to source for development
       // Note: Subpath must come BEFORE the main package alias
       '@inkdown/muya/assets': fileURLToPath(

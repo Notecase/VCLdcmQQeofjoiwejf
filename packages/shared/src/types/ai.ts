@@ -36,7 +36,7 @@ export interface AIUsageRecord {
 /**
  * Supported AI providers
  */
-export type AIProvider = 'openai' | 'anthropic' | 'google'
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'ollama'
 
 /**
  * Types of AI actions

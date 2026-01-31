@@ -27,12 +27,18 @@ export default function highlight(
 
   if (unions.length) {
     for (const u of unions) {
-      const { start, end, active } = u
-      const className = this.getHighlightClassName(!!active)
+      const { start, end } = u
+      const className = this.getHighlightClassName(u)
 
       if (pos < start) result.push(text.substring(pos, start))
 
-      result.push(h(`span.${className}`, text.substring(start, end)))
+      // Add data-hunk-id attribute for diff highlights
+      const attrs: Record<string, string> = {}
+      if (u.hunkId) {
+        attrs['data-hunk-id'] = u.hunkId
+      }
+
+      result.push(h(`span.${className}`, { attrs }, text.substring(start, end)))
       pos = end
     }
 

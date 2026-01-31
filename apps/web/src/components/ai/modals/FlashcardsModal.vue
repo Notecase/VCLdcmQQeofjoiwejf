@@ -120,13 +120,12 @@ async function copyAsMarkdown() {
       >
         <Check
           v-if="copied"
-          :size="14"
+          :size="16"
         />
         <Copy
           v-else
-          :size="14"
+          :size="16"
         />
-        <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </template>
 
@@ -241,9 +240,10 @@ async function copyAsMarkdown() {
   padding: 24px;
   border-radius: 16px;
   backface-visibility: hidden;
-  background: rgba(22, 27, 34, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid #30363d;
+  background: var(--modal-bg);
+  backdrop-filter: blur(var(--modal-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur));
+  border: 1px solid var(--modal-border);
 }
 
 .card-back {
@@ -264,7 +264,7 @@ async function copyAsMarkdown() {
 
 .card-content {
   font-size: 16px;
-  color: #e6edf3;
+  color: var(--text-color);
   text-align: center;
   line-height: 1.6;
   overflow-y: auto;
@@ -310,7 +310,7 @@ async function copyAsMarkdown() {
 
 .card-hint {
   font-size: 11px;
-  color: #6e7681;
+  color: var(--text-color-secondary);
 }
 
 /* Pagination */
@@ -324,14 +324,14 @@ async function copyAsMarkdown() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #30363d;
+  background: var(--modal-card-border);
   border: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dot:hover {
-  background: #484f58;
+  background: var(--modal-btn-secondary-hover);
 }
 
 .dot.active {
@@ -343,7 +343,7 @@ async function copyAsMarkdown() {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
 }
 
 /* Footer */
@@ -353,17 +353,17 @@ async function copyAsMarkdown() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #21262d;
-  border: 1px solid #30363d;
-  color: #8b949e;
-  border-radius: 6px;
+  background: var(--modal-btn-secondary-bg);
+  border: 1px solid var(--modal-border);
+  color: var(--text-color-secondary);
+  border-radius: var(--modal-radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-btn:hover:not(:disabled) {
-  background: #30363d;
-  color: #e6edf3;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 .nav-btn:disabled {
@@ -373,31 +373,31 @@ async function copyAsMarkdown() {
 
 .footer-text {
   font-size: 12px;
-  color: #6e7681;
+  color: var(--text-color-secondary);
 }
 
-/* Copy button */
+/* Copy button - icon only, matches close button */
 .copy-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: transparent;
-  color: #8b949e;
-  font-size: 12px;
+  justify-content: center;
+  background: var(--modal-btn-secondary-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-color-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 36px;
 }
 
 .copy-btn:hover {
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
 .copy-btn.copied {
-  border-color: #3fb950;
   color: #3fb950;
 }
 </style>

@@ -8,17 +8,46 @@
 :root[data-theme='dark'],
 :root[data-theme='one-dark'],
 :root[data-theme='material-dark'] {
-  /* New design colors */
-  --app-bg: #1a1a1e;
+  /* New design colors - unified dark background matching AI sidebar */
+  --app-bg: #010409;
   --card-bg: #242428;
-  --sidebar-bg: #1e1e22;
-  --bg-color: #252525;
+  --sidebar-bg: #010409;
+  --bg-color: #0d1117;
   --primary-color: #7c9ef8;
   --primary-gradient: linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%);
   --hover-bg: rgba(255, 255, 255, 0.06);
   --text-color: #e2e8f0;
   --text-color-secondary: #94a3b8;
   --border-color: #333338;
+
+  /* ============================================
+   * TS MUYA CSS VARIABLE MAPPINGS (kebab-case)
+   * These override the light-theme defaults in Muya
+   * ============================================ */
+  --theme-color: #7c9ef8;
+  --highlight-color: rgba(102, 177, 255, 0.6);
+  --selection-color: rgba(102, 177, 255, 0.3);
+  --editor-color: rgba(255, 255, 255, 0.7);
+  --editor-color-80: rgba(255, 255, 255, 0.8);
+  --editor-color-50: rgba(255, 255, 255, 0.5);
+  --editor-color-30: rgba(255, 255, 255, 0.3);
+  --editor-color-10: rgba(255, 255, 255, 0.1);
+  --editor-color-04: rgba(255, 255, 255, 0.04);
+  --editor-bg-color: #282828;
+  --delete-color: #ff6969;
+  --icon-color: rgba(255, 255, 255, 0.7);
+  --code-block-bg-color: #424344;
+  --table-border-color: #363839;
+  --input-bg-color: #2f3336;
+  --button-font-color: rgba(255, 255, 255, 0.7);
+  --button-bg-color: #3f3f3f;
+  --button-border: 1px solid rgba(255, 255, 255, 0.1);
+  --button-bg-color-hover: linear-gradient(#4a4a4a, #404040);
+  --button-border-hover: 1px solid rgba(255, 255, 255, 0.15);
+  --float-bg-color: #3f3f3f;
+  --float-hover-color: rgba(255, 255, 255, 0.08);
+  --float-border-color: rgba(255, 255, 255, 0.1);
+  --float-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 
   /* Theme colors */
   --themeColor: #7c9ef8;
@@ -94,6 +123,96 @@
   --ai-send-active-bg: #238636;
   --ai-send-active-color: #ffffff;
   --ai-scrollbar-thumb: #30363d;
+
+  /* AI Sidebar - Ultra-minimal design tokens */
+  --ai-subtle-bg: rgba(255, 255, 255, 0.02);
+  --ai-subtle-bg-hover: rgba(255, 255, 255, 0.04);
+  --ai-subtle-border: rgba(255, 255, 255, 0.03);
+  --ai-focus-ring: rgba(88, 166, 255, 0.08);
+  --ai-divider: rgba(255, 255, 255, 0.04);
+  --ai-float-bg: rgba(22, 27, 34, 0.8);
+  --ai-gradient-overlay: linear-gradient(180deg, rgba(88, 166, 255, 0.02) 0%, transparent 50%);
+
+  /* ============================================
+   * CHAT INTERFACE - Claude.ai Style (Dark)
+   * ============================================ */
+  --chat-message-gap: 24px;
+  --chat-card-bg: rgba(22, 27, 34, 0.6);
+  --chat-card-border: rgba(48, 54, 61, 0.4);
+  --chat-card-border-hover: rgba(88, 166, 255, 0.2);
+  --chat-card-radius: 16px;
+  --chat-card-padding: 20px;
+
+  /* Streaming Animation */
+  --stream-cursor: #58a6ff;
+  --stream-pulse: rgba(88, 166, 255, 0.3);
+  --stream-glow: 0 0 0 1px rgba(88, 166, 255, 0.3);
+
+  /* Role Badges */
+  --role-user-bg: rgba(88, 166, 255, 0.15);
+  --role-user-color: #58a6ff;
+  --role-assistant-bg: rgba(63, 185, 80, 0.15);
+  --role-assistant-color: #3fb950;
+
+  /* GitHub Unified Diff */
+  --diff-line-height: 20px;
+  --diff-line-num-width: 40px;
+  --diff-line-num-bg: rgba(110, 118, 129, 0.1);
+  --diff-add-bg: rgba(46, 160, 67, 0.15);
+  --diff-add-line-bg: rgba(46, 160, 67, 0.25);
+  --diff-add-word-bg: rgba(46, 160, 67, 0.4);
+  --diff-add-border: #3fb950;
+  --diff-add-text: #7ee787;
+  --diff-remove-bg: rgba(248, 81, 73, 0.15);
+  --diff-remove-line-bg: rgba(248, 81, 73, 0.25);
+  --diff-remove-word-bg: rgba(248, 81, 73, 0.4);
+  --diff-remove-border: #f85149;
+  --diff-remove-text: #ffa198;
+
+  /* Timeline Thinking Steps */
+  --timeline-line-color: rgba(48, 54, 61, 0.6);
+  --timeline-dot-size: 8px;
+  --timeline-active-glow: rgba(88, 166, 255, 0.4);
+
+  /* Tool Cards */
+  --tool-card-bg: rgba(22, 27, 34, 0.8);
+  --tool-card-border: rgba(48, 54, 61, 0.5);
+  --tool-card-border-hover: rgba(48, 54, 61, 0.8);
+  --tool-running-border: rgba(88, 166, 255, 0.4);
+  --tool-running-glow: rgba(88, 166, 255, 0.15);
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 100ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+
+  /* Surface Colors */
+  --surface-0: #010409;
+  --surface-1: #0d1117;
+  --surface-2: #161b22;
+  --surface-3: #21262d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --border-subtle: rgba(48, 54, 61, 0.5);
+
+  /* Modal Glassmorphism - Dark */
+  --modal-bg: rgba(22, 27, 34, 0.72);
+  --modal-bg-solid: rgba(22, 27, 34, 0.95);
+  --modal-border: rgba(255, 255, 255, 0.08);
+  --modal-border-subtle: rgba(255, 255, 255, 0.04);
+  --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 12px 24px -8px rgba(0, 0, 0, 0.3);
+  --modal-inset-highlight: rgba(255, 255, 255, 0.06);
+  --modal-backdrop-blur: 24px;
+  --modal-overlay-blur: 8px;
+  --modal-radius: 20px;
+  --modal-radius-sm: 12px;
+  --modal-card-bg: rgba(255, 255, 255, 0.03);
+  --modal-card-bg-hover: rgba(255, 255, 255, 0.06);
+  --modal-card-border: rgba(255, 255, 255, 0.04);
+  --modal-btn-secondary-bg: rgba(255, 255, 255, 0.06);
+  --modal-btn-secondary-hover: rgba(255, 255, 255, 0.1);
 }
 
 /* LIGHT THEMES (light, ulysses-light, graphite-light, cadmium-light) */
@@ -112,6 +231,35 @@
   --text-color: #334155;
   --text-color-secondary: #64748b;
   --border-color: #e2e8f0;
+
+  /* ============================================
+   * TS MUYA CSS VARIABLE MAPPINGS (kebab-case)
+   * These match the Muya default light theme
+   * ============================================ */
+  --theme-color: #7c9ef8;
+  --highlight-color: rgba(33, 150, 243, 0.3);
+  --selection-color: rgba(33, 150, 243, 0.15);
+  --editor-color: rgba(0, 0, 0, 0.7);
+  --editor-color-80: rgba(0, 0, 0, 0.8);
+  --editor-color-50: rgba(0, 0, 0, 0.5);
+  --editor-color-30: rgba(0, 0, 0, 0.3);
+  --editor-color-10: rgba(0, 0, 0, 0.1);
+  --editor-color-04: rgba(0, 0, 0, 0.04);
+  --editor-bg-color: #ffffff;
+  --delete-color: #f44336;
+  --icon-color: rgba(0, 0, 0, 0.54);
+  --code-block-bg-color: #f5f5f5;
+  --table-border-color: #e0e0e0;
+  --input-bg-color: #fafafa;
+  --button-font-color: rgba(0, 0, 0, 0.7);
+  --button-bg-color: #ffffff;
+  --button-border: 1px solid #dcdfe6;
+  --button-bg-color-hover: linear-gradient(#f9f9f9, #f2f2f2);
+  --button-border-hover: 1px solid #dcdfe6;
+  --float-bg-color: #ffffff;
+  --float-hover-color: rgba(0, 0, 0, 0.04);
+  --float-border-color: rgba(0, 0, 0, 0.1);
+  --float-shadow: rgb(15 15 15 / 3%) 0 0 0 1px, rgb(15 15 15 / 4%) 0 3px 6px, rgb(15 15 15 / 5%) 0 9px 24px;
 
   /* Theme colors */
   --themeColor: #7c9ef8;
@@ -186,4 +334,254 @@
   --ai-send-active-bg: #238636;
   --ai-send-active-color: #ffffff;
   --ai-scrollbar-thumb: #cbd5e1;
+
+  /* AI Sidebar - Ultra-minimal design tokens */
+  --ai-subtle-bg: rgba(0, 0, 0, 0.015);
+  --ai-subtle-bg-hover: rgba(0, 0, 0, 0.03);
+  --ai-subtle-border: rgba(0, 0, 0, 0.03);
+  --ai-focus-ring: rgba(124, 158, 248, 0.1);
+  --ai-divider: rgba(0, 0, 0, 0.04);
+  --ai-float-bg: rgba(255, 255, 255, 0.9);
+  --ai-gradient-overlay: linear-gradient(180deg, rgba(124, 158, 248, 0.03) 0%, transparent 50%);
+
+  /* ============================================
+   * CHAT INTERFACE - Claude.ai Style (Light)
+   * ============================================ */
+  --chat-message-gap: 24px;
+  --chat-card-bg: rgba(255, 255, 255, 0.8);
+  --chat-card-border: rgba(0, 0, 0, 0.08);
+  --chat-card-border-hover: rgba(124, 158, 248, 0.3);
+  --chat-card-radius: 16px;
+  --chat-card-padding: 20px;
+
+  /* Streaming Animation */
+  --stream-cursor: #7c9ef8;
+  --stream-pulse: rgba(124, 158, 248, 0.3);
+  --stream-glow: 0 0 0 1px rgba(124, 158, 248, 0.3);
+
+  /* Role Badges */
+  --role-user-bg: rgba(124, 158, 248, 0.15);
+  --role-user-color: #5b7fd6;
+  --role-assistant-bg: rgba(34, 197, 94, 0.15);
+  --role-assistant-color: #16a34a;
+
+  /* GitHub Unified Diff */
+  --diff-line-height: 20px;
+  --diff-line-num-width: 40px;
+  --diff-line-num-bg: rgba(0, 0, 0, 0.04);
+  --diff-add-bg: rgba(34, 197, 94, 0.12);
+  --diff-add-line-bg: rgba(34, 197, 94, 0.2);
+  --diff-add-word-bg: rgba(34, 197, 94, 0.35);
+  --diff-add-border: #16a34a;
+  --diff-add-text: #166534;
+  --diff-remove-bg: rgba(239, 68, 68, 0.12);
+  --diff-remove-line-bg: rgba(239, 68, 68, 0.2);
+  --diff-remove-word-bg: rgba(239, 68, 68, 0.35);
+  --diff-remove-border: #dc2626;
+  --diff-remove-text: #991b1b;
+
+  /* Timeline Thinking Steps */
+  --timeline-line-color: rgba(0, 0, 0, 0.1);
+  --timeline-dot-size: 8px;
+  --timeline-active-glow: rgba(124, 158, 248, 0.4);
+
+  /* Tool Cards */
+  --tool-card-bg: rgba(255, 255, 255, 0.9);
+  --tool-card-border: rgba(0, 0, 0, 0.08);
+  --tool-card-border-hover: rgba(0, 0, 0, 0.12);
+  --tool-running-border: rgba(124, 158, 248, 0.4);
+  --tool-running-glow: rgba(124, 158, 248, 0.15);
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 100ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+
+  /* Surface Colors */
+  --surface-0: #ffffff;
+  --surface-1: #f8fafc;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+
+  /* Modal Glassmorphism - Light */
+  --modal-bg: rgba(255, 255, 255, 0.78);
+  --modal-bg-solid: rgba(255, 255, 255, 0.95);
+  --modal-border: rgba(0, 0, 0, 0.06);
+  --modal-border-subtle: rgba(0, 0, 0, 0.03);
+  --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 12px 24px -8px rgba(0, 0, 0, 0.08);
+  --modal-inset-highlight: rgba(255, 255, 255, 0.8);
+  --modal-backdrop-blur: 24px;
+  --modal-overlay-blur: 8px;
+  --modal-radius: 20px;
+  --modal-radius-sm: 12px;
+  --modal-card-bg: rgba(0, 0, 0, 0.02);
+  --modal-card-bg-hover: rgba(0, 0, 0, 0.04);
+  --modal-card-border: rgba(0, 0, 0, 0.04);
+  --modal-btn-secondary-bg: rgba(0, 0, 0, 0.04);
+  --modal-btn-secondary-hover: rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+ * INLINE DIFF MARKERS - Global Styles
+ * ============================================ */
+
+/* Deletion marker - red with strikethrough */
+.mu-diff-deletion {
+  background: var(--diff-remove-bg);
+  color: var(--diff-remove-text);
+  text-decoration: line-through;
+  text-decoration-color: var(--diff-remove-border);
+  text-decoration-thickness: 2px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  position: relative;
+  display: inline;
+}
+
+/* Addition marker - green highlight */
+.mu-diff-addition {
+  background: var(--diff-add-bg);
+  color: var(--diff-add-text);
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  position: relative;
+  display: inline;
+}
+
+/* Action buttons inside diff markers */
+.diff-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: all 0.15s ease;
+  opacity: 0.85;
+}
+
+.diff-action-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.diff-action-btn:active {
+  transform: scale(0.95);
+}
+
+/* Accept button (for additions) */
+.diff-action-btn.accept {
+  background: var(--diff-add-border);
+  color: white;
+}
+
+.diff-action-btn.accept:hover {
+  background: #15803d;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.4);
+}
+
+/* Reject button (for deletions) */
+.diff-action-btn.reject {
+  background: var(--diff-remove-border);
+  color: white;
+}
+
+.diff-action-btn.reject:hover {
+  background: #b91c1c;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+}
+
+/* Diff mode indicator on editor */
+.editor-area.diff-mode .muya-editor {
+  pointer-events: none;
+  user-select: none;
+}
+
+.editor-area.diff-mode .mu-diff-deletion,
+.editor-area.diff-mode .mu-diff-addition,
+.editor-area.diff-mode .diff-action-btn {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Floating diff action bar at bottom */
+.diff-floating-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface-2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.diff-floating-bar .bar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.diff-floating-bar .bar-btn.accept-all {
+  background: var(--diff-add-border);
+  color: white;
+}
+
+.diff-floating-bar .bar-btn.accept-all:hover {
+  filter: brightness(1.1);
+}
+
+.diff-floating-bar .bar-btn.reject-all {
+  background: var(--diff-remove-bg);
+  color: var(--diff-remove-border);
+  border: 1px solid var(--diff-remove-border);
+}
+
+.diff-floating-bar .bar-btn.reject-all:hover {
+  background: var(--diff-remove-line-bg);
+}
+
+.diff-floating-bar .bar-btn.discard {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.diff-floating-bar .bar-btn.discard:hover {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+.diff-floating-bar .progress-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }

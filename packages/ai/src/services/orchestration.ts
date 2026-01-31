@@ -22,7 +22,6 @@ import type {
   WorkflowResult,
   WorkflowState,
   WorkflowExecution,
-  ExecutionStep,
   BlockInfo,
   WorkflowProgress,
   OrchestrationRequest,

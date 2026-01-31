@@ -96,6 +96,24 @@ function renderContent(text: string | undefined): string {
       <Brain :size="20" />
     </template>
 
+    <template #header-right>
+      <button
+        :title="copied ? 'Copied!' : 'Copy as Markdown'"
+        class="copy-btn"
+        :class="{ copied }"
+        @click="copyToClipboard"
+      >
+        <Check
+          v-if="copied"
+          :size="16"
+        />
+        <Copy
+          v-else
+          :size="16"
+        />
+      </button>
+    </template>
+
     <div
       v-if="mindmap"
       class="mindmap-container"
@@ -161,21 +179,7 @@ function renderContent(text: string | undefined): string {
     </div>
 
     <template #footer>
-      <button
-        class="footer-btn secondary"
-        :class="{ copied }"
-        @click="copyToClipboard"
-      >
-        <Check
-          v-if="copied"
-          :size="14"
-        />
-        <Copy
-          v-else
-          :size="14"
-        />
-        {{ copied ? 'Copied!' : 'Copy as Markdown' }}
-      </button>
+      <div></div>
       <button
         class="footer-btn primary"
         @click="addToNote"
@@ -236,22 +240,23 @@ function renderContent(text: string | undefined): string {
 }
 
 .branch-node {
-  background: rgba(22, 27, 34, 0.6);
+  background: var(--modal-card-bg);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 2px solid var(--branch-color);
-  color: #e6edf3;
+  color: var(--text-color);
   font-size: 14px;
   font-weight: 500;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--modal-radius-sm);
   text-align: center;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .branch-node:hover {
-  background: rgba(var(--branch-color-rgb, 88, 166, 255), 0.15);
+  background: var(--modal-card-bg-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -273,23 +278,23 @@ function renderContent(text: string | undefined): string {
   gap: 8px;
   margin-top: 16px;
   padding-left: 20px;
-  border-left: 2px solid var(--branch-color, #30363d);
+  border-left: 2px solid var(--branch-color, var(--modal-border));
   opacity: 0.9;
 }
 
 .child-node {
   font-size: 13px;
-  color: #c9d1d9;
+  color: var(--text-color);
   padding: 8px 12px;
   position: relative;
-  background: rgba(22, 27, 34, 0.4);
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  background: var(--modal-card-bg);
+  border-radius: var(--modal-radius-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .child-node:hover {
-  background: rgba(22, 27, 34, 0.7);
-  color: #e6edf3;
+  background: var(--modal-card-bg-hover);
+  color: var(--text-color);
 }
 
 .connector {
@@ -298,7 +303,7 @@ function renderContent(text: string | undefined): string {
   top: 50%;
   width: 18px;
   height: 2px;
-  background: var(--branch-color, #30363d);
+  background: var(--branch-color, var(--modal-border));
 }
 
 /* Grandchildren */
@@ -308,12 +313,12 @@ function renderContent(text: string | undefined): string {
   gap: 4px;
   margin-top: 8px;
   padding-left: 16px;
-  border-left: 1px solid #21262d;
+  border-left: 1px solid var(--modal-border-subtle);
 }
 
 .grandchild-node {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   padding: 4px 8px;
 }
 
@@ -340,7 +345,32 @@ function renderContent(text: string | undefined): string {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
+}
+
+/* Copy button - icon only, matches close button */
+.copy-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--modal-btn-secondary-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 36px;
+}
+
+.copy-btn:hover {
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
+}
+
+.copy-btn.copied {
+  color: #3fb950;
 }
 
 /* Footer buttons */
@@ -348,37 +378,23 @@ function renderContent(text: string | undefined): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: var(--modal-radius-sm);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .footer-btn.primary {
-  background: #238636;
-  border: 1px solid #238636;
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  border: none;
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
 }
 
 .footer-btn.primary:hover {
-  background: #2ea043;
-}
-
-.footer-btn.secondary {
-  background: transparent;
-  border: 1px solid #30363d;
-  color: #8b949e;
-}
-
-.footer-btn.secondary:hover {
-  background: #21262d;
-  color: #e6edf3;
-}
-
-.footer-btn.secondary.copied {
-  border-color: #3fb950;
-  color: #3fb950;
+  background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
 }
 </style>

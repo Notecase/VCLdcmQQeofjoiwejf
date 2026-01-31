@@ -1,60 +1,43 @@
 <script setup lang="ts">
-/**
- * AI Chat / Starting Page - Exact Note3 Design
- * Features:
- * - "SUGGESTED FOR YOU" header with icon
- * - 2x2 grid of recommendation cards
- * - Rounded input with Attach, Mic, Model selector, Research, Send
- */
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useAIStore } from '@/stores/ai'
 import { useAIChat } from '@/services/ai.service'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
+import AgentConsole from '@/components/ai/AgentConsole.vue'
 import {
   ArrowUp,
   Paperclip,
   Globe,
   Mic,
-  Zap,
   ChevronDown,
   Loader2,
+  Sparkles,
   Brain,
   Code,
   Lightbulb,
 } from 'lucide-vue-next'
 
-// Store and composable
 const store = useAIStore()
 const { sendMessage, clearChat, isProcessing, error, clearError } = useAIChat()
 
-// Local state
 const inputValue = ref('')
 const selectedModel = ref<'gpt' | 'gemini'>('gpt')
 const isModelDropdownOpen = ref(false)
 const messagesEndRef = ref<HTMLDivElement | null>(null)
-const isRecommendationsExiting = ref(false)
+const inputRef = ref<HTMLTextAreaElement | null>(null)
 
-// Computed
 const messages = computed(() => store.activeSession?.messages || [])
 const hasMessages = computed(() => messages.value.length > 0)
 
-// Scroll to bottom on new messages
 function scrollToBottom() {
   nextTick(() => {
     messagesEndRef.value?.scrollIntoView({ behavior: 'smooth' })
   })
 }
 
-// Handle submit with animation
 async function handleSubmit() {
   const value = inputValue.value.trim()
-  if (!value || isProcessing) return
-
-  // Trigger exit animation if first message
-  if (!hasMessages.value) {
-    isRecommendationsExiting.value = true
-    await new Promise((resolve) => setTimeout(resolve, 300))
-  }
+  if (!value || isProcessing.value) return
 
   inputValue.value = ''
   scrollToBottom()
@@ -63,7 +46,6 @@ async function handleSubmit() {
   scrollToBottom()
 }
 
-// Handle enter key
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
@@ -71,19 +53,15 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-// Clear chat
 function handleClearChat() {
   clearChat()
-  isRecommendationsExiting.value = false
 }
 
-// Model selection
 function selectModel(model: 'gpt' | 'gemini') {
   selectedModel.value = model
   isModelDropdownOpen.value = false
 }
 
-// 2x2 Recommendation cards matching Note3 exactly
 const recommendations = [
   {
     id: 'vae',
@@ -101,7 +79,7 @@ const recommendations = [
   },
   {
     id: 'quantum',
-    icon: Zap,
+    icon: Sparkles,
     title: 'Quantum Gates Cheatsheet',
     description: 'Generate a quick reference for Hadamard, CNOT, and Pauli gates.',
     action: 'Generate',
@@ -117,502 +95,542 @@ const recommendations = [
 
 function handleRecommendationClick(rec: (typeof recommendations)[0]) {
   inputValue.value = `${rec.action}: ${rec.title}`
+  inputRef.value?.focus()
 }
+
+watch(
+  () => messages.value.length,
+  () => {
+    scrollToBottom()
+  }
+)
 
 onMounted(() => {
   setTimeout(() => {
-    const textarea = document.querySelector('textarea')
-    textarea?.focus()
-  }, 100)
+    inputRef.value?.focus()
+  }, 120)
 })
 </script>
 
 <template>
-  <div class="starting-page">
-    <!-- Chat Mode: Messages -->
-    <template v-if="hasMessages">
-      <div class="messages-area">
-        <div class="messages-container">
-          <ChatMessage
-            v-for="msg in messages"
-            :key="msg.id"
-            :message="msg"
-          />
-
-          <!-- Loading indicator -->
-          <div
-            v-if="isProcessing"
-            class="loading-indicator"
-          >
-            <Loader2
-              :size="16"
-              class="spin"
-            />
-            <span>AI is thinking...</span>
-          </div>
-
-          <div ref="messagesEndRef" />
-        </div>
+  <div class="ai-chat">
+    <header class="ai-header">
+      <div class="header-title">
+        <span class="eyebrow">Agent Workspace</span>
+        <h1>Inkdown AI Studio</h1>
+        <p>Plan, search, and rewrite with a transparent trace of every step.</p>
       </div>
 
-      <!-- Fixed input at bottom -->
-      <div class="input-area">
-        <div class="input-wrapper">
-          <div class="chat-input">
-            <textarea
-              v-model="inputValue"
-              placeholder="Ask anything, or type '@' to add to a note..."
-              :disabled="isProcessing"
-              @keydown="handleKeydown"
-              rows="1"
-            />
+      <div class="header-actions">
+        <div class="status-chip" :class="{ live: isProcessing }">
+          <span class="status-dot"></span>
+          {{ isProcessing ? 'Streaming' : 'Ready' }}
+        </div>
 
-            <div class="input-toolbar">
-              <div class="toolbar-left">
-                <button
-                  class="toolbar-btn"
-                  title="Attach file"
-                >
-                  <Paperclip :size="16" />
-                </button>
-                <button
-                  class="toolbar-btn"
-                  title="Voice input"
-                >
-                  <Mic :size="16" />
-                </button>
-
-                <div class="toolbar-divider" />
-
-                <!-- Model selector -->
-                <div
-                  class="model-selector"
-                  @click.stop
-                >
-                  <button
-                    class="model-btn"
-                    @click="isModelDropdownOpen = !isModelDropdownOpen"
-                  >
-                    <span class="model-icon">🤖</span>
-                    <span>{{ selectedModel === 'gpt' ? 'GPT-5.2' : 'Gemini' }}</span>
-                    <ChevronDown
-                      :size="12"
-                      :class="{ rotated: isModelDropdownOpen }"
-                    />
-                  </button>
-                  <Transition name="dropdown">
-                    <div
-                      v-if="isModelDropdownOpen"
-                      class="model-dropdown"
-                    >
-                      <button
-                        @click="selectModel('gpt')"
-                        :class="{ active: selectedModel === 'gpt' }"
-                      >
-                        🤖 GPT-5.2
-                      </button>
-                      <button
-                        @click="selectModel('gemini')"
-                        :class="{ active: selectedModel === 'gemini' }"
-                      >
-                        ✨ Gemini 3 Pro
-                      </button>
-                    </div>
-                  </Transition>
-                </div>
-
-                <button class="toolbar-btn research">
-                  <Globe :size="14" />
-                  <span>Research</span>
-                </button>
-              </div>
-
+        <div class="model-selector" @click.stop>
+          <button class="model-btn" @click="isModelDropdownOpen = !isModelDropdownOpen">
+            <span class="model-icon">AI</span>
+            <span>{{ selectedModel === 'gpt' ? 'GPT-5.2' : 'Gemini 3 Pro' }}</span>
+            <ChevronDown :size="12" :class="{ rotated: isModelDropdownOpen }" />
+          </button>
+          <Transition name="dropdown">
+            <div v-if="isModelDropdownOpen" class="model-dropdown">
+              <button @click="selectModel('gpt')" :class="{ active: selectedModel === 'gpt' }">
+                GPT-5.2
+              </button>
               <button
-                class="send-btn"
-                :class="{ active: inputValue.trim() && !isProcessing }"
-                :disabled="!inputValue.trim() || isProcessing"
-                @click="handleSubmit"
+                @click="selectModel('gemini')"
+                :class="{ active: selectedModel === 'gemini' }"
               >
-                <Loader2
-                  v-if="isProcessing"
-                  :size="16"
-                  class="spin"
-                />
-                <ArrowUp
-                  v-else
-                  :size="16"
-                />
+                Gemini 3 Pro
               </button>
             </div>
-          </div>
-
-          <button
-            v-if="hasMessages"
-            class="clear-btn"
-            @click="handleClearChat"
-          >
-            Clear conversation
-          </button>
+          </Transition>
         </div>
-      </div>
-    </template>
 
-    <!-- Empty State: Centered with recommendations -->
-    <template v-else>
-      <div
-        class="empty-state"
-        :class="{ exiting: isRecommendationsExiting }"
-      >
-        <div class="centered-content">
-          <!-- Recommendations -->
-          <div class="recommendations-section">
-            <div class="recommendations-header">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path
-                  d="M9.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM7.25 4a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75V4Z"
-                />
-              </svg>
-              <span>SUGGESTED FOR YOU</span>
+        <button class="ghost-action" @click="handleClearChat">New session</button>
+      </div>
+    </header>
+
+    <main class="ai-shell">
+      <section class="chat-panel">
+        <div class="chat-body">
+          <div v-if="!hasMessages" class="chat-hero">
+            <div class="hero-card">
+              <div class="hero-icon">
+                <Sparkles :size="18" />
+              </div>
+              <div>
+                <h2>Start a guided session</h2>
+                <p>
+                  Ask for summaries, generate study plans, or draft edits with inline diffs you can
+                  review.
+                </p>
+              </div>
             </div>
 
-            <!-- 2x2 Grid -->
-            <div class="recommendations-grid">
+            <div class="prompt-grid">
               <button
                 v-for="rec in recommendations"
                 :key="rec.id"
-                class="recommendation-card"
+                class="prompt-card"
                 @click="handleRecommendationClick(rec)"
               >
-                <div class="card-icon">
-                  <component
-                    :is="rec.icon"
-                    :size="20"
-                  />
+                <div class="prompt-icon">
+                  <component :is="rec.icon" :size="18" />
                 </div>
-                <h3 class="card-title">{{ rec.title }}</h3>
-                <p class="card-description">{{ rec.description }}</p>
-                <span class="card-action">{{ rec.action }} →</span>
+                <div>
+                  <h3>{{ rec.title }}</h3>
+                  <p>{{ rec.description }}</p>
+                  <span class="prompt-action">{{ rec.action }} -></span>
+                </div>
               </button>
             </div>
           </div>
 
-          <!-- Centered Input -->
-          <div class="chat-input">
-            <textarea
-              v-model="inputValue"
-              placeholder="Ask anything, or type '@' to add to a note..."
-              :disabled="isProcessing"
-              @keydown="handleKeydown"
-              rows="1"
-            />
+          <div class="chat-thread" :class="{ empty: !hasMessages }">
+            <ChatMessage v-for="msg in messages" :key="msg.id" :message="msg" />
 
-            <div class="input-toolbar">
-              <div class="toolbar-left">
-                <button
-                  class="toolbar-btn"
-                  title="Attach file"
-                >
-                  <Paperclip :size="16" />
-                </button>
-                <button
-                  class="toolbar-btn"
-                  title="Voice input"
-                >
-                  <Mic :size="16" />
-                </button>
-
-                <div class="toolbar-divider" />
-
-                <!-- Model selector -->
-                <div
-                  class="model-selector"
-                  @click.stop
-                >
-                  <button
-                    class="model-btn"
-                    @click="isModelDropdownOpen = !isModelDropdownOpen"
-                  >
-                    <span class="model-icon">🤖</span>
-                    <span>{{ selectedModel === 'gpt' ? 'GPT-5.2' : 'Gemini' }}</span>
-                    <ChevronDown
-                      :size="12"
-                      :class="{ rotated: isModelDropdownOpen }"
-                    />
-                  </button>
-                  <Transition name="dropdown">
-                    <div
-                      v-if="isModelDropdownOpen"
-                      class="model-dropdown"
-                    >
-                      <button
-                        @click="selectModel('gpt')"
-                        :class="{ active: selectedModel === 'gpt' }"
-                      >
-                        🤖 GPT-5.2
-                      </button>
-                      <button
-                        @click="selectModel('gemini')"
-                        :class="{ active: selectedModel === 'gemini' }"
-                      >
-                        ✨ Gemini 3 Pro
-                      </button>
-                    </div>
-                  </Transition>
-                </div>
-
-                <button class="toolbar-btn research">
-                  <Globe :size="14" />
-                  <span>Research</span>
-                </button>
-              </div>
-
-              <button
-                class="send-btn"
-                :class="{ active: inputValue.trim() && !isProcessing }"
-                :disabled="!inputValue.trim() || isProcessing"
-                @click="handleSubmit"
-              >
-                <Loader2
-                  v-if="isProcessing"
-                  :size="16"
-                  class="spin"
-                />
-                <ArrowUp
-                  v-else
-                  :size="16"
-                />
-              </button>
+            <div v-if="isProcessing" class="stream-indicator">
+              <Loader2 :size="14" class="spin" />
+              <span>Streaming response...</span>
             </div>
+
+            <div ref="messagesEndRef" />
           </div>
         </div>
-      </div>
-    </template>
+      </section>
 
-    <!-- Error Display -->
+      <AgentConsole class="agent-panel" />
+    </main>
+
+    <footer class="ai-composer">
+      <div class="composer-card">
+        <div class="composer-input">
+          <textarea
+            ref="inputRef"
+            v-model="inputValue"
+            placeholder="Ask anything, or type '@' to add to a note..."
+            :disabled="isProcessing"
+            rows="1"
+            @keydown="handleKeydown"
+          />
+        </div>
+
+        <div class="composer-actions">
+          <div class="actions-left">
+            <button class="tool-btn" title="Attach file">
+              <Paperclip :size="14" />
+              Attach
+            </button>
+            <button class="tool-btn" title="Voice input">
+              <Mic :size="14" />
+              Voice
+            </button>
+            <button class="tool-btn" title="Research">
+              <Globe :size="14" />
+              Research
+            </button>
+          </div>
+
+          <button
+            class="send-btn"
+            :class="{ active: inputValue.trim() && !isProcessing }"
+            :disabled="!inputValue.trim() || isProcessing"
+            @click="handleSubmit"
+          >
+            <Loader2 v-if="isProcessing" :size="16" class="spin" />
+            <ArrowUp v-else :size="16" />
+          </button>
+        </div>
+      </div>
+    </footer>
+
     <Transition name="slide-up">
-      <div
-        v-if="error"
-        class="error-banner"
-      >
+      <div v-if="error" class="error-banner">
         <span>{{ error }}</span>
-        <button @click="clearError">×</button>
+        <button @click="clearError">x</button>
       </div>
     </Transition>
   </div>
 </template>
 
 <style scoped>
-/* Base Layout - Note3 dark theme */
-.starting-page {
+.ai-chat {
+  --font-sans: 'Open Sans', 'Noto Sans', sans-serif;
+  --font-mono: 'DejaVu Sans Mono', 'JetBrains Mono', monospace;
+  --bg: #f6f7fb;
+  --panel-bg: rgba(255, 255, 255, 0.86);
+  --panel-border: rgba(148, 163, 184, 0.35);
+  --panel-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+  --radius-xl: 22px;
+  --ink: #0f172a;
+  --text-soft: #5b6777;
+  --muted: #728197;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --surface-1: rgba(255, 255, 255, 0.92);
+  --surface-2: rgba(15, 23, 42, 0.05);
+  --surface-3: rgba(15, 23, 42, 0.08);
+  --border-subtle: rgba(148, 163, 184, 0.4);
+  --stream-cursor: #2563eb;
+  --stream-glow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+  --role-user-bg: rgba(37, 99, 235, 0.12);
+  --role-user-color: #1d4ed8;
+  --role-assistant-bg: rgba(16, 185, 129, 0.12);
+  --role-assistant-color: #047857;
+  --chat-card-bg: rgba(255, 255, 255, 0.9);
+  --chat-card-border: rgba(148, 163, 184, 0.3);
+  --chat-card-border-hover: rgba(37, 99, 235, 0.35);
+  --chat-card-radius: 18px;
+  --chat-card-padding: 18px;
+  --chat-message-gap: 18px;
+  --transition-fast: 120ms;
+  --transition-normal: 200ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --tool-card-bg: rgba(15, 23, 42, 0.04);
+  --tool-card-border: rgba(148, 163, 184, 0.3);
+  --tool-card-border-hover: rgba(37, 99, 235, 0.25);
+  --tool-running-border: rgba(37, 99, 235, 0.4);
+  --tool-running-glow: rgba(37, 99, 235, 0.18);
+  --diff-remove-border: #ef4444;
+  --chat-divider: rgba(148, 163, 184, 0.35);
+  --chat-user-bg: rgba(37, 99, 235, 0.1);
+  --chat-user-border: rgba(37, 99, 235, 0.35);
+  --chat-assistant-bg: rgba(255, 255, 255, 0.9);
+  --chat-assistant-border: rgba(148, 163, 184, 0.3);
+
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0d1117;
-  color: #e6edf3;
-}
-
-/* Empty State */
-.empty-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  animation: fadeIn 0.5s ease-out;
-}
-
-.empty-state.exiting {
-  animation: fadeUpAndAway 0.3s cubic-bezier(0.4, 0, 0.6, 1) forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeUpAndAway {
-  to {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-}
-
-.centered-content {
-  width: 100%;
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-}
-
-/* Recommendations Section */
-.recommendations-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.recommendations-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #7d8590;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-left: 4px;
-}
-
-/* 2x2 Grid */
-.recommendations-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  border: 1px solid #30363d;
-  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  position: relative;
   overflow: hidden;
 }
 
-.recommendation-card {
+.ai-chat::before,
+.ai-chat::after {
+  content: '';
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12), transparent 60%);
+  top: -20vw;
+  right: -10vw;
+  z-index: 0;
+}
+
+.ai-chat::after {
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12), transparent 65%);
+  top: auto;
+  bottom: -15vw;
+  left: -10vw;
+}
+
+.ai-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 20px;
-  background: transparent;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  color: #e6edf3;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px 12px;
+  position: relative;
+  z-index: 1;
 }
 
-.recommendation-card:hover {
-  background: #1c2128;
+.header-title h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 
-/* Card borders - recreate 2x2 grid lines */
-.recommendation-card:nth-child(1) {
-  border-right: 1px solid #30363d;
-  border-bottom: 1px solid #30363d;
-}
-.recommendation-card:nth-child(2) {
-  border-bottom: 1px solid #30363d;
-}
-.recommendation-card:nth-child(3) {
-  border-right: 1px solid #30363d;
-}
-
-.card-icon {
-  color: #7d8590;
-}
-
-.card-title {
+.header-title p {
   font-size: 14px;
+  color: var(--text-soft);
+  max-width: 520px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
   font-weight: 600;
-  margin: 0;
-  color: #e6edf3;
 }
 
-.card-description {
-  font-size: 13px;
-  color: #7d8590;
-  margin: 0;
-  line-height: 1.4;
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.card-action {
-  font-size: 13px;
-  color: #58a6ff;
-  font-weight: 500;
-  margin-top: 4px;
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
-/* Chat Input - Note3 rounded style */
-.chat-input {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 32px;
-  padding: 12px 16px;
+.status-chip.live {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ghost-action {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ai-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  padding: 12px 32px 16px;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.chat-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  min-height: 0;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(18px);
 }
 
-.chat-input textarea {
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.chat-hero {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.hero-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.hero-card h2 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.hero-card p {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.hero-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.prompt-card {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.75);
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prompt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.prompt-card h3 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.prompt-card p {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.prompt-action {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.prompt-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--accent-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.chat-thread.empty {
+  padding-top: 0;
+}
+
+.stream-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.agent-panel {
+  min-height: 0;
+}
+
+.ai-composer {
+  padding: 0 32px 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.composer-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 16px 18px 14px;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.composer-input textarea {
   width: 100%;
-  background: transparent;
   border: none;
   outline: none;
-  color: #e6edf3;
-  font-size: 14px;
   resize: none;
-  min-height: 24px;
-  max-height: 120px;
+  background: transparent;
+  font-size: 14px;
   font-family: inherit;
-  line-height: 1.5;
+  color: var(--ink);
+  min-height: 28px;
 }
 
-.chat-input textarea::placeholder {
-  color: #7d8590;
+.composer-input textarea::placeholder {
+  color: var(--muted);
 }
 
-/* Input Toolbar */
-.input-toolbar {
+.composer-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 8px;
+  margin-top: 12px;
 }
 
-.toolbar-left {
+.actions-left {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.toolbar-btn {
-  display: flex;
+.tool-btn {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px;
-  background: transparent;
-  border: none;
-  border-radius: 20px;
-  color: #7d8590;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: 12px;
-}
-
-.toolbar-btn:hover {
-  background: #30363d;
-  color: #e6edf3;
-}
-
-.toolbar-btn.research {
   padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  color: var(--ink);
 }
 
-.toolbar-divider {
-  width: 1px;
-  height: 20px;
-  background: #30363d;
-  margin: 0 4px;
+.send-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 23, 42, 0.1);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
+  transition: all 0.2s ease;
 }
 
-/* Model Selector */
+.send-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+.send-btn.active:hover {
+  transform: translateY(-1px);
+}
+
 .model-selector {
   position: relative;
 }
@@ -621,24 +639,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 20px;
-  color: #7d8590;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.6);
   font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.model-btn:hover {
-  background: #30363d;
-  color: #e6edf3;
-}
-
-.model-icon {
-  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .model-btn svg {
@@ -651,16 +658,15 @@ onMounted(() => {
 
 .model-dropdown {
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 8px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 12px;
+  top: calc(100% + 10px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
   overflow: hidden;
-  min-width: 160px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 100;
+  min-width: 180px;
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+  z-index: 5;
 }
 
 .model-dropdown button {
@@ -669,27 +675,18 @@ onMounted(() => {
   gap: 8px;
   width: 100%;
   padding: 10px 14px;
-  background: none;
   border: none;
-  color: #7d8590;
+  background: none;
   font-size: 12px;
-  font-weight: 500;
+  color: var(--text-soft);
   text-align: left;
-  cursor: pointer;
-  transition: all 0.1s ease;
-}
-
-.model-dropdown button:hover {
-  background: #30363d;
-  color: #e6edf3;
 }
 
 .model-dropdown button.active {
-  background: rgba(88, 166, 255, 0.1);
-  color: #58a6ff;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent-strong);
 }
 
-/* Dropdown transition */
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.15s ease;
@@ -698,121 +695,36 @@ onMounted(() => {
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(-6px);
 }
 
-/* Send Button */
-.send-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #30363d;
-  border: none;
-  color: #7d8590;
-  cursor: not-allowed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.send-btn.active {
-  background: #238636;
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
-}
-
-.send-btn.active:hover {
-  background: #2ea043;
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Messages Area */
-.messages-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 2rem;
-}
-
-.messages-container {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 1rem 0;
-  color: #7d8590;
-  font-size: 14px;
-}
-
-/* Input Area (chat mode) */
-.input-area {
-  background: #0d1117;
-  padding: 1.5rem 2rem;
-}
-
-.input-wrapper {
-  max-width: 640px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.clear-btn {
-  align-self: center;
-  padding: 6px 12px;
-  background: none;
-  border: none;
-  color: #7d8590;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.clear-btn:hover {
-  color: #e6edf3;
-}
-
-/* Error Banner */
 .error-banner {
   position: fixed;
-  bottom: 100px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(248, 81, 73, 0.15);
-  border: 1px solid rgba(248, 81, 73, 0.3);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 12px;
-  color: #f85149;
-  z-index: 100;
+  color: #b91c1c;
+  z-index: 10;
 }
 
 .error-banner button {
   background: none;
   border: none;
   color: inherit;
-  cursor: pointer;
-  font-size: 1.25rem;
-  padding: 0;
+  font-size: 18px;
 }
 
-/* Transitions */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s ease;
@@ -821,24 +733,62 @@ onMounted(() => {
 .slide-up-enter-from,
 .slide-up-leave-to {
   opacity: 0;
-  transform: translate(-50%, 20px);
+  transform: translate(-50%, 12px);
 }
 
-/* Responsive */
-@media (max-width: 640px) {
-  .recommendations-grid {
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+  .ai-shell {
     grid-template-columns: 1fr;
   }
 
-  .recommendation-card:nth-child(1),
-  .recommendation-card:nth-child(2),
-  .recommendation-card:nth-child(3) {
-    border-right: none;
-    border-bottom: 1px solid #30363d;
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
+  .ai-header,
+  .ai-shell,
+  .ai-composer {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
-  .recommendation-card:last-child {
-    border-bottom: none;
+  .ai-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .prompt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .send-btn {
+    align-self: flex-end;
   }
 }
 </style>

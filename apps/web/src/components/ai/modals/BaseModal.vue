@@ -107,91 +107,98 @@ function handleOverlayClick(e: MouseEvent) {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(var(--modal-overlay-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--modal-overlay-blur)) saturate(150%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  animation: fadeIn 0.2s ease-out;
+  animation: overlayFadeIn 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@keyframes fadeIn {
+@keyframes overlayFadeIn {
   from {
     opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
   }
   to {
     opacity: 1;
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
   }
 }
 
 .modal-container {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: var(--modal-bg);
+  backdrop-filter: blur(var(--modal-backdrop-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur)) saturate(180%);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius);
+  box-shadow: var(--modal-shadow), inset 0 1px 0 var(--modal-inset-highlight);
   position: relative;
   display: flex;
   flex-direction: column;
-  max-height: 80vh;
-  animation: scaleIn 0.2s ease-out;
+  max-height: 85vh;
+  animation: modalEnter 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@keyframes scaleIn {
+@keyframes modalEnter {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.92) translateY(10px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
-/* Size variants */
+/* Size variants - Bigger */
 .size-sm {
-  width: 400px;
+  width: 480px;
 }
 
 .size-md {
-  width: 600px;
+  width: 720px;
 }
 
 .size-lg {
-  width: 800px;
+  width: 960px;
 }
 
-/* Close button */
+/* Close button - Refined */
 .close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
+  top: 20px;
+  right: 20px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: var(--modal-btn-secondary-bg);
   border: none;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
 }
 
 .close-btn:hover {
-  background: #21262d;
-  color: #e6edf3;
+  background: var(--modal-btn-secondary-hover);
+  color: var(--text-color);
 }
 
-/* Header */
+/* Header - No Border */
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #21262d;
+  padding: 24px 28px 16px;
+  background: transparent;
 }
 
 .header-content {
@@ -212,15 +219,16 @@ function handleOverlayClick(e: MouseEvent) {
 }
 
 .modal-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  color: #e6edf3;
+  letter-spacing: -0.01em;
+  color: var(--text-color);
   margin: 0;
 }
 
 .modal-subtitle {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary);
   margin: 0;
 }
 
@@ -228,7 +236,8 @@ function handleOverlayClick(e: MouseEvent) {
 .modal-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 8px 28px 28px;
+  scroll-behavior: smooth;
 }
 
 /* Custom scrollbar */
@@ -241,18 +250,22 @@ function handleOverlayClick(e: MouseEvent) {
 }
 
 .modal-content::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: var(--modal-border);
   border-radius: 3px;
 }
 
-/* Footer */
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--modal-btn-secondary-hover);
+}
+
+/* Footer - No Border, Subtle BG */
 .modal-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-top: 1px solid #21262d;
-  background: rgba(22, 27, 34, 0.5);
+  padding: 16px 28px 20px;
+  background: var(--modal-card-bg);
+  border-radius: 0 0 var(--modal-radius) var(--modal-radius);
 }
 
 /* Responsive */

@@ -14,8 +14,12 @@ interface IOptions {
 }
 
 const inlineStartRule = /(\s|^)\${1,2}(?!\$)/
-const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\1(?=[\s?!.,:]|$)/
-const blockRule = /^(\${1,2})\n((?:\\[\s\S]|[^\\])+?)\n\1(?:\n|$)/
+// Single $ inline math - no newlines, no $ inside
+const inlineRule = /^(\$)(?!\$)([^$\n]+?)\1(?!\$)/
+// Double $$ display math on same line (no newlines required) - allows $ inside but not $$
+const displayMathInlineRule = /^\$\$(?!\$)((?:[^$]|\$(?!\$))+?)\$\$(?!\$)/
+// Double $$ block math with newlines
+const blockRule = /^(\$\$)\n((?:\\[\s\S]|[^\\])+?)\n\1(?:\n|$)/
 
 const DEFAULT_OPTIONS = {
   throwOnError: false,
@@ -26,7 +30,12 @@ export default function (options: IOptions = {}) {
   const opts = Object.assign({}, DEFAULT_OPTIONS, options)
 
   return {
-    extensions: [inlineKatex(createRenderer(opts, false)), blockKatex(createRenderer(opts, true))],
+    extensions: [
+      // Display math inline ($$...$$) must come before single $ inline math
+      displayMathInline(createRenderer(opts, false)),
+      inlineKatex(createRenderer(opts, false)),
+      blockKatex(createRenderer(opts, true)),
+    ],
   }
 }
 
@@ -49,6 +58,35 @@ function createRenderer(options: IOptions, newlineAfter: boolean) {
   }
 }
 
+// Display math on same line: $$...$$
+function displayMathInline(renderer: (token: IMathToken) => string) {
+  return {
+    name: 'displayMath',
+    level: 'inline' as const,
+    start(src: string) {
+      const index = src.indexOf('$$')
+      if (index !== -1) {
+        const possibleKatex = src.substring(index)
+        if (possibleKatex.match(displayMathInlineRule)) return index
+      }
+      return -1
+    },
+    tokenizer(src: string) {
+      const match = src.match(displayMathInlineRule)
+      if (match) {
+        return {
+          type: 'inlineMath',
+          raw: match[0],
+          text: match[1].trim(),
+          displayMode: true,
+        }
+      }
+    },
+    renderer,
+  }
+}
+
+// Single $ inline math: $...$
 function inlineKatex(renderer: (token: IMathToken) => string) {
   return {
     name: 'inlineMath',
@@ -69,7 +107,7 @@ function inlineKatex(renderer: (token: IMathToken) => string) {
           type: 'inlineMath',
           raw: match[0],
           text: match[2].trim(),
-          displayMode: match[1].length === 2,
+          displayMode: false,
         }
       }
     },

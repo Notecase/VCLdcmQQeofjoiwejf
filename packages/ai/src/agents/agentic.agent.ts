@@ -481,7 +481,7 @@ Extract ${count} records and return ONLY a JSON array:
 
   private async executeCreateNote(
     title: string,
-    parentId?: string
+    _parentId?: string
   ): Promise<{ blockId: string; title: string }> {
     // In actual implementation, this would create a note via Supabase
     // For now, return a mock result
@@ -492,7 +492,7 @@ Extract ${count} records and return ONLY a JSON array:
   private async executeCreateDatabase(
     title: string,
     columns: DatabaseColumn[],
-    noteId?: string
+    _noteId?: string
   ): Promise<{ blockId: string; title: string; columns: DatabaseColumn[] }> {
     const blockId = generateId()
     return { blockId, title, columns }
@@ -502,7 +502,7 @@ Extract ${count} records and return ONLY a JSON array:
     title: string,
     artifactType: string,
     contentPrompt: string,
-    noteId?: string
+    _noteId?: string
   ): Promise<{ blockId: string; title: string; type: string }> {
     const provider = createOpenAIProvider({ apiKey: this.apiKey })
 
@@ -514,9 +514,10 @@ Requirements: ${contentPrompt}
 
 Return ONLY the HTML code, no explanation.`
 
-    let html = ''
+    // Generate HTML content (stored for future use when actual artifact creation is implemented)
+    let _html = ''
     for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      html += chunk
+      _html += chunk
     }
 
     const blockId = generateId()

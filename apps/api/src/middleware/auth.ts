@@ -118,3 +118,66 @@ export function requireAuth(c: Context): AuthContext {
 export function getAuth(c: Context): AuthContext | null {
   return c.get('auth') || null
 }
+
+/**
+ * Verify that the authenticated user owns the specified note
+ * Returns the note ID if ownership is verified, null otherwise
+ */
+export async function verifyNoteOwnership(
+  auth: AuthContext,
+  noteId: string
+): Promise<boolean> {
+  const { data, error } = await auth.supabase
+    .from('notes')
+    .select('id')
+    .eq('id', noteId)
+    .eq('user_id', auth.userId)
+    .single()
+
+  return !error && !!data
+}
+
+/**
+ * Require that the user owns the note, throwing HTTPException if not
+ */
+export async function requireNoteOwnership(
+  auth: AuthContext,
+  noteId: string
+): Promise<void> {
+  const isOwner = await verifyNoteOwnership(auth, noteId)
+  if (!isOwner) {
+    throw new HTTPException(404, { message: 'Note not found' })
+  }
+}
+
+/**
+ * Get OpenAI API key from environment, throwing if not configured
+ */
+export function requireOpenAIKey(): string {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    throw new HTTPException(500, { message: 'OpenAI API key not configured' })
+  }
+  return apiKey
+}
+
+/**
+ * UUID validation regex
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Validate UUID format
+ */
+export function isValidUUID(id: string): boolean {
+  return UUID_REGEX.test(id)
+}
+
+/**
+ * Require valid UUID format, throwing HTTPException if invalid
+ */
+export function requireValidUUID(id: string, paramName = 'id'): void {
+  if (!isValidUUID(id)) {
+    throw new HTTPException(400, { message: `Invalid ${paramName} format` })
+  }
+}

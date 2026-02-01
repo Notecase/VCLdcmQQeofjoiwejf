@@ -111,7 +111,7 @@ Grep patterns:
 ### ❌ Raw Error Throws Found
 | File | Line | Pattern |
 |------|------|---------|
-| apps/desktop/src/main.ts | 42 | throw new Error('...') |
+| apps/web/src/main.ts | 42 | throw new Error('...') |
 
 ### ⚠️ Console.error Without handleError
 | File | Line | Context |

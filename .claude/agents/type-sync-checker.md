@@ -73,7 +73,7 @@ Grep patterns:
 ### ⚠️ Duplicate Definitions Found
 | Type | Location | Should Import From |
 |------|----------|-------------------|
-| ChatMessage | apps/desktop/src/types.ts | @inkdown/shared/types |
+| ChatMessage | apps/web/src/types.ts | @inkdown/shared/types |
 
 ### ❌ Missing from Shared
 - [types that should be moved to shared]

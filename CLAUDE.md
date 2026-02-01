@@ -11,8 +11,6 @@ This document defines conventions, constraints, and guardrails for Claude Code w
 | Vue | 3.5.24 | UI framework |
 | Vite | 7.2.4 | Build tool |
 | TypeScript | ~5.7.0 | Strict mode enabled |
-| Electron | 36.4.0 | Desktop app |
-| Tauri | 2.x | Alternative desktop runtime |
 
 ## Known Version Conflicts - CRITICAL
 
@@ -27,10 +25,6 @@ This document defines conventions, constraints, and guardrails for Claude Code w
 - **Never use**: `ES2023` (causes compatibility issues with some dependencies)
 - **Check**: All `tsconfig.json` files must use ES2022
 
-### Electron Builder
-- **Current**: `electron-builder@26.0.12`
-- **Warning**: Do not upgrade without testing all platform builds
-
 ## Package Architecture
 
 ```
@@ -41,9 +35,8 @@ inkdown/
 │   ├── editor/        # Editor components
 │   └── muya/          # Markdown editor engine
 ├── apps/
-│   ├── desktop/       # Electron app
-│   ├── web/           # Web app (Vite 7)
-│   └── server/        # Backend services
+│   ├── api/           # Backend API services
+│   └── web/           # Web app (Vite 7)
 └── extensions/        # Browser extensions
 ```
 

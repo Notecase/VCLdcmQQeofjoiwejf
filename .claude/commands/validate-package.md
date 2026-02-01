@@ -17,7 +17,7 @@ Deep validation workflow for a specific package in the Inkdown monorepo.
 Examples:
 - `/validate-package shared`
 - `/validate-package ai`
-- `/validate-package desktop`
+- `/validate-package web`
 
 ## Validation Checks
 

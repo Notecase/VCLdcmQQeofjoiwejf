@@ -94,8 +94,6 @@ These version unifications are always safe:
 
 These require extra care:
 - `@vitejs/plugin-vue` - intentional split, do not unify
-- `electron` - may have platform-specific requirements
-- `electron-builder` - version-sensitive for CI/CD
 
 ## Output
 

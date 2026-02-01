@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useEditorStore, usePreferencesStore } from '@/stores'
 import { useAIStore } from '@/stores/ai'
 import InlineDiffOverlay from '@/components/ai/InlineDiffOverlay.vue'
-import InlineDiffController from '@/components/ai/InlineDiffController.vue'
+import InlineDiffView from '@/components/ai/InlineDiffView.vue'
 // InlineDiffRenderer is deprecated - replaced by InlineDiffController for true Muya integration
 
 // Import Muya and plugins from TS package
@@ -477,8 +477,8 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
       :dir="preferencesStore.textDirection"
     ></div>
 
-    <!-- True Inline Diff Controller (Muya-integrated approach) -->
-    <InlineDiffController
+    <!-- True Inline Diff View (Muya-integrated approach) -->
+    <InlineDiffView
       v-if="showDiffOverlay && diffViewMode === 'inline'"
       :get-muya="getMuya"
       @apply="handleDiffApply"

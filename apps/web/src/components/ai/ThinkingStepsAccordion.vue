@@ -27,6 +27,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-vue-next'
+import StreamingCodePreview from './StreamingCodePreview.vue'
 
 const store = useAIStore()
 
@@ -39,6 +40,7 @@ const hasSteps = computed(() => steps.value.length > 0)
 const hasRunningStep = computed(() => steps.value.some((s) => s.status === 'running'))
 const allComplete = computed(() => hasSteps.value && !hasRunningStep.value)
 const isProcessing = computed(() => store.isProcessing)
+const codePreview = computed(() => store.codePreview)
 
 // Auto-expand when new step arrives
 watch(
@@ -50,17 +52,8 @@ watch(
   }
 )
 
-// Auto-collapse when all complete (after delay)
-watch(allComplete, (complete) => {
-  if (complete && hasSteps.value) {
-    setTimeout(() => {
-      // Only collapse if still complete
-      if (store.thinkingSteps.every((s) => s.status !== 'running')) {
-        expanded.value = false
-      }
-    }, 2000)
-  }
-})
+// Note: Removed auto-collapse behavior - thinking steps now stay visible after completion
+// Users can manually collapse via the chevron button in the header if desired
 
 // Get icon for step type
 function getStepIcon(type: ThinkingStep['type']) {
@@ -136,7 +129,7 @@ function clearSteps() {
     :class="{ collapsed: !expanded, complete: allComplete }"
   >
     <!-- Header -->
-    <button class="timeline-header" @click="toggleExpanded" type="button">
+    <button class="timeline-header" type="button" @click="toggleExpanded">
       <div class="header-left">
         <div class="header-indicator">
           <div v-if="hasRunningStep" class="pulse-ring" />
@@ -151,8 +144,8 @@ function clearSteps() {
           v-if="!isProcessing && hasSteps"
           class="clear-btn"
           title="Clear steps"
-          @click.stop="clearSteps"
           type="button"
+          @click.stop="clearSteps"
         >
           <X :size="12" />
         </button>
@@ -179,9 +172,9 @@ function clearSteps() {
               class="connector-dot"
               :style="{ backgroundColor: getStepColor(step.type) }"
             >
-              <Loader2 v-if="step.status === 'running'" :size="8" class="dot-spinner" />
+              <Loader2 v-if="step.status === 'running'" :size="6" class="dot-spinner" />
             </div>
-            <div v-if="index < steps.length - 1" class="connector-line" />
+            <div v-if="index < steps.length - 1 || codePreview.active" class="connector-line" />
           </div>
 
           <!-- Step content -->
@@ -208,6 +201,15 @@ function clearSteps() {
             </div>
           </div>
         </div>
+
+        <!-- Code preview appears during artifact generation -->
+        <StreamingCodePreview
+          v-if="codePreview.active"
+          :phase="codePreview.phase"
+          :preview="codePreview.preview"
+          :total-chars="codePreview.totalChars"
+          class="artifact-preview"
+        />
       </div>
     </Transition>
   </div>
@@ -215,16 +217,17 @@ function clearSteps() {
 
 <style scoped>
 .thinking-timeline {
-  background: var(--chat-card-bg);
-  border: 1px solid var(--chat-card-border);
-  border-radius: 12px;
-  margin-bottom: 16px;
-  overflow: hidden;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--chat-separator);
   transition: all var(--transition-normal) ease;
 }
 
 .thinking-timeline.complete {
-  border-color: rgba(63, 185, 80, 0.3);
+  /* No special border for complete state */
 }
 
 /* ============================================
@@ -236,7 +239,7 @@ function clearSteps() {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 14px;
+  padding: 8px 0;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -244,27 +247,27 @@ function clearSteps() {
 }
 
 .timeline-header:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .header-indicator {
   position: relative;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .indicator-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--text-muted);
   transition: all var(--transition-normal) ease;
@@ -298,7 +301,7 @@ function clearSteps() {
 }
 
 .header-text {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -342,19 +345,19 @@ function clearSteps() {
  * ============================================ */
 
 .timeline-body {
-  padding: 0 14px 14px 14px;
-  border-top: 1px solid var(--border-subtle);
+  padding: 0 0 6px 0;
+  border-top: none;
 }
 
 .timeline-step {
   display: flex;
-  gap: 12px;
-  min-height: 36px;
-  padding-top: 12px;
+  gap: 8px;
+  min-height: 24px;
+  padding-top: 6px;
 }
 
 .timeline-step:first-child {
-  padding-top: 14px;
+  padding-top: 8px;
 }
 
 /* Connector */
@@ -362,13 +365,13 @@ function clearSteps() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 16px;
+  width: 12px;
   flex-shrink: 0;
 }
 
 .connector-dot {
-  width: var(--timeline-dot-size);
-  height: var(--timeline-dot-size);
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
   display: flex;
@@ -378,7 +381,7 @@ function clearSteps() {
 }
 
 .timeline-step.running .connector-dot {
-  box-shadow: 0 0 0 4px var(--timeline-active-glow);
+  box-shadow: 0 0 0 3px var(--timeline-active-glow);
 }
 
 .dot-spinner {
@@ -393,19 +396,19 @@ function clearSteps() {
 }
 
 .connector-line {
-  width: 2px;
+  width: 1px;
   flex: 1;
   background: var(--timeline-line-color);
-  margin: 6px 0;
-  min-height: 12px;
+  margin: 3px 0;
+  min-height: 6px;
 }
 
 /* Step content */
 .step-content {
   flex: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   min-width: 0;
 }
@@ -413,12 +416,14 @@ function clearSteps() {
 .step-main {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  gap: 6px;
 }
 
 .step-icon {
   flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
 }
 
 .step-description {
@@ -427,6 +432,7 @@ function clearSteps() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 180px;
 }
 
 .timeline-step.running .step-description {
@@ -436,7 +442,7 @@ function clearSteps() {
 .step-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -474,5 +480,15 @@ function clearSteps() {
 .expand-enter-to,
 .expand-leave-from {
   max-height: 400px;
+}
+
+/* ============================================
+ * ARTIFACT PREVIEW
+ * ============================================ */
+
+.artifact-preview {
+  margin-top: 8px;
+  margin-left: 12px; /* Align with step content after connector */
+  margin-bottom: 4px;
 }
 </style>

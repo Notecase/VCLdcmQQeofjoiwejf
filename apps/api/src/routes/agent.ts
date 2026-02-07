@@ -2,7 +2,7 @@
  * Agent API Routes
  *
  * Hono routes for AI agents with Vercel AI SDK compatible streaming.
- * Integrates Chat, Note, Secretary, and Planner agents.
+ * Integrates Chat, Note, Editor, and Planner agents.
  */
 
 import { Hono } from 'hono'
@@ -26,6 +26,8 @@ const AgentRequestSchema = z.object({
       noteIds: z.array(z.string().uuid()).optional(),
       projectId: z.string().uuid().optional(),
       currentNoteId: z.string().uuid().optional(),
+      selectedBlockIds: z.array(z.string()).optional(), // For clarification flow - user-selected targets (deprecated)
+      selectedLineNumbers: z.array(z.number()).optional(), // For clarification flow - line numbers are stable across re-parsing
     })
     .optional(),
   sessionId: z.string().uuid().optional(),
@@ -70,12 +72,15 @@ const PlannerSchema = z.object({
 })
 
 // ============================================================================
-// Secretary Agent (Main Entry Point)
+// Editor Agent (Main Entry Point)
 // ============================================================================
 
 /**
- * Secretary agent - intelligent routing
+ * Editor agent - intelligent routing
  * POST /api/agent/secretary
+ *
+ * Routes compound requests (multiple tasks) to DeepAgent for task decomposition.
+ * Simple requests continue to use EditorAgent for faster processing.
  */
 agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
@@ -87,9 +92,42 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   }
 
   // Dynamically import to avoid bundling issues
-  const { SecretaryAgent } = await import('@inkdown/ai/agents')
+  const { EditorAgent, InkdownDeepAgent } = await import('@inkdown/ai/agents')
 
-  const agent = new SecretaryAgent({
+  // Check if this is a compound request requiring task decomposition
+  const isCompound = InkdownDeepAgent.isCompoundRequest(body.input)
+
+  if (isCompound && body.stream) {
+    // Use DeepAgent for compound requests with streaming
+    const deepAgent = new InkdownDeepAgent({
+      supabase: auth.supabase,
+      userId: auth.userId,
+      openaiApiKey,
+      ollamaApiKey: process.env.OLLAMA_API_KEY,
+    })
+
+    return streamSSE(c, async (stream) => {
+      try {
+        const generator = deepAgent.stream({
+          message: body.input,
+          context: body.context,
+        })
+
+        for await (const event of generator) {
+          await stream.writeSSE({
+            data: JSON.stringify(event),
+          })
+        }
+      } catch (err) {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'error', data: String(err) }),
+        })
+      }
+    })
+  }
+
+  // Use EditorAgent for simple requests or non-streaming
+  const editorAgent = new EditorAgent({
     supabase: auth.supabase,
     userId: auth.userId,
     openaiApiKey,
@@ -97,13 +135,13 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
 
   // Load session if provided
   if (body.sessionId) {
-    await agent.loadSession(body.sessionId)
+    await editorAgent.loadSession(body.sessionId)
   }
 
   if (body.stream) {
     return streamSSE(c, async (stream) => {
       try {
-        const generator = agent.stream({
+        const generator = editorAgent.stream({
           message: body.input,
           context: body.context,
           sessionId: body.sessionId,
@@ -122,7 +160,7 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
     })
   }
 
-  const result = await agent.run({
+  const result = await editorAgent.run({
     message: body.input,
     context: body.context,
     sessionId: body.sessionId,

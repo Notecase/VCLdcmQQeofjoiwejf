@@ -24,6 +24,9 @@
       ],
       "muya/*": [
         "src/muya/*"
+      ],
+      "@inkdown/ai/*": [
+        "../../packages/ai/src/*"
       ]
     },
     /* Linting */

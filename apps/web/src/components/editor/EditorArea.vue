@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useEditorStore, usePreferencesStore } from '@/stores'
-import { useAIStore } from '@/stores/ai'
-import InlineDiffOverlay from '@/components/ai/InlineDiffOverlay.vue'
-import InlineDiffView from '@/components/ai/InlineDiffView.vue'
-// InlineDiffRenderer is deprecated - replaced by InlineDiffController for true Muya integration
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, markRaw } from 'vue'
+import { useEditorStore, usePreferencesStore, useAuthStore } from '@/stores'
+import { useAIStore, type PendingArtifact } from '@/stores/ai'
+import { useDiffBlocks } from '@/composables/useDiffBlocks'
+import ArtifactCodeModal, { type ArtifactData } from '@/components/artifact/ArtifactCodeModal.vue'
 
 // Import Muya and plugins from TS package
 import {
@@ -91,23 +90,29 @@ function extractHeadingsFromState(state: any[]): TocItem[] {
 
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
+const authStore = useAuthStore()
 const aiStore = useAIStore()
 
 const editorRef = ref<HTMLElement>()
-let muyaInstance: InstanceType<typeof Muya> | null = null
+const muyaInstance = ref<InstanceType<typeof Muya> | null>(null)
+
+// Current note ID for diff tracking
+const currentNoteId = computed(() => editorStore.currentDocument?.id)
+
+// Initialize true inline diff system
+// The composable watches for pending edits and injects diff blocks directly into Muya's DOM
+const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
+  muyaInstance as unknown as Parameters<typeof useDiffBlocks>[0],
+  currentNoteId
+)
 const autoSaveTimer = ref<ReturnType<typeof setTimeout>>()
 const tocUpdateTimer = ref<ReturnType<typeof setTimeout>>()
 const isEditorReady = ref(false)
 const isUploadingImage = ref(false)
 
-// AI Edit overlay state
-const showDiffOverlay = computed(() => aiStore.activeEdit !== null)
-const diffViewMode = computed(() => aiStore.diffViewMode)
-
-// Toggle between inline and sidebar diff views
-function toggleDiffView() {
-  aiStore.toggleDiffViewMode()
-}
+// Artifact code modal state
+const artifactModalOpen = ref(false)
+const artifactEditData = ref<ArtifactData | null>(null)
 
 // Register Muya plugins once
 let pluginsRegistered = false
@@ -188,7 +193,10 @@ function initializeMuya() {
     disableHtml: false, // Allow HTML for math rendering
   }
 
-  muyaInstance = new Muya(editorRef.value, options)
+  // Use markRaw to prevent Vue from proxying the Muya instance.
+  // Without this, Vue's reactivity system wraps DOM elements, event listeners,
+  // and internal objects in Proxies, which breaks structuredClone() in getState().
+  muyaInstance.value = markRaw(new Muya(editorRef.value, options))
 
   // Restore editor state (cursor and scroll position) after initialization
   const currentDoc = editorStore.currentDocument
@@ -196,13 +204,13 @@ function initializeMuya() {
     nextTick(() => {
       try {
         // Restore cursor position
-        if (currentDoc.editor_state?.cursor && muyaInstance) {
-          muyaInstance.setCursor(currentDoc.editor_state.cursor)
+        if (currentDoc.editor_state?.cursor && muyaInstance.value) {
+          muyaInstance.value.setCursor(currentDoc.editor_state.cursor)
         }
 
         // Restore scroll position
-        if (currentDoc.editor_state?.scroll && muyaInstance) {
-          const container = muyaInstance.container
+        if (currentDoc.editor_state?.scroll && muyaInstance.value) {
+          const container = muyaInstance.value.container
           if (container) {
             container.scrollTop = currentDoc.editor_state.scroll.top || 0
             container.scrollLeft = currentDoc.editor_state.scroll.left || 0
@@ -215,9 +223,9 @@ function initializeMuya() {
   }
 
   // Handle content changes - TS Muya uses 'json-change' event
-  muyaInstance.on('json-change', () => {
-    const markdown = muyaInstance?.getMarkdown() || ''
-    const state = muyaInstance?.getState() || []
+  muyaInstance.value.on('json-change', () => {
+    const markdown = muyaInstance.value?.getMarkdown() || ''
+    const state = muyaInstance.value?.getState() || []
 
     // Calculate word count from markdown
     const words = markdown.split(/\s+/).filter((w: string) => w.length > 0).length
@@ -253,15 +261,42 @@ function initializeMuya() {
   })
 
   // Handle selection changes
-  muyaInstance.on('selection-change', () => {
+  muyaInstance.value.on('selection-change', () => {
     // Could dispatch to store for toolbar state
+  })
+
+  // Handle artifact code editor open event
+  muyaInstance.value.on('artifact-open-code-editor', (data: { blockId: string; code: string; title: string; height: number }) => {
+    // Parse code JSON to extract html/css/javascript
+    let html = ''
+    let css = ''
+    let javascript = ''
+    try {
+      const parsed = JSON.parse(data.code)
+      html = parsed.html || ''
+      css = parsed.css || ''
+      javascript = parsed.javascript || ''
+    } catch {
+      // If code is not JSON, treat as raw HTML
+      html = data.code
+    }
+
+    artifactEditData.value = {
+      blockId: data.blockId,
+      title: data.title,
+      html,
+      css,
+      javascript,
+      height: data.height,
+    }
+    artifactModalOpen.value = true
   })
 
   isEditorReady.value = true
 
   // Extract initial TOC after editor is ready
   nextTick(() => {
-    const state = muyaInstance?.getState() || []
+    const state = muyaInstance.value?.getState() || []
     const toc = extractHeadingsFromState(state)
     editorStore.updateToc(toc)
   })
@@ -271,13 +306,17 @@ function initializeMuya() {
 watch(
   () => editorStore.currentDocument,
   (newDoc, oldDoc) => {
-    if (newDoc && muyaInstance && newDoc.id !== oldDoc?.id) {
+    if (newDoc && muyaInstance.value && newDoc.id !== oldDoc?.id) {
+      // Clear any active diffs when switching documents
+      // (Note: composable also watches noteId, but explicit clear is safer)
+      clearAllDiffs()
+
       // Switch to new document content, restoring cursor position if available
-      muyaInstance.setMarkdown(newDoc.content, newDoc.editor_state?.cursor)
+      muyaInstance.value.setMarkdown(newDoc.content, newDoc.editor_state?.cursor)
 
       // Update TOC after document switch
       nextTick(() => {
-        const state = muyaInstance?.getState() || []
+        const state = muyaInstance.value?.getState() || []
         const toc = extractHeadingsFromState(state)
         editorStore.updateToc(toc)
       })
@@ -285,32 +324,151 @@ watch(
   }
 )
 
+// Load persisted artifacts when note changes
+watch(
+  currentNoteId,
+  async (noteId) => {
+    if (noteId && authStore.user?.id) {
+      await aiStore.loadPersistedArtifacts(authStore.user.id, noteId)
+    }
+  },
+  { immediate: true }
+)
+
+// Watch for pending artifacts and insert them into editor
+watch(
+  () => aiStore.getPendingArtifactsForNote(currentNoteId.value || ''),
+  (pendingArtifacts) => {
+    if (!muyaInstance.value || !currentNoteId.value) return
+    for (const artifact of pendingArtifacts) {
+      insertArtifactBlock(artifact)
+    }
+  },
+  { deep: true }
+)
+
+/**
+ * Insert an artifact block into the editor
+ * Creates an IArtifactState and appends it to the document
+ */
+function insertArtifactBlock(artifact: PendingArtifact) {
+  const muya = muyaInstance.value
+  if (!muya?.editor?.scrollPage) return
+
+  const scrollPage = muya.editor.scrollPage
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ScrollPageClass = (scrollPage as any).constructor
+
+  // Create artifact state with JSON-serialized content
+  // IMPORTANT: Use nullish coalescing (??) to ensure data fields are never undefined
+  // JSON.stringify silently OMITS keys with undefined values, causing content loss
+  const artifactState = {
+    name: 'artifact' as const,
+    meta: { title: artifact.data.title || 'Untitled Artifact', customHeight: 300 },
+    text: JSON.stringify({
+      html: artifact.data.html ?? '',
+      css: artifact.data.css ?? '',
+      javascript: artifact.data.javascript ?? '',
+    }),
+  }
+
+  // Load and create artifact block
+  const ArtifactBlockClass = ScrollPageClass.loadBlock('artifact')
+  if (!ArtifactBlockClass) {
+    console.warn('[EditorArea] ArtifactBlock class not found')
+    return
+  }
+
+  const artifactBlock = ArtifactBlockClass.create(muya, artifactState)
+
+  // Insert at end of document
+  // Use 'user' source to properly sync OT state (prevents index mismatch errors)
+  const lastBlock = scrollPage.children?.tail
+  if (lastBlock) {
+    scrollPage.insertAfter(artifactBlock, lastBlock, 'user')
+  } else {
+    scrollPage.insertBefore(artifactBlock, null, 'user')
+  }
+
+  // Mark as inserted
+  aiStore.markArtifactInserted(artifact.id)
+
+  // Sync content to store
+  nextTick(() => {
+    const markdown = muya.getMarkdown()
+    editorStore.updateContent(markdown, {
+      words: markdown.split(/\s+/).filter((w: string) => w.length > 0).length,
+      characters: markdown.length,
+      paragraphs: markdown.split('\n\n').length,
+    })
+    editorStore.saveDocument()
+  })
+
+  console.log('[EditorArea] Artifact block inserted:', artifact.data.title)
+}
+
+/**
+ * Handle artifact code modal save
+ * Emits the update event back to Muya
+ */
+function handleArtifactSave(data: ArtifactData) {
+  const muya = muyaInstance.value
+  if (!muya) return
+
+  // Convert back to JSON code format
+  const codeJson = JSON.stringify({
+    html: data.html,
+    css: data.css,
+    javascript: data.javascript,
+  })
+
+  // Emit update event to Muya
+  muya.eventCenter.emit('artifact-update-code', {
+    blockId: data.blockId,
+    code: codeJson,
+    title: data.title,
+    height: data.height,
+  })
+
+  // Close modal
+  artifactModalOpen.value = false
+  artifactEditData.value = null
+}
+
+/**
+ * Close artifact modal without saving
+ */
+function closeArtifactModal() {
+  artifactModalOpen.value = false
+  artifactEditData.value = null
+}
+
 // Watch for preference changes
 watch(
   () => preferencesStore.focus,
   (value) => {
-    muyaInstance?.setFocusMode(value)
+    muyaInstance.value?.setFocusMode(value)
   }
 )
 
 watch(
   () => preferencesStore.fontSize,
   (value) => {
-    muyaInstance?.setFont({ fontSize: value })
+    muyaInstance.value?.setFont({ fontSize: value })
   }
 )
 
 watch(
   () => preferencesStore.lineHeight,
   (value) => {
-    muyaInstance?.setFont({ lineHeight: value })
+    muyaInstance.value?.setFont({ lineHeight: value })
   }
 )
 
 watch(
   () => preferencesStore.tabSize,
   (value) => {
-    muyaInstance?.setTabSize(value)
+    muyaInstance.value?.setTabSize(value)
   }
 )
 
@@ -318,7 +476,7 @@ watch(
   () => preferencesStore.theme,
   (value) => {
     const isDark = value.includes('dark')
-    muyaInstance?.setOptions(
+    muyaInstance.value?.setOptions(
       {
         mermaidTheme: isDark ? 'dark' : 'default',
         vegaTheme: isDark ? 'dark' : 'latimes',
@@ -339,7 +497,7 @@ function handleKeydown(event: KeyboardEvent) {
   // Undo: Cmd/Ctrl + Z
   if ((event.metaKey || event.ctrlKey) && event.key === 'z' && !event.shiftKey) {
     event.preventDefault()
-    muyaInstance?.undo()
+    muyaInstance.value?.undo()
   }
 
   // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
@@ -348,7 +506,7 @@ function handleKeydown(event: KeyboardEvent) {
     (event.key === 'y' || (event.key === 'z' && event.shiftKey))
   ) {
     event.preventDefault()
-    muyaInstance?.redo()
+    muyaInstance.value?.redo()
   }
 }
 
@@ -368,44 +526,19 @@ onUnmounted(() => {
     clearTimeout(tocUpdateTimer.value)
   }
 
-  if (muyaInstance) {
+  if (muyaInstance.value) {
     try {
-      muyaInstance.destroy()
+      muyaInstance.value.destroy()
     } catch {
       // Ignore cleanup errors
     }
-    muyaInstance = null
+    muyaInstance.value = null
   }
 })
 
-// AI Edit handlers
-function handleDiffApply(content: string) {
-  if (muyaInstance) {
-    // Set the new content
-    muyaInstance.setMarkdown(content)
-
-    // Trigger save
-    editorStore.updateContent(content, {
-      words: 0,
-      characters: content.length,
-      paragraphs: content.split('\n\n').length,
-    })
-
-    if (preferencesStore.autoSave) {
-      editorStore.saveDocument()
-    }
-  }
-}
-
-function handleDiffDiscard() {
-  // The store already handles clearing the active edit
-  // Just reset focus to the editor
-  editorRef.value?.focus()
-}
-
 // Expose Muya instance for parent components (e.g., format toolbar)
-const getMuya = () => muyaInstance
-defineExpose({ getMuya, isEditorReady, isUploadingImage })
+const getMuya = () => muyaInstance.value
+defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectAllDiffs })
 </script>
 
 <template>
@@ -415,83 +548,19 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
       'typewriter-mode': preferencesStore.typewriter,
       'focus-mode': preferencesStore.focus,
       'source-mode': preferencesStore.sourceCode,
-      'has-diff-overlay': showDiffOverlay && diffViewMode === 'sidebar',
-      'has-inline-diff': showDiffOverlay && diffViewMode === 'inline',
     }"
     :style="{
       '--editor-font-size': `${preferencesStore.fontSize}px`,
       '--editor-line-height': preferencesStore.lineHeight,
     }"
   >
-    <!-- View toggle button (when diff is active) -->
-    <button
-      v-if="showDiffOverlay"
-      class="diff-view-toggle"
-      :title="diffViewMode === 'inline' ? 'Switch to sidebar view' : 'Switch to inline view'"
-      @click="toggleDiffView"
-    >
-      <svg
-        v-if="diffViewMode === 'sidebar'"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="2"
-        />
-        <path d="M9 3v18" />
-      </svg>
-      <svg
-        v-else
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="2"
-        />
-        <path d="M3 9h18" />
-        <path d="M3 15h18" />
-      </svg>
-      {{ diffViewMode === 'inline' ? 'Sidebar' : 'Inline' }}
-    </button>
-
     <!-- Muya Editor Container -->
+    <!-- Diff blocks are injected directly into .mu-container by useDiffBlocks composable -->
     <div
       ref="editorRef"
       class="muya-editor"
       :dir="preferencesStore.textDirection"
     ></div>
-
-    <!-- True Inline Diff View (Muya-integrated approach) -->
-    <InlineDiffView
-      v-if="showDiffOverlay && diffViewMode === 'inline'"
-      :get-muya="getMuya"
-      @apply="handleDiffApply"
-      @discard="handleDiffDiscard"
-    />
-
-    <!-- Sidebar Diff Overlay (fallback view) -->
-    <InlineDiffOverlay
-      v-if="showDiffOverlay && diffViewMode === 'sidebar'"
-      :editor-element="editorRef"
-      @apply="handleDiffApply"
-      @discard="handleDiffDiscard"
-    />
 
     <!-- Loading state -->
     <div
@@ -501,6 +570,15 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
       <div class="loading-spinner"></div>
       <p>Initializing editor...</p>
     </div>
+
+    <!-- Artifact Code Modal -->
+    <ArtifactCodeModal
+      v-if="artifactEditData"
+      :visible="artifactModalOpen"
+      :data="artifactEditData"
+      @save="handleArtifactSave"
+      @close="closeArtifactModal"
+    />
   </div>
 </template>
 
@@ -509,56 +587,11 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Allow vertical overflow for diff hunks positioned outside scroll container */
+  overflow-x: hidden;
+  overflow-y: visible;
   background: transparent;
   position: relative;
-}
-
-/* When sidebar diff overlay is shown, make room for it */
-.editor-area.has-diff-overlay .muya-editor {
-  margin-right: 400px;
-}
-
-/* When inline diff is shown, no margin needed but add padding for suggestions */
-.editor-area.has-inline-diff .muya-editor {
-  padding-bottom: 100px; /* Space for floating action bar */
-}
-
-/* Diff view toggle button */
-.diff-view-toggle {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: var(--float-btn-bg, rgba(22, 27, 34, 0.9));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--border-color, rgba(48, 54, 61, 0.8));
-  border-radius: 8px;
-  color: var(--text-color-secondary, #8b949e);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.diff-view-toggle:hover {
-  background: var(--float-btn-bg-hover, rgba(33, 38, 45, 0.95));
-  color: var(--text-color, #e6edf3);
-  border-color: var(--border-color-hover, #484f58);
-}
-
-.diff-view-toggle svg {
-  opacity: 0.8;
-}
-
-/* When in sidebar mode, position toggle away from sidebar */
-.editor-area.has-diff-overlay .diff-view-toggle {
-  right: 412px;
 }
 
 .muya-editor {
@@ -1144,120 +1177,6 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage })
 
 :deep(.mu-table-picker td.selected) {
   background: var(--themeColor, #0078d4) !important;
-}
-
-/* ============================================
- * INLINE DIFF VISUALIZATION
- * Styles for AI-proposed edits shown inline
- * ============================================ */
-
-/* Diff highlighting - additions */
-.muya-editor :deep(.mu-diff-addition) {
-  background: rgba(46, 160, 67, 0.2);
-  color: #3fb950;
-  border-radius: 2px;
-  padding: 1px 3px;
-  margin: 0 1px;
-  position: relative;
-  display: inline;
-}
-
-.muya-editor :deep(.mu-diff-addition.pending) {
-  background: rgba(46, 160, 67, 0.2);
-  color: #3fb950;
-}
-
-.muya-editor :deep(.mu-diff-addition.accepted) {
-  background: transparent;
-  color: inherit;
-}
-
-.muya-editor :deep(.mu-diff-addition.rejected) {
-  opacity: 0.4;
-  text-decoration: line-through;
-  text-decoration-color: #f85149;
-}
-
-/* Diff highlighting - deletions */
-.muya-editor :deep(.mu-diff-deletion) {
-  background: rgba(248, 81, 73, 0.2);
-  color: #f85149;
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
-  border-radius: 2px;
-  padding: 1px 3px;
-  margin: 0 1px;
-  position: relative;
-  display: inline;
-}
-
-.muya-editor :deep(.mu-diff-deletion.pending) {
-  background: rgba(248, 81, 73, 0.2);
-  color: #f85149;
-  text-decoration: line-through;
-}
-
-.muya-editor :deep(.mu-diff-deletion.accepted) {
-  opacity: 0.4;
-  text-decoration: line-through;
-}
-
-.muya-editor :deep(.mu-diff-deletion.rejected) {
-  background: transparent;
-  color: inherit;
-  text-decoration: none;
-}
-
-/* Action button group container */
-.muya-editor :deep(.mu-diff-action-group) {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-  vertical-align: middle;
-}
-
-/* Action buttons - injected after highlight spans */
-.muya-editor :deep(.mu-diff-action) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: bold;
-  vertical-align: middle;
-  transition:
-    transform 0.1s ease,
-    filter 0.1s ease;
-  line-height: 1;
-}
-
-.muya-editor :deep(.mu-diff-action:hover) {
-  transform: scale(1.15);
-  filter: brightness(1.1);
-}
-
-.muya-editor :deep(.mu-diff-action.accept) {
-  background: #3fb950;
-  color: white;
-}
-
-.muya-editor :deep(.mu-diff-action.reject) {
-  background: #f85149;
-  color: white;
-}
-
-/* Hide action buttons when decision is made */
-.muya-editor :deep(.mu-diff-addition.accepted .mu-diff-action-group),
-.muya-editor :deep(.mu-diff-addition.rejected .mu-diff-action-group),
-.muya-editor :deep(.mu-diff-deletion.accepted .mu-diff-action-group),
-.muya-editor :deep(.mu-diff-deletion.rejected .mu-diff-action-group) {
-  display: none;
 }
 
 /* ============================================

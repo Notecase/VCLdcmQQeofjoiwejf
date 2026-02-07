@@ -19,8 +19,7 @@ import ChatMessage from './ChatMessage.vue'
 import RecommendTab from './RecommendTab.vue'
 import WorkflowsTab from './WorkflowsTab.vue'
 import LearningResourcesTab from './LearningResourcesTab.vue'
-import ThinkingStepsAccordion from './ThinkingStepsAccordion.vue'
-import EditProposalCard from './EditProposalCard.vue'
+import ClarificationDialog from './ClarificationDialog.vue'
 
 // Modal components
 import MindmapModal from './modals/MindmapModal.vue'
@@ -102,7 +101,6 @@ const searchQuery = ref('')
 // Computed
 const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
-const pendingEdits = computed(() => store.pendingEdits.filter((e) => e.status === 'pending'))
 const error = computed(() => store.error)
 
 // Watch for note changes and update recommendation store
@@ -162,6 +160,34 @@ function closeModal() {
 function handleAddToNote(_content: string) {
   // TODO: Integrate with editor to add content
   closeModal()
+}
+
+// Clarification handlers
+async function handleClarificationSelect(blockIds: string[]) {
+  const instruction = store.pendingClarification?.instruction || ''
+  const options = store.pendingClarification?.options || []
+
+  // Extract line numbers from the selected options for stable matching
+  // Line numbers remain consistent even when the document is re-parsed
+  const selectedLineNumbers = options
+    .filter(opt => blockIds.includes(opt.id))
+    .map(opt => opt.line)
+
+  store.resolveClarification(blockIds)
+
+  // Re-send with both blockIds (for backward compat) and lineNumbers (for stable matching)
+  const context = activeNote.value
+    ? {
+        currentNoteId: activeNote.value.id,
+        selectedBlockIds: blockIds,
+        selectedLineNumbers,
+      }
+    : undefined
+  await sendMessage(instruction, 'secretary', context)
+}
+
+function handleClarificationCancel() {
+  store.cancelClarification()
 }
 </script>
 
@@ -239,21 +265,6 @@ function handleAddToNote(_content: string) {
             placeholder="Search knowledge base..."
           />
         </div>
-      </div>
-
-      <!-- Thinking Steps Accordion -->
-      <ThinkingStepsAccordion />
-
-      <!-- Pending Edit Proposals -->
-      <div
-        v-if="pendingEdits.length > 0"
-        class="pending-edits"
-      >
-        <EditProposalCard
-          v-for="edit in pendingEdits"
-          :key="edit.id"
-          :edit="edit"
-        />
       </div>
 
       <!-- Error state -->
@@ -414,6 +425,16 @@ function handleAddToNote(_content: string) {
         </div>
       </div>
     </div>
+
+    <!-- Clarification Dialog -->
+    <ClarificationDialog
+      v-if="store.hasPendingClarification"
+      :options="store.pendingClarification?.options || []"
+      :reason="store.pendingClarification?.reason || ''"
+      :is-visible="store.hasPendingClarification"
+      @select="handleClarificationSelect"
+      @cancel="handleClarificationCancel"
+    />
 
     <!-- Modals -->
     <MindmapModal
@@ -704,11 +725,6 @@ function handleAddToNote(_content: string) {
 .error-dismiss:hover {
   color: #e6edf3;
   background: #21262d;
-}
-
-/* Pending Edits */
-.pending-edits {
-  margin-bottom: 12px;
 }
 
 /* Messages Area */

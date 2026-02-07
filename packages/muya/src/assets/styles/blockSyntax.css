@@ -120,7 +120,7 @@
   content: none;
 }
 
-.mu-thematic-break:not(.mu-active) > .mu-thematic-break-content {
+.mu-thematic-break:not(.mu-active)>.mu-thematic-break-content {
   opacity: 0;
 }
 
@@ -183,7 +183,7 @@ code.mu-code .mu-code-copy:hover {
   overflow: auto;
 }
 
-.mu-code-copy i.icon > i[class^='icon-'] {
+.mu-code-copy i.icon>i[class^='icon-'] {
   position: absolute;
   left: -16px;
 
@@ -243,7 +243,7 @@ span.mu-language-input {
 }
 
 /* loose tight list */
-.mu-tight-list > li > p {
+.mu-tight-list>li>p {
   margin: 0;
   padding: 0;
 }
@@ -285,8 +285,8 @@ li.mu-task-list-item {
   list-style-type: none;
 }
 
-li.mu-task-list-item > input[type='checkbox'],
-li.mu-task-list-item > span.mu-task-list-checkbox {
+li.mu-task-list-item>input[type='checkbox'],
+li.mu-task-list-item>span.mu-task-list-checkbox {
   position: absolute;
   top: 0.9em;
   left: -23px;
@@ -302,18 +302,18 @@ li.mu-task-list-item > span.mu-task-list-checkbox {
   appearance: none;
 }
 
-ul.mu-tight-list > li.mu-task-list-item > input[type='checkbox'],
-ul.mu-tight-list > li.mu-task-list-item > span.mu-task-list-checkbox {
+ul.mu-tight-list>li.mu-task-list-item>input[type='checkbox'],
+ul.mu-tight-list>li.mu-task-list-item>span.mu-task-list-checkbox {
   top: 0.3em;
 }
 
-li.mu-task-list-item > input.mu-checkbox-checked ~ *,
-li.mu-task-list-item > span.mu-checkbox-checked ~ * {
+li.mu-task-list-item>input.mu-checkbox-checked~*,
+li.mu-task-list-item>span.mu-checkbox-checked~* {
   color: var(--editor-color-50);
 }
 
-li.mu-task-list-item > input[type='checkbox']::before,
-li.mu-task-list-item > span.mu-task-list-checkbox::before {
+li.mu-task-list-item>input[type='checkbox']::before,
+li.mu-task-list-item>span.mu-task-list-checkbox::before {
   position: absolute;
   top: -2px;
   left: -2px;
@@ -332,8 +332,8 @@ li.mu-task-list-item > span.mu-task-list-checkbox::before {
   content: '';
 }
 
-li.mu-task-list-item > input::after,
-li.mu-task-list-item > span.mu-task-list-checkbox::after {
+li.mu-task-list-item>input::after,
+li.mu-task-list-item>span.mu-task-list-checkbox::after {
   position: absolute;
   top: 1px;
   left: 4px;
@@ -354,13 +354,13 @@ li.mu-task-list-item > span.mu-task-list-checkbox::after {
   content: '';
 }
 
-li.mu-task-list-item > input.mu-checkbox-checked::after,
-li.mu-task-list-item > span.mu-checkbox-checked::after {
+li.mu-task-list-item>input.mu-checkbox-checked::after,
+li.mu-task-list-item>span.mu-checkbox-checked::after {
   transform: rotate(-45deg) scale(1);
 }
 
-li.mu-task-list-item > input.mu-checkbox-checked::before,
-li.mu-task-list-item > span.mu-checkbox-checked::before {
+li.mu-task-list-item>input.mu-checkbox-checked::before,
+li.mu-task-list-item>span.mu-checkbox-checked::before {
   background: var(--icon-color);
   border-color: var(--icon-color);
 }
@@ -438,24 +438,24 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 }
 
 .mu-table-inner td[data-align='left'],
-.mu-table-inner td[data-align='left'] > .mu-table-cell-content {
+.mu-table-inner td[data-align='left']>.mu-table-cell-content {
   text-align: left;
 }
 
 .mu-table-inner td[data-align='center'],
-.mu-table-inner td[data-align='center'] > .mu-table-cell-content {
+.mu-table-inner td[data-align='center']>.mu-table-cell-content {
   text-align: center;
 }
 
 .mu-table-inner td[data-align='right'],
-.mu-table-inner td[data-align='right'] > .mu-table-cell-content {
+.mu-table-inner td[data-align='right']>.mu-table-cell-content {
   text-align: right;
 }
 
 /* html block and math block, diagram block */
-figure.mu-html-block > .mu-html-container,
-figure.mu-math-block > .mu-math-container,
-figure.mu-diagram-block > .mu-diagram-container {
+figure.mu-html-block>.mu-html-container,
+figure.mu-math-block>.mu-math-container,
+figure.mu-diagram-block>.mu-diagram-container {
   position: absolute;
   z-index: -1;
 
@@ -506,7 +506,7 @@ figure.mu-diagram-block .mu-diagram-preview img {
   max-width: 100%;
 }
 
-figure.mu-html-block .mu-html-preview > pre {
+figure.mu-html-block .mu-html-preview>pre {
   padding: 0 1rem;
 
   white-space: pre-wrap;
@@ -539,12 +539,12 @@ figure.mu-diagram-block div.mu-diagram-preview {
   text-align: center;
 }
 
-figure.mu-math-block div.mu-math-preview > svg {
+figure.mu-math-block div.mu-math-preview>svg {
   width: 100%;
 }
 
-figure.mu-active.mu-math-block > div.mu-math-preview,
-figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
+figure.mu-active.mu-math-block>div.mu-math-preview,
+figure.mu-active.mu-diagram-block>div.mu-diagram-preview {
   position: absolute;
   top: calc(100% + 20px);
   left: 50%;
@@ -657,7 +657,7 @@ pre.mu-active.mu-fenced-code::after {
   content: '\200B';
 }
 
-.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type::after {
+.mu-show-quick-insert-hint .mu-paragraph.mu-active>.mu-paragraph-content:first-of-type::after {
   padding-left: 8px;
 
   color: var(--editor-color-30);
@@ -665,9 +665,7 @@ pre.mu-active.mu-fenced-code::after {
   content: attr(placeholder);
 }
 
-.mu-show-quick-insert-hint
-  .mu-paragraph.mu-active
-  > .mu-paragraph-content:first-of-type:empty::after {
+.mu-show-quick-insert-hint .mu-paragraph.mu-active>.mu-paragraph-content:first-of-type:empty::after {
   color: var(--editor-color-30);
 
   content: attr(empty-hint);
@@ -675,4 +673,478 @@ pre.mu-active.mu-fenced-code::after {
 
 .mu-table-cell-content {
   min-width: 10em;
+}
+
+/* Artifact Block */
+figure.mu-artifact-block {
+  position: relative;
+
+  margin: 1em 0;
+  padding: 0;
+
+  border-radius: 16px;
+  border: none;
+  overflow: hidden;
+}
+
+.mu-artifact-preview {
+  display: block;
+  width: 100%;
+  background: transparent;
+}
+
+.mu-artifact-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--code-block-bg-color);
+  border-bottom: 1px solid var(--editor-color-10);
+}
+
+.mu-artifact-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--editor-color-50);
+}
+
+.mu-artifact-iframe-container {
+  width: 100%;
+  min-height: 200px;
+  background: transparent;
+  border-radius: 16px;
+  pointer-events: auto;
+  overflow: hidden;
+  /* Subtle border to define the mold */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mu-artifact-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  pointer-events: auto;
+}
+
+.mu-artifact-container {
+  position: absolute;
+  z-index: -1;
+
+  width: 0;
+  height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: visible;
+
+  opacity: 0;
+}
+
+figure.mu-active.mu-artifact-block .mu-artifact-container {
+  position: relative;
+  z-index: 1;
+
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+
+  opacity: 1;
+}
+
+figure:not(.mu-active).mu-artifact-block .mu-artifact-container {
+  overflow: hidden;
+}
+
+/* Artifact container code editing styles */
+pre.mu-artifact-container {
+  margin-top: 0;
+  border-top: 1px solid var(--editor-color-10);
+  border-radius: 0 0 8px 8px;
+}
+
+pre.mu-active.mu-artifact-container::before {
+  content: '``` artifact';
+}
+
+pre.mu-active.mu-artifact-container::after {
+  content: '```';
+}
+
+pre.mu-active.mu-artifact-container::before,
+pre.mu-active.mu-artifact-container::after {
+  position: absolute;
+  left: 0;
+
+  color: var(--editor-color-30);
+  font-weight: 100;
+}
+
+pre.mu-active.mu-artifact-container::before {
+  top: -20px;
+}
+
+pre.mu-active.mu-artifact-container::after {
+  bottom: -23px;
+}
+
+/* ============================================
+ * ARTIFACT BLOCK REDESIGN - Note3 Style
+ * Clean preview with glassmorphic hover controls
+ * ============================================ */
+
+/* Hide old header */
+.mu-artifact-header {
+  display: none !important;
+}
+
+/* Container - GitHub dark style */
+figure.mu-artifact-block {
+  position: relative;
+  margin: 1em 0;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Glassmorphic Control Pill - More transparent with stronger blur */
+.mu-artifact-control-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+
+  /* Enhanced Glassmorphism - more transparent */
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /* Hidden by default */
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+/* Show on hover */
+figure.mu-artifact-block:hover .mu-artifact-control-pill {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Divider between buttons */
+.mu-artifact-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Code button */
+.mu-artifact-code-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 24px 0 0 24px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mu-artifact-code-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 1);
+}
+
+.mu-artifact-code-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Expand button */
+.mu-artifact-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0 24px 24px 0;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mu-artifact-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mu-artifact-expand-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Light theme pill */
+:root[data-theme='light'] .mu-artifact-control-pill,
+:root[data-theme='ulysses-light'] .mu-artifact-control-pill,
+:root[data-theme='graphite-light'] .mu-artifact-control-pill,
+:root[data-theme='cadmium-light'] .mu-artifact-control-pill {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme='light'] .mu-artifact-divider,
+:root[data-theme='ulysses-light'] .mu-artifact-divider,
+:root[data-theme='graphite-light'] .mu-artifact-divider,
+:root[data-theme='cadmium-light'] .mu-artifact-divider {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='light'] .mu-artifact-code-btn,
+:root[data-theme='ulysses-light'] .mu-artifact-code-btn,
+:root[data-theme='graphite-light'] .mu-artifact-code-btn,
+:root[data-theme='cadmium-light'] .mu-artifact-code-btn {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+:root[data-theme='light'] .mu-artifact-code-btn:hover,
+:root[data-theme='ulysses-light'] .mu-artifact-code-btn:hover,
+:root[data-theme='graphite-light'] .mu-artifact-code-btn:hover,
+:root[data-theme='cadmium-light'] .mu-artifact-code-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.9);
+}
+
+:root[data-theme='light'] .mu-artifact-expand-btn,
+:root[data-theme='ulysses-light'] .mu-artifact-expand-btn,
+:root[data-theme='graphite-light'] .mu-artifact-expand-btn,
+:root[data-theme='cadmium-light'] .mu-artifact-expand-btn {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme='light'] .mu-artifact-expand-btn:hover,
+:root[data-theme='ulysses-light'] .mu-artifact-expand-btn:hover,
+:root[data-theme='graphite-light'] .mu-artifact-expand-btn:hover,
+:root[data-theme='cadmium-light'] .mu-artifact-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* Corner Bracket Decorations - L-shaped lines at corners */
+.mu-artifact-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+figure.mu-artifact-block:hover .mu-artifact-corner {
+  opacity: 1;
+}
+
+.mu-artifact-corner::before,
+.mu-artifact-corner::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 1px;
+}
+
+/* Horizontal line */
+.mu-artifact-corner::before {
+  width: 14px;
+  height: 2px;
+}
+
+/* Vertical line */
+.mu-artifact-corner::after {
+  width: 2px;
+  height: 14px;
+}
+
+/* Position each corner */
+.mu-artifact-corner-nw {
+  top: 6px;
+  left: 6px;
+}
+
+.mu-artifact-corner-nw::before {
+  top: 0;
+  left: 0;
+}
+
+.mu-artifact-corner-nw::after {
+  top: 0;
+  left: 0;
+}
+
+.mu-artifact-corner-ne {
+  top: 6px;
+  right: 6px;
+}
+
+.mu-artifact-corner-ne::before {
+  top: 0;
+  right: 0;
+}
+
+.mu-artifact-corner-ne::after {
+  top: 0;
+  right: 0;
+}
+
+.mu-artifact-corner-sw {
+  bottom: 6px;
+  left: 6px;
+}
+
+.mu-artifact-corner-sw::before {
+  bottom: 0;
+  left: 0;
+}
+
+.mu-artifact-corner-sw::after {
+  bottom: 0;
+  left: 0;
+}
+
+.mu-artifact-corner-se {
+  bottom: 6px;
+  right: 6px;
+}
+
+.mu-artifact-corner-se::before {
+  bottom: 0;
+  right: 0;
+}
+
+.mu-artifact-corner-se::after {
+  bottom: 0;
+  right: 0;
+}
+
+/* Light theme corners */
+:root[data-theme='light'] .mu-artifact-corner::before,
+:root[data-theme='light'] .mu-artifact-corner::after,
+:root[data-theme='ulysses-light'] .mu-artifact-corner::before,
+:root[data-theme='ulysses-light'] .mu-artifact-corner::after,
+:root[data-theme='graphite-light'] .mu-artifact-corner::before,
+:root[data-theme='graphite-light'] .mu-artifact-corner::after,
+:root[data-theme='cadmium-light'] .mu-artifact-corner::before,
+:root[data-theme='cadmium-light'] .mu-artifact-corner::after {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Resize Handle Dots - Small circles at corners */
+.mu-artifact-resize-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+figure.mu-artifact-block:hover .mu-artifact-resize-handle {
+  opacity: 1;
+}
+
+.mu-artifact-resize-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.mu-artifact-resize-ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.mu-artifact-resize-sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.mu-artifact-resize-se {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+}
+
+.mu-artifact-resize-handle::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.mu-artifact-resize-handle:hover::before {
+  transform: scale(1.25);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.mu-artifact-resize-nw::before {
+  top: 4px;
+  left: 4px;
+}
+
+.mu-artifact-resize-ne::before {
+  top: 4px;
+  right: 4px;
+}
+
+.mu-artifact-resize-sw::before {
+  bottom: 4px;
+  left: 4px;
+}
+
+.mu-artifact-resize-se::before {
+  bottom: 4px;
+  right: 4px;
+}
+
+/* Light theme resize handles */
+:root[data-theme='light'] .mu-artifact-resize-handle::before,
+:root[data-theme='ulysses-light'] .mu-artifact-resize-handle::before,
+:root[data-theme='graphite-light'] .mu-artifact-resize-handle::before,
+:root[data-theme='cadmium-light'] .mu-artifact-resize-handle::before {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme='light'] .mu-artifact-resize-handle:hover::before,
+:root[data-theme='ulysses-light'] .mu-artifact-resize-handle:hover::before,
+:root[data-theme='graphite-light'] .mu-artifact-resize-handle:hover::before,
+:root[data-theme='cadmium-light'] .mu-artifact-resize-handle:hover::before {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Hide inline code container (modal replaces it) */
+figure.mu-artifact-block .mu-artifact-container {
+  display: none !important;
 }

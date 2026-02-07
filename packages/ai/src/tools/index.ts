@@ -32,6 +32,7 @@ export {
   CreateDatabaseSchema,
   ReadMemorySchema,
   WriteMemorySchema,
+  InsertMarkdownTableSchema,
   // Types
   type ReadBlockInput,
   type ReadNoteInput,
@@ -41,6 +42,7 @@ export {
   type CreateDatabaseInput,
   type ReadMemoryInput,
   type WriteMemoryInput,
+  type InsertMarkdownTableInput,
   // Functions
   readBlock,
   readNote,
@@ -50,6 +52,7 @@ export {
   createDatabase,
   readMemory,
   writeMemory,
+  insertMarkdownTable,
   // Tool definitions
   coreEditingTools,
 } from './core.tools'
@@ -70,6 +73,7 @@ export {
   DbSortRowsSchema,
   DbGetSchemaSchema,
   DbCreateChartDataSchema,
+  DbInsertRowsSchema,
   // Types
   type DbAddRowInput,
   type DbUpdateRowsInput,
@@ -81,6 +85,7 @@ export {
   type DbSortRowsInput,
   type DbGetSchemaInput,
   type DbCreateChartDataInput,
+  type DbInsertRowsInput,
   // Functions
   dbAddRow,
   dbUpdateRows,
@@ -92,6 +97,7 @@ export {
   dbSortRows,
   dbGetSchema,
   dbCreateChartData,
+  dbInsertRows,
   // Tool definitions
   databaseTools,
 } from './database.tools'
@@ -302,8 +308,18 @@ export const TOOL_METADATA: Record<
   },
   read_memory_file: { label: 'Read Memory', description: 'Read AI memory', category: 'core' },
   write_memory_file: { label: 'Write Memory', description: 'Write AI memory', category: 'core' },
+  insert_markdown_table: {
+    label: 'Insert Table',
+    description: 'Insert a markdown table into a note',
+    category: 'core',
+  },
   // Database
   db_add_row: { label: 'Add Row', description: 'Add row to database', category: 'database' },
+  db_insert_rows: {
+    label: 'Insert Rows',
+    description: 'Bulk insert multiple rows',
+    category: 'database',
+  },
   db_update_rows: {
     label: 'Update Rows',
     description: 'Update matching rows',

@@ -1,5 +1,6 @@
 /* eslint-disable no-fallthrough */
 import type {
+  IArtifactState,
   IAtxHeadingState,
   IBlockQuoteState,
   IBulletListState,
@@ -126,6 +127,11 @@ export default class ExportMarkdown {
         case 'diagram':
           this.insertLineBreak(result, indent)
           result.push(this.serializeDiagramBlock(state, indent))
+          break
+
+        case 'artifact':
+          this.insertLineBreak(result, indent)
+          result.push(this.serializeArtifactBlock(state, indent))
           break
 
         case 'block-quote':
@@ -316,6 +322,19 @@ export default class ExportMarkdown {
     return result.join('')
   }
 
+  serializeArtifactBlock(state: IArtifactState, indent: string) {
+    const result = []
+    const { text } = state
+    const lines = text.split('\n')
+    result.push(`${indent}\`\`\`artifact\n`)
+
+    for (const line of lines) result.push(`${indent}${line}\n`)
+
+    result.push(`${indent}\`\`\`\n`)
+
+    return result.join('')
+  }
+
   serializeBlockquote(state: IBlockQuoteState, indent: string) {
     const { children } = state
     const newIndent = `${indent}> `
@@ -410,10 +429,11 @@ export default class ExportMarkdown {
     } else {
       // NOTE: GitHub and Bitbucket limit the list count to 99 but this is nowhere defined.
       //  We limit the number to 99 for Daring Fireball Markdown to prevent indentation issues.
-      let n = start
+      let n = Number(start)
+      if (!Number.isFinite(n) || n < 1) n = 1
       if ((this.listIndentation === 'dfm' && n > 99) || n > 999999999) n = 1
 
-      listInfo.start++
+      listInfo.start = n + 1
 
       itemMarker = `${n}${delimiter || '.'} `
     }

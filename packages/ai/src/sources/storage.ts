@@ -470,7 +470,7 @@ export class SourceStorage {
   async getAllContent(noteId: string): Promise<string> {
     const sources = await this.getSourcesForNote(noteId, 'ready')
 
-    return sources.map((s) => `## Source: ${s.title}\n\n${s.content}`).join('\n\n---\n\n')
+    return sources.map((s) => `## Source: ${s.title}\n\n${s.content}`).join('\n\n')
   }
 
   /**

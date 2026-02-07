@@ -22,6 +22,9 @@ import ParagraphContent from './content/paragraphContent'
 import SetextHeadingContent from './content/setextHeadingContent'
 import TableCellContent from './content/tableCell'
 import ThematicBreakContent from './content/thematicBreakContent'
+import ArtifactBlock from './extra/artifact'
+import ArtifactContainer from './extra/artifact/artifactContainer'
+import ArtifactPreview from './extra/artifact/artifactPreview'
 import DiagramBlock from './extra/diagram'
 import DiagramContainer from './extra/diagram/diagramContainer'
 import DiagramPreview from './extra/diagram/diagramPreview'
@@ -80,4 +83,8 @@ export function registerBlocks() {
   ScrollPage.register(DiagramBlock)
   ScrollPage.register(DiagramContainer)
   ScrollPage.register(DiagramPreview)
+  // Artifact
+  ScrollPage.register(ArtifactBlock)
+  ScrollPage.register(ArtifactPreview)
+  ScrollPage.register(ArtifactContainer)
 }

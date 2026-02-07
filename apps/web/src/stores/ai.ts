@@ -7,6 +7,12 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, reactive } from 'vue'
+import {
+  createArtifact,
+  getPendingArtifacts,
+  markArtifactInserted as markArtifactInsertedDB,
+  type Artifact,
+} from '../services/artifacts.service'
 
 // ============================================================================
 // Types (ported from Note3)
@@ -69,6 +75,7 @@ export interface ThinkingStep {
   completedAt?: Date
   durationMs?: number
   errorMessage?: string
+  messageId?: string // Links to the assistant message being generated
 }
 
 export interface Citation {
@@ -106,9 +113,127 @@ export interface DiffHunk {
   status: DiffHunkStatus
 }
 
-export type AIStatus = 'idle' | 'streaming' | 'tool-calling' | 'thinking' | 'error'
+export type AIStatus = 'idle' | 'streaming' | 'tool-calling' | 'thinking' | 'clarifying' | 'error'
 
-export type DiffViewMode = 'inline' | 'sidebar'
+/**
+ * CodePreviewState - Tracks real-time code generation during artifact streaming
+ */
+export interface CodePreviewState {
+  active: boolean
+  phase: 'html' | 'css' | 'javascript'
+  preview: string
+  totalChars: number
+}
+
+/**
+ * ClarificationRequest - Shown when AI needs user to select target section
+ */
+export interface ClarificationRequest {
+  id: string
+  noteId: string
+  instruction: string // Original user instruction
+  options: ClarificationOption[]
+  reason: string
+  status: 'pending' | 'resolved' | 'cancelled'
+  createdAt: Date
+}
+
+export interface ClarificationOption {
+  id: string
+  label: string
+  preview: string
+  line: number
+}
+
+/**
+ * DiffBlockPair - Tracks a pair of injected blocks for inline diff visualization
+ *
+ * When the AI proposes an edit, we inject TWO real paragraph blocks into Muya:
+ * 1. Original block (styled as deletion - red strikethrough)
+ * 2. Proposed block (styled as addition - green highlight)
+ *
+ * Both blocks have action buttons for accept/reject. This approach ensures
+ * the diff hunks scroll naturally with the editor content.
+ */
+export interface DiffBlockPair {
+  id: string
+  editId: string
+  hunkId: string
+  noteId: string
+  originalBlockIndex: number // Index in scrollPage.children (before injection)
+  proposedBlockIndex: number // Index of inserted proposed block
+  proposedBlockCount: number // Number of blocks created for this hunk (tables/headings parsed from markdown)
+  originalContent: string
+  proposedContent: string
+  status: 'pending' | 'accepted' | 'rejected'
+}
+
+/**
+ * DiffBlock - Tracks an INDIVIDUAL block for per-block accept/reject
+ *
+ * Each block from a hunk gets its own unique blockId, allowing users to
+ * accept or reject individual blocks instead of all blocks from a hunk together.
+ */
+export interface DiffBlock {
+  id: string // Unique block ID
+  editId: string // Parent edit
+  hunkId: string // Parent hunk
+  noteId: string
+  blockIndex: number // Index within hunk's blocks
+  blockType: string // 'atx-heading', 'paragraph', 'table', etc.
+  content: string // This block's content
+  status: 'pending' | 'accepted' | 'rejected'
+  isOriginal: boolean // true = deletion block, false = addition block
+  hunkIndex?: number // Position among all hunks (0, 1, 2...) for ordering
+  hunkNewStart?: number // Line number from DiffHunk for visual alignment
+}
+
+/**
+ * PendingArtifact - Tracks artifacts created by AI before insertion into notes
+ */
+export interface PendingArtifact {
+  id: string
+  artifactId?: string // Database record ID for persistence
+  noteId: string
+  sessionId?: string // Chat session ID for linking
+  data: {
+    title: string
+    html: string
+    css: string
+    javascript: string
+  }
+  status: 'pending' | 'inserted'
+  createdAt: Date
+}
+
+/**
+ * CompletedArtifact - Links completed artifacts to chat messages for UI rendering
+ */
+export interface CompletedArtifact {
+  id: string
+  title: string
+  noteId: string
+  sessionId: string
+  messageId: string // Links to assistant message for rendering in ChatMessage
+  createdAt: Date
+}
+
+/**
+ * SubTask - Tracks individual tasks from DeepAgent decomposition
+ * Used when processing compound requests with multiple outputs
+ */
+export interface SubTask {
+  id: string
+  type: 'edit_note' | 'create_artifact' | 'database_action' | 'chat'
+  description: string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  progress: number // 0-100
+  progressMessage?: string
+  dependsOn?: string[]
+  result?: unknown
+  startedAt?: Date
+  completedAt?: Date
+}
 
 // ============================================================================
 // Store Definition
@@ -136,15 +261,41 @@ export const useAIStore = defineStore('ai', () => {
   // Pending edits (proposed changes from Note agent)
   const pendingEdits = ref<PendingEdit[]>([])
 
-  // Active edit for inline diff visualization
+  // Active edit for inline diff visualization (deprecated - hunks now shown inline)
   const activeEditId = ref<string | null>(null)
-  const focusedHunkIndex = ref<number>(0)
 
-  // Diff view mode (inline vs sidebar)
-  const diffViewMode = ref<DiffViewMode>('inline')
+  // Diff block pairs - tracks injected block pairs for true inline diff visualization
+  const diffBlockPairs = ref<DiffBlockPair[]>([])
+
+  // Individual diff blocks - tracks each block separately for per-block accept/reject
+  const diffBlocks = ref<DiffBlock[]>([])
+
+  // Pending artifacts - artifacts created by AI awaiting insertion
+  const pendingArtifacts = ref<PendingArtifact[]>([])
+
+  // Completed artifacts - links artifacts to chat messages for UI rendering
+  const completedArtifacts = ref<CompletedArtifact[]>([])
+
+  // Code preview state for streaming artifacts
+  const codePreview = ref<CodePreviewState>({
+    active: false,
+    phase: 'html',
+    preview: '',
+    totalChars: 0,
+  })
 
   // Error state
   const error = ref<string | null>(null)
+
+  // Clarification request (when AI needs user to select target section)
+  const pendingClarification = ref<ClarificationRequest | null>(null)
+
+  // SubTasks from DeepAgent decomposition (for compound requests)
+  const subTasks = ref<SubTask[]>([])
+
+  // Note preview panel (AI Chat page - right panel showing note being edited)
+  const previewNoteId = ref<string | null>(null)
+  const previewPanelVisible = ref(false)
 
   // ---------------------------------------------------------------------------
   // Computed
@@ -173,15 +324,12 @@ export const useAIStore = defineStore('ai', () => {
     return pendingEdits.value.find((e) => e.id === activeEditId.value) || null
   })
 
-  const focusedHunk = computed(() => {
-    if (!activeEdit.value) return null
-    return activeEdit.value.diffHunks[focusedHunkIndex.value] || null
-  })
-
-  const pendingHunksInActiveEdit = computed(() => {
-    if (!activeEdit.value) return []
-    return activeEdit.value.diffHunks.filter((h) => h.status === 'pending')
-  })
+  // Get all pending hunks across all edits for a specific note
+  const getPendingHunksForNote = (noteId: string) => {
+    return pendingEdits.value
+      .filter((e) => e.noteId === noteId && e.status === 'pending')
+      .flatMap((e) => e.diffHunks.filter((h) => h.status === 'pending'))
+  }
 
   // ---------------------------------------------------------------------------
   // Session Actions
@@ -306,6 +454,13 @@ export const useAIStore = defineStore('ai', () => {
     thinkingSteps.value = []
   }
 
+  /**
+   * Get thinking steps linked to a specific message
+   */
+  function getThinkingStepsForMessage(messageId: string): ThinkingStep[] {
+    return thinkingSteps.value.filter(s => s.messageId === messageId)
+  }
+
   // ---------------------------------------------------------------------------
   // Citation Actions
   // ---------------------------------------------------------------------------
@@ -369,7 +524,6 @@ export const useAIStore = defineStore('ai', () => {
     // Clear active edit if it was removed
     if (activeEditId.value && !pendingEdits.value.find((e) => e.id === activeEditId.value)) {
       activeEditId.value = null
-      focusedHunkIndex.value = 0
     }
   }
 
@@ -379,51 +533,6 @@ export const useAIStore = defineStore('ai', () => {
 
   function setActiveEdit(editId: string | null) {
     activeEditId.value = editId
-    focusedHunkIndex.value = 0
-  }
-
-  function focusNextHunk() {
-    if (!activeEdit.value) return
-    const hunks = activeEdit.value.diffHunks
-    const pendingHunks = hunks.filter((h) => h.status === 'pending')
-    if (pendingHunks.length === 0) return
-
-    // Find next pending hunk after current index
-    for (let i = focusedHunkIndex.value + 1; i < hunks.length; i++) {
-      if (hunks[i].status === 'pending') {
-        focusedHunkIndex.value = i
-        return
-      }
-    }
-    // Wrap around to start
-    for (let i = 0; i <= focusedHunkIndex.value; i++) {
-      if (hunks[i].status === 'pending') {
-        focusedHunkIndex.value = i
-        return
-      }
-    }
-  }
-
-  function focusPreviousHunk() {
-    if (!activeEdit.value) return
-    const hunks = activeEdit.value.diffHunks
-    const pendingHunks = hunks.filter((h) => h.status === 'pending')
-    if (pendingHunks.length === 0) return
-
-    // Find previous pending hunk before current index
-    for (let i = focusedHunkIndex.value - 1; i >= 0; i--) {
-      if (hunks[i].status === 'pending') {
-        focusedHunkIndex.value = i
-        return
-      }
-    }
-    // Wrap around to end
-    for (let i = hunks.length - 1; i >= focusedHunkIndex.value; i--) {
-      if (hunks[i].status === 'pending') {
-        focusedHunkIndex.value = i
-        return
-      }
-    }
   }
 
   function acceptHunk(editId: string, hunkId: string) {
@@ -434,9 +543,6 @@ export const useAIStore = defineStore('ai', () => {
     if (hunk) {
       hunk.status = 'accepted'
     }
-
-    // Auto-advance to next pending hunk
-    focusNextHunk()
   }
 
   function rejectHunk(editId: string, hunkId: string) {
@@ -447,9 +553,6 @@ export const useAIStore = defineStore('ai', () => {
     if (hunk) {
       hunk.status = 'rejected'
     }
-
-    // Auto-advance to next pending hunk
-    focusNextHunk()
   }
 
   function acceptAllHunks(editId: string) {
@@ -533,20 +636,286 @@ export const useAIStore = defineStore('ai', () => {
     }
     if (activeEditId.value === editId) {
       activeEditId.value = null
-      focusedHunkIndex.value = 0
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Diff View Mode Actions
+  // Diff Block Pair Actions (for true inline diff visualization)
   // ---------------------------------------------------------------------------
 
-  function setDiffViewMode(mode: DiffViewMode) {
-    diffViewMode.value = mode
+  /**
+   * Add a diff block pair to track injected blocks
+   * Accepts optional `id` to sync with DOM elements - if not provided, generates a new one
+   */
+  function addDiffBlockPair(
+    pair: Omit<DiffBlockPair, 'status'> & { id?: string }
+  ): DiffBlockPair {
+    const newPair: DiffBlockPair = {
+      id: pair.id || crypto.randomUUID(),
+      status: 'pending',
+      editId: pair.editId,
+      hunkId: pair.hunkId,
+      noteId: pair.noteId,
+      originalBlockIndex: pair.originalBlockIndex,
+      proposedBlockIndex: pair.proposedBlockIndex,
+      proposedBlockCount: pair.proposedBlockCount ?? 1,
+      originalContent: pair.originalContent,
+      proposedContent: pair.proposedContent,
+    }
+    diffBlockPairs.value.push(newPair)
+    return newPair
   }
 
-  function toggleDiffViewMode() {
-    diffViewMode.value = diffViewMode.value === 'inline' ? 'sidebar' : 'inline'
+  /**
+   * Update a diff block pair status
+   */
+  function updateDiffBlockPair(id: string, status: 'accepted' | 'rejected') {
+    const pair = diffBlockPairs.value.find((p) => p.id === id)
+    if (pair) {
+      pair.status = status
+    }
+  }
+
+  /**
+   * Get all diff block pairs for a specific note
+   */
+  function getDiffBlockPairsForNote(noteId: string): DiffBlockPair[] {
+    return diffBlockPairs.value.filter(
+      (p) => p.noteId === noteId && p.status === 'pending'
+    )
+  }
+
+  /**
+   * Clear diff block pairs for a specific note or all pairs
+   */
+  function clearDiffBlockPairs(noteId?: string) {
+    if (noteId) {
+      diffBlockPairs.value = diffBlockPairs.value.filter((p) => p.noteId !== noteId)
+    } else {
+      diffBlockPairs.value = []
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Individual Diff Block Actions (for per-block accept/reject)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add an individual diff block to track
+   */
+  function addDiffBlock(
+    block: Omit<DiffBlock, 'status'> & { id?: string }
+  ): DiffBlock {
+    const newBlock: DiffBlock = {
+      id: block.id || crypto.randomUUID(),
+      status: 'pending',
+      editId: block.editId,
+      hunkId: block.hunkId,
+      noteId: block.noteId,
+      blockIndex: block.blockIndex,
+      blockType: block.blockType,
+      content: block.content,
+      isOriginal: block.isOriginal,
+    }
+    diffBlocks.value.push(newBlock)
+    return newBlock
+  }
+
+  /**
+   * Update an individual diff block status
+   */
+  function updateDiffBlock(id: string, status: 'accepted' | 'rejected') {
+    const block = diffBlocks.value.find((b) => b.id === id)
+    if (block) {
+      block.status = status
+    }
+  }
+
+  /**
+   * Get a specific diff block by ID
+   */
+  function getDiffBlock(id: string): DiffBlock | undefined {
+    return diffBlocks.value.find((b) => b.id === id)
+  }
+
+  /**
+   * Get all diff blocks for a specific note
+   */
+  function getDiffBlocksForNote(noteId: string): DiffBlock[] {
+    return diffBlocks.value.filter(
+      (b) => b.noteId === noteId && b.status === 'pending'
+    )
+  }
+
+  /**
+   * Get all diff blocks for a specific hunk
+   */
+  function getDiffBlocksForHunk(hunkId: string): DiffBlock[] {
+    return diffBlocks.value.filter((b) => b.hunkId === hunkId)
+  }
+
+  /**
+   * Check if all blocks for a note are resolved (accepted or rejected)
+   */
+  function areAllBlocksResolved(noteId: string): boolean {
+    const blocks = diffBlocks.value.filter((b) => b.noteId === noteId)
+    return blocks.length > 0 && blocks.every((b) => b.status !== 'pending')
+  }
+
+  /**
+   * Clear diff blocks for a specific note or all blocks
+   */
+  function clearDiffBlocks(noteId?: string) {
+    if (noteId) {
+      diffBlocks.value = diffBlocks.value.filter((b) => b.noteId !== noteId)
+    } else {
+      diffBlocks.value = []
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Clarification Actions
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set a pending clarification request
+   */
+  function setClarificationRequest(request: {
+    noteId: string
+    instruction: string
+    options: ClarificationOption[]
+    reason: string
+  }): ClarificationRequest {
+    const clarification: ClarificationRequest = {
+      id: crypto.randomUUID(),
+      noteId: request.noteId,
+      instruction: request.instruction,
+      options: request.options,
+      reason: request.reason,
+      status: 'pending',
+      createdAt: new Date(),
+    }
+    pendingClarification.value = clarification
+    status.value = 'clarifying'
+    return clarification
+  }
+
+  /**
+   * Resolve clarification with selected block IDs
+   */
+  function resolveClarification(selectedBlockIds: string[]): string[] {
+    if (pendingClarification.value) {
+      pendingClarification.value.status = 'resolved'
+      pendingClarification.value = null
+    }
+    status.value = 'idle'
+    return selectedBlockIds
+  }
+
+  /**
+   * Cancel pending clarification
+   */
+  function cancelClarification() {
+    if (pendingClarification.value) {
+      pendingClarification.value.status = 'cancelled'
+      pendingClarification.value = null
+    }
+    status.value = 'idle'
+  }
+
+  /**
+   * Check if there's a pending clarification
+   */
+  const hasPendingClarification = computed(() => pendingClarification.value !== null)
+
+  // ---------------------------------------------------------------------------
+  // SubTask Actions (DeepAgent compound request tracking)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set the list of subtasks from DeepAgent decomposition
+   */
+  function setSubTasks(tasks: Array<{
+    id: string
+    type: 'edit_note' | 'create_artifact' | 'database_action' | 'chat'
+    description: string
+    dependsOn?: string[]
+  }>) {
+    subTasks.value = tasks.map(t => ({
+      id: t.id,
+      type: t.type,
+      description: t.description,
+      status: 'pending' as const,
+      progress: 0,
+      dependsOn: t.dependsOn || [],
+    }))
+  }
+
+  /**
+   * Update a subtask's status
+   */
+  function updateSubTask(taskId: string, updates: Partial<SubTask>) {
+    const task = subTasks.value.find(t => t.id === taskId)
+    if (task) {
+      Object.assign(task, updates)
+      if (updates.status === 'in_progress') {
+        task.startedAt = new Date()
+      } else if (updates.status === 'completed' || updates.status === 'failed') {
+        task.completedAt = new Date()
+      }
+    }
+  }
+
+  /**
+   * Update a subtask's progress
+   */
+  function updateSubTaskProgress(taskId: string, progress: number, message?: string) {
+    const task = subTasks.value.find(t => t.id === taskId)
+    if (task) {
+      task.progress = progress
+      task.progressMessage = message
+    }
+  }
+
+  /**
+   * Get subtasks in progress
+   */
+  const activeSubTasks = computed(() =>
+    subTasks.value.filter(t => t.status === 'in_progress')
+  )
+
+  /**
+   * Get completed subtask count
+   */
+  const completedSubTaskCount = computed(() =>
+    subTasks.value.filter(t => t.status === 'completed').length
+  )
+
+  /**
+   * Check if all subtasks are completed
+   */
+  const allSubTasksCompleted = computed(() =>
+    subTasks.value.length > 0 && subTasks.value.every(t => t.status === 'completed' || t.status === 'failed')
+  )
+
+  /**
+   * Clear all subtasks
+   */
+  function clearSubTasks() {
+    subTasks.value = []
+  }
+
+  // ---------------------------------------------------------------------------
+  // Note Preview Panel Actions (AI Chat page)
+  // ---------------------------------------------------------------------------
+
+  function openNotePreview(noteId: string) {
+    previewNoteId.value = noteId
+    previewPanelVisible.value = true
+  }
+
+  function closeNotePreview() {
+    previewPanelVisible.value = false
   }
 
   // ---------------------------------------------------------------------------
@@ -578,6 +947,224 @@ export const useAIStore = defineStore('ai', () => {
   }
 
   // ---------------------------------------------------------------------------
+  // Pending Artifact Actions
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a pending artifact from AI generation
+   * Persists to database for cross-session recovery
+   */
+  async function addPendingArtifact(
+    noteId: string,
+    data: PendingArtifact['data'],
+    options?: { userId?: string; sessionId?: string }
+  ): Promise<PendingArtifact> {
+    const localId = crypto.randomUUID()
+    let artifactId: string | undefined
+
+    // Persist to database if userId is provided
+    if (options?.userId) {
+      try {
+        const result = await createArtifact(options.userId, {
+          note_id: noteId || null,
+          session_id: options.sessionId || null,
+          title: data.title,
+          html: data.html,
+          css: data.css,
+          javascript: data.javascript,
+          status: 'pending',
+        })
+
+        if (result.data && !Array.isArray(result.data)) {
+          artifactId = result.data.id
+          console.log('[AI Store] Artifact persisted to database:', artifactId)
+        } else if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+          artifactId = result.data[0].id
+          console.log('[AI Store] Artifact persisted to database:', artifactId)
+        }
+      } catch (err) {
+        console.warn('[AI Store] Failed to persist artifact to database:', err)
+        // Continue anyway - artifact will work in session, just won't persist
+      }
+    }
+
+    const artifact: PendingArtifact = {
+      id: localId,
+      artifactId,
+      noteId,
+      sessionId: options?.sessionId,
+      data,
+      status: 'pending',
+      createdAt: new Date(),
+    }
+    pendingArtifacts.value.push(artifact)
+    return artifact
+  }
+
+  /**
+   * Load persisted artifacts from database on app init or note change
+   */
+  async function loadPersistedArtifacts(userId: string, noteId?: string): Promise<void> {
+    try {
+      const result = await getPendingArtifacts(userId, noteId)
+
+      if (result.error) {
+        console.warn('[AI Store] Failed to load persisted artifacts:', result.error)
+        return
+      }
+
+      if (result.data && result.data.length > 0) {
+        // Convert database artifacts to PendingArtifact format
+        // IMPORTANT: Use nullish coalescing (??) to ensure data fields are never undefined/null
+        // This prevents JSON.stringify from silently omitting keys with undefined values
+        const loadedArtifacts: PendingArtifact[] = result.data.map((dbArtifact: Artifact) => ({
+          id: crypto.randomUUID(), // Local ID for this session
+          artifactId: dbArtifact.id, // Database ID for persistence
+          noteId: dbArtifact.note_id || '',
+          sessionId: dbArtifact.session_id || undefined,
+          data: {
+            title: dbArtifact.title || 'Untitled Artifact',
+            html: dbArtifact.html ?? '',
+            css: dbArtifact.css ?? '',
+            javascript: dbArtifact.javascript ?? '',
+          },
+          status: dbArtifact.status === 'inserted' ? 'inserted' : 'pending',
+          createdAt: new Date(dbArtifact.created_at),
+        }))
+
+        // Merge with existing artifacts, avoiding duplicates by artifactId
+        const existingArtifactIds = new Set(
+          pendingArtifacts.value
+            .filter((a) => a.artifactId)
+            .map((a) => a.artifactId)
+        )
+
+        const newArtifacts = loadedArtifacts.filter(
+          (a) => !a.artifactId || !existingArtifactIds.has(a.artifactId)
+        )
+
+        if (newArtifacts.length > 0) {
+          pendingArtifacts.value.push(...newArtifacts)
+          console.log(`[AI Store] Loaded ${newArtifacts.length} persisted artifacts`)
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Store] Failed to load persisted artifacts:', err)
+    }
+  }
+
+  /**
+   * Mark an artifact as inserted into the note
+   * Updates both local state and database
+   */
+  async function markArtifactInserted(id: string): Promise<void> {
+    const artifact = pendingArtifacts.value.find((a) => a.id === id)
+    if (artifact) {
+      artifact.status = 'inserted'
+
+      // Update database if we have the artifactId
+      if (artifact.artifactId) {
+        try {
+          await markArtifactInsertedDB(artifact.artifactId)
+          console.log('[AI Store] Artifact marked as inserted in database:', artifact.artifactId)
+        } catch (err) {
+          console.warn('[AI Store] Failed to update artifact status in database:', err)
+        }
+      }
+    }
+  }
+
+  /**
+   * Get pending artifacts for a specific note
+   */
+  function getPendingArtifactsForNote(noteId: string): PendingArtifact[] {
+    return pendingArtifacts.value.filter(
+      (a) => a.noteId === noteId && a.status === 'pending'
+    )
+  }
+
+  /**
+   * Get ALL artifacts for a note (both pending and inserted).
+   * Used by acceptAllDiffs() which needs inserted artifacts too,
+   * since setMarkdown() will overwrite the DOM and destroy
+   * artifacts that were auto-inserted by the EditorArea watcher.
+   */
+  function getArtifactsForNote(noteId: string): PendingArtifact[] {
+    return pendingArtifacts.value.filter((a) => a.noteId === noteId)
+  }
+
+  /**
+   * Clear pending artifacts for a note or all artifacts
+   */
+  function clearPendingArtifacts(noteId?: string) {
+    if (noteId) {
+      pendingArtifacts.value = pendingArtifacts.value.filter((a) => a.noteId !== noteId)
+    } else {
+      pendingArtifacts.value = []
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Completed Artifact Actions (for chat message UI)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a completed artifact linked to a chat message
+   */
+  function addCompletedArtifact(
+    artifact: Omit<CompletedArtifact, 'id' | 'createdAt'>
+  ): CompletedArtifact {
+    const newArtifact: CompletedArtifact = {
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      ...artifact,
+    }
+    completedArtifacts.value.push(newArtifact)
+    return newArtifact
+  }
+
+  /**
+   * Get completed artifacts for a specific message
+   */
+  function getCompletedArtifactsForMessage(messageId: string): CompletedArtifact[] {
+    return completedArtifacts.value.filter((a) => a.messageId === messageId)
+  }
+
+  /**
+   * Clear completed artifacts for a session or all artifacts
+   */
+  function clearCompletedArtifacts(sessionId?: string) {
+    if (sessionId) {
+      completedArtifacts.value = completedArtifacts.value.filter((a) => a.sessionId !== sessionId)
+    } else {
+      completedArtifacts.value = []
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Code Preview Actions (for streaming artifact visualization)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Update code preview state during artifact streaming
+   */
+  function updateCodePreview(data: Omit<CodePreviewState, 'active'>) {
+    codePreview.value = { ...data, active: true }
+  }
+
+  /**
+   * Clear code preview state when artifact completes
+   */
+  function clearCodePreview() {
+    codePreview.value = {
+      active: false,
+      phase: 'html',
+      preview: '',
+      totalChars: 0,
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Reset
   // ---------------------------------------------------------------------------
 
@@ -592,6 +1179,15 @@ export const useAIStore = defineStore('ai', () => {
     thinkingSteps.value = []
     citations.value = []
     pendingEdits.value = []
+    diffBlockPairs.value = []
+    diffBlocks.value = []
+    pendingArtifacts.value = []
+    completedArtifacts.value = []
+    codePreview.value = { active: false, phase: 'html', preview: '', totalChars: 0 }
+    pendingClarification.value = null
+    subTasks.value = []
+    previewNoteId.value = null
+    previewPanelVisible.value = false
     error.value = null
   }
 
@@ -609,7 +1205,9 @@ export const useAIStore = defineStore('ai', () => {
     citations,
     pendingEdits,
     activeEditId,
-    focusedHunkIndex,
+    diffBlockPairs,
+    pendingClarification,
+    subTasks,
     error,
 
     // Computed
@@ -618,8 +1216,11 @@ export const useAIStore = defineStore('ai', () => {
     currentThinkingStep,
     pendingEditCount,
     activeEdit,
-    focusedHunk,
-    pendingHunksInActiveEdit,
+    hasPendingClarification,
+    getPendingHunksForNote,
+    activeSubTasks,
+    completedSubTaskCount,
+    allSubTasksCompleted,
 
     // Session actions
     createSession,
@@ -636,6 +1237,7 @@ export const useAIStore = defineStore('ai', () => {
     addThinkingStep,
     completeThinkingStep,
     clearThinkingSteps,
+    getThinkingStepsForMessage,
 
     // Citations
     addCitation,
@@ -650,8 +1252,6 @@ export const useAIStore = defineStore('ai', () => {
 
     // Hunk-level actions
     setActiveEdit,
-    focusNextHunk,
-    focusPreviousHunk,
     acceptHunk,
     rejectHunk,
     acceptAllHunks,
@@ -659,10 +1259,58 @@ export const useAIStore = defineStore('ai', () => {
     applyAcceptedHunks,
     discardEdit,
 
-    // Diff view mode
-    diffViewMode,
-    setDiffViewMode,
-    toggleDiffViewMode,
+    // Diff block pair actions (true inline diff)
+    addDiffBlockPair,
+    updateDiffBlockPair,
+    getDiffBlockPairsForNote,
+    clearDiffBlockPairs,
+
+    // Individual diff block actions (per-block accept/reject)
+    diffBlocks,
+    addDiffBlock,
+    updateDiffBlock,
+    getDiffBlock,
+    getDiffBlocksForNote,
+    getDiffBlocksForHunk,
+    areAllBlocksResolved,
+    clearDiffBlocks,
+
+    // Clarification actions
+    setClarificationRequest,
+    resolveClarification,
+    cancelClarification,
+
+    // Note preview panel (AI Chat page)
+    previewNoteId,
+    previewPanelVisible,
+    openNotePreview,
+    closeNotePreview,
+
+    // SubTask actions (DeepAgent compound request tracking)
+    setSubTasks,
+    updateSubTask,
+    updateSubTaskProgress,
+    clearSubTasks,
+
+    // Pending artifact actions
+    pendingArtifacts,
+    addPendingArtifact,
+    loadPersistedArtifacts,
+    markArtifactInserted,
+    getPendingArtifactsForNote,
+    getArtifactsForNote,
+    clearPendingArtifacts,
+
+    // Completed artifact actions (chat message UI)
+    completedArtifacts,
+    addCompletedArtifact,
+    getCompletedArtifactsForMessage,
+    clearCompletedArtifacts,
+
+    // Code preview actions (streaming artifact visualization)
+    codePreview,
+    updateCodePreview,
+    clearCodePreview,
 
     // Status
     setStatus,

@@ -4,9 +4,9 @@
  * Creates AI providers based on task type.
  * Routes to the optimal model for each task.
  *
- * From Note3 model strategy:
+ * Model strategy:
  * - Chat/Agents: GPT-5.2 (OpenAI)
- * - Artifacts/Code: GLM-4.6 (Ollama Cloud)
+ * - Artifacts/Code: kimi-k2.5 (Ollama Cloud)
  * - Slides: Gemini 3 Pro
  * - Research: Gemini Deep Research
  */
@@ -94,14 +94,16 @@ function getOpenAIProvider(config?: Partial<OpenAIProviderConfig>): OpenAIProvid
  * Get or create Ollama Cloud provider
  */
 function getOllamaCloudProvider(config?: Partial<OllamaCloudConfig>): OllamaCloudProvider {
+  // Always read from env first, then fall back to config
+  const baseURL = config?.baseURL || process.env.OLLAMA_CLOUD_URL || 'https://ollama.com'
+  const apiKey = config?.apiKey || process.env.OLLAMA_API_KEY
+
+  // Create new provider if cache is empty or if apiKey changed
   if (!providerCache.ollamaCloud) {
-    const baseURL = config?.baseURL || process.env.OLLAMA_CLOUD_URL || 'https://api.ollama.ai/v1'
-    const apiKey = config?.apiKey || process.env.OLLAMA_CLOUD_API_KEY
     providerCache.ollamaCloud = new OllamaCloudProvider({
       baseURL,
       apiKey,
       model: config?.model || OLLAMA_DEFAULT,
-      ...config,
     })
   }
   return providerCache.ollamaCloud
@@ -253,7 +255,7 @@ export function getModelNameForTask(taskType: AITaskType): string {
     case 'html':
     case 'css':
     case 'javascript':
-      return 'glm-4.6'
+      return 'kimi-k2.5'
 
     case 'slides':
       return 'gemini-3-pro-preview'

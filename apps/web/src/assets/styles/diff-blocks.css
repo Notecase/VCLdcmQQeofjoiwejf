@@ -1,0 +1,116 @@
+/* ============================================
+ * INLINE DIFF VISUALIZATION - Global Styles
+ * Applied to ALL Muya editor instances (EditorArea, NotePreviewPanel, etc.)
+ *
+ * Layout: [block with padding-left for button space]
+ *         [button positioned absolute left]
+ * - Coral/pink for deletions, mint green for additions
+ * - 8px border-radius, solid backgrounds
+ * - NO strikethrough, NO inline display
+ * ============================================ */
+
+/* Base diff block styling - MUST override any global inline styles */
+.muya-editor .mu-diff-block {
+  display: block !important;
+  position: relative !important;
+  border-radius: 8px !important;
+  padding: 16px 20px !important;
+  margin: 0 32px 12px 0 !important;
+  overflow: visible !important;
+  line-height: 1.7 !important;
+  text-decoration: none !important;
+  transition: background-color 0.2s ease, opacity 0.3s ease;
+}
+
+/* Tables inside diff blocks should not overflow */
+.muya-editor .mu-diff-block table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Deletion block - coral/pink background */
+.muya-editor .mu-diff-deletion {
+  background: #F8D7D5 !important;
+  color: #5C4444 !important;
+  text-decoration: none !important;
+}
+
+/* Addition block - mint green background */
+.muya-editor .mu-diff-addition {
+  background: #D4EDDA !important;
+  color: #3D5C45 !important;
+  text-decoration: none !important;
+}
+
+/* Action button base - OUTSIDE block on RIGHT side */
+.muya-editor .mu-diff-action {
+  position: absolute !important;
+  left: auto !important;
+  right: -28px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 24px !important;
+  font-weight: 300 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0.85;
+  padding: 0 !important;
+  z-index: 10;
+}
+
+.muya-editor .mu-diff-action:hover {
+  transform: scale(1.15) !important;
+  opacity: 1;
+}
+
+/* Plus button (accept) - forest green, positioned at top */
+.muya-editor .mu-diff-action-accept {
+  color: #5A9E6F !important;
+  top: 8px !important;
+}
+
+/* Minus button (reject) - coral red, positioned below accept button */
+.muya-editor .mu-diff-action-reject {
+  color: #C9726A !important;
+  top: 36px !important;
+}
+
+/* For deletion blocks, only one button (reject), center it vertically */
+.muya-editor .mu-diff-deletion .mu-diff-action-reject {
+  top: 16px !important;
+}
+
+/* Dark theme overrides for diff blocks */
+:root[data-theme='dark'] .muya-editor .mu-diff-deletion,
+:root[data-theme='one-dark'] .muya-editor .mu-diff-deletion,
+:root[data-theme='material-dark'] .muya-editor .mu-diff-deletion {
+  background: rgba(248, 215, 213, 0.22) !important;
+  color: #ffa198 !important;
+}
+
+:root[data-theme='dark'] .muya-editor .mu-diff-addition,
+:root[data-theme='one-dark'] .muya-editor .mu-diff-addition,
+:root[data-theme='material-dark'] .muya-editor .mu-diff-addition {
+  background: rgba(212, 237, 218, 0.22) !important;
+  color: #7ee787 !important;
+}
+
+/* Dark theme button colors */
+:root[data-theme='dark'] .muya-editor .mu-diff-action-reject,
+:root[data-theme='one-dark'] .muya-editor .mu-diff-action-reject,
+:root[data-theme='material-dark'] .muya-editor .mu-diff-action-reject {
+  color: #ffa198 !important;
+}
+
+:root[data-theme='dark'] .muya-editor .mu-diff-action-accept,
+:root[data-theme='one-dark'] .muya-editor .mu-diff-action-accept,
+:root[data-theme='material-dark'] .muya-editor .mu-diff-action-accept {
+  color: #7ee787 !important;
+}

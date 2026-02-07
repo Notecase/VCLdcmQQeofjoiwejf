@@ -1,124 +1,120 @@
 <script setup lang="ts">
 /**
- * DiffActionBar - Floating bar with Accept All / Deny All buttons
+ * DiffActionBar - Floating Accept All / Deny All bar
  *
- * Appears at bottom center when diff blocks are active.
- * Disappears when all hunks are resolved.
+ * Appears when there are pending diff blocks in the editor.
+ * Positioned fixed at bottom-right per reference design.
  */
 import { computed } from 'vue'
-import { CheckCheck, XCircle } from 'lucide-vue-next'
-
-const props = defineProps<{
-  pendingCount: number
-  totalCount: number
-}>()
+import { useAIStore } from '@/stores/ai'
 
 const emit = defineEmits<{
   acceptAll: []
   rejectAll: []
 }>()
 
-const isVisible = computed(() => props.pendingCount > 0)
+const aiStore = useAIStore()
+
+const pendingCount = computed(() => {
+  return aiStore.diffBlocks.filter((b) => b.status === 'pending').length
+})
+
+const isVisible = computed(() => pendingCount.value > 0)
+
+// Detect platform for keyboard shortcut display
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+const modKey = isMac ? '\u2318' : 'Ctrl'
+const shiftKey = '\u21E7'
+const enterKey = '\u21B5'
+const escKey = '\u238B'
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="slide-up">
-      <div v-if="isVisible" class="diff-action-bar">
-        <span class="pending-count">{{ pendingCount }} change{{ pendingCount !== 1 ? 's' : '' }} remaining</span>
+  <Transition name="float">
+    <div v-if="isVisible" class="diff-action-bar">
+      <button class="action-btn accept-all" @click="emit('acceptAll')">
+        <span class="btn-text">Accept All</span>
+        <span class="shortcut">{{ modKey }}{{ shiftKey }}{{ enterKey }}</span>
+      </button>
 
-        <button
-          class="action-btn accept-all"
-          @click="emit('acceptAll')"
-        >
-          <CheckCheck :size="16" />
-          Accept All
-        </button>
-
-        <button
-          class="action-btn reject-all"
-          @click="emit('rejectAll')"
-        >
-          <XCircle :size="16" />
-          Deny All
-        </button>
-      </div>
-    </Transition>
-  </Teleport>
+      <button class="action-btn deny-all" @click="emit('rejectAll')">
+        <span class="btn-text">Deny All</span>
+        <span class="shortcut">{{ modKey }}{{ shiftKey }}{{ escKey }}</span>
+      </button>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
 .diff-action-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
-  background: var(--float-btn-bg, rgba(22, 27, 34, 0.95));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color, rgba(48, 54, 61, 0.8));
-  border-radius: 12px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-}
-
-.pending-count {
-  color: var(--text-color-secondary, #8b949e);
-  font-size: 13px;
-  font-weight: 500;
-  padding-right: 12px;
-  border-right: 1px solid var(--border-color, rgba(48, 54, 61, 0.5));
+  gap: 8px;
+  z-index: 100;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 6px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.action-btn.accept-all {
-  background: var(--diff-add-border, #3fb950);
+.action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.shortcut {
+  opacity: 0.7;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+/* Accept All - forest green */
+.accept-all {
+  background: #5a9e6f;
   color: white;
 }
 
-.action-btn.accept-all:hover {
-  background: #2ea043;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4);
+.accept-all:hover {
+  background: #4a8e5f;
+  box-shadow: 0 6px 16px rgba(90, 158, 111, 0.35);
 }
 
-.action-btn.reject-all {
-  background: rgba(248, 81, 73, 0.15);
-  color: #f85149;
-  border: 1px solid rgba(248, 81, 73, 0.3);
+/* Deny All - coral red */
+.deny-all {
+  background: #d46a6a;
+  color: white;
 }
 
-.action-btn.reject-all:hover {
-  background: rgba(248, 81, 73, 0.25);
-  transform: translateY(-1px);
+.deny-all:hover {
+  background: #c45a5a;
+  box-shadow: 0 6px 16px rgba(212, 106, 106, 0.35);
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* Transition */
+.float-enter-active,
+.float-leave-active {
+  transition: all 0.25s ease;
 }
 
-.slide-up-enter-from,
-.slide-up-leave-to {
+.float-enter-from,
+.float-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(20px);
+  transform: translateY(16px);
 }
 </style>

@@ -100,6 +100,12 @@ export const DbGetSchemaSchema = z.object({
   databaseId: z.string().uuid().describe('ID of the database'),
 })
 
+export const DbInsertRowsSchema = z.object({
+  noteId: z.string().uuid().describe('Note containing the database'),
+  databaseId: z.string().uuid().describe('ID of the database'),
+  rows: z.array(z.record(z.unknown())).describe('Array of row data objects to insert'),
+})
+
 export const DbCreateChartDataSchema = z.object({
   noteId: z.string().uuid().describe('Note containing the database'),
   databaseId: z.string().uuid().describe('ID of the database'),
@@ -123,6 +129,7 @@ export type DbColumnStatsInput = z.infer<typeof DbColumnStatsSchema>
 export type DbSortRowsInput = z.infer<typeof DbSortRowsSchema>
 export type DbGetSchemaInput = z.infer<typeof DbGetSchemaSchema>
 export type DbCreateChartDataInput = z.infer<typeof DbCreateChartDataSchema>
+export type DbInsertRowsInput = z.infer<typeof DbInsertRowsSchema>
 
 // ============================================================================
 // Helper Functions
@@ -506,6 +513,33 @@ export async function dbGetSchema(
   }
 }
 
+export async function dbInsertRows(
+  input: DbInsertRowsInput,
+  ctx: ToolContext
+): Promise<ToolResult<{ insertedCount: number; rowIds: string[] }>> {
+  try {
+    const result = await getDatabase(ctx.supabase, ctx.userId, input.noteId, input.databaseId)
+    if (!result) return { success: false, error: 'Database not found' }
+
+    const { database, databases } = result
+    const rowIds: string[] = []
+
+    for (const rowData of input.rows) {
+      const rowId = crypto.randomUUID()
+      const newRow: DatabaseRow = { id: rowId, ...rowData }
+      database.rows.push(newRow)
+      rowIds.push(rowId)
+    }
+
+    const saved = await saveDatabase(ctx.supabase, ctx.userId, input.noteId, databases)
+    if (!saved) return { success: false, error: 'Failed to save' }
+
+    return { success: true, data: { insertedCount: rowIds.length, rowIds } }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+}
+
 export async function dbCreateChartData(
   input: DbCreateChartDataInput,
   ctx: ToolContext
@@ -577,6 +611,12 @@ export const databaseTools = [
     description: 'Add a new row to an embedded database',
     schema: DbAddRowSchema,
     execute: dbAddRow,
+  },
+  {
+    name: 'db_insert_rows',
+    description: 'Insert multiple rows into an embedded database in bulk',
+    schema: DbInsertRowsSchema,
+    execute: dbInsertRows,
   },
   {
     name: 'db_update_rows',

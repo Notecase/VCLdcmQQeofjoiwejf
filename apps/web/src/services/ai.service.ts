@@ -6,6 +6,7 @@
  */
 
 import { useAIStore, type DiffHunk, type ThinkingStep } from '@/stores/ai'
+import { useAuthStore } from '@/stores/auth'
 import { authFetch, authFetchSSE } from '@/utils/api'
 import * as Diff from 'diff'
 
@@ -21,6 +22,8 @@ export interface AgentRequestOptions {
     noteIds?: string[]
     projectId?: string
     currentNoteId?: string
+    selectedBlockIds?: string[] // For clarification flow - user-selected targets (deprecated)
+    selectedLineNumbers?: number[] // For clarification flow - line numbers are stable across re-parsing
   }
   sessionId?: string
   stream?: boolean
@@ -35,9 +38,46 @@ export interface StreamChunk {
     | 'intent'
     | 'citation'
     | 'edit-proposal'
+    | 'clarification-request'
+    | 'artifact'
+    | 'code-preview'
     | 'finish'
     | 'error'
+    // DeepAgent events for compound request handling
+    | 'decomposition'
+    | 'subtask-start'
+    | 'subtask-progress'
+    | 'subtask-complete'
+    | 'note-navigate'
   data: unknown
+}
+
+// DeepAgent event data types
+export interface SubTaskData {
+  id: string
+  type: 'edit_note' | 'create_artifact' | 'database_action' | 'chat'
+  description: string
+  status?: 'pending' | 'in_progress' | 'completed' | 'failed'
+  dependsOn?: string[]
+}
+
+export interface DecompositionData {
+  tasks: SubTaskData[]
+  reasoning: string
+}
+
+export interface SubtaskProgressData {
+  taskId: string
+  progress: number
+  message: string
+}
+
+export interface ArtifactData {
+  title: string
+  html: string
+  css: string
+  javascript: string
+  noteId: string | null
 }
 
 export interface EditProposalData {
@@ -45,6 +85,16 @@ export interface EditProposalData {
   blockId?: string
   original: string
   proposed: string
+}
+
+export interface ClarificationRequestData {
+  options: Array<{
+    id: string
+    label: string
+    preview: string
+    line: number
+  }>
+  reason: string
 }
 
 // ============================================================================
@@ -209,14 +259,99 @@ export async function getAgentCapabilities(): Promise<{
 // ============================================================================
 
 /**
+ * Split markdown content into sections by heading levels (# through ######).
+ * Each section includes the heading line + all content until the next heading.
+ *
+ * Example:
+ *   "# Title\nIntro\n## Section 1\nContent" ->
+ *   ["# Title\nIntro", "## Section 1\nContent"]
+ */
+function splitMarkdownBySections(markdown: string): string[] {
+  const lines = markdown.split('\n')
+  const sections: string[] = []
+  let currentSection: string[] = []
+
+  for (const line of lines) {
+    // Check if line is a heading (# through ######)
+    const isHeading = /^#{1,6}\s/.test(line)
+
+    if (isHeading && currentSection.length > 0) {
+      // Flush previous section
+      sections.push(currentSection.join('\n').trim())
+      currentSection = []
+    }
+
+    currentSection.push(line)
+  }
+
+  // Flush final section
+  if (currentSection.length > 0) {
+    const trimmed = currentSection.join('\n').trim()
+    if (trimmed) {
+      sections.push(trimmed)
+    }
+  }
+
+  return sections
+}
+
+/**
  * Compute diff hunks from original and proposed content
  * Uses jsdiff to compute structural changes and groups them into logical hunks
  */
 export function computeDiffHunks(original: string, proposed: string): DiffHunk[] {
+  // Normalize trailing newlines to prevent jsdiff from treating
+  // newline-only differences as 'modify' hunks instead of clean 'add' hunks.
+  // This is critical for incremental edits (e.g., DeepAgent appending a table)
+  // where the original content may lack a trailing newline from LLM streaming.
+  const normalizedOriginal = original && !original.endsWith('\n') ? original + '\n' : original
+  const normalizedProposed = proposed && !proposed.endsWith('\n') ? proposed + '\n' : proposed
+
+  // Special case: empty note → new content = multiple addition hunks by section
+  // This splits content at heading levels so users can accept/reject individual sections
+  // Uses raw values (not normalized) to preserve existing section-split behavior
+  if (!original.trim() && proposed.trim()) {
+    const sections = splitMarkdownBySections(proposed)
+
+    // If no headings found (single section or no headings), fall back to single hunk
+    if (sections.length <= 1) {
+      return [{
+        id: crypto.randomUUID(),
+        oldStart: 1,
+        oldLines: 0,
+        newStart: 1,
+        newLines: proposed.split('\n').length,
+        oldContent: '',
+        newContent: proposed,
+        type: 'add',
+        status: 'pending',
+      }]
+    }
+
+    // Create one hunk per section
+    let lineNumber = 1
+    return sections.map((section) => {
+      const sectionLines = section.split('\n').length
+      const hunk: DiffHunk = {
+        id: crypto.randomUUID(),
+        oldStart: 1, // All sections "replace" nothing at line 1
+        oldLines: 0,
+        newStart: lineNumber,
+        newLines: sectionLines,
+        oldContent: '',
+        newContent: section,
+        type: 'add',
+        status: 'pending',
+      }
+      lineNumber += sectionLines + 1 // +1 for blank line between sections
+      return hunk
+    })
+  }
+
   const hunks: DiffHunk[] = []
 
-  // Use structuredPatch to get unified diff hunks
-  const patch = Diff.structuredPatch('original', 'proposed', original, proposed, '', '', {
+  // Use structuredPatch to get unified diff hunks (with normalized inputs)
+  const patch = Diff.structuredPatch('original', 'proposed', normalizedOriginal, normalizedProposed, '', '', {
     context: 3, // Include 3 lines of context around changes
   })
 
@@ -363,13 +498,19 @@ async function processSSEResponse(
             const chunk: StreamChunk = JSON.parse(data)
 
             switch (chunk.type) {
-              case 'text-delta':
+              case 'text-delta': {
                 fullContent += chunk.data as string
-                // Update last message in store
-                if (store.activeSession) {
-                  store.appendToLastMessage(store.activeSession.id, chunk.data as string)
+                // Use activeSessionId directly to avoid computed property race condition
+                // The computed activeSession can return null if sessions[id] lookup fails
+                // during the brief window between session creation and state synchronization
+                const sessionId = store.activeSessionId
+                if (sessionId && store.sessions[sessionId]) {
+                  store.appendToLastMessage(sessionId, chunk.data as string)
+                } else {
+                  console.warn('[AI Service] Received text-delta but no active session - chunk dropped:', chunk.data)
                 }
                 break
+              }
 
               case 'finish':
                 store.setStatus('idle')
@@ -380,7 +521,7 @@ async function processSSEResponse(
                 break
 
               case 'thinking': {
-                // Add thinking step to store
+                // Add thinking step to store, linked to current assistant message
                 const thinkingData = chunk.data as { description: string; type?: ThinkingStep['type'] }
                 const runningThoughts = store.thinkingSteps.filter(
                   (step) => step.status === 'running' && step.type !== 'tool'
@@ -389,17 +530,25 @@ async function processSSEResponse(
                 if (lastRunningThought) {
                   store.completeThinkingStep(lastRunningThought.id)
                 }
+
+                // Get current assistant message ID for linking
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
                 store.addThinkingStep({
                   type: thinkingData.type || 'thought',
                   description: thinkingData.description || (thinkingData as unknown as string),
                   status: 'running',
+                  messageId,
                 })
                 store.setStatus('thinking')
                 break
               }
 
               case 'tool-call': {
-                // Add tool call as thinking step
+                // Add tool call as thinking step, linked to current assistant message
                 // Backend may send 'tool' or 'name' depending on the source
                 const toolData = chunk.data as {
                   name?: string
@@ -414,10 +563,18 @@ async function processSSEResponse(
                 if (lastRunningThought) {
                   store.completeThinkingStep(lastRunningThought.id)
                 }
+
+                // Get current assistant message ID for linking
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
                 store.addThinkingStep({
                   type: 'tool',
                   description: `Calling ${toolName}...`,
                   status: 'running',
+                  messageId,
                 })
                 store.setStatus('tool-calling')
                 break
@@ -453,6 +610,83 @@ async function processSSEResponse(
 
                 // Automatically activate this edit for inline visualization
                 store.setActiveEdit(pendingEdit.id)
+
+                // Auto-open preview panel if there's a noteId
+                if (editData.noteId && !store.previewPanelVisible) {
+                  store.openNotePreview(editData.noteId)
+                }
+                break
+              }
+
+              case 'clarification-request': {
+                // Handle clarification request - AI needs user to select target section
+                const clarificationData = chunk.data as ClarificationRequestData
+                store.setClarificationRequest({
+                  noteId: store.activeSession?.contextNoteIds?.[0] || '',
+                  instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
+                  options: clarificationData.options,
+                  reason: clarificationData.reason,
+                })
+                // Complete any running thinking steps
+                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+                runningSteps.forEach((step) => store.completeThinkingStep(step.id))
+                // Status is set to 'clarifying' inside setClarificationRequest
+                break
+              }
+
+              case 'code-preview': {
+                // Handle code preview during artifact streaming
+                const previewData = chunk.data as {
+                  phase: 'html' | 'css' | 'javascript'
+                  preview: string
+                  totalChars: number
+                }
+                store.updateCodePreview(previewData)
+                break
+              }
+
+              case 'artifact': {
+                // Handle artifact creation - add to pending artifacts for insertion into editor
+                const artifactData = chunk.data as ArtifactData
+                const authStore = useAuthStore()
+
+                // Clear the streaming preview when artifact completes
+                store.clearCodePreview()
+
+                const noteId = artifactData.noteId ||
+                  store.activeSession?.contextNoteIds?.[0] || ''
+
+                if (noteId) {
+                  // Pass userId for database persistence
+                  // Note: Don't pass sessionId - chat sessions aren't persisted to DB yet,
+                  // so the local UUID would cause FK constraint violation (409 Conflict)
+                  store.addPendingArtifact(noteId, {
+                    title: artifactData.title,
+                    html: artifactData.html,
+                    css: artifactData.css,
+                    javascript: artifactData.javascript,
+                  }, {
+                    userId: authStore.user?.id,
+                  })
+
+                  // Track completed artifact linked to the current assistant message for UI rendering
+                  const session = store.activeSession
+                  if (session && session.messages.length > 0) {
+                    const lastMessage = session.messages[session.messages.length - 1]
+                    if (lastMessage.role === 'assistant') {
+                      store.addCompletedArtifact({
+                        title: artifactData.title,
+                        noteId,
+                        sessionId: store.activeSessionId || '',
+                        messageId: lastMessage.id,
+                      })
+                    }
+                  }
+
+                  console.log('[AI] Artifact added to pending:', artifactData.title)
+                } else {
+                  console.warn('[AI] Received artifact but no noteId available')
+                }
                 break
               }
 
@@ -460,9 +694,77 @@ async function processSSEResponse(
               case 'citation':
                 console.log(`[AI] ${chunk.type}:`, chunk.data)
                 break
+
+              // ===== DeepAgent Events =====
+
+              case 'decomposition': {
+                // Task decomposition from DeepAgent
+                const decompositionData = chunk.data as DecompositionData
+                store.setSubTasks(decompositionData.tasks)
+                console.log('[AI] Task decomposition:', decompositionData.reasoning)
+                break
+              }
+
+              case 'subtask-start': {
+                // Subagent starting work on a task
+                const startData = chunk.data as SubTaskData
+                store.updateSubTask(startData.id, { status: 'in_progress' })
+
+                // Get current assistant message ID for linking
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+                store.addThinkingStep({
+                  type: 'create',
+                  description: `Working on: ${startData.description}`,
+                  status: 'running',
+                  messageId,
+                })
+                store.setStatus('thinking')
+                break
+              }
+
+              case 'subtask-progress': {
+                // Progress update from subagent
+                const progressData = chunk.data as SubtaskProgressData
+                store.updateSubTaskProgress(progressData.taskId, progressData.progress, progressData.message)
+                break
+              }
+
+              case 'subtask-complete': {
+                // Subagent completed task
+                const completeData = chunk.data as { taskId: string; result: unknown }
+                store.updateSubTask(completeData.taskId, { status: 'completed' })
+
+                // Complete the thinking step
+                const runningSteps = store.thinkingSteps.filter(
+                  (step) => step.status === 'running'
+                )
+                const lastRunningStep = runningSteps[runningSteps.length - 1]
+                if (lastRunningStep) {
+                  store.completeThinkingStep(lastRunningStep.id)
+                }
+
+                store.setStatus('streaming')
+                break
+              }
+
+              case 'note-navigate': {
+                // DeepAgent created a new note — open in preview panel + load in editor
+                const navData = chunk.data as { noteId: string }
+                store.openNotePreview(navData.noteId)
+                const { useEditorStore } = await import('@/stores')
+                const editorStore = useEditorStore()
+                await editorStore.loadDocument(navData.noteId)
+                // Refresh sidebar document list so the new note appears immediately
+                await editorStore.loadDocuments()
+                break
+              }
             }
-          } catch {
-            // Ignore parse errors for malformed chunks
+          } catch (err) {
+            console.error('[AI Service] Failed to parse SSE chunk:', data, err)
           }
         }
       }
@@ -494,17 +796,21 @@ export function useAIChat() {
     store.clearError()
     store.clearThinkingSteps()
 
-    // Get or create session
+    // Get or create session and capture the ID to use consistently
     const session = store.getOrCreateSession(undefined, { agentType })
+    const sessionId = session.id
+
+    // Ensure activeSessionId is set correctly before streaming
+    store.setActiveSession(sessionId)
 
     // Add user message
-    store.addMessage(session.id, {
+    store.addMessage(sessionId, {
       role: 'user',
       content: message,
     })
 
     // Add placeholder assistant message
-    store.addMessage(session.id, {
+    store.addMessage(sessionId, {
       role: 'assistant',
       content: '',
     })
@@ -515,14 +821,31 @@ export function useAIChat() {
         await sendToChat({
           input: message,
           context,
-          sessionId: session.id,
+          sessionId,
         })
       } else {
         await sendToSecretary({
           input: message,
           context,
-          sessionId: session.id,
+          sessionId,
         })
+      }
+
+      // After streaming completes, check if the assistant message is empty
+      // This can happen if the API returned no text-delta chunks
+      const currentSession = store.sessions[sessionId]
+      if (currentSession) {
+        const lastMessage = currentSession.messages[currentSession.messages.length - 1]
+        if (lastMessage && lastMessage.role === 'assistant' && !lastMessage.content.trim()) {
+          // Check if there's a pending edit or clarification - if so, empty response is expected
+          const hasPendingEdit = store.pendingEdits.some(e => e.noteId && e.status === 'pending')
+          const hasPendingClarification = store.hasPendingClarification
+
+          if (!hasPendingEdit && !hasPendingClarification) {
+            // No edit/clarification pending, so show a fallback message
+            lastMessage.content = 'I processed your request but had no additional response to provide.'
+          }
+        }
       }
     } catch (err) {
       console.error('Chat error:', err)

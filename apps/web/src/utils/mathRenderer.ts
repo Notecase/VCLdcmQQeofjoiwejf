@@ -78,7 +78,8 @@ export function renderMathContent(content: string): string {
   let html = content
 
   // Step 1: Extract and protect code blocks first
-  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
+  // Allow whitespace before/after language name to handle variations like ``` javascript
+  html = html.replace(/```\s*(\w+)?\s*[\r\n]*([\s\S]*?)```/g, (_, lang, code) => {
     const escapedCode = escapeHtml(code.trim())
     return addPlaceholder(
       `<pre class="math-code-block" data-lang="${lang || ''}"><code>${escapedCode}</code></pre>`
@@ -137,7 +138,8 @@ export function renderBasicMarkdown(content: string): string {
   let html = escapeHtml(content)
 
   // Code blocks (need to unescape the content since we escaped everything)
-  html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
+  // Allow whitespace before/after language name to handle variations like ``` javascript
+  html = html.replace(/```\s*(\w+)?\s*[\r\n]*([\s\S]*?)```/g, (_, lang, code) => {
     return `<pre class="math-code-block" data-lang="${lang || ''}"><code>${code.trim()}</code></pre>`
   })
 

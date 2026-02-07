@@ -67,8 +67,8 @@ function skipAuth() {
       </div>
 
       <form
-        @submit.prevent="handleSubmit"
         class="auth-form"
+        @submit.prevent="handleSubmit"
       >
         <el-input
           v-model="email"
@@ -110,14 +110,14 @@ function skipAuth() {
 
       <div class="oauth-buttons">
         <el-button
-          @click="handleOAuth('github')"
           size="large"
+          @click="handleOAuth('github')"
         >
           GitHub
         </el-button>
         <el-button
-          @click="handleOAuth('google')"
           size="large"
+          @click="handleOAuth('google')"
         >
           Google
         </el-button>

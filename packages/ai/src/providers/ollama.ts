@@ -1,10 +1,8 @@
 /**
  * Ollama Cloud Provider
  *
- * Provider for GLM-4.6 via Ollama Cloud.
+ * Provider for kimi-k2.5:cloud via Ollama Cloud.
  * Used for artifact generation (HTML/CSS/JS) and code generation.
- *
- * From Note3: "Code Generation: GLM-4.6 (Ollama Cloud)"
  */
 
 import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from './interface'
@@ -15,14 +13,14 @@ import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from
 
 export interface OllamaCloudConfig {
   baseURL: string // Ollama Cloud API URL
-  model?: string // Default: glm-4.6
+  model?: string // Default: kimi-k2.5:cloud
   apiKey?: string // Optional API key for cloud
   maxRetries?: number
 }
 
-// Default model from Note3 analysis
-export const DEFAULT_MODEL = 'glm-4.6'
-export const OLLAMA_CLOUD_URL = 'https://api.ollama.ai/v1' // Example, adjust as needed
+// Default model for artifact and code generation
+export const DEFAULT_MODEL = 'kimi-k2.5' // Ollama Cloud model for artifacts
+export const OLLAMA_CLOUD_URL = 'https://ollama.com' // Official Ollama Cloud API
 
 // ============================================================================
 // Types
@@ -63,6 +61,7 @@ interface OllamaChatStreamChunk {
   message: {
     role: 'assistant'
     content: string
+    thinking?: string  // kimi-k2.5 streams thinking tokens first
   }
   done: boolean
 }
@@ -182,37 +181,43 @@ Only output the rewritten code, nothing else. Maintain proper formatting and syn
 
   /**
    * Generate artifact (HTML/CSS/JS)
-   * Specialized method for Note3's artifact generation
+   * Returns a JSON object with title, html, css, javascript fields
    */
   async *generateArtifact(
     prompt: string,
     artifactType: 'html' | 'css' | 'js' | 'full'
   ): AsyncGenerator<string, void, unknown> {
-    const systemPrompts: Record<string, string> = {
-      html: `You are an HTML generator. Generate clean, semantic HTML based on the user's description.
-Output only valid HTML code without any explanation. Use modern HTML5 elements.`,
-      css: `You are a CSS generator. Generate clean, modern CSS based on the user's description.
-Output only valid CSS code without any explanation. Use CSS variables and modern properties.`,
-      js: `You are a JavaScript generator. Generate clean, modern JavaScript based on the user's description.
-Output only valid JavaScript code without any explanation. Use ES6+ syntax.`,
-      full: `You are a web component generator. Generate a complete HTML/CSS/JS component based on the user's description.
-Output the code in this format:
-<!-- HTML -->
-[html code]
-<!-- CSS -->
-[css code]
-<!-- JS -->
-[js code]
+    const baseSystemPrompt = `You are an interactive artifact generator. Create engaging, self-contained web components.
 
-Use modern web standards and clean code practices.`,
+IMPORTANT: Your response MUST be valid JSON with this exact structure:
+{
+  "title": "Short descriptive title for the artifact",
+  "html": "HTML content (without doctype, html, head, body tags - just the inner content)",
+  "css": "CSS styles (will be placed in a style tag)",
+  "javascript": "JavaScript code (React and ReactDOM are available, use JSX syntax)"
+}
+
+Guidelines:
+- Use Tailwind CSS classes for styling (available via CDN)
+- React 18 and ReactDOM are available globally
+- Use Babel for JSX transformation (available)
+- Keep code clean, well-organized, and self-contained
+- The artifact should be interactive and visually appealing
+- Handle errors gracefully in JavaScript`
+
+    const typeSpecificPrompts: Record<string, string> = {
+      html: `${baseSystemPrompt}\n\nFocus on semantic HTML structure. The css and javascript fields can be minimal.`,
+      css: `${baseSystemPrompt}\n\nFocus on beautiful CSS styling with Tailwind and custom CSS. The html field should be minimal, and javascript can be empty.`,
+      js: `${baseSystemPrompt}\n\nFocus on interactive JavaScript/React components. Use the html field for the React root container.`,
+      full: `${baseSystemPrompt}\n\nCreate a complete, polished component with rich HTML structure, beautiful CSS styling, and interactive JavaScript.`,
     }
 
     const messages: OllamaChatMessage[] = [
-      { role: 'system', content: systemPrompts[artifactType] },
+      { role: 'system', content: typeSpecificPrompts[artifactType] },
       { role: 'user', content: prompt },
     ]
 
-    yield* this.streamChat(messages, { temperature: 0.3, maxTokens: 4000 })
+    yield* this.streamChat(messages, { temperature: 0.3, maxTokens: 20000 })
 
     this.lastUsage = {
       inputTokens: 0,
@@ -302,7 +307,7 @@ Output only valid ${language} code without any explanation. Include helpful comm
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
-        const response = await fetch(`${this.baseURL}/chat`, {
+        const response = await fetch(`${this.baseURL}/api/chat`, {
           method: 'POST',
           headers,
           body: JSON.stringify(request),
@@ -430,7 +435,7 @@ export function createOllamaCloudProvider(config: OllamaCloudConfig): OllamaClou
 export function getDefaultOllamaCloudProvider(): OllamaCloudProvider {
   if (!defaultProvider) {
     const baseURL = process.env.OLLAMA_CLOUD_URL || OLLAMA_CLOUD_URL
-    const apiKey = process.env.OLLAMA_CLOUD_API_KEY
+    const apiKey = process.env.OLLAMA_API_KEY
     defaultProvider = new OllamaCloudProvider({ baseURL, apiKey })
   }
   return defaultProvider

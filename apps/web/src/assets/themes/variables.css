@@ -134,9 +134,13 @@
   --ai-gradient-overlay: linear-gradient(180deg, rgba(88, 166, 255, 0.02) 0%, transparent 50%);
 
   /* ============================================
-   * CHAT INTERFACE - Claude.ai Style (Dark)
+   * CHAT INTERFACE - Minimal Flow Design (Dark)
    * ============================================ */
-  --chat-message-gap: 24px;
+  --chat-message-gap: 0;
+  --chat-separator: rgba(48, 54, 61, 0.3);
+  --chat-message-hover: rgba(255, 255, 255, 0.02);
+  --chat-message-streaming: rgba(88, 166, 255, 0.03);
+  /* Legacy card vars kept for compatibility */
   --chat-card-bg: rgba(22, 27, 34, 0.6);
   --chat-card-border: rgba(48, 54, 61, 0.4);
   --chat-card-border-hover: rgba(88, 166, 255, 0.2);
@@ -169,6 +173,16 @@
   --diff-remove-border: #f85149;
   --diff-remove-text: #ffa198;
 
+  /* Inline Diff - Reference Design (Dark Theme) */
+  --diff-inline-deletion-bg: rgba(248, 215, 213, 0.22);
+  --diff-inline-deletion-text: #ffa198;
+  --diff-inline-addition-bg: rgba(212, 237, 218, 0.22);
+  --diff-inline-addition-text: #7ee787;
+  --diff-inline-minus-color: #f87171;
+  --diff-inline-plus-color: #4ade80;
+  --diff-inline-accept-btn: #5a9e6f;
+  --diff-inline-deny-btn: #d46a6a;
+
   /* Timeline Thinking Steps */
   --timeline-line-color: rgba(48, 54, 61, 0.6);
   --timeline-dot-size: 8px;
@@ -196,6 +210,37 @@
   --text-secondary: #8b949e;
   --text-muted: #6e7681;
   --border-subtle: rgba(48, 54, 61, 0.5);
+
+  /* Artifact Block - Dark */
+  --artifact-bg: #0d1117;
+  --artifact-border: #21262d;
+
+  /* Secretary Dashboard - Warm Green + Amber */
+  --sec-primary: #10b981;
+  --sec-primary-light: #34d399;
+  --sec-primary-bg: rgba(16, 185, 129, 0.12);
+  --sec-primary-border: rgba(16, 185, 129, 0.3);
+  --sec-accent: #f59e0b;
+  --sec-accent-dark: #d97706;
+  --sec-accent-bg: rgba(245, 158, 11, 0.12);
+  --sec-accent-border: rgba(245, 158, 11, 0.3);
+  --sec-urgent: #f97316;
+  --sec-task-learn: #f59e0b;
+  --sec-task-practice: #10b981;
+  --sec-task-review: #14b8a6;
+  --sec-task-break: #6b7280;
+  --sec-task-project: #8b5cf6;
+  --sec-fab-bg: linear-gradient(135deg, #10b981, #34d399);
+  --sec-fab-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+  --sec-drawer-bg: #0d1117;
+  --sec-drawer-handle: rgba(255, 255, 255, 0.2);
+  --sec-drawer-backdrop: rgba(0, 0, 0, 0.5);
+
+  /* Chat popup — darker surface hierarchy */
+  --chat-popup-bg: #080b10;
+  --chat-composer-bg: #13161b;
+  --chat-composer-border: rgba(255, 255, 255, 0.07);
+  --chat-composer-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
 
   /* Modal Glassmorphism - Dark */
   --modal-bg: rgba(22, 27, 34, 0.72);
@@ -345,9 +390,13 @@
   --ai-gradient-overlay: linear-gradient(180deg, rgba(124, 158, 248, 0.03) 0%, transparent 50%);
 
   /* ============================================
-   * CHAT INTERFACE - Claude.ai Style (Light)
+   * CHAT INTERFACE - Minimal Flow Design (Light)
    * ============================================ */
-  --chat-message-gap: 24px;
+  --chat-message-gap: 0;
+  --chat-separator: rgba(0, 0, 0, 0.06);
+  --chat-message-hover: rgba(0, 0, 0, 0.02);
+  --chat-message-streaming: rgba(124, 158, 248, 0.04);
+  /* Legacy card vars kept for compatibility */
   --chat-card-bg: rgba(255, 255, 255, 0.8);
   --chat-card-border: rgba(0, 0, 0, 0.08);
   --chat-card-border-hover: rgba(124, 158, 248, 0.3);
@@ -380,6 +429,16 @@
   --diff-remove-border: #dc2626;
   --diff-remove-text: #991b1b;
 
+  /* Inline Diff - Reference Design (Light Theme) */
+  --diff-inline-deletion-bg: #F8D7D5;
+  --diff-inline-deletion-text: #5C4444;
+  --diff-inline-addition-bg: #D4EDDA;
+  --diff-inline-addition-text: #3D5C45;
+  --diff-inline-minus-color: #C9726A;
+  --diff-inline-plus-color: #5A9E6F;
+  --diff-inline-accept-btn: #5A9E6F;
+  --diff-inline-deny-btn: #D46A6A;
+
   /* Timeline Thinking Steps */
   --timeline-line-color: rgba(0, 0, 0, 0.1);
   --timeline-dot-size: 8px;
@@ -408,6 +467,37 @@
   --text-muted: #94a3b8;
   --border-subtle: rgba(0, 0, 0, 0.08);
 
+  /* Artifact Block - Light */
+  --artifact-bg: #f6f8fa;
+  --artifact-border: #d0d7de;
+
+  /* Secretary Dashboard - Warm Green + Amber (Light) */
+  --sec-primary: #059669;
+  --sec-primary-light: #10b981;
+  --sec-primary-bg: rgba(5, 150, 105, 0.1);
+  --sec-primary-border: rgba(5, 150, 105, 0.25);
+  --sec-accent: #d97706;
+  --sec-accent-dark: #b45309;
+  --sec-accent-bg: rgba(217, 119, 6, 0.1);
+  --sec-accent-border: rgba(217, 119, 6, 0.25);
+  --sec-urgent: #ea580c;
+  --sec-task-learn: #d97706;
+  --sec-task-practice: #059669;
+  --sec-task-review: #0d9488;
+  --sec-task-break: #9ca3af;
+  --sec-task-project: #7c3aed;
+  --sec-fab-bg: linear-gradient(135deg, #059669, #10b981);
+  --sec-fab-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
+  --sec-drawer-bg: #ffffff;
+  --sec-drawer-handle: rgba(0, 0, 0, 0.15);
+  --sec-drawer-backdrop: rgba(0, 0, 0, 0.3);
+
+  /* Chat popup — lighter surface hierarchy */
+  --chat-popup-bg: #f5f5f5;
+  --chat-composer-bg: #ffffff;
+  --chat-composer-border: rgba(0, 0, 0, 0.08);
+  --chat-composer-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+
   /* Modal Glassmorphism - Light */
   --modal-bg: rgba(255, 255, 255, 0.78);
   --modal-bg-solid: rgba(255, 255, 255, 0.95);
@@ -428,32 +518,13 @@
 
 /* ============================================
  * INLINE DIFF MARKERS - Global Styles
+ * ============================================
+ * NOTE: Block-level diff styles are defined in EditorArea.vue
+ * The .mu-diff-deletion and .mu-diff-addition classes for block-level
+ * diffs are styled with scoped CSS in the editor component.
+ *
+ * This section only contains utility styles for diff action buttons.
  * ============================================ */
-
-/* Deletion marker - red with strikethrough */
-.mu-diff-deletion {
-  background: var(--diff-remove-bg);
-  color: var(--diff-remove-text);
-  text-decoration: line-through;
-  text-decoration-color: var(--diff-remove-border);
-  text-decoration-thickness: 2px;
-  border-radius: 3px;
-  padding: 1px 3px;
-  margin: 0 1px;
-  position: relative;
-  display: inline;
-}
-
-/* Addition marker - green highlight */
-.mu-diff-addition {
-  background: var(--diff-add-bg);
-  color: var(--diff-add-text);
-  border-radius: 3px;
-  padding: 1px 3px;
-  margin: 0 1px;
-  position: relative;
-  display: inline;
-}
 
 /* Action buttons inside diff markers */
 .diff-action-btn {

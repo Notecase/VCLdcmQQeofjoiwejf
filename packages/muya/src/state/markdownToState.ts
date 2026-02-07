@@ -143,6 +143,25 @@ export class MarkdownToState {
                 lang: lang === 'vega-lite' ? 'json' : 'yaml',
               },
             }
+          } else if (lang === 'artifact') {
+            // Parse artifact JSON to extract title from meta
+            let title = 'Artifact'
+            try {
+              const parsed = JSON.parse(value)
+              if (parsed.title) {
+                title = parsed.title
+              }
+            } catch {
+              // Use default title if JSON parsing fails
+            }
+            state = {
+              name: 'artifact' as const,
+              text: value,
+              meta: {
+                title,
+                customHeight: 300,
+              },
+            }
           } else {
             state = {
               name: 'code-block' as const,

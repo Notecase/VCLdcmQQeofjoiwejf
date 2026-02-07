@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, nextTick, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick, watch } from 'vue'
 import { useEditorStore, useLayoutStore } from '@/stores'
+import { useAIStore } from '@/stores/ai'
 import { FileText, Plus, X, Clock } from 'lucide-vue-next'
 import SideBar from '@/components/layout/SideBar.vue'
 import EditorArea from '@/components/editor/EditorArea.vue'
-import FormatToolbar from '@/components/editor/FormatToolbar.vue'
 import NoteOutline from '@/components/layout/NoteOutline.vue'
 import AISidebar from '@/components/ai/AISidebar.vue'
+import DiffActionBar from '@/components/ai/DiffActionBar.vue'
+import NavigationDock from '@/components/ui/NavigationDock.vue'
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
+const aiStore = useAIStore()
 
 const isReady = ref(false)
 const tabsContainerRef = ref(null)
 const editorAreaRef = ref<InstanceType<typeof EditorArea> | null>(null)
 
-// Get Muya instance from EditorArea
-const muyaInstance = computed(() => editorAreaRef.value?.getMuya?.())
-
 const isSaved = computed(() => editorStore.activeTab?.isSaved ?? true)
+
+// CSS variable for sidebar width (used in dock-area)
+const sidebarWidthStyle = computed(() => ({
+  '--sidebar-width': `${layoutStore.sidebarWidth}px`,
+}))
 
 const wordCount = computed(() => {
   const wc = editorStore.wordCount
@@ -61,7 +66,45 @@ watch(
   }
 )
 
+// Accept/Reject all diffs via the editorAreaRef's exposed methods
+function handleAcceptAllDiffs() {
+  const editorArea = editorAreaRef.value
+  if (editorArea && typeof (editorArea as any).acceptAllDiffs === 'function') {
+    ;(editorArea as any).acceptAllDiffs()
+  }
+}
+
+function handleRejectAllDiffs() {
+  const editorArea = editorAreaRef.value
+  if (editorArea && typeof (editorArea as any).rejectAllDiffs === 'function') {
+    ;(editorArea as any).rejectAllDiffs()
+  }
+}
+
+// Keyboard shortcuts for diff actions
+function handleGlobalKeydown(event: KeyboardEvent) {
+  // Accept All: Cmd/Ctrl + Shift + Enter
+  if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'Enter') {
+    const pendingCount = aiStore.diffBlocks.filter((b) => b.status === 'pending').length
+    if (pendingCount > 0) {
+      event.preventDefault()
+      handleAcceptAllDiffs()
+    }
+  }
+
+  // Reject All: Cmd/Ctrl + Shift + Escape
+  if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'Escape') {
+    const pendingCount = aiStore.diffBlocks.filter((b) => b.status === 'pending').length
+    if (pendingCount > 0) {
+      event.preventDefault()
+      handleRejectAllDiffs()
+    }
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+
   await editorStore.loadDocuments()
   if (editorStore.documents.length === 0) {
     await editorStore.createDocument('Welcome to Inkdown')
@@ -70,104 +113,117 @@ onMounted(async () => {
   }
   isReady.value = true
 })
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <template>
   <div class="editor-view">
-    <!-- Left Sidebar -->
-    <SideBar v-if="isReady && layoutStore.sidebarVisible" />
-
-    <!-- Main Content Area -->
-    <main class="main-content">
-      <!-- Tabs Bar -->
-      <div class="tabs-bar">
-        <div
-          class="tabs-container"
-          ref="tabsContainerRef"
-        >
-          <button
-            v-for="tab in editorStore.tabs"
-            :key="tab.id"
-            class="tab"
-            :class="{ active: tab.id === editorStore.activeTabId }"
-            @click="editorStore.switchTab(tab.id)"
-          >
-            <FileText
-              :size="14"
-              class="tab-icon"
-            />
-            <span class="tab-title">{{ tab.document.title }}</span>
-            <span
-              v-if="!tab.isSaved"
-              class="tab-unsaved"
-              >•</span
-            >
-            <button
-              class="tab-close"
-              @click.stop="editorStore.closeTab(tab.id)"
-            >
-              <X :size="12" />
-            </button>
-          </button>
+    <!-- Left Area: Header + Editor Body -->
+    <div class="left-area">
+      <!-- Full-Width Header: Dock Area + Tabs Bar -->
+      <header class="editor-header" :class="{ 'sidebar-closed': !layoutStore.sidebarVisible }" :style="sidebarWidthStyle">
+        <!-- Dock Area - Width transitions based on sidebar state -->
+        <div class="dock-area">
+          <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
         </div>
-        <button
-          class="new-tab-btn"
-          @click="createNewDocument"
-          title="New Document"
-        >
-          <Plus :size="16" />
-        </button>
 
-        <!-- Metadata in tabs bar -->
-        <div
-          class="tabs-meta"
-          v-if="isReady && editorStore.currentDocument"
-        >
-          <span class="meta-item">
-            <Clock :size="12" />
-            Updated {{ lastUpdated }}
-          </span>
-          <span
-            class="status-badge"
-            :class="{ saved: isSaved }"
-          >
-            {{ isSaved ? 'Saved' : 'Draft' }}
-          </span>
-          <span class="word-count">{{ wordCount }}</span>
-        </div>
-      </div>
-
-      <!-- Note Container - Elevated Card -->
-      <div class="note-container">
-        <!-- Floating Format Toolbar (positioned relative to note-container) -->
-        <FormatToolbar
-          v-if="isReady && editorStore.currentDocument"
-          :muyaInstance="muyaInstance"
-        />
-
-        <!-- Outline Button (on left side of note) -->
-        <NoteOutline v-if="isReady && editorStore.currentDocument" />
-
-        <!-- Note Content -->
-        <div class="note-content">
-          <!-- Editor -->
-          <EditorArea
-            v-if="isReady && editorStore.currentDocument"
-            ref="editorAreaRef"
-          />
-
+        <!-- Tabs Bar - Fills remaining space, slides left when sidebar closes -->
+        <div class="tabs-bar">
           <div
-            v-else-if="!isReady"
-            class="loading-state"
+            ref="tabsContainerRef"
+            class="tabs-container"
           >
-            <div class="loading-spinner"></div>
-            <p>Loading...</p>
+            <button
+              v-for="tab in editorStore.tabs"
+              :key="tab.id"
+              class="tab"
+              :class="{ active: tab.id === editorStore.activeTabId }"
+              @click="editorStore.switchTab(tab.id)"
+            >
+              <FileText
+                :size="14"
+                class="tab-icon"
+              />
+              <span class="tab-title">{{ tab.document.title }}</span>
+              <span
+                v-if="!tab.isSaved"
+                class="tab-unsaved"
+                >•</span
+              >
+              <button
+                class="tab-close"
+                @click.stop="editorStore.closeTab(tab.id)"
+              >
+                <X :size="12" />
+              </button>
+            </button>
           </div>
-        </div>
-      </div>
-    </main>
+          <button
+            class="new-tab-btn"
+            title="New Document"
+            @click="createNewDocument"
+          >
+            <Plus :size="16" />
+          </button>
 
-    <!-- AI Sidebar (right panel) -->
+        </div>
+      </header>
+
+      <!-- Editor Body: Sidebar + Main Content side by side -->
+      <div class="editor-body">
+        <!-- Left Sidebar -->
+        <SideBar v-if="isReady && layoutStore.sidebarVisible" />
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+          <!-- Note Container - Elevated Card -->
+          <div class="note-container">
+            <!-- Outline Button (on left side of note) -->
+            <NoteOutline v-if="isReady && editorStore.currentDocument" />
+
+            <!-- Status bar above note content -->
+            <div v-if="isReady && editorStore.currentDocument" class="note-status">
+              <span class="meta-item">
+                <Clock :size="12" />
+                Updated {{ lastUpdated }}
+              </span>
+              <span class="status-badge" :class="{ saved: isSaved }">
+                {{ isSaved ? 'Saved' : 'Draft' }}
+              </span>
+              <span class="word-count">{{ wordCount }}</span>
+            </div>
+
+            <!-- Note Content -->
+            <div class="note-content">
+              <!-- Editor -->
+              <EditorArea
+                v-if="isReady && editorStore.currentDocument"
+                ref="editorAreaRef"
+              />
+
+              <div
+                v-else-if="!isReady"
+                class="loading-state"
+              >
+                <div class="loading-spinner"></div>
+                <p>Loading...</p>
+              </div>
+            </div>
+
+            <!-- Diff Action Bar (floating Accept All / Deny All) - positioned within note canvas -->
+            <DiffActionBar
+              @accept-all="handleAcceptAllDiffs"
+              @reject-all="handleRejectAllDiffs"
+            />
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- AI Sidebar (right panel) - Full height, outside left-area -->
     <Transition name="slide-right">
       <AISidebar
         v-if="layoutStore.rightPanelVisible && editorStore.currentDocument"
@@ -183,6 +239,7 @@ onMounted(async () => {
 <style scoped>
 .editor-view {
   display: flex;
+  flex-direction: row; /* Changed from column to row for full-height AI sidebar */
   height: 100vh;
   width: 100vw;
   background: var(--app-bg, #f8fafc);
@@ -195,32 +252,82 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-/* Main Content Area */
+/* Left Area: Contains header + editor body, flexes to fill available space */
+.left-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+}
+
+/* ============================================
+ * FULL-WIDTH HEADER - Dock Area + Tabs Bar
+ * Spans entire top of screen
+ * ============================================ */
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  flex-shrink: 0;
+  padding: 8px 16px 8px 0;
+  background: var(--app-bg, #f8fafc);
+}
+
+/* Dock Area - matches sidebar width when open, shrinks to auto when closed */
+.dock-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sidebar-width, 260px); /* Matches sidebar width dynamically */
+  flex-shrink: 0;
+  transition: width 0.25s ease;
+}
+
+
+/* Tabs Bar - fills remaining space, slides left as dock-area shrinks */
+.tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  padding-left: 16px; /* Align with note canvas */
+}
+
+/* ============================================
+ * EDITOR BODY - Sidebar + Main Content row
+ * ============================================ */
+
+.editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Main Content Area - no longer contains header */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 16px;
+  padding: 0 16px 16px 16px;
   gap: 12px;
 }
 
-/* Tabs Bar */
-.tabs-bar {
+/* Note Status bar - positioned inside note container */
+.note-status {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding-right: 16px;
-}
-
-.tabs-meta {
-  display: flex;
-  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  margin-left: auto;
+  padding: 8px 24px;
   color: var(--text-color-secondary, #94a3b8);
   font-size: 12px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tabs-container {
@@ -344,7 +451,8 @@ onMounted(async () => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Allow overflow for diff hunks to be visible */
+  overflow: visible;
   padding: 0;
   background: var(--editorBgColor, var(--card-bg, #ffffff));
   min-height: 0;

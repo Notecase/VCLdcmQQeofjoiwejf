@@ -136,12 +136,12 @@ function handleReject() {
       </div>
 
       <div v-if="isPending" class="diff-actions">
-        <button class="action-btn accept" @click="handleAccept" type="button">
+        <button class="action-btn accept" type="button" @click="handleAccept">
           <Check :size="12" />
           <span>Accept</span>
           <KeyboardShortcut keys="⌘↵" />
         </button>
-        <button class="action-btn reject" @click="handleReject" type="button">
+        <button class="action-btn reject" type="button" @click="handleReject">
           <X :size="12" />
           <span>Reject</span>
           <KeyboardShortcut keys="⌘⌫" />

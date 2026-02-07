@@ -9,6 +9,7 @@ import orchestration from './orchestration'
 import slides from './slides'
 import sources from './sources'
 import learningResources from './learningResources'
+import secretary from './secretary'
 
 /**
  * API Routes
@@ -24,6 +25,7 @@ import learningResources from './learningResources'
  * - /api/slides/*              - Slide generation (auth required)
  * - /api/sources/*             - Source management (auth required)
  * - /api/learning-resources/*  - Learning resources (auth required)
+ * - /api/secretary/*           - Secretary AI planner (auth required)
  */
 
 const routes = new Hono()
@@ -41,5 +43,6 @@ routes.route('/api/orchestration', orchestration)
 routes.route('/api/slides', slides)
 routes.route('/api/sources', sources)
 routes.route('/api/learning-resources', learningResources)
+routes.route('/api/secretary', secretary)
 
 export default routes

@@ -67,9 +67,10 @@ function parseSelector(str = '') {
   return { tag, id, className, isVoid }
 }
 
-const LANG_HASH = {
+const LANG_HASH: Record<string, string> = {
   'html-block': 'html',
   'math-block': 'latex',
+  'artifact': 'json',
 }
 
 function hasStateMeta(

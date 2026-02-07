@@ -108,7 +108,7 @@ export class WorkflowActions {
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title}\n\n${s.content.slice(0, 10000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `You are a study assistant. Create comprehensive study notes from the provided sources.
 
@@ -166,7 +166,7 @@ Create detailed, well-organized study notes in markdown format:`
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title}\n\n${s.content.slice(0, 8000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Summarize the following sources into a concise overview.
 
@@ -240,7 +240,7 @@ KEY POINTS:
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 8000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Extract key terms and their definitions from the following sources.
 
@@ -343,7 +343,7 @@ Provide your response as JSON in this format:
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 6000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Compare the following sources and identify agreements, differences, and unique insights.
 
@@ -431,7 +431,7 @@ Analyze these sources and provide your response as JSON:
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 8000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Generate study questions and answers based on the following sources.
 
@@ -510,7 +510,7 @@ Provide your response as JSON:
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 6000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Identify any conflicting or contradictory information between the following sources.
 
@@ -593,7 +593,7 @@ If no conflicts are found, return: {"conflicts": []}`
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 8000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Extract all citations, references, and bibliography entries from the following sources.
 
@@ -672,7 +672,7 @@ Provide your response as JSON:
 
     const combinedContent = sources
       .map((s) => `## Source: ${s.title} (ID: ${s.id})\n\n${s.content.slice(0, 8000)}`)
-      .join('\n\n---\n\n')
+      .join('\n\n')
 
     const prompt = `Extract all dates and events from the following sources to build a timeline.
 

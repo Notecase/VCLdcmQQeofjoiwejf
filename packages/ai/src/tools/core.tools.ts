@@ -111,6 +111,14 @@ export const WriteMemorySchema = z.object({
   metadata: z.record(z.unknown()).optional().describe('Optional metadata'),
 })
 
+export const InsertMarkdownTableSchema = z.object({
+  noteId: z.string().uuid().describe('The note ID to insert the table into'),
+  title: z.string().optional().describe('Optional title/heading above the table'),
+  headers: z.array(z.string()).min(1).describe('Column headers for the table'),
+  rows: z.array(z.array(z.string())).describe('Table data rows (array of arrays, each inner array is a row)'),
+  position: z.enum(['end', 'start']).default('end').describe('Where to insert the table in the note'),
+})
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -123,6 +131,7 @@ export type CreateArtifactInput = z.infer<typeof CreateArtifactSchema>
 export type CreateDatabaseInput = z.infer<typeof CreateDatabaseSchema>
 export type ReadMemoryInput = z.infer<typeof ReadMemorySchema>
 export type WriteMemoryInput = z.infer<typeof WriteMemorySchema>
+export type InsertMarkdownTableInput = z.infer<typeof InsertMarkdownTableSchema>
 
 // ============================================================================
 // Tool Implementations
@@ -491,6 +500,87 @@ export async function writeMemory(
   }
 }
 
+/**
+ * Insert a markdown table into a note
+ * Generates GFM (GitHub Flavored Markdown) table syntax and appends/prepends to note content
+ */
+export async function insertMarkdownTable(
+  input: InsertMarkdownTableInput,
+  ctx: ToolContext
+): Promise<ToolResult<{ updatedContent: string; tableMarkdown: string }>> {
+  try {
+    // Get current note content
+    const { data: note, error: readError } = await ctx.supabase
+      .from('notes')
+      .select('content')
+      .eq('id', input.noteId)
+      .eq('user_id', ctx.userId)
+      .eq('is_deleted', false)
+      .single()
+
+    if (readError || !note) {
+      return { success: false, error: 'Note not found' }
+    }
+
+    // Generate markdown table
+    const { headers, rows, title } = input
+
+    let tableMarkdown = ''
+
+    // Add title as heading if provided
+    if (title) {
+      tableMarkdown += `\n### ${title}\n\n`
+    } else {
+      tableMarkdown += '\n'
+    }
+
+    // Header row
+    tableMarkdown += '| ' + headers.join(' | ') + ' |\n'
+
+    // Separator row
+    tableMarkdown += '| ' + headers.map(() => '---').join(' | ') + ' |\n'
+
+    // Data rows
+    for (const row of rows) {
+      // Pad row to match headers length, escape pipe characters
+      const cells = headers.map((_, idx) => {
+        const cell = row[idx] ?? ''
+        return String(cell).replace(/\|/g, '\\|')
+      })
+      tableMarkdown += '| ' + cells.join(' | ') + ' |\n'
+    }
+
+    // Combine with existing content based on position
+    const currentContent = (note as { content: string }).content || ''
+    let updatedContent: string
+
+    if (input.position === 'start') {
+      updatedContent = tableMarkdown + '\n' + currentContent
+    } else {
+      // Default: append to end
+      updatedContent = currentContent + tableMarkdown
+    }
+
+    // Update note
+    const { error: updateError } = await ctx.supabase
+      .from('notes')
+      .update({ content: updatedContent })
+      .eq('id', input.noteId)
+      .eq('user_id', ctx.userId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    return {
+      success: true,
+      data: { updatedContent, tableMarkdown: tableMarkdown.trim() },
+    }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+}
+
 // ============================================================================
 // Tool Definitions for LangGraph
 // ============================================================================
@@ -543,5 +633,11 @@ export const coreEditingTools = [
     description: 'Write/update AI memory content',
     schema: WriteMemorySchema,
     execute: writeMemory,
+  },
+  {
+    name: 'insert_markdown_table',
+    description: 'Insert a markdown table into a note with headers and data rows',
+    schema: InsertMarkdownTableSchema,
+    execute: insertMarkdownTable,
   },
 ] as const

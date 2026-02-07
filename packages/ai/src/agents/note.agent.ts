@@ -12,6 +12,15 @@
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import {
+  EDIT_START_MARKER,
+  EDIT_END_MARKER,
+  CONTEXT_BEFORE_MARKER,
+  CONTEXT_BEFORE_END_MARKER,
+  CONTEXT_AFTER_MARKER,
+  CONTEXT_AFTER_END_MARKER,
+  extractEditedContent,
+} from '../utils/contextExtractor'
 
 // ============================================================================
 // Types
@@ -75,18 +84,32 @@ export type NoteAgentInput = z.infer<typeof NoteAgentInputSchema>
 // Action Prompts
 // ============================================================================
 
+// Formatting instructions to include in all prompts
+const FORMAT_INSTRUCTIONS = `
+IMPORTANT formatting rules:
+- Do NOT use horizontal rules (--- or ***) to separate sections. Use headings instead.
+- When writing mathematical content, use Markdown-compatible formats:
+  - Inline math: $x + y = z$ (single dollar signs)
+  - Display/block math:
+$$
+equation here
+$$
+  - Do NOT use \\[...\\] or [...] brackets for display math.`
+
 const ACTION_PROMPTS: Record<NoteAction, string> = {
   create: `You are a note creation assistant. Based on the user's input, create a well-structured note.
 Include:
 - A clear, descriptive title
 - Well-organized content with appropriate headings
 - Bullet points or numbered lists where appropriate
+${FORMAT_INSTRUCTIONS}
 
 Output ONLY the note content in Markdown format. Start with # Title on the first line.`,
 
   update: `You are a note editing assistant. The user wants to update their note based on their instructions.
 Preserve the note's core structure unless specifically asked to change it.
 Make the requested changes clearly and cleanly.
+${FORMAT_INSTRUCTIONS}
 
 Output ONLY the updated note content in Markdown format.`,
 
@@ -95,6 +118,7 @@ Output ONLY the updated note content in Markdown format.`,
 - Group related content
 - Add bullet points where appropriate
 - Fix formatting issues
+${FORMAT_INSTRUCTIONS}
 
 Output ONLY the reorganized note content in Markdown format.`,
 
@@ -103,6 +127,7 @@ Output ONLY the reorganized note content in Markdown format.`,
 - Maintain clarity and accuracy
 - Use bullet points for main ideas
 - Keep it under 200 words unless the source is very long
+${FORMAT_INSTRUCTIONS}
 
 Output ONLY the summary in Markdown format.`,
 
@@ -111,8 +136,72 @@ Output ONLY the summary in Markdown format.`,
 - Provide examples where helpful
 - Expand bullet points into full paragraphs if appropriate
 - Add related information that would be valuable
+${FORMAT_INSTRUCTIONS}
 
 Output ONLY the expanded note content in Markdown format.`,
+}
+
+// ============================================================================
+// Surgical Editing Prompts (for targeted section editing)
+// ============================================================================
+
+/**
+ * Build the surgical edit system prompt
+ * This prompt instructs the AI to only edit content between markers
+ */
+export function buildSurgicalEditPrompt(instruction: string): string {
+  return `You are a precise note editing assistant.
+
+CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY:
+1. Edit ONLY the content between ${EDIT_START_MARKER} and ${EDIT_END_MARKER} markers
+2. Do NOT modify, add, or remove ANY content outside these markers
+3. Do NOT include the markers themselves in your output
+
+PRESERVATION RULES - DO NOT CHANGE THESE STRUCTURAL ELEMENTS:
+4. PRESERVE all existing headings exactly as written (do NOT rename, reorder, or remove section headings)
+5. PRESERVE all tables - keep their structure, headers, columns, and data intact (you may add rows but not restructure)
+6. PRESERVE all code blocks - keep them exactly as they are unless specifically asked to modify code
+7. PRESERVE the overall document hierarchy and structure
+
+MODIFICATION RULES - WHAT YOU CAN CHANGE:
+8. You may ADD new paragraphs or expand existing paragraph text
+9. You may IMPROVE wording, clarity, or detail within existing paragraphs
+10. You may ADD bullet points or numbered lists to elaborate on content
+11. If the user asks to "make X more detailed" or "expand X", ADD detail to existing content - do NOT replace, reorganize, or remove existing content
+
+The content between ${CONTEXT_BEFORE_MARKER} and ${CONTEXT_BEFORE_END_MARKER} is for context only - DO NOT modify it.
+The content between ${CONTEXT_AFTER_MARKER} and ${CONTEXT_AFTER_END_MARKER} is for context only - DO NOT modify it.
+
+User instruction: ${instruction}
+${FORMAT_INSTRUCTIONS}
+
+Return ONLY the edited content that should replace the ${EDIT_START_MARKER}...${EDIT_END_MARKER} section.
+Keep ALL headings, tables, and structural elements from the original content.
+Do not include the markers in your response.`
+}
+
+/**
+ * Build the insertion prompt for ADD operations
+ */
+export function buildInsertionPrompt(
+  instruction: string,
+  position: 'before' | 'after' | 'start' | 'end',
+  referenceDescription: string
+): string {
+  return `You are a precise note editing assistant.
+
+TASK: Generate NEW content to be inserted into the note.
+
+CRITICAL RULES:
+1. Generate ONLY the new content to be inserted
+2. The content will be inserted ${position} ${referenceDescription}
+3. Match the formatting style of the existing note
+4. Do not include any meta-commentary or explanations - just the content
+
+User instruction: ${instruction}
+${FORMAT_INSTRUCTIONS}
+
+Generate the new content to insert:`
 }
 
 // ============================================================================
@@ -230,7 +319,7 @@ export class NoteAgent {
     let userContent: string
 
     if (existingContent && action !== 'create') {
-      userContent = `Current note content:\n\n${existingContent}\n\n---\n\nUser instructions: ${safeInput}`
+      userContent = `Current note content:\n\n${existingContent}\n\nUser instructions: ${safeInput}`
     } else if (existingContent) {
       userContent = existingContent
     } else {
@@ -295,7 +384,15 @@ export class NoteAgent {
     let extractedTitle = ''
 
     for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content
+      // Log chunk structure for debugging GPT-5.2 format
+      console.log('[NoteAgent.stream] Chunk:', JSON.stringify(chunk).slice(0, 200))
+
+      // Try multiple delta paths for GPT-5.2 compatibility
+      const delta = chunk.choices?.[0]?.delta?.content
+        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
+        ?? (chunk.choices?.[0] as { text?: string })?.text
+        ?? (chunk.choices?.[0] as { content?: string })?.content
+
       if (delta) {
         fullContent += delta
         yield { type: 'text-delta', data: delta }
@@ -308,6 +405,8 @@ export class NoteAgent {
             yield { type: 'title', data: extractedTitle }
           }
         }
+      } else if (chunk.choices?.[0]?.finish_reason !== 'stop') {
+        console.warn('[NoteAgent.stream] No delta content in chunk:', chunk)
       }
     }
 
@@ -349,6 +448,90 @@ export class NoteAgent {
     }
 
     yield { type: 'finish', data: { success: true, noteId, title } }
+  }
+
+  /**
+   * Stream a surgical edit (targeted section only)
+   * Used by the section-aware editing pipeline
+   */
+  async *streamSurgicalEdit(config: {
+    instruction: string
+    focusedContent: string // Content with [EDIT_START]/[EDIT_END] markers
+    isInsertion?: boolean
+    insertionPosition?: 'before' | 'after' | 'start' | 'end'
+    insertionReference?: string
+  }): AsyncGenerator<{
+    type: 'text-delta' | 'thinking' | 'finish'
+    data: string | { success: boolean; editedContent?: string }
+  }> {
+    yield { type: 'thinking', data: 'Preparing targeted edit...' }
+
+    // Build appropriate prompt based on operation type
+    let systemPrompt: string
+    if (config.isInsertion && config.insertionPosition && config.insertionReference) {
+      systemPrompt = buildInsertionPrompt(
+        config.instruction,
+        config.insertionPosition,
+        config.insertionReference
+      )
+    } else {
+      systemPrompt = buildSurgicalEditPrompt(config.instruction)
+    }
+
+    const OpenAI = (await import('openai')).default
+    const client = new OpenAI({ apiKey: this.openaiApiKey })
+
+    yield { type: 'thinking', data: 'Generating targeted changes...' }
+
+    let stream
+    try {
+      stream = await client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: config.focusedContent },
+        ],
+        temperature: 0.7,
+        max_completion_tokens: 4000,
+        stream: true,
+      })
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error('[NoteAgent] Surgical edit error:', errMsg)
+      yield { type: 'finish', data: { success: false } }
+      return
+    }
+
+    let fullContent = ''
+
+    for await (const chunk of stream) {
+      // Log chunk structure for debugging GPT-5.2 format
+      console.log('[NoteAgent.streamSurgicalEdit] Chunk:', JSON.stringify(chunk).slice(0, 200))
+
+      // Try multiple delta paths for GPT-5.2 compatibility
+      const delta = chunk.choices?.[0]?.delta?.content
+        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
+        ?? (chunk.choices?.[0] as { text?: string })?.text
+        ?? (chunk.choices?.[0] as { content?: string })?.content
+
+      if (delta) {
+        fullContent += delta
+        yield { type: 'text-delta', data: delta }
+      } else if (chunk.choices?.[0]?.finish_reason !== 'stop') {
+        console.warn('[NoteAgent.streamSurgicalEdit] No delta content in chunk:', chunk)
+      }
+    }
+
+    // Extract the edited content (handles cases where AI includes markers)
+    const editedContent = extractEditedContent(fullContent)
+
+    yield {
+      type: 'finish',
+      data: {
+        success: true,
+        editedContent,
+      },
+    }
   }
 
   /**
@@ -407,7 +590,7 @@ export class NoteAgent {
     }
 
     const existingContent = (existingNote as { content: string }).content || ''
-    const prompt = `Current note:\n\n${existingContent}\n\n---\n\nUpdate instructions: ${input.input}`
+    const prompt = `Current note:\n\n${existingContent}\n\nUpdate instructions: ${input.input}`
 
     const content = await this.generateContent(ACTION_PROMPTS.update, prompt)
     const title = this.extractTitle(content)
@@ -506,7 +689,7 @@ export class NoteAgent {
       return { success: false, action: 'expand', error: 'Note not found' }
     }
 
-    const prompt = `${(existingNote as { content: string }).content || ''}\n\n---\n\nExpansion focus: ${input.input}`
+    const prompt = `${(existingNote as { content: string }).content || ''}\n\nExpansion focus: ${input.input}`
     const content = await this.generateContent(ACTION_PROMPTS.expand, prompt)
 
     const { error: updateError } = await this.supabase

@@ -17,6 +17,10 @@
     "./utils": {
       "import": "./dist/utils/index.js",
       "types": "./dist/utils/index.d.ts"
+    },
+    "./secretary": {
+      "import": "./dist/secretary/index.js",
+      "types": "./dist/secretary/index.d.ts"
     }
   },
   "scripts": {

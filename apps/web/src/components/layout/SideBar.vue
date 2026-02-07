@@ -35,9 +35,9 @@ import {
   useAuthStore,
   usePreferencesStore,
 } from '@/stores'
-import NavigationDock from '@/components/ui/NavigationDock.vue'
+import { useAIStore } from '@/stores/ai'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TableOfContents from './TableOfContents.vue'
 import { buildNoteTree, wouldCreateCircularNote, type NoteTreeNode } from '@inkdown/shared'
 import * as notesService from '@/services/notes.service'
@@ -46,11 +46,13 @@ import type { MoveNoteDTO } from '@inkdown/shared'
 type SidebarTab = 'documents' | 'toc'
 
 const router = useRouter()
+const route = useRoute()
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
 const preferencesStore = usePreferencesStore()
+const aiStore = useAIStore()
 
 // User menu state
 const showUserMenu = ref(false)
@@ -249,7 +251,12 @@ async function createNewDocument(projectId?: string) {
 }
 
 async function openDocument(doc: any) {
-  editorStore.openDocument(doc)
+  // On /home route, open note in the preview panel instead of the main editor
+  if (route.path === '/home') {
+    aiStore.openNotePreview(doc.id)
+  } else {
+    editorStore.openDocument(doc)
+  }
 }
 
 async function deleteDocument(doc: any, e: Event) {
@@ -648,9 +655,6 @@ const tabs = [
       v-else
       class="sidebar-expanded"
     >
-      <!-- Navigation Dock (Integrated) -->
-      <NavigationDock />
-
       <!-- Action buttons with inline search -->
       <div class="quick-actions">
         <button
@@ -1423,7 +1427,7 @@ const tabs = [
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding-top: 0;
+  padding-top: 12px;
   animation: sidebar-fade-in 0.3s ease;
 }
 

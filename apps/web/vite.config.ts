@@ -58,6 +58,7 @@ export default defineConfig({
         new URL('../../packages/muya/src/assets', import.meta.url)
       ),
       '@inkdown/muya': fileURLToPath(new URL('../../packages/muya/src', import.meta.url)),
+      '@inkdown/ai': fileURLToPath(new URL('../../packages/ai/src', import.meta.url)),
       '@inkdown/editor': fileURLToPath(new URL('../../packages/editor', import.meta.url)),
       // Stubs for packages not available in web
       '@marktext/file-icons': fileURLToPath(new URL('./src/stubs/file-icons', import.meta.url)),

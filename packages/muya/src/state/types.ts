@@ -146,6 +146,18 @@ export interface IDiagramState {
   text: string
 }
 
+export interface IArtifactMeta {
+  title: string
+  customWidth?: number
+  customHeight?: number
+}
+
+export interface IArtifactState {
+  name: 'artifact'
+  meta: IArtifactMeta
+  text: string // JSON: { html, css, javascript, prompt? }
+}
+
 export type TLeafState =
   | IParagraphState
   | IAtxHeadingState
@@ -157,6 +169,7 @@ export type TLeafState =
   | IMathBlockState
   | IFrontmatterState
   | IDiagramState
+  | IArtifactState
   | ITableCellState
 
 export type TContainerState =
@@ -175,6 +188,7 @@ export type CodeContentState =
   | ICodeBlockState
   | IHtmlBlockState
   | IDiagramState
+  | IArtifactState
   | IMathBlockState
   | IFrontmatterState
 

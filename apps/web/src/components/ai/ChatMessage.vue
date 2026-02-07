@@ -1,19 +1,18 @@
 <script setup lang="ts">
 /**
- * ChatMessage - Claude.ai Style Card Design
+ * ChatMessage - Minimal Flow Design
  *
  * Features:
- * - Card-based layout with subtle background
- * - Spacious padding (20px)
- * - Role indicator as small pill badge
+ * - Borderless layout with spacing-based separation
+ * - Simple text role labels (no pill badges)
  * - Model chip next to role
  * - Timestamp on far right (subtle)
  * - Hover actions slide in from right
- * - Streaming state with glowing border
+ * - Streaming state with subtle glow
  * - Inline tool call cards
  */
 import { computed, ref } from 'vue'
-import type { ChatMessage } from '@/stores/ai'
+import type { ChatMessage, CompletedArtifact } from '@/stores/ai'
 import { useAIStore } from '@/stores/ai'
 import { renderMathContent } from '@/utils/mathRenderer'
 import {
@@ -25,6 +24,8 @@ import {
 } from 'lucide-vue-next'
 import StreamingCursor from './shared/StreamingCursor.vue'
 import ToolCallCard from './ToolCallCard.vue'
+import ArtifactSummaryCard from './ArtifactSummaryCard.vue'
+import MessageThinkingSteps from './MessageThinkingSteps.vue'
 
 const props = defineProps<{
   message: ChatMessage
@@ -54,6 +55,16 @@ const isStreaming = computed(() => {
 
 // Tool calls from message (if any)
 const toolCalls = computed(() => props.message.toolCalls || [])
+
+// Completed artifacts linked to this message
+const completedArtifacts = computed(() =>
+  store.getCompletedArtifactsForMessage(props.message.id)
+)
+
+// Check if there are thinking steps for this message
+const hasThinkingSteps = computed(() =>
+  store.getThinkingStepsForMessage(props.message.id).length > 0
+)
 
 // Format timestamp
 const formattedTime = computed(() => {
@@ -90,6 +101,22 @@ function handleFeedback(type: 'up' | 'down') {
   console.log('Feedback:', type, props.message.id)
   // TODO: Implement feedback functionality
 }
+
+// Artifact action handlers
+function handleScrollToArtifact(artifact: CompletedArtifact) {
+  // TODO: Implement scroll to artifact in editor
+  console.log('Scroll to artifact:', artifact.title, 'in note:', artifact.noteId)
+}
+
+function handleEditArtifact(artifact: CompletedArtifact) {
+  // TODO: Implement edit artifact
+  console.log('Edit artifact:', artifact.title)
+}
+
+function handleDeleteArtifact(artifact: CompletedArtifact) {
+  // TODO: Implement delete artifact
+  console.log('Delete artifact:', artifact.title)
+}
 </script>
 
 <template>
@@ -106,11 +133,18 @@ function handleFeedback(type: 'up' | 'down') {
     <!-- Header row -->
     <div class="message-header">
       <div class="header-left">
-        <span class="role-pill" :class="roleClass">{{ roleLabel }}</span>
+        <span class="role-label" :class="roleClass">{{ roleLabel }}</span>
         <span v-if="message.model" class="model-chip">{{ message.model }}</span>
       </div>
       <span v-if="formattedTime" class="timestamp">{{ formattedTime }}</span>
     </div>
+
+    <!-- Thinking steps for this message (assistant only) -->
+    <MessageThinkingSteps
+      v-if="isAssistant && hasThinkingSteps"
+      :message-id="message.id"
+      class="message-thinking"
+    />
 
     <!-- Inline tool calls -->
     <ToolCallCard
@@ -126,7 +160,18 @@ function handleFeedback(type: 'up' | 'down') {
       <StreamingCursor v-if="isStreaming" />
     </div>
 
-    <!-- Hover actions -->
+    <!-- Completed artifact cards -->
+    <ArtifactSummaryCard
+      v-for="artifact in completedArtifacts"
+      :key="artifact.id"
+      :title="artifact.title"
+      :note-id="artifact.noteId"
+      @scroll-to-artifact="handleScrollToArtifact(artifact)"
+      @edit-artifact="handleEditArtifact(artifact)"
+      @delete-artifact="handleDeleteArtifact(artifact)"
+    />
+
+    <!-- Hover actions - positioned below all content -->
     <Transition name="slide-in">
       <div v-if="showActions" class="message-actions">
         <button
@@ -134,17 +179,17 @@ function handleFeedback(type: 'up' | 'down') {
           :title="copied ? 'Copied!' : 'Copy'"
           @click="copyMessage"
         >
-          <Check v-if="copied" :size="14" />
-          <Copy v-else :size="14" />
+          <Check v-if="copied" :size="12" />
+          <Copy v-else :size="12" />
         </button>
         <button class="action-btn" title="Retry" @click="handleRetry">
-          <RotateCcw :size="14" />
+          <RotateCcw :size="12" />
         </button>
         <button class="action-btn" title="Good response" @click="handleFeedback('up')">
-          <ThumbsUp :size="14" />
+          <ThumbsUp :size="12" />
         </button>
         <button class="action-btn" title="Bad response" @click="handleFeedback('down')">
-          <ThumbsDown :size="14" />
+          <ThumbsDown :size="12" />
         </button>
       </div>
     </Transition>
@@ -153,28 +198,30 @@ function handleFeedback(type: 'up' | 'down') {
 
 <style scoped>
 /* ============================================
- * MESSAGE CARD - Claude.ai Style
+ * MESSAGE CARD - Minimal Flow Design
  * ============================================ */
 
 .message-card {
-  background: var(--chat-card-bg);
-  border: 1px solid var(--chat-card-border);
-  border-radius: var(--chat-card-radius);
-  padding: var(--chat-card-padding);
-  margin-bottom: var(--chat-message-gap);
-  transition:
-    border-color var(--transition-normal) ease,
-    box-shadow var(--transition-normal) ease;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 16px 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--chat-separator);
+  transition: background var(--transition-normal) ease;
   position: relative;
 }
 
+.message-card:last-child {
+  border-bottom: none;
+}
+
 .message-card:hover {
-  border-color: var(--chat-card-border-hover);
+  background: var(--chat-message-hover);
 }
 
 .message-card.streaming {
-  border-color: var(--stream-cursor);
-  box-shadow: var(--stream-glow);
+  background: var(--chat-message-streaming);
 }
 
 /* ============================================
@@ -194,22 +241,19 @@ function handleFeedback(type: 'up' | 'down') {
   gap: 8px;
 }
 
-.role-pill {
+.role-label {
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
 }
 
-.role-pill.user {
-  background: var(--role-user-bg);
+.role-label.user {
   color: var(--role-user-color);
 }
 
-.role-pill.assistant {
-  background: var(--role-assistant-bg);
+.role-label.assistant {
   color: var(--role-assistant-color);
 }
 
@@ -339,31 +383,31 @@ function handleFeedback(type: 'up' | 'down') {
 }
 
 /* ============================================
- * HOVER ACTIONS
+ * HOVER ACTIONS - Inline below content
  * ============================================ */
 
 .message-actions {
-  position: absolute;
-  bottom: 12px;
-  right: 16px;
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  justify-content: flex-end;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid transparent;
+}
+
+.message-card:hover .message-actions {
+  border-top-color: var(--border-subtle);
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--transition-fast) ease;

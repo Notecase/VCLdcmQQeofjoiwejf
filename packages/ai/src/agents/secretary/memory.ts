@@ -1,0 +1,742 @@
+/**
+ * Secretary Memory Service
+ *
+ * Supabase CRUD wrapper for the `secretary_memory` table.
+ * Provides file-based memory storage (Plan.md, AI.md, Today.md, Tomorrow.md, Plans/*.md).
+ */
+
+import { SupabaseClient } from '@supabase/supabase-js'
+import {
+  parsePlanMarkdown,
+  renderPlanEntryMarkdown,
+  getTodayDate,
+  addDays,
+  getCurrentWeekMonday,
+} from '@inkdown/shared/secretary'
+import type {
+  ActivationSuggestion,
+  LearningRoadmap,
+  MemoryFile,
+  ParserWarning,
+  RoadmapCandidate,
+  StudyPreferences,
+  DayTransitionResult,
+} from '@inkdown/shared/types'
+import { AppError, ErrorCode } from '@inkdown/shared'
+import { lintSecretaryMemoryFiles } from './memory-lint'
+import {
+  parseRoadmapCandidatesFromFiles,
+  type ParsedRoadmapCandidate,
+} from './roadmap-candidates'
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface MemoryRow {
+  id: string
+  user_id: string
+  filename: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface HistoryAnalytics {
+  recentDays: number
+  avgCompletionRate: number
+  struggledTopics: string[]
+  strongTopics: string[]
+  currentStreak: number
+  moodTrend: string[]
+}
+
+export interface MemoryContext {
+  preferences: StudyPreferences | null
+  activePlans: LearningRoadmap[]
+  thisWeekSection: string
+  todayContent: string
+  tomorrowContent: string
+  parserWarnings: ParserWarning[]
+  activationSuggestion: ActivationSuggestion
+  recurringBlocks: string
+  carryoverTasks: string
+}
+
+// ============================================================================
+// Memory Service
+// ============================================================================
+
+export class MemoryService {
+  constructor(
+    private supabase: SupabaseClient,
+    private userId: string,
+  ) {}
+
+  /**
+   * Read a memory file by filename
+   */
+  async readFile(filename: string): Promise<MemoryFile | null> {
+    const { data, error } = await this.supabase
+      .from('secretary_memory')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('filename', filename)
+      .single()
+
+    if (error || !data) return null
+
+    const row = data as MemoryRow
+    return {
+      id: row.id,
+      userId: row.user_id,
+      filename: row.filename,
+      content: row.content,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  /**
+   * Write (upsert) a memory file
+   */
+  async writeFile(filename: string, content: string): Promise<MemoryFile> {
+    const { data, error } = await this.supabase
+      .from('secretary_memory')
+      .upsert(
+        {
+          user_id: this.userId,
+          filename,
+          content,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,filename' },
+      )
+      .select()
+      .single()
+
+    if (error) throw new AppError(`Failed to write memory file: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { filename })
+
+    const row = data as MemoryRow
+    return {
+      id: row.id,
+      userId: row.user_id,
+      filename: row.filename,
+      content: row.content,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  /**
+   * List memory files, optionally filtered by directory prefix
+   */
+  async listFiles(prefix?: string): Promise<MemoryFile[]> {
+    let query = this.supabase
+      .from('secretary_memory')
+      .select('*')
+      .eq('user_id', this.userId)
+      .order('filename')
+
+    if (prefix) {
+      query = query.like('filename', `${prefix}%`)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw new AppError(`Failed to list memory files: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { prefix })
+
+    return ((data as MemoryRow[]) || []).map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      filename: row.filename,
+      content: row.content,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+  }
+
+  /**
+   * Delete a memory file
+   */
+  async deleteFile(filename: string): Promise<boolean> {
+    const { error } = await this.supabase
+      .from('secretary_memory')
+      .delete()
+      .eq('user_id', this.userId)
+      .eq('filename', filename)
+
+    if (error) throw new AppError(`Failed to delete memory file: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { filename })
+    return true
+  }
+
+  /**
+   * Get full context for the secretary agent (reads all core files).
+   * Performs day transition and weekly expansion checks on every invocation.
+   */
+  async getFullContext(): Promise<MemoryContext> {
+    // Lifecycle checks — run before reading state
+    await this.performDayTransition()
+    await this.checkAndExpandWeek()
+
+    const files = await this.listFiles()
+    const fileMap = new Map(files.map(f => [f.filename, f.content]))
+
+    let planContent = fileMap.get('Plan.md') || ''
+    const aiContent = fileMap.get('AI.md') || ''
+    const todayContent = fileMap.get('Today.md') || ''
+    const tomorrowContent = fileMap.get('Tomorrow.md') || ''
+    let planParse = parsePlanMarkdown(planContent)
+
+    const parsedRoadmapCandidates = parseRoadmapCandidatesFromFiles(files)
+    const roadmapCandidates: RoadmapCandidate[] = parsedRoadmapCandidates.map(candidate => ({
+      id: candidate.id,
+      name: candidate.name,
+      filename: candidate.filename,
+    }))
+    let activationSuggestion: ActivationSuggestion = {
+      action: 'none',
+      reason: 'Active plans are present in Plan.md.',
+      candidates: roadmapCandidates,
+    }
+
+    // Auto-activation fallback: if exactly one roadmap exists and Plan.md has no active entries.
+    if (planParse.activePlans.length === 0 && parsedRoadmapCandidates.length === 1) {
+      const candidate = parsedRoadmapCandidates[0]
+      const autoEntry = this.buildAutoActivationEntry(candidate)
+
+      planContent = this.insertPlanEntry(planContent, autoEntry)
+      await this.writeFile('Plan.md', planContent)
+      planParse = parsePlanMarkdown(planContent)
+
+      activationSuggestion = {
+        action: 'auto_activated',
+        reason: `Auto-activated single roadmap candidate [${candidate.id}] ${candidate.name}.`,
+        candidates: roadmapCandidates,
+        selectedId: candidate.id,
+      }
+    } else if (planParse.activePlans.length === 0 && roadmapCandidates.length > 1) {
+      activationSuggestion = {
+        action: 'needs_selection',
+        reason: 'Multiple roadmap archives found but Plan.md has no active plan entries.',
+        candidates: roadmapCandidates,
+      }
+    }
+
+    return {
+      preferences: this.parsePreferences(aiContent),
+      activePlans: planParse.activePlans,
+      thisWeekSection: planParse.thisWeekSection,
+      todayContent,
+      tomorrowContent,
+      parserWarnings: planParse.warnings,
+      activationSuggestion,
+      recurringBlocks: fileMap.get('Recurring.md') || '',
+      carryoverTasks: fileMap.get('Carryover.md') || '',
+    }
+  }
+
+  /**
+   * Analyze recent History/*.md files for patterns and trends.
+   * Reads the last 7 history files and extracts completion rates,
+   * struggled/strong topics, mood trend, and current streak.
+   */
+  async getHistoryAnalytics(): Promise<HistoryAnalytics> {
+    const historyFiles = await this.listFiles('History/')
+    // Sort by filename descending (filenames are YYYY-MM-DD.md) and take last 7
+    const recent = historyFiles
+      .sort((a, b) => b.filename.localeCompare(a.filename))
+      .slice(0, 7)
+
+    if (recent.length === 0) {
+      return {
+        recentDays: 0,
+        avgCompletionRate: 0,
+        struggledTopics: [],
+        strongTopics: [],
+        currentStreak: 0,
+        moodTrend: [],
+      }
+    }
+
+    const taskPattern = /^-\s*\[([x \->])\]/gm
+    let totalCompletionRate = 0
+    const struggledTopics: string[] = []
+    const strongTopics: string[] = []
+    const moodTrend: string[] = []
+    let currentStreak = 0
+    let streakBroken = false
+
+    for (const file of recent) {
+      const content = file.content
+
+      // Count tasks using same regex as frontend secretaryAnalytics.ts
+      let total = 0
+      let completed = 0
+      for (const m of content.matchAll(taskPattern)) {
+        total++
+        if (m[1] === 'x') completed++
+      }
+
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+      totalCompletionRate += rate
+
+      // Track streak (consecutive days with >50% completion)
+      if (!streakBroken && rate > 50) {
+        currentStreak++
+      } else {
+        streakBroken = true
+      }
+
+      // Extract "Struggled with:" from End of Day sections
+      const struggledMatch = content.match(/Struggled with:\s*(.+)/i)
+      if (struggledMatch && struggledMatch[1].trim()) {
+        struggledTopics.push(struggledMatch[1].trim())
+      }
+
+      // Extract "What went well:" as strong topics
+      const strongMatch = content.match(/What went well:\s*(.+)/i)
+      if (strongMatch && strongMatch[1].trim()) {
+        strongTopics.push(strongMatch[1].trim())
+      }
+
+      // Extract mood
+      const moodMatch = content.match(/Mood:\s*(.+)/i)
+      if (moodMatch && moodMatch[1].trim()) {
+        moodTrend.push(moodMatch[1].trim())
+      }
+    }
+
+    return {
+      recentDays: recent.length,
+      avgCompletionRate: Math.round(totalCompletionRate / recent.length),
+      struggledTopics,
+      strongTopics,
+      currentStreak,
+      moodTrend,
+    }
+  }
+
+  /**
+   * Initialize default memory files for a new user
+   */
+  async initializeDefaults(): Promise<MemoryFile[]> {
+    const defaults: Array<{ filename: string; content: string }> = [
+      {
+        filename: 'AI.md',
+        content: `# AI Preferences
+
+## Study Schedule
+- **Best focus time:** 09:00 - 12:00
+- **Break frequency:** Every 45 minutes
+- **Break duration:** 15 minutes
+- **Weekday study hours:** 4
+- **Weekend study hours:** 6
+- **Timezone:** America/New_York
+
+## Learning Style
+- Prefer hands-on practice over theory
+- Like visual diagrams and examples
+
+## Availability
+- **Weekdays:** 09:00 - 22:00
+- **Weekends:** 10:00 - 20:00
+`,
+      },
+      {
+        filename: 'Plan.md',
+        content: `# Learning Plans
+
+## Active Plans
+
+<!-- New plans will be added here -->
+
+---
+
+## This Week
+
+*Schedule will be generated when plans are active.*
+
+---
+
+## Archived
+
+*No archived plans yet.*
+`,
+      },
+      {
+        filename: 'Today.md',
+        content: `# Today's Plan
+
+*No tasks scheduled yet. Use "Prepare Tomorrow" to generate a plan.*
+`,
+      },
+      {
+        filename: 'Tomorrow.md',
+        content: '',
+      },
+    ]
+
+    const results: MemoryFile[] = []
+    for (const { filename, content } of defaults) {
+      const existing = await this.readFile(filename)
+      if (!existing) {
+        results.push(await this.writeFile(filename, content))
+      } else {
+        results.push(existing)
+      }
+    }
+
+    return results
+  }
+
+  /**
+   * Produce lightweight diagnostics for secretary debug workflows.
+   */
+  async getContextDiagnostics(): Promise<{
+    activePlansParsed: number
+    roadmapFilesFound: number
+    autoActivated: boolean
+    warnings: ParserWarning[]
+    activationSuggestion: ActivationSuggestion
+    todayPlanParsed: boolean
+  }> {
+    const context = await this.getFullContext()
+    const files = await this.listFiles()
+    const candidates = parseRoadmapCandidatesFromFiles(files)
+    const lint = lintSecretaryMemoryFiles(files)
+
+    return {
+      activePlansParsed: lint.activePlansParsed,
+      roadmapFilesFound: candidates.length,
+      autoActivated: context.activationSuggestion.action === 'auto_activated',
+      warnings: lint.warnings,
+      activationSuggestion: context.activationSuggestion,
+      todayPlanParsed: lint.todayPlanParsed,
+    }
+  }
+
+  private buildAutoActivationEntry(candidate: ParsedRoadmapCandidate): string {
+    const start = getTodayDate()
+    const roadmapContent = candidate.content || ''
+    const durationMatch = roadmapContent.match(/\*\*Duration:\*\*\s*(\d+)\s*days?/i)
+    const durationDays = durationMatch ? parseInt(durationMatch[1], 10) : 14
+    const end = addDays(start, Math.max(durationDays - 1, 0))
+
+    const scheduleMatch = roadmapContent.match(/\*\*Schedule:\*\*\s*(.+)/i)
+    const hoursMatch = roadmapContent.match(/\*\*Hours\/day:\*\*\s*(\d+(?:\.\d+)?)/i)
+    const hours = hoursMatch ? parseFloat(hoursMatch[1]) : 2
+    const schedule = scheduleMatch?.[1]?.trim()
+      || `Daily ${Number.isFinite(hours) ? hours : 2}h/day`
+
+    return renderPlanEntryMarkdown({
+      planId: candidate.id,
+      planName: candidate.name,
+      status: 'active',
+      progressCurrent: 0,
+      progressTotal: durationDays,
+      startDate: start,
+      endDate: end,
+      schedule,
+      currentTopic: 'Week 1 - Getting started',
+    })
+  }
+
+  private insertPlanEntry(planContent: string, planEntry: string): string {
+    if (!planContent.trim()) {
+      return [
+        '# Learning Plans',
+        '',
+        '## Active Plans',
+        '',
+        planEntry,
+        '',
+        '---',
+        '',
+        '## This Week',
+        '',
+        '*Schedule will be generated when plans are active.*',
+      ].join('\n')
+    }
+
+    const activeSectionPattern = /##\s*Active Plans[^\n]*\n/i
+    const activeMatch = planContent.match(activeSectionPattern)
+    if (!activeMatch || activeMatch.index === undefined) {
+      return `${planContent.trimEnd()}\n\n## Active Plans\n\n${planEntry}\n`
+    }
+
+    const sectionStart = activeMatch.index + activeMatch[0].length
+    const afterActive = planContent.slice(sectionStart)
+    const nextSectionOffset = afterActive.search(/\n##\s/)
+    const sectionEnd = nextSectionOffset >= 0
+      ? sectionStart + nextSectionOffset
+      : planContent.length
+
+    const currentActiveBody = planContent.slice(sectionStart, sectionEnd).trim()
+    const updatedActiveBody = currentActiveBody
+      ? `${currentActiveBody}\n\n${planEntry}`
+      : planEntry
+
+    return `${planContent.slice(0, sectionStart)}\n${updatedActiveBody}\n${planContent.slice(sectionEnd)}`
+  }
+
+  // ==========================================================================
+  // Day Transition
+  // ==========================================================================
+
+  /**
+   * Check if Today.md is stale and perform day transition:
+   * 1. Archive stale Today.md to History/YYYY-MM-DD.md
+   * 2. Promote Tomorrow.md to Today.md if it matches today's date
+   * 3. Clear Tomorrow.md
+   */
+  async performDayTransition(): Promise<DayTransitionResult> {
+    const todayDate = getTodayDate()
+    const todayFile = await this.readFile('Today.md')
+
+    if (!todayFile || !todayFile.content.trim()) {
+      return { transitioned: false }
+    }
+
+    // Extract the date from Today.md header (e.g., "# Today's Plan — 2026-01-15" or "**Date:** 2026-01-15")
+    const dateMatch = todayFile.content.match(/(\d{4}-\d{2}-\d{2})/)
+    if (!dateMatch) {
+      return { transitioned: false }
+    }
+
+    const todayFileDate = dateMatch[1]
+    if (todayFileDate === todayDate) {
+      // Today.md is current, no transition needed
+      return { transitioned: false }
+    }
+
+    // Today.md is stale — archive it
+    const archiveFilename = `History/${todayFileDate}.md`
+    await this.writeFile(archiveFilename, todayFile.content)
+    await this.updatePlanProgress(todayFile.content)
+
+    // Auto carry-over: save incomplete tasks to Carryover.md
+    await this.saveCarryoverTasks(todayFile.content, todayFileDate)
+
+    // Check if Tomorrow.md should be promoted
+    const tomorrowFile = await this.readFile('Tomorrow.md')
+    let promotedTomorrow = false
+
+    if (tomorrowFile && tomorrowFile.content.trim()) {
+      const tomorrowDateMatch = tomorrowFile.content.match(/(\d{4}-\d{2}-\d{2})/)
+      if (tomorrowDateMatch && tomorrowDateMatch[1] === todayDate) {
+        // Tomorrow.md has today's date — promote it
+        await this.writeFile('Today.md', tomorrowFile.content)
+        await this.writeFile('Tomorrow.md', '')
+        promotedTomorrow = true
+      } else {
+        // Tomorrow.md doesn't match today — clear both
+        await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
+        await this.writeFile('Tomorrow.md', '')
+      }
+    } else {
+      // No tomorrow plan — reset Today.md
+      await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
+    }
+
+    return {
+      transitioned: true,
+      archivedDate: todayFileDate,
+      promotedTomorrow,
+    }
+  }
+
+  /**
+   * Update Plan.md progress counters based on completed tasks in archived content
+   */
+  private async updatePlanProgress(archivedContent: string): Promise<void> {
+    const completedPerPlan = new Map<string, number>()
+    const taskPattern = /^-\s*\[x\].*\[(\w+)\]\s*$/gm
+    let match
+    while ((match = taskPattern.exec(archivedContent)) !== null) {
+      const planId = match[1]
+      completedPerPlan.set(planId, (completedPerPlan.get(planId) || 0) + 1)
+    }
+
+    if (completedPerPlan.size === 0) return
+
+    const planFile = await this.readFile('Plan.md')
+    if (!planFile) return
+
+    let content = planFile.content
+    for (const [planId, count] of completedPerPlan) {
+      const progressPattern = new RegExp(
+        `(###\\s*\\[${planId}\\][\\s\\S]*?-\\s*Progress:\\s*)(\\d+)(\\/\\d+)`,
+        'i',
+      )
+      content = content.replace(progressPattern, (_, prefix, current, total) => {
+        return `${prefix}${parseInt(current, 10) + count}${total}`
+      })
+    }
+
+    await this.writeFile('Plan.md', content)
+  }
+
+  /**
+   * Extract incomplete tasks from archived content and write to Carryover.md.
+   * These are picked up by generate_daily_plan to include in the next schedule.
+   */
+  private async saveCarryoverTasks(archivedContent: string, fromDate: string): Promise<void> {
+    const taskPattern = /^- \[[ >]\] \d{1,2}:\d{2}\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+)$/gm
+    const incomplete: Array<{ duration: string; desc: string }> = []
+    let match
+    while ((match = taskPattern.exec(archivedContent)) !== null) {
+      incomplete.push({ duration: match[1], desc: match[2] })
+    }
+
+    if (incomplete.length === 0) {
+      const existing = await this.readFile('Carryover.md')
+      if (existing) await this.deleteFile('Carryover.md')
+      return
+    }
+
+    const lines = incomplete.map(t => `- (${t.duration}min) ${t.desc}`)
+    const content = `# Carried Over Tasks (from ${fromDate})\n\n${lines.join('\n')}\n`
+    await this.writeFile('Carryover.md', content)
+  }
+
+  // ==========================================================================
+  // Weekly Auto-Expansion
+  // ==========================================================================
+
+  /**
+   * Check if a new week has started and update Plan.md:
+   * - Increment currentWeek for active plans
+   * - Mark completed plans
+   * - Regenerate "This Week" section
+   */
+  async checkAndExpandWeek(): Promise<boolean> {
+    const planFile = await this.readFile('Plan.md')
+    if (!planFile || !planFile.content.trim()) return false
+
+    // Calculate current week's Monday
+    const currentWeekStart = getCurrentWeekMonday()
+
+    // Check if "This Week" header already contains this week's date
+    const weekHeaderMatch = planFile.content.match(/##\s*(?:This Week|THIS WEEK)\s*\(([^)]+)\)/i)
+    if (weekHeaderMatch) {
+      const headerDates = weekHeaderMatch[1]
+      // If header contains current Monday's date, we're already up to date
+      if (headerDates.includes(currentWeekStart)) {
+        return false
+      }
+    }
+
+    // Parse active plans and check if any need week advancement
+    const activePlans = parsePlanMarkdown(planFile.content).activePlans
+    if (activePlans.length === 0) return false
+
+    // Calculate Sunday of current week
+    const currentWeekEnd = addDays(currentWeekStart, 6)
+
+    // Build new "This Week" section based on active plans and their schedules
+    const weekDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const thisWeekLines: string[] = [`## This Week (${currentWeekStart} - ${currentWeekEnd})\n`]
+
+    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      const dayStr = addDays(currentWeekStart, dayIdx)
+      const dayName = weekDayNames[dayIdx]
+      const entries: string[] = []
+
+      for (const plan of activePlans) {
+        if (plan.status !== 'active') continue
+
+        // Check if this day is within the plan's date range
+        const planStart = plan.dateRange.start
+        const planEnd = plan.dateRange.end
+
+        if (planStart && dayStr < planStart) continue
+        if (planEnd && dayStr > planEnd) continue
+
+        // Check if this day matches the plan's schedule
+        const schedDays = plan.schedule.studyDays
+        const isStudyDay = schedDays.includes('Daily')
+          || schedDays.some(d => d.toLowerCase().startsWith(dayName.toLowerCase().slice(0, 2)))
+
+        if (isStudyDay) {
+          entries.push(`${plan.id} - ${plan.currentTopic || plan.name}`)
+        }
+      }
+
+      if (entries.length > 0) {
+        thisWeekLines.push(`**${dayName}:** ${entries.join(' | ')}`)
+      }
+    }
+
+    // Replace the This Week section in Plan.md
+    let updatedContent = planFile.content
+    const weekSectionPattern = /##\s*(?:This Week|THIS WEEK)[^\n]*\n[\s\S]*?(?=\n##\s|\n#\s|$)/i
+    const weekMatch = updatedContent.match(weekSectionPattern)
+
+    if (weekMatch) {
+      updatedContent = updatedContent.replace(weekSectionPattern, thisWeekLines.join('\n'))
+    } else {
+      // Append This Week section
+      updatedContent = updatedContent.trimEnd() + '\n\n' + thisWeekLines.join('\n') + '\n'
+    }
+
+    await this.writeFile('Plan.md', updatedContent)
+    return true
+  }
+
+  // ==========================================================================
+  // Parsers
+  // ==========================================================================
+
+  /**
+   * Parse study preferences from AI.md content
+   */
+  private parsePreferences(aiContent: string): StudyPreferences | null {
+    if (!aiContent.trim()) return null
+
+    const getMatch = (pattern: RegExp): string | null => {
+      const m = aiContent.match(pattern)
+      return m ? m[1].trim() : null
+    }
+
+    const parseTime = (s: string | null, fallback: string): string => {
+      if (!s) return fallback
+      const m = s.match(/(\d{1,2}:\d{2})/)
+      return m ? m[1] : fallback
+    }
+
+    const parseNum = (s: string | null, fallback: number): number => {
+      if (!s) return fallback
+      const n = parseInt(s, 10)
+      return isNaN(n) ? fallback : n
+    }
+
+    const focusMatch = getMatch(/best focus time[:\s]*(.+)/i)
+    const focusParts = focusMatch?.split(/[-\u2013]/) || []
+
+    const timezoneMatch = getMatch(/timezone[:\s]*(.+)/i)
+
+    return {
+      focusTime: {
+        bestStart: parseTime(focusParts[0] || null, '09:00'),
+        bestEnd: parseTime(focusParts[1] || null, '12:00'),
+      },
+      breakFrequency: parseNum(getMatch(/break frequency[:\s]*(?:every\s+)?(\d+)/i), 45),
+      breakDuration: parseNum(getMatch(/break duration[:\s]*(\d+)/i), 15),
+      weekdayHours: parseNum(getMatch(/weekday.*?hours[:\s]*(\d+)/i), 4),
+      weekendHours: parseNum(getMatch(/weekend.*?hours[:\s]*(\d+)/i), 6),
+      availability: {
+        weekday: {
+          start: parseTime(getMatch(/weekdays[:\s]*(.+)/i), '09:00'),
+          end: parseTime(getMatch(/weekdays[:\s]*\d{1,2}:\d{2}\s*[-\u2013]\s*(.+)/i), '22:00'),
+        },
+        weekend: {
+          start: parseTime(getMatch(/weekends[:\s]*(.+)/i), '10:00'),
+          end: parseTime(getMatch(/weekends[:\s]*\d{1,2}:\d{2}\s*[-\u2013]\s*(.+)/i), '20:00'),
+        },
+      },
+      timezone: timezoneMatch || undefined,
+    }
+  }
+
+}

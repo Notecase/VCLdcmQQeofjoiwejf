@@ -151,7 +151,7 @@ function toggle() {
 
 <template>
   <div class="tool-card" :class="{ running: isRunning, expanded, [tool.status]: true }">
-    <button class="tool-header" @click="toggle" type="button">
+    <button class="tool-header" type="button" @click="toggle">
       <div class="tool-info">
         <component :is="toolIcon" :size="14" class="tool-icon" />
         <span class="tool-name">{{ displayName }}</span>

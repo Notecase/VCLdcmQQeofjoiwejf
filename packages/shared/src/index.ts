@@ -8,3 +8,6 @@ export * from './utils'
 
 // Error handling
 export * from './errors'
+
+// Secretary markdown utilities
+export * from './secretary'

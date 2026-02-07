@@ -4,7 +4,7 @@
  * AI agents for Inkdown:
  * - ChatAgent: Conversational AI with RAG and citations
  * - NoteAgent: Note manipulation (create, update, organize, summarize, expand)
- * - SecretaryAgent: Intent classification and task routing (8 intents)
+ * - EditorAgent: Intent classification and task routing (8 intents)
  * - PlannerAgent: Goal decomposition and task planning
  */
 
@@ -111,19 +111,19 @@ export {
 } from './note.agent'
 
 // ============================================================================
-// Secretary Agent
+// Editor Agent
 // ============================================================================
 
 export {
-  SecretaryAgent,
-  createSecretaryAgent,
-  SecretaryAgentInputSchema,
-  type SecretaryAgentConfig,
-  type SecretaryAgentInput,
-  type SecretaryAgentResponse,
+  EditorAgent,
+  createEditorAgent,
+  EditorAgentInputSchema,
+  type EditorAgentConfig,
+  type EditorAgentInput,
+  type EditorAgentResponse,
   type IntentType,
   type IntentClassification,
-} from './secretary.agent'
+} from './editor.agent'
 
 // ============================================================================
 // Planner Agent
@@ -149,6 +149,63 @@ export {
 // ============================================================================
 
 export { AgenticAgent, createAgenticAgent } from './agentic.agent'
+
+// ============================================================================
+// Deep Agent (Compound Request Orchestration)
+// ============================================================================
+
+export {
+  InkdownDeepAgent,
+  createInkdownDeepAgent,
+  type DeepAgentConfig,
+  type DeepAgentEvent,
+  type DeepAgentEventType,
+  type SubTask,
+  type DecompositionResult,
+} from './deep-agent'
+
+// ============================================================================
+// Secretary Agent (AI Planner / Roadmap Manager)
+// ============================================================================
+
+export {
+  SecretaryAgent,
+  createSecretaryAgent,
+  MemoryService,
+  ChatPersistenceService,
+  type SecretaryAgentConfig,
+  type MemoryContext,
+} from './secretary'
+
+// ============================================================================
+// Subagents (Specialized Task Execution)
+// ============================================================================
+
+export {
+  // Note Subagent
+  NoteSubagent,
+  createNoteSubagent,
+  NOTE_SUBAGENT_PROMPT,
+  type NoteSubagentConfig,
+  type NoteSubagentContext,
+  type NoteSubagentResult,
+  // Artifact Subagent
+  ArtifactSubagent,
+  createArtifactSubagent,
+  ARTIFACT_SUBAGENT_PROMPT,
+  type ArtifactSubagentConfig,
+  type ArtifactData,
+  type ArtifactSubagentResult,
+  // Table Subagent
+  TableSubagent,
+  createTableSubagent,
+  TABLE_SUBAGENT_PROMPT,
+  type TableSubagentConfig,
+  type TableSubagentContext,
+  type TableColumn,
+  type TableData,
+  type TableSubagentResult,
+} from './subagents'
 
 export type {
   AgentStep,
@@ -182,11 +239,13 @@ export type {
 import { SupabaseClient } from '@supabase/supabase-js'
 import { ChatAgent } from './chat.agent'
 import { NoteAgent } from './note.agent'
-import { SecretaryAgent } from './secretary.agent'
+import { EditorAgent } from './editor.agent'
 import { PlannerAgent } from './planner.agent'
+import { InkdownDeepAgent } from './deep-agent'
+import { SecretaryAgent } from './secretary'
 // AgenticAgent is exported above but not used in factory (standalone usage)
 
-export type AgentType = 'chat' | 'note' | 'secretary' | 'planner' | 'agentic'
+export type AgentType = 'chat' | 'note' | 'editor' | 'planner' | 'agentic' | 'deep' | 'secretary'
 
 export interface AgentConfig {
   supabase: SupabaseClient
@@ -201,16 +260,20 @@ export interface AgentConfig {
 export function createAgent(
   type: AgentType,
   config: AgentConfig
-): ChatAgent | NoteAgent | SecretaryAgent | PlannerAgent {
+): ChatAgent | NoteAgent | EditorAgent | PlannerAgent | InkdownDeepAgent | SecretaryAgent {
   switch (type) {
     case 'chat':
       return new ChatAgent(config)
     case 'note':
       return new NoteAgent(config)
-    case 'secretary':
-      return new SecretaryAgent(config)
+    case 'editor':
+      return new EditorAgent(config)
     case 'planner':
       return new PlannerAgent(config)
+    case 'deep':
+      return new InkdownDeepAgent(config)
+    case 'secretary':
+      return new SecretaryAgent(config)
     default:
       throw new Error(`Unknown agent type: ${type}`)
   }
@@ -237,8 +300,8 @@ export const AGENT_METADATA: Record<
     description: 'Create, update, and organize notes',
     capabilities: ['create', 'update', 'organize', 'summarize', 'expand'],
   },
-  secretary: {
-    name: 'Secretary Agent',
+  editor: {
+    name: 'Editor Agent',
     description: 'Intent classification and task routing',
     capabilities: ['classify', 'route', 'tools', 'memory'],
   },
@@ -251,5 +314,15 @@ export const AGENT_METADATA: Record<
     name: 'Agentic Agent',
     description: 'Autonomous task execution with research and creation',
     capabilities: ['research', 'extract', 'create', 'populate', 'validate'],
+  },
+  deep: {
+    name: 'Deep Agent',
+    description: 'Compound request orchestration with task decomposition',
+    capabilities: ['decompose', 'delegate', 'orchestrate', 'artifacts', 'tables'],
+  },
+  secretary: {
+    name: 'Secretary Agent',
+    description: 'AI daily planner, roadmap manager, and learning assistant',
+    capabilities: ['roadmap', 'daily-plan', 'memory', 'schedule', 'preferences'],
   },
 }

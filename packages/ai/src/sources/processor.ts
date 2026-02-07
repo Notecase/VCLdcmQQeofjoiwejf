@@ -619,7 +619,7 @@ export class SourceProcessor {
       return headers.map((h, i) => `${h}: ${values[i] || ''}`).join('\n')
     })
 
-    return `Headers: ${headers.join(', ')}\n\n${rows.join('\n\n---\n\n')}`
+    return `Headers: ${headers.join(', ')}\n\n${rows.join('\n\n')}`
   }
 
   /**

@@ -13,6 +13,7 @@ import './assets/themes/variables.css'
 
 // Import global styles
 import './assets/styles/index.scss'
+import './assets/styles/diff-blocks.css'
 
 // Create router
 const router = createRouter({
@@ -32,6 +33,16 @@ const router = createRouter({
       path: '/ai',
       name: 'ai-chat',
       component: () => import('./views/AIChat.vue'),
+    },
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('./views/HomePage.vue'),
+    },
+    {
+      path: '/calendar',
+      name: 'secretary',
+      component: () => import('./views/SecretaryView.vue'),
     },
   ],
 })

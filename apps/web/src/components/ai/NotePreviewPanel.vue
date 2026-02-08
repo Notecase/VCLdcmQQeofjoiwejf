@@ -10,34 +10,17 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, markRaw } from 
 import { useAIStore } from '@/stores/ai'
 import { usePreferencesStore, useEditorStore } from '@/stores'
 import { useDiffBlocks } from '@/composables/useDiffBlocks'
+import { registerMuyaPlugins } from '@/utils/muyaPlugins'
 import DiffActionBar from '@/components/ai/DiffActionBar.vue'
 import * as notesService from '@/services/notes.service'
 import { X, FileText, Check } from 'lucide-vue-next'
 
-import {
-  Muya,
-  ParagraphFrontButton,
-  ParagraphFrontMenu,
-  ParagraphQuickInsertMenu,
-  CodeBlockLanguageSelector,
-  EmojiSelector,
-  ImageToolBar,
-  ImageResizeBar,
-  InlineFormatToolbar,
-  TableColumnToolbar,
-  TableRowColumMenu,
-  TableDragBar,
-  TablePicker,
-  LinkTools,
-  FootnoteTool,
-} from '@inkdown/muya'
+import { Muya } from '@inkdown/muya'
 
 // Muya styles are already imported globally by EditorArea
 // Only need KaTeX + Prism if not already loaded
 import 'katex/dist/katex.min.css'
 import 'prismjs/themes/prism.css'
-
-import { openExternal } from '@/utils/platform'
 
 const aiStore = useAIStore()
 const preferencesStore = usePreferencesStore()
@@ -120,32 +103,6 @@ const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
   { onSync: handleDiffSync }
 )
 
-// Register Muya plugins (module-level guard in registerPlugins ensures no double-registration)
-let pluginsRegistered = false
-function registerPlugins() {
-  if (pluginsRegistered) return
-
-  Muya.use(ParagraphFrontButton)
-  Muya.use(ParagraphFrontMenu)
-  Muya.use(ParagraphQuickInsertMenu)
-  Muya.use(CodeBlockLanguageSelector)
-  Muya.use(EmojiSelector)
-  Muya.use(ImageToolBar)
-  Muya.use(ImageResizeBar)
-  Muya.use(InlineFormatToolbar)
-  Muya.use(TablePicker)
-  Muya.use(TableColumnToolbar)
-  Muya.use(TableRowColumMenu)
-  Muya.use(TableDragBar)
-  Muya.use(LinkTools, {
-    jumpClick: (linkInfo: { href: string }) => {
-      openExternal(linkInfo.href)
-    },
-  })
-  Muya.use(FootnoteTool)
-  pluginsRegistered = true
-}
-
 /**
  * Calculate word count from markdown content
  */
@@ -189,7 +146,7 @@ async function loadNote(noteId: string) {
 function initializeMuya() {
   if (!editorRef.value || !previewDocument.value) return
 
-  registerPlugins()
+  registerMuyaPlugins({ frontControls: false })
 
   const options = {
     markdown: previewDocument.value.content,
@@ -409,7 +366,7 @@ onUnmounted(() => {
     <div class="preview-body">
       <div
         ref="editorRef"
-        class="preview-editor muya-editor"
+        class="preview-editor muya-editor muya-editor--contained-diff"
       ></div>
       <div v-if="isLoading" class="loading-state">
         <div class="loading-spinner"></div>

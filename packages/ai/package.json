@@ -57,6 +57,14 @@
     "./workflows": {
       "import": "./dist/workflows/index.js",
       "types": "./dist/workflows/index.d.ts"
+    },
+    "./agents/course": {
+      "import": "./dist/agents/course/index.js",
+      "types": "./dist/agents/course/index.d.ts"
+    },
+    "./agents/research": {
+      "import": "./dist/agents/research/index.js",
+      "types": "./dist/agents/research/index.d.ts"
     }
   },
   "scripts": {

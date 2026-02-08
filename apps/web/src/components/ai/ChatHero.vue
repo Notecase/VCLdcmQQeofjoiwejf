@@ -1,18 +1,11 @@
 <script setup lang="ts">
 /**
- * ChatHero - Empty state hero with recommendation prompts
+ * ChatHero - 4-quadrant suggestion layout for empty chat state
+ * Features: "SUGGESTED FOR YOU" header, 2 crossing lines (no outer border), 4 recommendation cards
  */
-import { type Component } from 'vue'
-import {
-  Sparkles,
-  Brain,
-  Code,
-  Lightbulb,
-} from 'lucide-vue-next'
 
 interface Recommendation {
   id: string
-  icon: Component
   title: string
   description: string
   action: string
@@ -25,28 +18,24 @@ const emit = defineEmits<{
 const recommendations: Recommendation[] = [
   {
     id: 'vae',
-    icon: Brain,
     title: 'Explain VAE vs DAG',
     description: 'Compare Variational Autoencoders and DAG models from your Deep Learning notes.',
     action: 'Compare',
   },
   {
     id: 'neural',
-    icon: Lightbulb,
     title: 'Quiz on Neural Pathways',
     description: 'Test your understanding of synaptic plasticity from Neuroscience 2.',
     action: 'Start Quiz',
   },
   {
     id: 'quantum',
-    icon: Sparkles,
     title: 'Quantum Gates Cheatsheet',
     description: 'Generate a quick reference for Hadamard, CNOT, and Pauli gates.',
     action: 'Generate',
   },
   {
     id: 'react',
-    icon: Code,
     title: 'React Hooks Deep Dive',
     description: 'Explain useEffect cleanup and dependency arrays from your React notes.',
     action: 'Explain',
@@ -56,31 +45,22 @@ const recommendations: Recommendation[] = [
 
 <template>
   <div class="chat-hero">
-    <div class="hero-card">
-      <div class="hero-icon">
-        <Sparkles :size="18" />
-      </div>
-      <div>
-        <h2>Start a guided session</h2>
-        <p>Ask for summaries, generate study plans, or draft edits with inline diffs you can review.</p>
-      </div>
+    <!-- Header with accent bar -->
+    <div class="hero-header">
+      <span class="accent-bar" />
+      <span class="hero-label">SUGGESTED FOR YOU</span>
     </div>
 
-    <div class="prompt-grid">
+    <!-- 4-quadrant grid with only crossing lines (no outer border) -->
+    <div class="quadrant-grid">
       <button
         v-for="rec in recommendations"
         :key="rec.id"
-        class="prompt-card"
+        class="quadrant-card"
         @click="emit('select', rec)"
       >
-        <div class="prompt-icon">
-          <component :is="rec.icon" :size="18" />
-        </div>
-        <div>
-          <h3>{{ rec.title }}</h3>
-          <p>{{ rec.description }}</p>
-          <span class="prompt-action">{{ rec.action }} -></span>
-        </div>
+        <span class="card-title">{{ rec.title }}</span>
+        <span class="card-description">{{ rec.description }}</span>
       </button>
     </div>
   </div>
@@ -88,114 +68,93 @@ const recommendations: Recommendation[] = [
 
 <style scoped>
 .chat-hero {
-  padding: 32px 24px 16px;
+  padding: 32px 0 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  animation: fadeIn 0.5s ease-out;
+  gap: 24px;
+  animation: fadeIn 0.4s ease-out;
 }
 
-.hero-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(124, 158, 248, 0.2);
-  background: rgba(124, 158, 248, 0.06);
-}
-
-.hero-card h2 {
-  font-size: 17px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--text-color, #e6edf3);
-}
-
-.hero-card p {
-  font-size: 13px;
-  color: var(--text-color-secondary, #8b949e);
-}
-
-.hero-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: rgba(124, 158, 248, 0.15);
-  color: var(--primary-color, #7c9ef8);
+.hero-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.prompt-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.prompt-card {
-  display: flex;
   gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #30363d);
+}
+
+.accent-bar {
+  width: 3px;
+  height: 14px;
+  background: #58a6ff;
+  border-radius: 2px;
+}
+
+.hero-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-color-secondary, #8b949e);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* 4-quadrant grid with ONLY crossing lines - no outer border */
+.quadrant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 0;
+  /* No outer border */
+}
+
+.quadrant-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
   background: transparent;
+  border: none;
   text-align: left;
-  transition: background 0.15s;
   cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
 }
 
-.prompt-card:hover {
-  background: rgba(255, 255, 255, 0.04);
+/* Only crossing lines - top row has bottom border, left column has right border */
+.quadrant-card:nth-child(1) {
+  border-right: 1px solid rgba(48, 54, 61, 0.6);
+  border-bottom: 1px solid rgba(48, 54, 61, 0.6);
 }
 
-.prompt-card h3 {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
+.quadrant-card:nth-child(2) {
+  border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+}
+
+.quadrant-card:nth-child(3) {
+  border-right: 1px solid rgba(48, 54, 61, 0.6);
+}
+
+.quadrant-card:nth-child(4) {
+  /* No borders - bottom right corner */
+}
+
+.quadrant-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-color, #e6edf3);
+  line-height: 1.3;
 }
 
-.prompt-card p {
+.card-description {
   font-size: 12px;
   color: var(--text-color-secondary, #8b949e);
-  margin-bottom: 6px;
-}
-
-.prompt-action {
-  font-size: 12px;
-  color: var(--primary-color, #7c9ef8);
-  font-weight: 500;
-}
-
-.prompt-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--primary-color, #7c9ef8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  line-height: 1.5;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 720px) {
-  .prompt-grid {
-    grid-template-columns: 1fr;
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

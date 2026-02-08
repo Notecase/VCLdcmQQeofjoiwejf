@@ -11,7 +11,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { useLayoutStore } from '@/stores'
 import {
   FileText,
-  LayoutGrid,
   Calendar,
   GraduationCap,
   PanelLeft,
@@ -34,10 +33,15 @@ function navigate(path: string) {
 }
 
 // Check if route is active
-const isActive = (path: string) => route.path === path
+const isCalendarActive = computed(() => route.path === '/calendar' || route.path.startsWith('/calendar/'))
+const isCoursesActive = computed(() => route.path === '/courses' || route.path.startsWith('/courses/'))
 
 const isNoteActive = computed(() => {
-  return route.path === '/' || route.name === 'editor'
+  return route.path === '/editor' || route.name === 'editor'
+})
+
+const isHomeActive = computed(() => {
+  return route.path === '/' || route.name === 'home'
 })
 </script>
 
@@ -55,28 +59,18 @@ const isNoteActive = computed(() => {
 
     <!-- Notes (Main Editor) -->
     <button
-      class="dock-item"
+      class="dock-item nav-notes"
       :class="{ active: isNoteActive }"
       title="Notes"
-      @click="navigate('/')"
+      @click="navigate('/editor')"
     >
       <FileText :size="18" />
     </button>
 
-    <!-- Dashboard -->
-    <button
-      class="dock-item"
-      :class="{ active: isActive('/ai') }"
-      title="Dashboard"
-      @click="navigate('/ai')"
-    >
-      <LayoutGrid :size="18" />
-    </button>
-
     <!-- Calendar -->
     <button
-      class="dock-item"
-      :class="{ active: isActive('/calendar') }"
+      class="dock-item nav-calendar"
+      :class="{ active: isCalendarActive }"
       title="Calendar"
       @click="navigate('/calendar')"
     >
@@ -85,8 +79,8 @@ const isNoteActive = computed(() => {
 
     <!-- Courses -->
     <button
-      class="dock-item"
-      :class="{ active: isActive('/courses') }"
+      class="dock-item nav-courses"
+      :class="{ active: isCoursesActive }"
       title="Courses"
       @click="navigate('/courses')"
     >
@@ -108,10 +102,10 @@ const isNoteActive = computed(() => {
 
     <!-- Home -->
     <button
-      class="dock-item"
-      :class="{ active: isActive('/home') }"
+      class="dock-item nav-home"
+      :class="{ active: isHomeActive }"
       title="Home"
-      @click="navigate('/home')"
+      @click="navigate('/')"
     >
       <Home :size="18" />
     </button>
@@ -150,25 +144,48 @@ const isNoteActive = computed(() => {
   color: #e6edf3;
 }
 
-/* Active state - icon color only, no background */
+/* Nav icons: neutral by default, colored only when active */
+.nav-notes:hover,
+.nav-calendar:hover,
+.nav-courses:hover,
+.nav-home:hover {
+  color: #e6edf3;
+  background: rgba(139, 148, 158, 0.08);
+}
+
+/* Active state - tinted background */
 .dock-item.active {
   background: transparent;
   border-color: transparent;
-  color: #3fb950;
 }
+
+.nav-notes.active { color: #58a6ff; background: rgba(88, 166, 255, 0.12); }
+.nav-calendar.active { color: #f0c36d; background: rgba(240, 195, 109, 0.12); }
+.nav-courses.active { color: #a78bfa; background: rgba(167, 139, 250, 0.12); }
+.nav-home.active { color: #3fb950; background: rgba(63, 185, 80, 0.12); }
 
 .dock-item.active:hover {
   background: transparent;
 }
+
+.nav-notes.active:hover { background: rgba(88, 166, 255, 0.16); }
+.nav-calendar.active:hover { background: rgba(240, 195, 109, 0.16); }
+.nav-courses.active:hover { background: rgba(167, 139, 250, 0.16); }
+.nav-home.active:hover { background: rgba(63, 185, 80, 0.16); }
 
 /* Toggle buttons styling */
 .toggle-btn {
   color: #8b949e;
 }
 
+.toggle-btn:hover {
+  color: #c9d1d9;
+  background: rgba(139, 148, 158, 0.08);
+}
+
 .toggle-btn.active {
-  color: #3fb950;
-  background: transparent;
+  color: #c9d1d9;
+  background: rgba(139, 148, 158, 0.12);
   border-color: transparent;
 }
 

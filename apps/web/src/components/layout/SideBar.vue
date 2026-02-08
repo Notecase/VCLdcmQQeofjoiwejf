@@ -54,6 +54,14 @@ const authStore = useAuthStore()
 const preferencesStore = usePreferencesStore()
 const aiStore = useAIStore()
 
+// Check if a note is highlighted — route-aware to avoid dual highlights
+function isNoteActive(noteId: string) {
+  if (route.path === '/') {
+    return aiStore.previewNoteId === noteId
+  }
+  return editorStore.currentDocument?.id === noteId
+}
+
 // User menu state
 const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
@@ -251,8 +259,8 @@ async function createNewDocument(projectId?: string) {
 }
 
 async function openDocument(doc: any) {
-  // On /home route, open note in the preview panel instead of the main editor
-  if (route.path === '/home') {
+  // On home route (/), open note in the preview panel instead of the main editor
+  if (route.path === '/') {
     aiStore.openNotePreview(doc.id)
   } else {
     editorStore.openDocument(doc)
@@ -845,7 +853,7 @@ const tabs = [
                       v-for="doc in getProjectDocuments(subproject.id)"
                       :key="doc.id"
                       class="tree-item doc-item"
-                      :class="{ active: editorStore.currentDocument?.id === doc.id }"
+                      :class="{ active: isNoteActive(doc.id) }"
                       @click.stop="openDocument(doc)"
                       @contextmenu="showContextMenu($event, 'note', doc.id)"
                     >
@@ -874,7 +882,7 @@ const tabs = [
                   <div
                     class="tree-item doc-item"
                     :class="{
-                      active: editorStore.currentDocument?.id === doc.id,
+                      active: isNoteActive(doc.id),
                       'drag-over': dragState.dropTargetId === doc.id,
                     }"
                     :data-item-id="doc.id"
@@ -948,7 +956,7 @@ const tabs = [
                       <div
                         class="tree-item doc-item subnote"
                         :class="{
-                          active: editorStore.currentDocument?.id === subnote.id,
+                          active: isNoteActive(subnote.id),
                           'drag-over': dragState.dropTargetId === subnote.id,
                         }"
                         :data-item-id="subnote.id"
@@ -1062,7 +1070,7 @@ const tabs = [
                 <div
                   class="tree-item doc-item"
                   :class="{
-                    active: editorStore.currentDocument?.id === doc.id,
+                    active: isNoteActive(doc.id),
                     'drag-over': dragState.dropTargetId === doc.id,
                   }"
                   :data-item-id="doc.id"
@@ -1137,7 +1145,7 @@ const tabs = [
                     <div
                       class="tree-item doc-item subnote"
                       :class="{
-                        active: editorStore.currentDocument?.id === subnote.id,
+                        active: isNoteActive(subnote.id),
                         'drag-over': dragState.dropTargetId === subnote.id,
                       }"
                       :data-item-id="subnote.id"
@@ -1655,6 +1663,10 @@ const tabs = [
 
 .doc-icon {
   color: var(--text-color-secondary, #888);
+}
+
+.tree-item.active .doc-icon {
+  color: #58a6ff;
 }
 
 .item-name {

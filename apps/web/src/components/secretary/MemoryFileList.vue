@@ -1,11 +1,39 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useSecretaryStore } from '@/stores/secretary'
 import { FileText, Folder, Clock, History } from 'lucide-vue-next'
 
 const store = useSecretaryStore()
+const router = useRouter()
+const route = useRoute()
 
-function selectFile(filename: string) {
-  store.selectedFilename = store.selectedFilename === filename ? null : filename
+const inHistoryRoute = computed(() => route.path === '/calendar/history')
+const inPlansRoute = computed(() => route.path === '/calendar/plans')
+
+function selectRootFile(filename: string) {
+  if (store.selectedFilename === filename && route.path === '/calendar') {
+    store.selectedFilename = null
+    return
+  }
+  store.selectedFilename = filename
+  if (route.path !== '/calendar') {
+    router.push('/calendar')
+  }
+}
+
+function openHistoryFolder() {
+  store.selectedFilename = null
+  if (route.path !== '/calendar/history') {
+    router.push('/calendar/history')
+  }
+}
+
+function openPlansFolder() {
+  store.selectedFilename = null
+  if (route.path !== '/calendar/plans') {
+    router.push('/calendar/plans')
+  }
 }
 
 function formatDate(dateStr: string): string {
@@ -25,14 +53,13 @@ function formatDate(dateStr: string): string {
     <h3 class="list-title">Memory Files</h3>
     <div class="file-list">
       <button
-        v-for="file in store.memoryFiles"
+        v-for="file in store.rootMemoryFiles"
         :key="file.filename"
         class="file-item"
         :class="{ active: store.selectedFilename === file.filename }"
-        @click="selectFile(file.filename)"
+        @click="selectRootFile(file.filename)"
       >
-        <Folder v-if="file.filename.includes('/')" :size="14" class="file-icon" />
-        <FileText v-else :size="14" class="file-icon" />
+        <FileText :size="14" class="file-icon" />
         <div class="file-info">
           <span class="file-name">{{ file.filename }}</span>
           <span class="file-meta">
@@ -46,13 +73,25 @@ function formatDate(dateStr: string): string {
     <div class="history-divider" />
     <button
       class="file-item history-item"
-      :class="{ active: store.selectedFilename === '__history__' }"
-      @click="store.selectedFilename = '__history__'"
+      :class="{ active: inHistoryRoute }"
+      @click="openHistoryFolder"
     >
       <History :size="14" class="file-icon" />
       <div class="file-info">
         <span class="file-name">History</span>
         <span class="file-meta">Archived daily plans</span>
+      </div>
+    </button>
+
+    <button
+      class="file-item history-item"
+      :class="{ active: inPlansRoute }"
+      @click="openPlansFolder"
+    >
+      <Folder :size="14" class="file-icon" />
+      <div class="file-info">
+        <span class="file-name">Plans</span>
+        <span class="file-meta">Roadmap archives</span>
       </div>
     </button>
   </div>

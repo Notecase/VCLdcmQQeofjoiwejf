@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { parseDateString } from '@inkdown/shared/secretary'
 import type { DailyStats } from '@/utils/secretaryAnalytics'
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ function barColor(rate: number): string {
 }
 
 function shortDate(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = parseDateString(dateStr)
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 </script>

@@ -11,3 +11,6 @@ export * from './errors'
 
 // Secretary markdown utilities
 export * from './secretary'
+
+// Shared request-routing policies
+export * from './research/request-policy'

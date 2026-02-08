@@ -14,6 +14,7 @@ import './assets/themes/variables.css'
 // Import global styles
 import './assets/styles/index.scss'
 import './assets/styles/diff-blocks.css'
+import './assets/styles/glass-design.css'
 
 // Create router
 const router = createRouter({
@@ -21,6 +22,11 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'home',
+      component: () => import('./views/HomePage.vue'),
+    },
+    {
+      path: '/editor',
       name: 'editor',
       component: () => import('./views/EditorView.vue'),
     },
@@ -30,19 +36,34 @@ const router = createRouter({
       component: () => import('./views/AuthView.vue'),
     },
     {
-      path: '/ai',
-      name: 'ai-chat',
-      component: () => import('./views/AIChat.vue'),
-    },
-    {
-      path: '/home',
-      name: 'home',
-      component: () => import('./views/HomePage.vue'),
-    },
-    {
       path: '/calendar',
       name: 'secretary',
       component: () => import('./views/SecretaryView.vue'),
+    },
+    {
+      path: '/calendar/history',
+      name: 'secretary-history',
+      component: () => import('./views/SecretaryView.vue'),
+    },
+    {
+      path: '/calendar/plans',
+      name: 'secretary-plans',
+      component: () => import('./views/SecretaryView.vue'),
+    },
+    {
+      path: '/courses',
+      name: 'courseList',
+      component: () => import('./views/CourseListView.vue'),
+    },
+    {
+      path: '/courses/generate',
+      name: 'courseGenerator',
+      component: () => import('./views/CourseGeneratorView.vue'),
+    },
+    {
+      path: '/courses/:id',
+      name: 'courseViewer',
+      component: () => import('./views/CourseView.vue'),
     },
   ],
 })

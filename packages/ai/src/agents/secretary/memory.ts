@@ -63,11 +63,112 @@ export interface MemoryContext {
   carryoverTasks: string
 }
 
+const CORE_ROOT_MEMORY_FILES = new Set([
+  'AI.md',
+  'Plan.md',
+  'Today.md',
+  'Tomorrow.md',
+  'Recurring.md',
+  'Carryover.md',
+])
+
+const LEGACY_HISTORY_FILENAME_RE = /^\d{4}-\d{2}-\d{2}\.md$/i
+
+export interface LegacyPathMigrationOperation {
+  source: string
+  destination?: string
+  action: 'move' | 'delete'
+  reason: 'canonical_missing' | 'canonical_same_content' | 'canonical_content_conflict'
+}
+
+/**
+ * Returns a canonical folder path for known legacy root-level markdown files.
+ * - YYYY-MM-DD.md      -> History/YYYY-MM-DD.md
+ * - *roadmap*.md       -> Plans/<filename>.md
+ * Core root files stay at root.
+ */
+export function getCanonicalPathForLegacyFile(filename: string): string | null {
+  if (!filename || filename.includes('/')) return null
+  if (CORE_ROOT_MEMORY_FILES.has(filename)) return null
+  if (!filename.toLowerCase().endsWith('.md')) return null
+
+  if (LEGACY_HISTORY_FILENAME_RE.test(filename)) {
+    return `History/${filename}`
+  }
+
+  if (filename.toLowerCase().includes('roadmap')) {
+    return `Plans/${filename}`
+  }
+
+  return null
+}
+
+function withLegacySuffix(filename: string, suffix: number): string {
+  const slashIdx = filename.lastIndexOf('/')
+  const dir = slashIdx >= 0 ? `${filename.slice(0, slashIdx)}/` : ''
+  const base = slashIdx >= 0 ? filename.slice(slashIdx + 1) : filename
+  const stem = base.toLowerCase().endsWith('.md') ? base.slice(0, -3) : base
+  return `${dir}${stem}-legacy-${suffix}.md`
+}
+
+export function planLegacyPathMigrations(
+  files: Array<Pick<MemoryFile, 'filename' | 'content'>>,
+): LegacyPathMigrationOperation[] {
+  const byFilename = new Map(files.map(file => [file.filename, file]))
+  const reservedDestinations = new Set(files.map(file => file.filename))
+  const operations: LegacyPathMigrationOperation[] = []
+
+  const sortedFiles = [...files].sort((a, b) => a.filename.localeCompare(b.filename))
+  for (const file of sortedFiles) {
+    const canonicalPath = getCanonicalPathForLegacyFile(file.filename)
+    if (!canonicalPath) continue
+
+    const canonicalFile = byFilename.get(canonicalPath)
+    if (!canonicalFile && !reservedDestinations.has(canonicalPath)) {
+      reservedDestinations.add(canonicalPath)
+      operations.push({
+        source: file.filename,
+        destination: canonicalPath,
+        action: 'move',
+        reason: 'canonical_missing',
+      })
+      continue
+    }
+
+    if (canonicalFile && canonicalFile.content === file.content) {
+      operations.push({
+        source: file.filename,
+        action: 'delete',
+        reason: 'canonical_same_content',
+      })
+      continue
+    }
+
+    let suffix = 1
+    let fallback = withLegacySuffix(canonicalPath, suffix)
+    while (reservedDestinations.has(fallback) || byFilename.has(fallback)) {
+      suffix += 1
+      fallback = withLegacySuffix(canonicalPath, suffix)
+    }
+    reservedDestinations.add(fallback)
+    operations.push({
+      source: file.filename,
+      destination: fallback,
+      action: 'move',
+      reason: 'canonical_content_conflict',
+    })
+  }
+
+  return operations
+}
+
 // ============================================================================
 // Memory Service
 // ============================================================================
 
 export class MemoryService {
+  private legacyPathMigrationChecked = false
+
   constructor(
     private supabase: SupabaseClient,
     private userId: string,
@@ -132,6 +233,11 @@ export class MemoryService {
    * List memory files, optionally filtered by directory prefix
    */
   async listFiles(prefix?: string): Promise<MemoryFile[]> {
+    await this.ensureLegacyPathMigration()
+    return this.listFilesRaw(prefix)
+  }
+
+  private async listFilesRaw(prefix?: string): Promise<MemoryFile[]> {
     let query = this.supabase
       .from('secretary_memory')
       .select('*')
@@ -154,6 +260,27 @@ export class MemoryService {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }))
+  }
+
+  private async ensureLegacyPathMigration(): Promise<void> {
+    if (this.legacyPathMigrationChecked) return
+    this.legacyPathMigrationChecked = true
+
+    const files = await this.listFilesRaw()
+    const operations = planLegacyPathMigrations(files)
+    if (operations.length === 0) return
+
+    const fileMap = new Map(files.map(file => [file.filename, file]))
+
+    for (const operation of operations) {
+      const source = fileMap.get(operation.source)
+      if (!source) continue
+
+      if (operation.action === 'move' && operation.destination) {
+        await this.writeFile(operation.destination, source.content)
+      }
+      await this.deleteFile(operation.source)
+    }
   }
 
   /**

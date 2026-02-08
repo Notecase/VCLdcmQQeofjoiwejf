@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSecretaryStore } from '@/stores/secretary'
 import { FileText, Clock } from 'lucide-vue-next'
 
 const store = useSecretaryStore()
-
-onMounted(() => {
-  store.loadHistory()
-})
+const router = useRouter()
 
 function openEntry(filename: string) {
   store.selectedFilename = filename
+}
+
+function backToDashboard() {
+  store.selectedFilename = null
+  router.push('/calendar')
 }
 
 function formatDate(dateStr: string): string {
@@ -34,16 +36,16 @@ function extractDate(filename: string): string {
   <div class="history-browser">
     <div class="history-header">
       <h3>History</h3>
-      <button class="back-btn" @click="store.selectedFilename = null">
+      <button class="back-btn" @click="backToDashboard">
         Back to Dashboard
       </button>
     </div>
 
-    <div v-if="!store.historyLoaded" class="loading">
-      Loading history...
-    </div>
+    <p class="history-note">
+      Archived daily plans used to compute dashboard completion and streak analytics.
+    </p>
 
-    <div v-else-if="store.historyEntries.length === 0" class="empty-state">
+    <div v-if="store.historyEntries.length === 0" class="empty-state">
       No archived daily plans yet.
     </div>
 
@@ -89,6 +91,12 @@ function extractDate(filename: string): string {
   margin: 0;
 }
 
+.history-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-color-secondary, #94a3b8);
+}
+
 .back-btn {
   padding: 6px 12px;
   border-radius: 6px;
@@ -102,13 +110,6 @@ function extractDate(filename: string): string {
 
 .back-btn:hover {
   background: rgba(255, 255, 255, 0.04);
-}
-
-.loading {
-  font-size: 13px;
-  color: var(--text-color-secondary, #94a3b8);
-  text-align: center;
-  padding: 24px 0;
 }
 
 .empty-state {

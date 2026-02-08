@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
 import { useNotificationsStore } from '@/stores/notifications'
+import { partitionMemoryFiles } from './secretary.file-grouping'
 import {
   parseDailyPlanMarkdown,
   parsePlanMarkdown,
@@ -96,13 +97,14 @@ export const useSecretaryStore = defineStore('secretary', () => {
   const lastReceivedThreadId = ref<string | null>(null)
   const lastStreamSeq = ref<number>(0)
 
-  // History state
-  const historyEntries = ref<MemoryFile[]>([])
-  const historyLoaded = ref(false)
   let memoryRefreshTimer: ReturnType<typeof setTimeout> | null = null
   const pendingMemoryRefresh = new Set<string>()
 
   // ---- Computed ----
+  const groupedMemoryFiles = computed(() => partitionMemoryFiles(memoryFiles.value))
+  const rootMemoryFiles = computed(() => groupedMemoryFiles.value.rootMemoryFiles)
+  const historyEntries = computed(() => groupedMemoryFiles.value.historyEntries)
+  const planArchiveEntries = computed(() => groupedMemoryFiles.value.planArchiveEntries)
 
   const todayProgress = computed(() => {
     if (!todayPlan.value) return { completed: 0, total: 0, percent: 0 }
@@ -701,18 +703,6 @@ export const useSecretaryStore = defineStore('secretary', () => {
     parserWarnings.value = warnings
   }
 
-  async function loadHistory() {
-    if (historyLoaded.value) return
-    try {
-      const res = await authFetch(`${SECRETARY_API}/history`)
-      const data = await res.json()
-      historyEntries.value = data.files || []
-      historyLoaded.value = true
-    } catch (err) {
-      notifications.error(err instanceof Error ? err.message : 'Failed to load history')
-    }
-  }
-
   function extractTitle(message: string): string {
     // First sentence (up to period/question mark/exclamation) or first 60 chars
     const sentenceMatch = message.match(/^(.+?[.!?])/)
@@ -785,7 +775,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   function studyNow(task: ScheduledTask) {
     if (task.noteId) {
-      window.location.href = `/?noteId=${task.noteId}`
+      window.location.href = `/editor?noteId=${task.noteId}`
     }
     updateTaskStatus(task.id, 'in_progress')
   }
@@ -801,6 +791,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   return {
     memoryFiles,
+    rootMemoryFiles,
+    historyEntries,
+    planArchiveEntries,
     activePlans,
     todayPlan,
     tomorrowPlan,
@@ -832,9 +825,6 @@ export const useSecretaryStore = defineStore('secretary', () => {
     loadThread,
     createNewThread,
     deleteThread,
-    historyEntries,
-    historyLoaded,
-    loadHistory,
     submitReflection,
     studyNow,
     startTaskNotifications,

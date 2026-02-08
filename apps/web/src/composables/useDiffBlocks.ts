@@ -407,12 +407,14 @@ export function useDiffBlocks(
     actionBtn.className = `${DIFF_CLASSES.ACTION_BTN} ${
       type === 'reject' ? DIFF_CLASSES.ACTION_REJECT : DIFF_CLASSES.ACTION_ACCEPT
     }`
+    actionBtn.type = 'button'
     actionBtn.setAttribute(DIFF_BLOCK_ATTR, blockId)
     actionBtn.textContent = type === 'reject' ? '\u2212' : '+' // Unicode minus or plus
     actionBtn.title = type === 'reject' ? 'Reject this block' : 'Accept this block'
 
-    // Event handler - uses individual block functions
-    const handler = (e: Event) => {
+    // Event handler - uses individual block functions.
+    // Use pointerdown to avoid editor click/focus handlers swallowing the action.
+    const pointerHandler = (e: Event) => {
       e.preventDefault()
       e.stopPropagation()
       if (type === 'reject') {
@@ -421,11 +423,19 @@ export function useDiffBlocks(
         acceptBlock(blockId)
       }
     }
-    actionBtn.addEventListener('click', handler)
+
+    const clickHandler = (e: Event) => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    actionBtn.addEventListener('pointerdown', pointerHandler)
+    actionBtn.addEventListener('click', clickHandler)
 
     // Store cleanup function
     cleanupFunctions.value.set(`${blockId}-${type}`, () => {
-      actionBtn.removeEventListener('click', handler)
+      actionBtn.removeEventListener('pointerdown', pointerHandler)
+      actionBtn.removeEventListener('click', clickHandler)
     })
 
     // Insert the button as the first child of the block

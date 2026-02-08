@@ -12,6 +12,9 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
+        // Disable idle timeouts for SSE connections (course generation streams)
+        timeout: 0,
+        proxyTimeout: 0,
       },
       // Also proxy health endpoint
       '/health': {

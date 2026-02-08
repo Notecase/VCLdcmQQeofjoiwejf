@@ -178,6 +178,37 @@ export {
 } from './secretary'
 
 // ============================================================================
+// Research Agent (Deep Research Workflow)
+// ============================================================================
+
+export {
+  ResearchAgent,
+  createResearchAgent,
+  type ResearchAgentConfig,
+  type ResearchThreadState,
+} from './research'
+
+// ============================================================================
+// Explain Agent (Course AI Tutor)
+// ============================================================================
+
+export {
+  ExplainAgent,
+  createExplainAgent,
+  type ExplainAgentConfig,
+} from './explain'
+
+// ============================================================================
+// Course Orchestrator (AI Course Generation Pipeline)
+// ============================================================================
+
+export {
+  CourseOrchestrator,
+  createCourseOrchestrator,
+  type CourseOrchestratorConfig,
+} from './course'
+
+// ============================================================================
 // Subagents (Specialized Task Execution)
 // ============================================================================
 
@@ -243,9 +274,11 @@ import { EditorAgent } from './editor.agent'
 import { PlannerAgent } from './planner.agent'
 import { InkdownDeepAgent } from './deep-agent'
 import { SecretaryAgent } from './secretary'
+import { ResearchAgent } from './research'
+import { ExplainAgent } from './explain'
 // AgenticAgent is exported above but not used in factory (standalone usage)
 
-export type AgentType = 'chat' | 'note' | 'editor' | 'planner' | 'agentic' | 'deep' | 'secretary'
+export type AgentType = 'chat' | 'note' | 'editor' | 'planner' | 'agentic' | 'deep' | 'secretary' | 'research' | 'explain'
 
 export interface AgentConfig {
   supabase: SupabaseClient
@@ -260,7 +293,7 @@ export interface AgentConfig {
 export function createAgent(
   type: AgentType,
   config: AgentConfig
-): ChatAgent | NoteAgent | EditorAgent | PlannerAgent | InkdownDeepAgent | SecretaryAgent {
+): ChatAgent | NoteAgent | EditorAgent | PlannerAgent | InkdownDeepAgent | SecretaryAgent | ResearchAgent | ExplainAgent {
   switch (type) {
     case 'chat':
       return new ChatAgent(config)
@@ -274,6 +307,10 @@ export function createAgent(
       return new InkdownDeepAgent(config)
     case 'secretary':
       return new SecretaryAgent(config)
+    case 'research':
+      return new ResearchAgent(config)
+    case 'explain':
+      return new ExplainAgent({ openaiApiKey: config.openaiApiKey, model: config.model })
     default:
       throw new Error(`Unknown agent type: ${type}`)
   }
@@ -324,5 +361,15 @@ export const AGENT_METADATA: Record<
     name: 'Secretary Agent',
     description: 'AI daily planner, roadmap manager, and learning assistant',
     capabilities: ['roadmap', 'daily-plan', 'memory', 'schedule', 'preferences'],
+  },
+  research: {
+    name: 'Research Agent',
+    description: 'Deep research with web search, file generation, and task tracking',
+    capabilities: ['research', 'web-search', 'files', 'todos', 'interrupts', 'subagents'],
+  },
+  explain: {
+    name: 'Explain Agent',
+    description: 'AI tutor for course lessons — explain-only mode',
+    capabilities: ['explain', 'tutor', 'quiz-guard'],
   },
 }

@@ -10,6 +10,9 @@ import slides from './slides'
 import sources from './sources'
 import learningResources from './learningResources'
 import secretary from './secretary'
+import research from './research'
+import course from './course'
+import explain from './explain'
 
 /**
  * API Routes
@@ -26,6 +29,8 @@ import secretary from './secretary'
  * - /api/sources/*             - Source management (auth required)
  * - /api/learning-resources/*  - Learning resources (auth required)
  * - /api/secretary/*           - Secretary AI planner (auth required)
+ * - /api/research/*            - Deep research agent (auth required)
+ * - /api/course/*              - Course generation & management (auth required)
  */
 
 const routes = new Hono()
@@ -44,5 +49,8 @@ routes.route('/api/slides', slides)
 routes.route('/api/sources', sources)
 routes.route('/api/learning-resources', learningResources)
 routes.route('/api/secretary', secretary)
+routes.route('/api/research', research)
+routes.route('/api/course', course)
+routes.route('/api/explain', explain)
 
 export default routes

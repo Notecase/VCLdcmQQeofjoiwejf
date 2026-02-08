@@ -6,20 +6,8 @@ import ActivePlansOverview from './ActivePlansOverview.vue'
 import TodayPlan from './TodayPlan.vue'
 import TomorrowPlan from './TomorrowPlan.vue'
 import ReflectionSection from './ReflectionSection.vue'
-import ProgressChart from './ProgressChart.vue'
-import StreakBadge from './StreakBadge.vue'
-import {
-  computeDailyCompletionRates,
-  computeStreak,
-  computeWeeklySummary,
-} from '@/utils/secretaryAnalytics'
 
 const store = useSecretaryStore()
-
-const dailyStats = computed(() => computeDailyCompletionRates(store.historyEntries))
-const streak = computed(() => computeStreak(store.historyEntries))
-const weeklySummary = computed(() => computeWeeklySummary(store.historyEntries))
-const hasAnalytics = computed(() => store.historyEntries.length > 0)
 const parserWarningSummary = computed(() => {
   const warnings = store.parserWarnings || []
   if (warnings.length === 0) return null
@@ -81,25 +69,14 @@ const todayFormatted = computed(() => {
     <!-- Active Plans -->
     <ActivePlansOverview v-if="store.activePlans.length > 0" />
 
-    <!-- Analytics -->
-    <div v-if="hasAnalytics" class="analytics-section">
-      <StreakBadge
-        :current-streak="streak.current"
-        :longest-streak="streak.longest"
-        :weekly-completed="weeklySummary.completedTasks"
-        :weekly-total="weeklySummary.totalTasks"
-      />
-      <ProgressChart :stats="dailyStats" />
-    </div>
-
     <!-- Daily Plans -->
     <div class="plans-section">
       <TodayPlan />
       <TomorrowPlan v-if="store.showTomorrowSection || store.tomorrowPlan" />
     </div>
 
-    <!-- Reflection (evening only) -->
-    <ReflectionSection v-if="store.showReflectionSection" />
+    <!-- Reflection -->
+    <ReflectionSection />
   </div>
 </template>
 
@@ -130,11 +107,6 @@ const todayFormatted = computed(() => {
 .active-plans {
   animation: fade-slide-up 0.4s ease both;
   animation-delay: 0.1s;
-}
-
-.analytics-section {
-  animation: fade-slide-up 0.4s ease both;
-  animation-delay: 0.15s;
 }
 
 .plans-section {
@@ -231,12 +203,6 @@ const todayFormatted = computed(() => {
 .prepare-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.analytics-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .plans-section {

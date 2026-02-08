@@ -5,24 +5,9 @@ import { useAIStore, type PendingArtifact } from '@/stores/ai'
 import { useDiffBlocks } from '@/composables/useDiffBlocks'
 import ArtifactCodeModal, { type ArtifactData } from '@/components/artifact/ArtifactCodeModal.vue'
 
-// Import Muya and plugins from TS package
-import {
-  Muya,
-  ParagraphFrontButton,
-  ParagraphFrontMenu,
-  ParagraphQuickInsertMenu,
-  CodeBlockLanguageSelector,
-  EmojiSelector,
-  ImageToolBar,
-  ImageResizeBar,
-  InlineFormatToolbar,
-  TableColumnToolbar,
-  TableRowColumMenu,
-  TableDragBar,
-  TablePicker,
-  LinkTools,
-  FootnoteTool,
-} from '@inkdown/muya'
+// Import Muya from TS package
+import { Muya } from '@inkdown/muya'
+import { registerMuyaPlugins } from '@/utils/muyaPlugins'
 
 // Import Muya styles directly from the package
 import '@inkdown/muya/assets/styles/index.css'
@@ -33,9 +18,6 @@ import 'katex/dist/katex.min.css'
 
 // Import Prism CSS for code syntax highlighting
 import 'prismjs/themes/prism.css'
-
-// Platform utilities
-import { openExternal } from '@/utils/platform'
 
 // Interface for TOC heading items
 interface TocItem {
@@ -114,55 +96,11 @@ const isUploadingImage = ref(false)
 const artifactModalOpen = ref(false)
 const artifactEditData = ref<ArtifactData | null>(null)
 
-// Register Muya plugins once
-let pluginsRegistered = false
-function registerPlugins() {
-  if (pluginsRegistered) return
-
-  // Front button (ghost icon) and menu (Turn Into dropdown)
-  Muya.use(ParagraphFrontButton)
-  Muya.use(ParagraphFrontMenu)
-
-  // Quick insert menu (triggered by /)
-  Muya.use(ParagraphQuickInsertMenu)
-
-  // Code block language selector
-  Muya.use(CodeBlockLanguageSelector)
-
-  // Emoji selector
-  Muya.use(EmojiSelector)
-
-  // Image tools
-  Muya.use(ImageToolBar)
-  Muya.use(ImageResizeBar)
-
-  // Inline format toolbar (bold, italic, etc.)
-  Muya.use(InlineFormatToolbar)
-
-  // Table tools
-  Muya.use(TablePicker)
-  Muya.use(TableColumnToolbar)
-  Muya.use(TableRowColumMenu)
-  Muya.use(TableDragBar)
-
-  // Link tools
-  Muya.use(LinkTools, {
-    jumpClick: (linkInfo: { href: string }) => {
-      openExternal(linkInfo.href)
-    },
-  })
-
-  // Footnote tool
-  Muya.use(FootnoteTool)
-
-  pluginsRegistered = true
-}
-
 // Initialize Muya editor
 function initializeMuya() {
   if (!editorRef.value) return
 
-  registerPlugins()
+  registerMuyaPlugins({ frontControls: true })
 
   const options = {
     markdown: editorStore.currentDocument?.content || '',

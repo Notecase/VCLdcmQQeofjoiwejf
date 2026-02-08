@@ -25,6 +25,37 @@ apps/web/src/**/*.js
 *.swp
 *.swo
 
+# AI coding tool config directories (keep only .claude, .codex, .agents)
+.adal/
+.agent/
+.augment/
+.cline/
+.codebuddy/
+.commandcode/
+.continue/
+.crush/
+.cursor/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+
 # OS
 .DS_Store
 Thumbs.db

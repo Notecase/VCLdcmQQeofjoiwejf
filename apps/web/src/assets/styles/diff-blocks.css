@@ -22,6 +22,12 @@
   transition: background-color 0.2s ease, opacity 0.3s ease;
 }
 
+/* Contained mode (AI start + preview): keep controls inside the block/card bounds */
+.muya-editor.muya-editor--contained-diff .mu-diff-block {
+  margin: 0 0 12px 0 !important;
+  padding-right: 56px !important;
+}
+
 /* Tables inside diff blocks should not overflow */
 .muya-editor .mu-diff-block table {
   max-width: 100%;
@@ -63,6 +69,10 @@
   opacity: 0.85;
   padding: 0 !important;
   z-index: 10;
+}
+
+.muya-editor.muya-editor--contained-diff .mu-diff-action {
+  right: 10px !important;
 }
 
 .muya-editor .mu-diff-action:hover {

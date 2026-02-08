@@ -13,8 +13,8 @@
   --card-bg: #242428;
   --sidebar-bg: #010409;
   --bg-color: #0d1117;
-  --primary-color: #7c9ef8;
-  --primary-gradient: linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%);
+  --primary-color: #58a6ff;
+  --primary-gradient: linear-gradient(135deg, #58a6ff 0%, #388bfd 100%);
   --hover-bg: rgba(255, 255, 255, 0.06);
   --text-color: #e2e8f0;
   --text-color-secondary: #94a3b8;
@@ -24,9 +24,9 @@
    * TS MUYA CSS VARIABLE MAPPINGS (kebab-case)
    * These override the light-theme defaults in Muya
    * ============================================ */
-  --theme-color: #7c9ef8;
-  --highlight-color: rgba(102, 177, 255, 0.6);
-  --selection-color: rgba(102, 177, 255, 0.3);
+  --theme-color: #ffffff;
+  --highlight-color: rgba(255, 255, 255, 0.25);
+  --selection-color: rgba(255, 255, 255, 0.15);
   --editor-color: rgba(255, 255, 255, 0.7);
   --editor-color-80: rgba(255, 255, 255, 0.8);
   --editor-color-50: rgba(255, 255, 255, 0.5);
@@ -50,20 +50,20 @@
   --float-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 
   /* Theme colors */
-  --themeColor: #7c9ef8;
-  --themeColor90: rgba(124, 158, 248, 0.9);
-  --themeColor80: rgba(124, 158, 248, 0.8);
-  --themeColor70: rgba(124, 158, 248, 0.7);
-  --themeColor60: rgba(124, 158, 248, 0.6);
-  --themeColor50: rgba(124, 158, 248, 0.5);
-  --themeColor40: rgba(124, 158, 248, 0.4);
-  --themeColor30: rgba(124, 158, 248, 0.3);
-  --themeColor20: rgba(124, 158, 248, 0.2);
-  --themeColor10: rgba(124, 158, 248, 0.1);
+  --themeColor: #ffffff;
+  --themeColor90: rgba(255, 255, 255, 0.9);
+  --themeColor80: rgba(255, 255, 255, 0.8);
+  --themeColor70: rgba(255, 255, 255, 0.7);
+  --themeColor60: rgba(255, 255, 255, 0.6);
+  --themeColor50: rgba(255, 255, 255, 0.5);
+  --themeColor40: rgba(255, 255, 255, 0.4);
+  --themeColor30: rgba(255, 255, 255, 0.3);
+  --themeColor20: rgba(255, 255, 255, 0.2);
+  --themeColor10: rgba(255, 255, 255, 0.1);
 
   /* Editor colors - white/light colors for dark backgrounds */
-  --highlightColor: rgba(102, 177, 255, 0.6);
-  --selectionColor: rgba(102, 177, 255, 0.3);
+  --highlightColor: rgba(255, 255, 255, 0.25);
+  --selectionColor: rgba(255, 255, 255, 0.15);
   --editorColor: rgba(255, 255, 255, 0.7);
   --editorColor80: rgba(255, 255, 255, 0.8);
   --editorColor60: rgba(255, 255, 255, 0.6);
@@ -110,7 +110,7 @@
   --ai-header-bg: rgba(13, 17, 23, 0.6);
   --ai-tab-color: #8b949e;
   --ai-tab-active: #ffffff;
-  --ai-tab-underline: #58a6ff;
+  --ai-tab-underline: #ffffff;
   --ai-card-bg: #161b22;
   --ai-card-border: #30363d;
   --ai-card-shadow: none;
@@ -128,10 +128,10 @@
   --ai-subtle-bg: rgba(255, 255, 255, 0.02);
   --ai-subtle-bg-hover: rgba(255, 255, 255, 0.04);
   --ai-subtle-border: rgba(255, 255, 255, 0.03);
-  --ai-focus-ring: rgba(88, 166, 255, 0.08);
+  --ai-focus-ring: rgba(255, 255, 255, 0.08);
   --ai-divider: rgba(255, 255, 255, 0.04);
   --ai-float-bg: rgba(22, 27, 34, 0.8);
-  --ai-gradient-overlay: linear-gradient(180deg, rgba(88, 166, 255, 0.02) 0%, transparent 50%);
+  --ai-gradient-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
 
   /* ============================================
    * CHAT INTERFACE - Minimal Flow Design (Dark)
@@ -139,22 +139,22 @@
   --chat-message-gap: 0;
   --chat-separator: rgba(48, 54, 61, 0.3);
   --chat-message-hover: rgba(255, 255, 255, 0.02);
-  --chat-message-streaming: rgba(88, 166, 255, 0.03);
+  --chat-message-streaming: rgba(255, 255, 255, 0.03);
   /* Legacy card vars kept for compatibility */
   --chat-card-bg: rgba(22, 27, 34, 0.6);
   --chat-card-border: rgba(48, 54, 61, 0.4);
-  --chat-card-border-hover: rgba(88, 166, 255, 0.2);
+  --chat-card-border-hover: rgba(255, 255, 255, 0.15);
   --chat-card-radius: 16px;
   --chat-card-padding: 20px;
 
   /* Streaming Animation */
-  --stream-cursor: #58a6ff;
-  --stream-pulse: rgba(88, 166, 255, 0.3);
-  --stream-glow: 0 0 0 1px rgba(88, 166, 255, 0.3);
+  --stream-cursor: #ffffff;
+  --stream-pulse: rgba(255, 255, 255, 0.3);
+  --stream-glow: 0 0 0 1px rgba(255, 255, 255, 0.3);
 
   /* Role Badges */
-  --role-user-bg: rgba(88, 166, 255, 0.15);
-  --role-user-color: #58a6ff;
+  --role-user-bg: rgba(255, 255, 255, 0.08);
+  --role-user-color: #e2e8f0;
   --role-assistant-bg: rgba(63, 185, 80, 0.15);
   --role-assistant-color: #3fb950;
 
@@ -186,14 +186,14 @@
   /* Timeline Thinking Steps */
   --timeline-line-color: rgba(48, 54, 61, 0.6);
   --timeline-dot-size: 8px;
-  --timeline-active-glow: rgba(88, 166, 255, 0.4);
+  --timeline-active-glow: rgba(255, 255, 255, 0.3);
 
   /* Tool Cards */
   --tool-card-bg: rgba(22, 27, 34, 0.8);
   --tool-card-border: rgba(48, 54, 61, 0.5);
   --tool-card-border-hover: rgba(48, 54, 61, 0.8);
-  --tool-running-border: rgba(88, 166, 255, 0.4);
-  --tool-running-glow: rgba(88, 166, 255, 0.15);
+  --tool-running-border: rgba(255, 255, 255, 0.3);
+  --tool-running-glow: rgba(255, 255, 255, 0.1);
 
   /* Transitions */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -270,8 +270,8 @@
   --card-bg: #ffffff;
   --sidebar-bg: #ffffff;
   --bg-color: #f5f5f5;
-  --primary-color: #7c9ef8;
-  --primary-gradient: linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%);
+  --primary-color: #2563eb;
+  --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   --hover-bg: #f1f5f9;
   --text-color: #334155;
   --text-color-secondary: #64748b;
@@ -281,9 +281,9 @@
    * TS MUYA CSS VARIABLE MAPPINGS (kebab-case)
    * These match the Muya default light theme
    * ============================================ */
-  --theme-color: #7c9ef8;
-  --highlight-color: rgba(33, 150, 243, 0.3);
-  --selection-color: rgba(33, 150, 243, 0.15);
+  --theme-color: #1a1a1a;
+  --highlight-color: rgba(0, 0, 0, 0.15);
+  --selection-color: rgba(0, 0, 0, 0.1);
   --editor-color: rgba(0, 0, 0, 0.7);
   --editor-color-80: rgba(0, 0, 0, 0.8);
   --editor-color-50: rgba(0, 0, 0, 0.5);
@@ -307,20 +307,20 @@
   --float-shadow: rgb(15 15 15 / 3%) 0 0 0 1px, rgb(15 15 15 / 4%) 0 3px 6px, rgb(15 15 15 / 5%) 0 9px 24px;
 
   /* Theme colors */
-  --themeColor: #7c9ef8;
-  --themeColor90: rgba(124, 158, 248, 0.9);
-  --themeColor80: rgba(124, 158, 248, 0.8);
-  --themeColor70: rgba(124, 158, 248, 0.7);
-  --themeColor60: rgba(124, 158, 248, 0.6);
-  --themeColor50: rgba(124, 158, 248, 0.5);
-  --themeColor40: rgba(124, 158, 248, 0.4);
-  --themeColor30: rgba(124, 158, 248, 0.3);
-  --themeColor20: rgba(124, 158, 248, 0.2);
-  --themeColor10: rgba(124, 158, 248, 0.1);
+  --themeColor: #1a1a1a;
+  --themeColor90: rgba(26, 26, 26, 0.9);
+  --themeColor80: rgba(26, 26, 26, 0.8);
+  --themeColor70: rgba(26, 26, 26, 0.7);
+  --themeColor60: rgba(26, 26, 26, 0.6);
+  --themeColor50: rgba(26, 26, 26, 0.5);
+  --themeColor40: rgba(26, 26, 26, 0.4);
+  --themeColor30: rgba(26, 26, 26, 0.3);
+  --themeColor20: rgba(26, 26, 26, 0.2);
+  --themeColor10: rgba(26, 26, 26, 0.1);
 
   /* Editor colors - dark/gray colors for light backgrounds */
-  --highlightColor: rgba(33, 150, 243, 0.3);
-  --selectionColor: rgba(33, 150, 243, 0.15);
+  --highlightColor: rgba(0, 0, 0, 0.15);
+  --selectionColor: rgba(0, 0, 0, 0.1);
   --editorColor: rgba(0, 0, 0, 0.87);
   --editorColor80: rgba(0, 0, 0, 0.8);
   --editorColor60: rgba(0, 0, 0, 0.6);
@@ -372,8 +372,8 @@
   --ai-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   --ai-input-bg: #ffffff;
   --ai-input-border: #e2e8f0;
-  --ai-input-focus: rgba(124, 158, 248, 0.2);
-  --ai-cmd-header: #7c9ef8;
+  --ai-input-focus: rgba(0, 0, 0, 0.1);
+  --ai-cmd-header: #1a1a1a;
   --ai-cmd-bg: #f1f5f9;
   --ai-send-bg: #e2e8f0;
   --ai-send-active-bg: #238636;
@@ -384,10 +384,10 @@
   --ai-subtle-bg: rgba(0, 0, 0, 0.015);
   --ai-subtle-bg-hover: rgba(0, 0, 0, 0.03);
   --ai-subtle-border: rgba(0, 0, 0, 0.03);
-  --ai-focus-ring: rgba(124, 158, 248, 0.1);
+  --ai-focus-ring: rgba(0, 0, 0, 0.06);
   --ai-divider: rgba(0, 0, 0, 0.04);
   --ai-float-bg: rgba(255, 255, 255, 0.9);
-  --ai-gradient-overlay: linear-gradient(180deg, rgba(124, 158, 248, 0.03) 0%, transparent 50%);
+  --ai-gradient-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, transparent 50%);
 
   /* ============================================
    * CHAT INTERFACE - Minimal Flow Design (Light)
@@ -395,22 +395,22 @@
   --chat-message-gap: 0;
   --chat-separator: rgba(0, 0, 0, 0.06);
   --chat-message-hover: rgba(0, 0, 0, 0.02);
-  --chat-message-streaming: rgba(124, 158, 248, 0.04);
+  --chat-message-streaming: rgba(0, 0, 0, 0.03);
   /* Legacy card vars kept for compatibility */
   --chat-card-bg: rgba(255, 255, 255, 0.8);
   --chat-card-border: rgba(0, 0, 0, 0.08);
-  --chat-card-border-hover: rgba(124, 158, 248, 0.3);
+  --chat-card-border-hover: rgba(0, 0, 0, 0.15);
   --chat-card-radius: 16px;
   --chat-card-padding: 20px;
 
   /* Streaming Animation */
-  --stream-cursor: #7c9ef8;
-  --stream-pulse: rgba(124, 158, 248, 0.3);
-  --stream-glow: 0 0 0 1px rgba(124, 158, 248, 0.3);
+  --stream-cursor: #1a1a1a;
+  --stream-pulse: rgba(0, 0, 0, 0.2);
+  --stream-glow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 
   /* Role Badges */
-  --role-user-bg: rgba(124, 158, 248, 0.15);
-  --role-user-color: #5b7fd6;
+  --role-user-bg: rgba(0, 0, 0, 0.06);
+  --role-user-color: #334155;
   --role-assistant-bg: rgba(34, 197, 94, 0.15);
   --role-assistant-color: #16a34a;
 
@@ -442,14 +442,14 @@
   /* Timeline Thinking Steps */
   --timeline-line-color: rgba(0, 0, 0, 0.1);
   --timeline-dot-size: 8px;
-  --timeline-active-glow: rgba(124, 158, 248, 0.4);
+  --timeline-active-glow: rgba(0, 0, 0, 0.2);
 
   /* Tool Cards */
   --tool-card-bg: rgba(255, 255, 255, 0.9);
   --tool-card-border: rgba(0, 0, 0, 0.08);
   --tool-card-border-hover: rgba(0, 0, 0, 0.12);
-  --tool-running-border: rgba(124, 158, 248, 0.4);
-  --tool-running-glow: rgba(124, 158, 248, 0.15);
+  --tool-running-border: rgba(0, 0, 0, 0.2);
+  --tool-running-glow: rgba(0, 0, 0, 0.08);
 
   /* Transitions */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);

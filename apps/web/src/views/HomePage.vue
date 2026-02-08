@@ -5,29 +5,49 @@
  * Layout: SideBar + NavigationDock (left) | Chat panel (center) | NotePreviewPanel (right)
  * The center panel shows a hero state initially, then a message thread + composer.
  * The right panel slides in when AI creates/edits a note.
+ * Deep agent features: task progress, interrupts, sub-agents, tool calls, virtual files.
  */
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useAIStore } from '@/stores/ai'
+import { useDeepAgentStore } from '@/stores/deepAgent'
 import { useEditorStore, useLayoutStore } from '@/stores'
 import { useAIChat } from '@/services/ai.service'
-import ChatMessage from '@/components/ai/ChatMessage.vue'
+import type { VirtualFile } from '@inkdown/shared/types'
 import ChatComposer from '@/components/ai/ChatComposer.vue'
 import ChatHero from '@/components/ai/ChatHero.vue'
 import ClarificationDialog from '@/components/ai/ClarificationDialog.vue'
 import NotePreviewPanel from '@/components/ai/NotePreviewPanel.vue'
 import SideBar from '@/components/layout/SideBar.vue'
 import NavigationDock from '@/components/ui/NavigationDock.vue'
+import TaskProgressBar from '@/components/deepagent/TaskProgressBar.vue'
+import InterruptBanner from '@/components/deepagent/InterruptBanner.vue'
+import OutputClarificationCard from '@/components/deepagent/OutputClarificationCard.vue'
+import SubagentCard from '@/components/deepagent/SubagentCard.vue'
+import ToolCallBox from '@/components/deepagent/ToolCallBox.vue'
+import MarkdownContent from '@/components/deepagent/MarkdownContent.vue'
+import InlineTasksFiles from '@/components/deepagent/InlineTasksFiles.vue'
+import FileViewerModal from '@/components/deepagent/FileViewerModal.vue'
+import NoteDraftResponseCard from '@/components/deepagent/NoteDraftResponseCard.vue'
 import { Loader2 } from 'lucide-vue-next'
 
 const aiStore = useAIStore()
+const deepAgent = useDeepAgentStore()
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
-const { sendMessage, clearChat, isProcessing, error, clearError } = useAIChat()
+const { clearChat, error, clearError } = useAIChat()
 
 const messagesEndRef = ref<HTMLDivElement | null>(null)
+const selectedFile = ref<VirtualFile | null>(null)
+const showFileViewer = ref(false)
+const AI_HOME_ROUTE_CLASS = 'ai-home-route'
 
-const messages = computed(() => aiStore.activeSession?.messages || [])
-const hasMessages = computed(() => messages.value.length > 0)
+const hasMessages = computed(() => deepAgent.chatMessages.length > 0)
+const showInlinePanel = computed(() =>
+  !deepAgent.hasActiveNoteDraft && (deepAgent.files.length > 0 || deepAgent.todos.length > 0),
+)
+const showComposerTop = computed(() =>
+  Boolean(deepAgent.pendingInterrupt || deepAgent.pendingOutputClarification || showInlinePanel.value),
+)
 
 // CSS variable for sidebar width (matches EditorView)
 const sidebarWidthStyle = computed(() => ({
@@ -41,13 +61,16 @@ function scrollToBottom() {
 }
 
 async function handleSubmit(value: string) {
-  if (!value.trim() || isProcessing.value) return
+  if (!value.trim() || deepAgent.isChatStreaming) return
+  const autoOutputDestination = deepAgent.getAutoOutputDestination(value)
+  if (deepAgent.requestOutputClarification(value)) return
   scrollToBottom()
-  await sendMessage(value, 'secretary')
+  await deepAgent.sendChatMessage(value, { outputDestination: autoOutputDestination })
   scrollToBottom()
 }
 
 function handleNewSession() {
+  deepAgent.createNewThread()
   clearChat()
 }
 
@@ -55,35 +78,74 @@ function handleRecommendation(rec: { action: string; title: string }) {
   handleSubmit(`${rec.action}: ${rec.title}`)
 }
 
-watch(
-  () => messages.value.length,
-  () => scrollToBottom()
-)
+function handleSelectFile(file: VirtualFile) {
+  selectedFile.value = file
+  showFileViewer.value = true
+}
+
+function handleFileSave(filename: string, content: string) {
+  deepAgent.editFile(filename, content)
+  showFileViewer.value = false
+}
+
+function handleSaveAsNote(file: VirtualFile) {
+  deepAgent.saveFileAsNote(file.name)
+}
+
+function handleNoteDraftUpdate(payload: { title?: string; content: string }) {
+  deepAgent.updateNoteDraftContent(payload)
+}
+
+async function handleNoteDraftSave(payload: { title?: string; content?: string }) {
+  await deepAgent.saveNoteDraft(payload)
+}
+
+function handleNoteDraftHide() {
+  deepAgent.hideNoteDraft()
+}
+
+function handleNoteDraftReopen() {
+  deepAgent.reopenNoteDraft()
+}
+
+async function handleOutputClarificationSelect(destination: 'chat' | 'md_file' | 'note') {
+  const resolved = deepAgent.resolveOutputClarification(destination)
+  if (!resolved) return
+  scrollToBottom()
+  await deepAgent.sendChatMessage(resolved.message, {
+    outputDestination: resolved.outputDestination,
+  })
+  scrollToBottom()
+}
+
+function handleOutputClarificationCancel() {
+  deepAgent.cancelOutputClarification()
+}
 
 // Clarification handlers
 async function handleClarificationSelect(blockIds: string[]) {
   const instruction = aiStore.pendingClarification?.instruction || ''
-  const options = aiStore.pendingClarification?.options || []
-
-  const selectedLineNumbers = options
-    .filter(opt => blockIds.includes(opt.id))
-    .map(opt => opt.line)
-
   aiStore.resolveClarification(blockIds)
-
-  await sendMessage(instruction, 'secretary', {
-    selectedBlockIds: blockIds,
-    selectedLineNumbers,
-  })
+  await deepAgent.sendChatMessage(instruction)
 }
 
 function handleClarificationCancel() {
   aiStore.cancelClarification()
 }
 
+watch(
+  () => deepAgent.chatMessages.length,
+  () => scrollToBottom()
+)
+
 onMounted(async () => {
-  // Load documents for SideBar note tree
+  document.body.classList.add(AI_HOME_ROUTE_CLASS)
   await editorStore.loadDocuments()
+  await deepAgent.loadThreads()
+})
+
+onUnmounted(() => {
+  document.body.classList.remove(AI_HOME_ROUTE_CLASS)
 })
 </script>
 
@@ -98,9 +160,21 @@ onMounted(async () => {
         </div>
 
         <div class="header-actions">
-          <div class="status-chip" :class="{ live: isProcessing }">
+          <div
+            class="status-chip"
+            :class="{
+              live: deepAgent.isChatStreaming,
+              interrupted: deepAgent.hasActiveInterrupt,
+              error: deepAgent.threadStatus === 'error',
+            }"
+          >
             <span class="status-dot"></span>
-            {{ isProcessing ? 'Streaming' : 'Ready' }}
+            {{
+              deepAgent.hasActiveInterrupt ? 'Awaiting Input'
+              : deepAgent.isChatStreaming ? 'Researching'
+              : deepAgent.threadStatus === 'error' ? 'Error'
+              : 'Ready'
+            }}
           </div>
           <button class="ghost-action" @click="handleNewSession">New session</button>
         </div>
@@ -111,17 +185,114 @@ onMounted(async () => {
         <SideBar v-if="layoutStore.sidebarVisible" />
 
         <div class="chat-main">
+          <!-- Task Progress Bar (collapsible, shows when todos exist) -->
+          <Transition name="slide-down">
+            <TaskProgressBar
+              v-if="deepAgent.todos.length > 0 && !deepAgent.hasActiveNoteDraft"
+              :todos="deepAgent.todos"
+            />
+          </Transition>
+
           <!-- Scrollable chat area -->
           <div class="chat-scroll">
             <div class="chat-content">
-              <ChatHero v-if="!hasMessages" @select="handleRecommendation" />
+              <ChatHero v-if="!hasMessages && !deepAgent.isChatStreaming" @select="handleRecommendation" />
 
               <div class="chat-thread" :class="{ empty: !hasMessages }">
-                <ChatMessage v-for="msg in messages" :key="msg.id" :message="msg" />
+                <!-- Render messages -->
+                <template v-for="msg in deepAgent.chatMessages" :key="msg.id">
+                  <!-- User message: right-aligned bubble -->
+                  <div v-if="msg.role === 'user'" class="message-row user">
+                    <div class="user-bubble">
+                      {{ msg.content }}
+                    </div>
+                  </div>
 
-                <div v-if="isProcessing" class="stream-indicator">
+                  <!-- Assistant message: left-aligned, full width -->
+                  <div v-else class="message-row assistant">
+                    <div class="assistant-content">
+                      <MarkdownContent v-if="msg.content" :content="msg.content" :is-streaming="false" />
+
+                      <NoteDraftResponseCard
+                        v-if="msg.noteDraft"
+                        :note-draft="msg.noteDraft"
+                        :thread-id="deepAgent.activeThreadId || undefined"
+                        @update="handleNoteDraftUpdate"
+                        @save="handleNoteDraftSave"
+                        @hide="handleNoteDraftHide"
+                        @reopen="handleNoteDraftReopen"
+                      />
+
+                      <!-- Tool calls inline -->
+                      <template v-if="msg.toolCalls?.length">
+                        <ToolCallBox
+                          v-for="tc in msg.toolCalls"
+                          :key="tc.id"
+                          :tool-call="tc"
+                        />
+                      </template>
+
+                      <!-- Sub-agent cards -->
+                      <template v-if="msg.subagents?.length">
+                        <SubagentCard
+                          v-for="sa in msg.subagents"
+                          :key="sa.id"
+                          :subagent="sa"
+                        />
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Streaming content -->
+                <div v-if="deepAgent.isChatStreaming && deepAgent.streamingContent" class="message-row assistant">
+                  <div class="assistant-content">
+                    <MarkdownContent :content="deepAgent.streamingContent" :is-streaming="true" />
+
+                    <NoteDraftResponseCard
+                      v-if="deepAgent.streamingNoteDraft"
+                      :note-draft="deepAgent.streamingNoteDraft"
+                      :thread-id="deepAgent.activeThreadId || undefined"
+                      :is-streaming="true"
+                      @update="handleNoteDraftUpdate"
+                      @save="handleNoteDraftSave"
+                      @hide="handleNoteDraftHide"
+                      @reopen="handleNoteDraftReopen"
+                    />
+
+                    <!-- Active tool calls during streaming -->
+                    <ToolCallBox
+                      v-for="tc in deepAgent.streamingToolCalls"
+                      :key="tc.id"
+                      :tool-call="tc"
+                    />
+
+                    <!-- Active sub-agents during streaming -->
+                    <SubagentCard
+                      v-for="sa in deepAgent.streamingSubagents"
+                      :key="sa.id"
+                      :subagent="sa"
+                    />
+                  </div>
+                </div>
+
+                <div v-else-if="deepAgent.isChatStreaming && deepAgent.streamingNoteDraft" class="message-row assistant">
+                  <div class="assistant-content">
+                    <NoteDraftResponseCard
+                      :note-draft="deepAgent.streamingNoteDraft"
+                      :thread-id="deepAgent.activeThreadId || undefined"
+                      :is-streaming="true"
+                      @update="handleNoteDraftUpdate"
+                      @save="handleNoteDraftSave"
+                      @hide="handleNoteDraftHide"
+                      @reopen="handleNoteDraftReopen"
+                    />
+                  </div>
+                </div>
+
+                <div v-if="deepAgent.isChatStreaming" class="stream-indicator">
                   <Loader2 :size="14" class="spin" />
-                  <span>Streaming response...</span>
+                  <span>Researching...</span>
                 </div>
 
                 <div ref="messagesEndRef" />
@@ -131,9 +302,33 @@ onMounted(async () => {
 
           <!-- Composer at bottom -->
           <ChatComposer
-            :is-processing="isProcessing"
+            :is-processing="deepAgent.isChatStreaming"
             @submit="handleSubmit"
-          />
+          >
+            <template v-if="showComposerTop" #top>
+              <OutputClarificationCard
+                v-if="deepAgent.pendingOutputClarification"
+                :request="deepAgent.pendingOutputClarification"
+                @select="handleOutputClarificationSelect"
+                @cancel="handleOutputClarificationCancel"
+              />
+
+              <InterruptBanner
+                v-if="deepAgent.pendingInterrupt"
+                :interrupt="deepAgent.pendingInterrupt"
+                compact
+                @respond="deepAgent.respondToInterrupt($event)"
+                @dismiss="deepAgent.respondToInterrupt({ decision: 'reject', message: 'Dismissed' })"
+              />
+
+              <InlineTasksFiles
+                v-if="showInlinePanel"
+                :todos="deepAgent.todos"
+                :files="deepAgent.files"
+                @select-file="handleSelectFile"
+              />
+            </template>
+          </ChatComposer>
         </div>
       </div>
     </div>
@@ -160,6 +355,15 @@ onMounted(async () => {
       @select="handleClarificationSelect"
       @cancel="handleClarificationCancel"
     />
+
+    <!-- File Viewer Modal -->
+    <FileViewerModal
+      :file="selectedFile"
+      :visible="showFileViewer"
+      @close="showFileViewer = false"
+      @save="handleFileSave"
+      @save-as-note="handleSaveAsNote"
+    />
   </div>
 </template>
 
@@ -172,9 +376,9 @@ onMounted(async () => {
   background: var(--app-bg, #0d1117);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow: hidden;
+  color: var(--text-color, #e6edf3);
 }
 
-/* Left Area: Header + Body, fills available space */
 .left-area {
   display: flex;
   flex-direction: column;
@@ -183,7 +387,6 @@ onMounted(async () => {
   height: 100vh;
 }
 
-/* Header: Dock + Actions (matches EditorView pattern) */
 .home-header {
   display: flex;
   align-items: center;
@@ -227,6 +430,16 @@ onMounted(async () => {
   background: rgba(63, 185, 80, 0.1);
 }
 
+.status-chip.interrupted {
+  color: #d29922;
+  background: rgba(210, 153, 34, 0.1);
+}
+
+.status-chip.error {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.1);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -250,7 +463,6 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Body: Sidebar + Chat Main side by side */
 .home-body {
   display: flex;
   flex: 1;
@@ -258,7 +470,6 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-/* Chat Main: scroll area + composer */
 .chat-main {
   flex: 1;
   display: flex;
@@ -267,25 +478,22 @@ onMounted(async () => {
   min-height: 0;
 }
 
-/* Scrollable chat area */
 .chat-scroll {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
 
-/* Centered content column */
 .chat-content {
   max-width: 768px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 24px;
 }
 
-/* Chat thread */
 .chat-thread {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 8px;
   padding-bottom: 16px;
 }
 
@@ -293,16 +501,48 @@ onMounted(async () => {
   padding-top: 0;
 }
 
+/* Message rows */
+.message-row {
+  padding: 8px 0;
+}
+
+.message-row.user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-bubble {
+  max-width: 70%;
+  padding: 10px 16px;
+  border-radius: 18px 18px 4px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color, #e6edf3);
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.message-row.assistant {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.assistant-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .stream-indicator {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-color-secondary, #8b949e);
+  color: rgba(139, 148, 158, 0.6);
   padding: 8px 0;
 }
 
-/* Error banner */
 .error-banner {
   position: fixed;
   bottom: 24px;
@@ -328,7 +568,6 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-/* Animations */
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -339,7 +578,19 @@ onMounted(async () => {
   }
 }
 
-/* Slide right transition for NotePreviewPanel */
+/* Slide down transition (task progress, interrupt banner) */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.25s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+/* Slide right transition (NotePreviewPanel) */
 .slide-right-enter-active,
 .slide-right-leave-active {
   transition:
@@ -353,7 +604,7 @@ onMounted(async () => {
   opacity: 0;
 }
 
-/* Slide up for error banner */
+/* Slide up transition (error banner) */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s ease;
@@ -363,5 +614,28 @@ onMounted(async () => {
 .slide-up-leave-to {
   opacity: 0;
   transform: translate(-50%, 12px);
+}
+
+/* Scrollbar */
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color, #30363d);
+  border-radius: 3px;
+}
+</style>
+
+<style>
+body.ai-home-route .mu-front-button-wrapper,
+body.ai-home-route .mu-front-menu,
+body.ai-home-route .mu-float-wrapper:has(.mu-front-menu) {
+  display: none !important;
+  pointer-events: none !important;
 }
 </style>

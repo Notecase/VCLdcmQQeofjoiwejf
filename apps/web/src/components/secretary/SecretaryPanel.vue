@@ -3,6 +3,13 @@ import { computed } from 'vue'
 import { useSecretaryStore } from '@/stores/secretary'
 import { Target, Zap, Eye, Settings, RefreshCw, ChevronRight } from 'lucide-vue-next'
 import WeekCalendar from './WeekCalendar.vue'
+import StreakBadge from './StreakBadge.vue'
+import ProgressChart from './ProgressChart.vue'
+import {
+  computeDailyCompletionRates,
+  computeStreak,
+  computeWeeklySummary,
+} from '@/utils/secretaryAnalytics'
 
 const store = useSecretaryStore()
 
@@ -11,6 +18,11 @@ const todayFocus = computed(() => {
     .filter(p => p.status === 'active' && p.currentTopic)
     .map(p => ({ id: p.id, topic: p.currentTopic }))
 })
+
+const dailyStats = computed(() => computeDailyCompletionRates(store.historyEntries))
+const streak = computed(() => computeStreak(store.historyEntries))
+const weeklySummary = computed(() => computeWeeklySummary(store.historyEntries))
+const hasAnalytics = computed(() => store.historyEntries.length > 0)
 </script>
 
 <template>
@@ -28,6 +40,17 @@ const todayFocus = computed(() => {
         </div>
       </div>
       <p v-else class="empty-text">No active topics for today.</p>
+    </div>
+
+    <!-- Analytics -->
+    <div v-if="hasAnalytics" class="panel-section analytics-sidebar">
+      <StreakBadge
+        :current-streak="streak.current"
+        :longest-streak="streak.longest"
+        :weekly-completed="weeklySummary.completedTasks"
+        :weekly-total="weeklySummary.totalTasks"
+      />
+      <ProgressChart :stats="dailyStats" />
     </div>
 
     <!-- Week Calendar -->
@@ -176,5 +199,9 @@ const todayFocus = computed(() => {
 .quick-btn:hover .btn-chevron {
   opacity: 0.8;
   transform: translateX(2px);
+}
+
+.analytics-sidebar {
+  gap: 14px;
 }
 </style>

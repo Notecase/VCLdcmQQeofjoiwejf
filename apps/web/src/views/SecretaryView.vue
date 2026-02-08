@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useSecretaryStore } from '@/stores/secretary'
 import { useLayoutStore } from '@/stores'
 import NavigationDock from '@/components/ui/NavigationDock.vue'
@@ -7,6 +8,7 @@ import SecretaryDashboard from '@/components/secretary/SecretaryDashboard.vue'
 import MemoryFileList from '@/components/secretary/MemoryFileList.vue'
 import MemoryFileEditor from '@/components/secretary/MemoryFileEditor.vue'
 import HistoryBrowser from '@/components/secretary/HistoryBrowser.vue'
+import PlansBrowser from '@/components/secretary/PlansBrowser.vue'
 import SecretaryPanel from '@/components/secretary/SecretaryPanel.vue'
 import SkeletonLoader from '@/components/secretary/SkeletonLoader.vue'
 import FloatingChatFab from '@/components/secretary/FloatingChatFab.vue'
@@ -14,12 +16,18 @@ import ChatDrawer from '@/components/secretary/ChatDrawer.vue'
 
 const secretaryStore = useSecretaryStore()
 const layoutStore = useLayoutStore()
+const route = useRoute()
 const isReady = ref(false)
 
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
 const isChatOpen = ref(false)
+const routeSection = computed<'dashboard' | 'history' | 'plans'>(() => {
+  if (route.name === 'secretary-history') return 'history'
+  if (route.name === 'secretary-plans') return 'plans'
+  return 'dashboard'
+})
 
 onMounted(async () => {
   await secretaryStore.initialize()
@@ -37,7 +45,7 @@ onUnmounted(() => {
     <!-- Header with NavigationDock -->
     <header class="secretary-header" :style="sidebarWidthStyle">
       <div class="dock-area">
-        <NavigationDock />
+        <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
       </div>
       <div class="header-title">
         <h1>Secretary</h1>
@@ -54,8 +62,9 @@ onUnmounted(() => {
 
       <!-- Center: Dashboard, History, or File Editor -->
       <main class="main-content">
-        <HistoryBrowser v-if="secretaryStore.selectedFilename === '__history__'" />
-        <MemoryFileEditor v-else-if="secretaryStore.selectedFile" />
+        <MemoryFileEditor v-if="secretaryStore.selectedFile" />
+        <HistoryBrowser v-else-if="routeSection === 'history'" />
+        <PlansBrowser v-else-if="routeSection === 'plans'" />
         <SecretaryDashboard v-else />
       </main>
 

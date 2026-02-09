@@ -44,9 +44,7 @@ function handleReject() {
     <div class="review-header">
       <h3>Review Course Outline</h3>
       <p class="review-subtitle">
-        {{ outline.title }} &mdash; {{ outline.difficulty }} &mdash; ~{{
-          outline.estimatedHours
-        }}
+        {{ outline.title }} &mdash; {{ outline.difficulty }} &mdash; ~{{ outline.estimatedHours }}
         hours
       </p>
     </div>

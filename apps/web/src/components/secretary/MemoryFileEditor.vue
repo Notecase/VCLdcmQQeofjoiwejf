@@ -150,7 +150,10 @@ onUnmounted(() => {
       message="You have unsaved changes. Close anyway?"
       confirm-label="Discard"
       variant="danger"
-      @confirm="showUnsavedConfirm = false; close()"
+      @confirm="
+        showUnsavedConfirm = false
+        close()
+      "
       @cancel="showUnsavedConfirm = false"
     />
   </div>

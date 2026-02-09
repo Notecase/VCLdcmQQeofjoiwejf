@@ -83,9 +83,7 @@ export class ChatPersistenceService {
     return { id: data.id, threadId: data.thread_id }
   }
 
-  async getThreads(
-    userId: string
-  ): Promise<
+  async getThreads(userId: string): Promise<
     Array<{
       id: string
       threadId: string
@@ -117,9 +115,7 @@ export class ChatPersistenceService {
     }))
   }
 
-  async getMessages(
-    threadId: string
-  ): Promise<
+  async getMessages(threadId: string): Promise<
     Array<{
       id: string
       role: string

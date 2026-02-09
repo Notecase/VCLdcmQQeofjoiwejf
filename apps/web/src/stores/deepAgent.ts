@@ -34,6 +34,7 @@ import type {
   ResearchStreamEvent,
   ResearchToolCall,
 } from '@inkdown/shared/types'
+import { isDemoMode } from '@/utils/demo'
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
 const RESEARCH_API = `${API_BASE}/api/research`
@@ -198,6 +199,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   async function loadThreads() {
+    if (isDemoMode()) return
     try {
       const res = await authFetch(`${RESEARCH_API}/threads`)
       const data = await res.json()
@@ -322,6 +324,10 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   async function sendChatMessage(message: string, options: SendChatMessageOptions = {}) {
+    if (isDemoMode()) {
+      notifications.info('AI chat available in full version')
+      return
+    }
     pendingOutputClarification.value = null
     const mode = getRequestModeForMessage(message, options.outputDestination)
     if (mode === 'note') {

@@ -25,6 +25,7 @@ import { zValidator } from '@hono/zod-validator'
 import { handleError, ErrorCode } from '@inkdown/shared'
 import type { CourseOrchestrator } from '@inkdown/ai/agents'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { getServiceClient } from '../lib/supabase'
 import type { CourseOutline, CourseSettings } from '@inkdown/shared/types'
 import {
   buildMissingTerminalEventErrorMessage,
@@ -169,7 +170,7 @@ course.post('/generate', zValidator('json', GenerateSchema), async (c) => {
   // Create orchestrator and register for interrupt resolution (10 min TTL)
   const { CourseOrchestrator: OrchestratorClass } = await import('@inkdown/ai/agents')
   const orchestrator = new OrchestratorClass({
-    supabase: auth.supabase,
+    supabase: getServiceClient(),
     userId: auth.userId,
     openaiApiKey,
     geminiApiKey,
@@ -217,7 +218,7 @@ course.get('/generate/:threadId/stream', async (c) => {
 
     const { CourseOrchestrator: OrchestratorClass } = await import('@inkdown/ai/agents')
     const orchestrator = new OrchestratorClass({
-      supabase: auth.supabase,
+      supabase: getServiceClient(),
       userId: auth.userId,
       openaiApiKey,
       geminiApiKey,
@@ -242,6 +243,8 @@ course.get('/generate/:threadId/stream', async (c) => {
   entry.streaming = true
 
   const orchestrator = entry.orchestrator
+
+  const serviceDb = getServiceClient()
 
   return streamSSE(c, async (stream) => {
     let clientConnected = true
@@ -289,7 +292,7 @@ course.get('/generate/:threadId/stream', async (c) => {
           if (typeof progressData.stage === 'string') {
             lastKnownStage = progressData.stage
           }
-          await auth.supabase
+          await serviceDb
             .from('course_generation_threads')
             .update({
               stage: progressData.stage,
@@ -307,7 +310,7 @@ course.get('/generate/:threadId/stream', async (c) => {
           }
           if (interruptData.type === 'outline_approval' && interruptData.outline) {
             lastKnownStage = 'approval'
-            await auth.supabase
+            const { error: interruptUpdateError } = await serviceDb
               .from('course_generation_threads')
               .update({
                 status: 'awaiting_approval',
@@ -316,17 +319,21 @@ course.get('/generate/:threadId/stream', async (c) => {
                 thinking_output: interruptData.thinking ?? '',
               })
               .eq('id', threadId)
+
+            if (interruptUpdateError) {
+              console.error(`[Course SSE] Failed to update thread ${threadId} to awaiting_approval:`, interruptUpdateError.message)
+            }
           }
         }
 
         if (event.event === 'complete') {
           observedTerminalEvent = true
-          await auth.supabase
+          await serviceDb
             .from('course_generation_threads')
             .update({ status: 'complete', stage: 'complete', progress: 100 })
             .eq('id', threadId)
 
-          await auth.supabase
+          await serviceDb
             .from('courses')
             .update({ status: 'ready', updated_at: new Date().toISOString() })
             .eq('id', thread.course_id)
@@ -340,7 +347,7 @@ course.get('/generate/:threadId/stream', async (c) => {
           const errorData = event.data as { message: string; stage?: string }
           const errorStage = typeof errorData.stage === 'string' ? errorData.stage : lastKnownStage
           lastKnownStage = errorStage
-          await auth.supabase
+          await serviceDb
             .from('course_generation_threads')
             .update({ status: 'error', stage: errorStage, error: errorData.message })
             .eq('id', threadId)
@@ -351,11 +358,10 @@ course.get('/generate/:threadId/stream', async (c) => {
 
       if (!observedTerminalEvent) {
         try {
-          const { data: latestThread } = await auth.supabase
+          const { data: latestThread } = await serviceDb
             .from('course_generation_threads')
             .select('status')
             .eq('id', threadId)
-            .eq('user_id', auth.userId)
             .single()
 
           if (
@@ -365,7 +371,7 @@ course.get('/generate/:threadId/stream', async (c) => {
             )
           ) {
             const diagnosticError = buildMissingTerminalEventErrorMessage(lastKnownStage)
-            await auth.supabase
+            await serviceDb
               .from('course_generation_threads')
               .update({ status: 'error', stage: lastKnownStage, error: diagnosticError })
               .eq('id', threadId)
@@ -422,7 +428,7 @@ course.get('/generate/:threadId/stream', async (c) => {
 
       // Update thread status to error
       try {
-        await auth.supabase
+        await serviceDb
           .from('course_generation_threads')
           .update({ status: 'error', stage: lastKnownStage, error: appError.userMessage })
           .eq('id', threadId)
@@ -501,6 +507,7 @@ course.post('/generate/:threadId/approve', zValidator('json', ApproveSchema), as
     if (thread.status === 'generating_content' || thread.status === 'complete') {
       return c.json({ status: thread.status, threadId, alreadyProcessed: true })
     }
+    console.warn(`[Course Approve] Thread ${threadId} status is "${thread.status}", expected "awaiting_approval"`)
     return c.json({ error: `Cannot approve: thread status is "${thread.status}"` }, 400)
   }
 
@@ -529,11 +536,19 @@ course.post('/generate/:threadId/approve', zValidator('json', ApproveSchema), as
         return c.json({ status: latestThread.status, threadId, alreadyProcessed: true })
       }
 
+      console.warn(`[Course Approve] Thread ${threadId}: resolveInterrupt() returned false (no pending interrupt)`)
       return c.json({ error: 'No pending interrupt to resolve' }, 400)
     }
 
     // Extend TTL since orchestrator is still active
     entry.expiresAt = Date.now() + 3_600_000
+  } else {
+    // Orchestrator lost (server restart, TTL expiry, etc.) — fail honestly
+    console.warn(`[Course Approve] Orchestrator not found for thread ${threadId}. Cannot resume generation.`)
+    return c.json(
+      { error: 'Generation process was lost (server may have restarted). Please start a new generation.' },
+      400
+    )
   }
 
   // Update thread status to generating_content

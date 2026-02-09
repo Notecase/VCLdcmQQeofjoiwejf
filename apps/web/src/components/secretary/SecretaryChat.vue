@@ -5,6 +5,7 @@ import ChatComposer from '@/components/ai/ChatComposer.vue'
 import SecretaryMessageCard from './SecretaryMessageCard.vue'
 import ThreadList from './ThreadList.vue'
 import { History, MessageSquare } from 'lucide-vue-next'
+import { isDemoMode } from '@/utils/demo'
 
 const store = useSecretaryStore()
 const messagesRef = ref<HTMLElement | null>(null)
@@ -91,6 +92,7 @@ watch(
     <!-- Input -->
     <ChatComposer
       :is-processing="store.isChatStreaming"
+      :demo-mode="isDemoMode()"
       placeholder="Ask your secretary..."
       @submit="handleSubmit"
     />

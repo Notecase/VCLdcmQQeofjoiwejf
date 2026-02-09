@@ -343,7 +343,8 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
           return `Outline already approved. Proceed with content generation.`
         }
         console.log('[CourseTools] request_outline_approval called')
-        const outline = JSON.parse(outlineJson) as CourseOutline
+        const { parseOutlineJSON } = await import('./tools')
+        const outline = parseOutlineJSON(outlineJson)
 
         const interruptId = `interrupt-outline-${Date.now()}`
 
@@ -372,7 +373,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
           )
           return `Outline APPROVED. ${outline.modules.length} modules, ${ctx.totalLessons.value} lessons. Proceed with content generation.`
         } else if (response.decision === 'edit' && response.editedArgs?.outline) {
-          const edited = response.editedArgs.outline as CourseOutline
+          const edited = parseOutlineJSON(JSON.stringify(response.editedArgs.outline))
           ctx.approvedOutline.value = edited
           ctx.totalLessons.value = edited.modules.reduce(
             (sum: number, m: CourseOutlineModule) => sum + m.lessons.length,
@@ -596,6 +597,15 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
           throw error
         }
 
+        // Defense-in-depth: update thread table directly so it reaches 'complete'
+        // even if the SSE handler has exited and isn't processing events
+        try {
+          await ctx.supabase
+            .from('course_generation_threads')
+            .update({ status: 'complete', stage: 'complete', progress: 100 })
+            .eq('course_id', ctx.courseId)
+        } catch { /* best-effort — SSE handler will also update if still connected */ }
+
         console.log(
           '[CourseTools] save_to_supabase completed successfully, emitting complete event'
         )
@@ -723,6 +733,7 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
             .filter((les: CourseOutlineLesson) => les.type !== 'quiz' && les.type !== 'slides')
             .map((les: CourseOutlineLesson) => ({
               ...les,
+              moduleId: mod.id,
               moduleTitle: mod.title,
               moduleDescription: mod.description,
             }))
@@ -836,6 +847,18 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
                 },
               })
 
+              ctx.emitEvent({
+                type: 'lesson_ready',
+                data: {
+                  lessonTitle: lesson.title,
+                  moduleTitle: lesson.moduleTitle,
+                  lessonType: lesson.type,
+                  lessonId: lesson.id,
+                  moduleId: lesson.moduleId,
+                  markdownPreview: content.markdown.slice(0, 300),
+                },
+              })
+
               console.log(
                 `[batch_generate_lessons] DONE: "${lesson.title}" (${lesson.type}) — ${content.markdown.length} chars [${generated}/${total}]`
               )
@@ -860,6 +883,17 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
                   ctx.generatedLessons.set(lesson.title, { markdown: fallback })
                   ctx.completedLessons.value++
                   generated++
+                  ctx.emitEvent({
+                    type: 'lesson_ready',
+                    data: {
+                      lessonTitle: lesson.title,
+                      moduleTitle: lesson.moduleTitle,
+                      lessonType: lesson.type,
+                      lessonId: lesson.id,
+                      moduleId: lesson.moduleId,
+                      markdownPreview: fallback.slice(0, 300),
+                    },
+                  })
                   console.log(
                     `[batch_generate_lessons] RECOVERED: "${lesson.title}" — ${fallback.length} chars (fallback extraction)`
                   )
@@ -915,6 +949,7 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
             .filter((les: CourseOutlineLesson) => les.type === 'quiz')
             .map((les: CourseOutlineLesson) => ({
               ...les,
+              moduleId: mod.id,
               moduleTitle: mod.title,
               moduleDescription: mod.description,
             }))
@@ -1026,6 +1061,18 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
                 },
               })
 
+              ctx.emitEvent({
+                type: 'lesson_ready',
+                data: {
+                  lessonTitle: lesson.title,
+                  moduleTitle: lesson.moduleTitle,
+                  lessonType: lesson.type,
+                  lessonId: lesson.id,
+                  moduleId: lesson.moduleId,
+                  markdownPreview: content.markdown.slice(0, 300),
+                },
+              })
+
               console.log(
                 `[batch_generate_quizzes] DONE: "${lesson.title}" [${generated}/${total}]`
               )
@@ -1050,6 +1097,17 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
                   ctx.generatedLessons.set(lesson.title, { markdown: fallback })
                   ctx.completedLessons.value++
                   generated++
+                  ctx.emitEvent({
+                    type: 'lesson_ready',
+                    data: {
+                      lessonTitle: lesson.title,
+                      moduleTitle: lesson.moduleTitle,
+                      lessonType: lesson.type,
+                      lessonId: lesson.id,
+                      moduleId: lesson.moduleId,
+                      markdownPreview: fallback.slice(0, 300),
+                    },
+                  })
                   console.log(
                     `[batch_generate_quizzes] RECOVERED: "${lesson.title}" — ${fallback.length} chars (fallback extraction)`
                   )
@@ -1106,6 +1164,7 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
             .filter((les: CourseOutlineLesson) => les.type === 'slides')
             .map((les: CourseOutlineLesson) => ({
               ...les,
+              moduleId: mod.id,
               moduleTitle: mod.title,
               moduleDescription: mod.description,
             }))
@@ -1229,6 +1288,18 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
                 },
               })
 
+              ctx.emitEvent({
+                type: 'lesson_ready',
+                data: {
+                  lessonTitle: lesson.title,
+                  moduleTitle: lesson.moduleTitle,
+                  lessonType: lesson.type,
+                  lessonId: lesson.id,
+                  moduleId: lesson.moduleId,
+                  markdownPreview: content.markdown.slice(0, 300),
+                },
+              })
+
               console.log(
                 `[batch_generate_slides] DONE: "${lesson.title}" — ${slides.length} slides, ${content.markdown.length} chars [${generated}/${total}]`
               )
@@ -1253,6 +1324,17 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
                   ctx.generatedLessons.set(lesson.title, { markdown: fallback })
                   ctx.completedLessons.value++
                   generated++
+                  ctx.emitEvent({
+                    type: 'lesson_ready',
+                    data: {
+                      lessonTitle: lesson.title,
+                      moduleTitle: lesson.moduleTitle,
+                      lessonType: lesson.type,
+                      lessonId: lesson.id,
+                      moduleId: lesson.moduleId,
+                      markdownPreview: fallback.slice(0, 300),
+                    },
+                  })
                   console.log(
                     `[batch_generate_slides] RECOVERED: "${lesson.title}" — ${fallback.length} chars (fallback extraction)`
                   )

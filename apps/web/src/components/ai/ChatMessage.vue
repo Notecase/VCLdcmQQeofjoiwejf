@@ -14,7 +14,7 @@
 import { computed, ref } from 'vue'
 import type { ChatMessage, CompletedArtifact } from '@/stores/ai'
 import { useAIStore } from '@/stores/ai'
-import { renderMathContent } from '@/utils/mathRenderer'
+import { renderMathMarkdown } from '@/utils/mathRenderer'
 import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
 import StreamingCursor from './shared/StreamingCursor.vue'
 import ToolCallCard from './ToolCallCard.vue'
@@ -35,7 +35,9 @@ const store = useAIStore()
 const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const displayContent = computed(() => props.message.content || '')
-const renderedContent = computed(() => renderMathContent(displayContent.value))
+const renderedContent = computed(() =>
+  isAssistant.value ? renderMathMarkdown(displayContent.value) : ''
+)
 
 // Check if this message is currently streaming
 const isStreaming = computed(() => {
@@ -161,9 +163,16 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
     <!-- Content -->
     <div class="message-body">
       <div
+        v-if="isAssistant"
         class="prose"
         v-html="renderedContent"
       />
+      <div
+        v-else
+        class="user-text"
+      >
+        {{ displayContent }}
+      </div>
       <StreamingCursor v-if="isStreaming" />
     </div>
 
@@ -326,6 +335,11 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
 .message-card.user .message-body {
   color: var(--text-secondary);
+}
+
+.user-text {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Prose styling */

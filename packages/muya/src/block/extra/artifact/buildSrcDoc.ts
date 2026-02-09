@@ -11,6 +11,28 @@ export interface ArtifactContent {
   javascript?: string
 }
 
+function normalizeUnsafeJavaScript(source: string): string {
+  if (!source) return ''
+
+  return source
+    // Cross-frame document access is blocked in sandboxed iframes without same-origin.
+    .replace(/\bwindow\.(?:parent|top)\?\.document\b/g, 'document')
+    .replace(/\bwindow\.(?:parent|top)\.document\b/g, 'document')
+    .replace(/\b(?:parent|top)\?\.document\b/g, 'document')
+    .replace(/\b(?:parent|top)\.document\b/g, 'document')
+    // Storage APIs are unavailable in opaque-origin sandboxed iframes.
+    .replace(/\bwindow\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
+    .replace(/\bglobalThis\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
+    .replace(/\bwindow\.localStorage\b/g, 'window.__inkdownLocalStorage')
+    .replace(/\bglobalThis\.localStorage\b/g, 'window.__inkdownLocalStorage')
+    .replace(/\blocalStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownLocalStorage')
+    .replace(/\bwindow\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
+    .replace(/\bglobalThis\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
+    .replace(/\bwindow\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
+    .replace(/\bglobalThis\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
+    .replace(/\bsessionStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownSessionStorage')
+}
+
 /**
  * Parse artifact JSON text into structured content
  */
@@ -40,6 +62,7 @@ export function parseArtifactContent(text: string): ArtifactContent {
  */
 export function buildSrcDoc(content: ArtifactContent): string {
   const { html = '', css = '', javascript = '' } = content
+  const normalizedJavascript = normalizeUnsafeJavaScript(javascript)
 
   const parts: string[] = [
     '<!DOCTYPE html>',
@@ -86,15 +109,106 @@ export function buildSrcDoc(content: ArtifactContent): string {
 
   if (javascript) {
     parts.push(
+      '  <script>',
+      '    const __inkdownCreateMemoryStorage = () => {',
+      '      const state = Object.create(null);',
+      '      return {',
+      '        get length() {',
+      '          return Object.keys(state).length;',
+      '        },',
+      '        key(index) {',
+      '          const keys = Object.keys(state);',
+      '          return keys[index] ?? null;',
+      '        },',
+      '        getItem(key) {',
+      '          const normalized = String(key);',
+      '          return Object.prototype.hasOwnProperty.call(state, normalized) ? state[normalized] : null;',
+      '        },',
+      '        setItem(key, value) {',
+      '          state[String(key)] = String(value);',
+      '        },',
+      '        removeItem(key) {',
+      '          delete state[String(key)];',
+      '        },',
+      '        clear() {',
+      '          for (const key of Object.keys(state)) delete state[key];',
+      '        },',
+      '      };',
+      '    };',
+      '    const __inkdownTryGet = (getter, fallback) => {',
+      '      try {',
+      '        const value = getter();',
+      '        return value ?? fallback;',
+      '      } catch {',
+      '        return fallback;',
+      '      }',
+      '    };',
+      '    const __inkdownSetGlobal = (target, key, value) => {',
+      '      if (!target) return;',
+      '      try {',
+      '        Object.defineProperty(target, key, {',
+      '          configurable: true,',
+      '          enumerable: false,',
+      '          writable: true,',
+      '          value,',
+      '        });',
+      '      } catch {',
+      '        try {',
+      '          target[key] = value;',
+      '        } catch {',
+      '          // Ignore assignment failures in locked-down runtimes.',
+      '        }',
+      '      }',
+      '    };',
+      '    const __inkdownLocalStorage = __inkdownTryGet(() => window.localStorage, __inkdownCreateMemoryStorage());',
+      '    const __inkdownSessionStorage = __inkdownTryGet(() => window.sessionStorage, __inkdownCreateMemoryStorage());',
+      '    __inkdownSetGlobal(window, "__inkdownLocalStorage", __inkdownLocalStorage);',
+      '    __inkdownSetGlobal(window, "__inkdownSessionStorage", __inkdownSessionStorage);',
+      '    __inkdownSetGlobal(window, "localStorage", __inkdownLocalStorage);',
+      '    __inkdownSetGlobal(window, "sessionStorage", __inkdownSessionStorage);',
+      '    if (typeof globalThis !== "undefined") {',
+      '      __inkdownSetGlobal(globalThis, "__inkdownLocalStorage", __inkdownLocalStorage);',
+      '      __inkdownSetGlobal(globalThis, "__inkdownSessionStorage", __inkdownSessionStorage);',
+      '      __inkdownSetGlobal(globalThis, "localStorage", __inkdownLocalStorage);',
+      '      __inkdownSetGlobal(globalThis, "sessionStorage", __inkdownSessionStorage);',
+      '    }',
+      '  </script>',
       '  <script type="text/babel">',
-      '    try {',
-      javascript,
-      '    } catch (error) {',
-      "      console.error('Artifact JS Error:', error);",
+      '    const __inkdownRenderRuntimeError = (rawError) => {',
+      '      console.error("Artifact JS Error:", rawError);',
+      '      const errorMessage = rawError instanceof Error ? rawError.message : String(rawError);',
+      '      const lower = errorMessage.toLowerCase();',
+      '      const isSandboxSecurityError =',
+      "        lower.includes('insecure') ||",
+      "        lower.includes('security') ||",
+      "        lower.includes('denied') ||",
+      "        lower.includes('permission') ||",
+      "        lower.includes('blocked a frame') ||",
+      "        lower.includes('not allowed');",
+      "      const message = isSandboxSecurityError",
+      "        ? 'Sandbox Security Error: ' + errorMessage + '\\nHint: avoid window.parent/window.top and browser storage APIs in artifacts.'",
+      "        : 'JavaScript Error: ' + errorMessage;",
+      '      const existing = document.getElementById("__inkdown-artifact-error");',
+      '      if (existing) {',
+      '        existing.textContent = message;',
+      '        return;',
+      '      }',
       "      const errorDiv = document.createElement('div');",
+      '      errorDiv.id = "__inkdown-artifact-error";',
       "      errorDiv.style.cssText = 'padding: 16px; background: #fee; color: #c00; border-radius: 8px; font-family: monospace; white-space: pre-wrap;';",
-      "      errorDiv.textContent = 'JavaScript Error: ' + error.message;",
+      '      errorDiv.textContent = message;',
       '      document.body.appendChild(errorDiv);',
+      '    };',
+      '    window.addEventListener("error", (event) => {',
+      '      __inkdownRenderRuntimeError(event.error || event.message || "Unknown script error");',
+      '    });',
+      '    window.addEventListener("unhandledrejection", (event) => {',
+      '      __inkdownRenderRuntimeError(event.reason || "Unhandled promise rejection");',
+      '    });',
+      '    try {',
+      normalizedJavascript,
+      '    } catch (error) {',
+      '      __inkdownRenderRuntimeError(error);',
       '    }',
       '  </script>'
     )

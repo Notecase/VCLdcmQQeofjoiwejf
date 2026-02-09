@@ -259,7 +259,20 @@ export class EditorAgent {
     }
 
     // Step 2: Execute based on intent
-    yield* this.streamExecution(intent, message)
+    let emittedUserVisibleContent = false
+    for await (const chunk of this.streamExecution(intent, message)) {
+      if (this.isUserVisibleStreamEvent(chunk.type)) {
+        emittedUserVisibleContent = true
+      }
+      yield chunk
+    }
+
+    if (!emittedUserVisibleContent) {
+      yield {
+        type: 'text-delta',
+        data: await this.buildNoOutputFallback(intent),
+      }
+    }
 
     yield { type: 'finish', data: { intent: intent.intent } }
   }
@@ -428,25 +441,45 @@ export class EditorAgent {
       case 'follow_up':
         return await this.handleFollowUp(message)
 
-      case 'open_note':
-        if (intent.parameters.noteId) {
+      case 'open_note': {
+        const requestedNoteId = await this.resolveAuthorizedNoteId(intent.parameters.noteId)
+        console.info('editor_agent.open_note.execute', {
+          userId: this.userId,
+          rawNoteId: intent.parameters.noteId,
+          selectedNoteId: requestedNoteId || null,
+          hasCurrentNoteContext: Boolean(this.state.context?.currentNoteId),
+        })
+
+        if (requestedNoteId) {
           const result = await executeTool(
             'read_note',
             {
-              noteId: intent.parameters.noteId,
+              noteId: requestedNoteId,
               includeMetadata: true,
             },
             toolContext
           )
           toolResults.push(result)
+          return {
+            intent,
+            response: toolResults[0]?.success
+              ? `Here's the note content:\n\n${JSON.stringify(toolResults[0].data, null, 2)}`
+              : 'Could not load the note.',
+            toolResults,
+          }
         }
+
+        // If no explicit noteId is provided but we do have an active note context,
+        // treat this as a question about the current note.
+        if (this.state.context?.currentNoteId) {
+          return await this.handleChat(message)
+        }
+
         return {
           intent,
-          response: toolResults[0]?.success
-            ? `Here's the note content:\n\n${JSON.stringify(toolResults[0].data, null, 2)}`
-            : 'Could not load the note.',
-          toolResults,
+          response: 'Please open a note first so I can answer questions about it.',
         }
+      }
 
       case 'create_artifact':
         return await this.handleCreateArtifact(intent, message)
@@ -520,13 +553,24 @@ export class EditorAgent {
         )
         break
 
-      case 'open_note':
-        if (intent.parameters.noteId) {
-          yield { type: 'tool-call', data: { tool: 'read_note', noteId: intent.parameters.noteId } }
+      case 'open_note': {
+        const requestedNoteId = await this.resolveAuthorizedNoteId(intent.parameters.noteId)
+        let emittedChars = 0
+        let readSuccess = false
+
+        console.info('editor_agent.open_note.stream.start', {
+          userId: this.userId,
+          rawNoteId: intent.parameters.noteId,
+          selectedNoteId: requestedNoteId || null,
+          hasCurrentNoteContext: Boolean(this.state.context?.currentNoteId),
+        })
+
+        if (requestedNoteId) {
+          yield { type: 'tool-call', data: { tool: 'read_note', noteId: requestedNoteId } }
           const result = await executeTool(
             'read_note',
             {
-              noteId: intent.parameters.noteId,
+              noteId: requestedNoteId,
               includeMetadata: true,
             },
             toolContext
@@ -534,10 +578,38 @@ export class EditorAgent {
           yield { type: 'tool-result', data: result }
           if (result.success) {
             const noteData = result.data as { title: string; content: string }
-            yield { type: 'text-delta', data: `## ${noteData.title}\n\n${noteData.content}` }
+            const rendered = `## ${noteData.title}\n\n${noteData.content}`
+            emittedChars += rendered.length
+            readSuccess = true
+            yield { type: 'text-delta', data: rendered }
+          }
+        } else if (this.state.context?.currentNoteId) {
+          // Classifier can route "what is this note about?" to open_note without noteId.
+          // Fall back to chat path, which injects current note content into the prompt.
+          for await (const chunk of this.streamChat(message)) {
+            if (chunk.type === 'text-delta' && typeof chunk.data === 'string') {
+              emittedChars += chunk.data.length
+            }
+            yield chunk
+          }
+        } else {
+          const clarification = 'Please open a note first so I can answer what the note is about.'
+          emittedChars += clarification.length
+          yield {
+            type: 'text-delta',
+            data: clarification,
           }
         }
+
+        console.info('editor_agent.open_note.stream.finish', {
+          userId: this.userId,
+          rawNoteId: intent.parameters.noteId,
+          selectedNoteId: requestedNoteId || null,
+          readSuccess,
+          emittedChars,
+        })
         break
+      }
 
       case 'create_artifact':
         yield* this.streamArtifactCreation(intent, message)
@@ -565,6 +637,131 @@ export class EditorAgent {
       default:
         yield* this.streamChat(message)
     }
+  }
+
+  private isUserVisibleStreamEvent(
+    type:
+      | 'tool-call'
+      | 'tool-result'
+      | 'text-delta'
+      | 'thinking'
+      | 'edit-proposal'
+      | 'clarification-request'
+      | 'artifact'
+      | 'code-preview'
+  ): boolean {
+    return (
+      type === 'text-delta' ||
+      type === 'edit-proposal' ||
+      type === 'clarification-request' ||
+      type === 'artifact'
+    )
+  }
+
+  private async buildNoOutputFallback(intent: IntentClassification): Promise<string> {
+    if (intent.intent === 'open_note') {
+      if (!this.state.context?.currentNoteId) {
+        return 'Please open a note first so I can answer what the note is about.'
+      }
+
+      const note = await this.fetchNoteContent(this.state.context.currentNoteId)
+      if (note) {
+        return this.buildDeterministicNoteSummary(note.title, note.content)
+      }
+
+      return 'I could not load the current note. Please open it again and retry.'
+    }
+    return 'I processed your request but need more context to provide a useful response.'
+  }
+
+  private isValidUuid(value: string): boolean {
+    return z.string().uuid().safeParse(value).success
+  }
+
+  private async resolveAuthorizedNoteId(rawNoteId: unknown): Promise<string | undefined> {
+    if (typeof rawNoteId !== 'string') return undefined
+    const candidate = rawNoteId.trim()
+    if (!candidate || !this.isValidUuid(candidate)) return undefined
+
+    const { data, error } = await this.supabase
+      .from('notes')
+      .select('id')
+      .eq('id', candidate)
+      .eq('user_id', this.userId)
+      .maybeSingle()
+
+    if (error || !data) return undefined
+    return candidate
+  }
+
+  private buildDeterministicNoteSummary(title: string, content: string): string {
+    const paragraphs = content
+      .split(/\n\n+/)
+      .map((segment) => segment.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, 4)
+
+    if (paragraphs.length === 0) {
+      return `This note "${title}" is currently empty.`
+    }
+
+    const bullets = paragraphs
+      .map((paragraph) => `- ${paragraph.slice(0, 180)}${paragraph.length > 180 ? '...' : ''}`)
+      .join('\n')
+
+    return `This note "${title}" is mainly about:\n${bullets}`
+  }
+
+  private extractStructuredDeltaContent(content: unknown): string {
+    if (typeof content === 'string') return content
+    if (!Array.isArray(content)) return ''
+
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part
+        if (!part || typeof part !== 'object') return ''
+
+        const typedPart = part as {
+          text?: unknown
+          content?: unknown
+        }
+
+        if (typeof typedPart.text === 'string') return typedPart.text
+        if (typeof typedPart.content === 'string') return typedPart.content
+        if (Array.isArray(typedPart.content)) {
+          return this.extractStructuredDeltaContent(typedPart.content)
+        }
+        return ''
+      })
+      .join('')
+  }
+
+  private extractStreamDelta(chunk: unknown): string {
+    const choice = (chunk as { choices?: unknown[] })?.choices?.[0] as
+      | {
+          delta?: { content?: unknown; text?: unknown }
+          text?: unknown
+          content?: unknown
+          message?: { content?: unknown }
+        }
+      | undefined
+
+    if (!choice) return ''
+
+    const candidates = [
+      choice.delta?.content,
+      choice.delta?.text,
+      choice.text,
+      choice.content,
+      choice.message?.content,
+    ]
+
+    for (const candidate of candidates) {
+      const parsed = this.extractStructuredDeltaContent(candidate)
+      if (parsed) return parsed
+    }
+
+    return ''
   }
 
   private async handleChat(message: string): Promise<EditorAgentResponse> {
@@ -658,15 +855,7 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     })
 
     for await (const chunk of stream) {
-      // Log chunk structure for debugging GPT-5.2 format
-      console.log('[streamChat] Chunk:', JSON.stringify(chunk).slice(0, 200))
-
-      // Try multiple delta paths for GPT-5.2 compatibility
-      const delta =
-        chunk.choices?.[0]?.delta?.content ??
-        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
-        (chunk.choices?.[0] as { text?: string })?.text ??
-        (chunk.choices?.[0] as { content?: string })?.content
+      const delta = this.extractStreamDelta(chunk)
 
       if (delta) {
         yield { type: 'text-delta', data: delta }

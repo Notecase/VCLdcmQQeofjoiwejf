@@ -27,6 +27,13 @@ import type {
   ReflectionMood,
   ParserWarning,
 } from '@inkdown/shared/types'
+import { isDemoMode } from '@/utils/demo'
+import {
+  DEMO_MEMORY_FILES,
+  DEMO_ACTIVE_PLANS,
+  DEMO_TODAY_PLAN,
+  DEMO_TOMORROW_PLAN,
+} from '@/data/demo-secretary'
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
 const SECRETARY_API = `${API_BASE}/api/secretary`
@@ -143,6 +150,17 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   async function initialize() {
     if (isInitialized.value) return
+
+    // Demo mode: load static fixtures
+    if (isDemoMode()) {
+      memoryFiles.value = DEMO_MEMORY_FILES
+      activePlans.value = DEMO_ACTIVE_PLANS
+      todayPlan.value = DEMO_TODAY_PLAN
+      tomorrowPlan.value = DEMO_TOMORROW_PLAN
+      isInitialized.value = true
+      return
+    }
+
     isLoading.value = true
     error.value = null
 
@@ -245,6 +263,19 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   async function updateMemoryFile(filename: string, content: string) {
+    if (isDemoMode()) {
+      const idx = memoryFiles.value.findIndex((f) => f.filename === filename)
+      if (idx >= 0) {
+        memoryFiles.value[idx] = {
+          ...memoryFiles.value[idx],
+          content,
+          updatedAt: new Date().toISOString(),
+        }
+      }
+      parsePlanData()
+      notifications.success('File saved successfully')
+      return
+    }
     try {
       const res = await authFetch(`${SECRETARY_API}/memory/${filename}`, {
         method: 'PUT',
@@ -297,6 +328,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   async function prepareTomorrow() {
+    if (isDemoMode()) {
+      notifications.info('AI planning available in full version')
+      return
+    }
     isGeneratingTomorrow.value = true
     error.value = null
 
@@ -368,6 +403,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   async function loadThreads() {
+    if (isDemoMode()) return
     try {
       const res = await authFetch(`${SECRETARY_API}/threads`)
       const data = await res.json()
@@ -421,6 +457,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   async function sendChatMessage(message: string) {
+    if (isDemoMode()) {
+      notifications.info('AI chat available in full version')
+      return
+    }
     const userMsg: SecretaryChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',

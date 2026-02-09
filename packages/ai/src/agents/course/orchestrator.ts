@@ -451,7 +451,15 @@ Please proceed through the full pipeline: research → index → outline → app
         eventQueue.push({ event: 'done' })
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error)
+        console.error('[CourseOrchestrator] agentTask error:', errorMsg)
         eventQueue.push({ event: 'error', data: { message: errorMsg, stage: currentStage } })
+        // Defense-in-depth: update DB directly in case SSE handler is gone
+        try {
+          await toolContext.supabase
+            .from('course_generation_threads')
+            .update({ status: 'error', stage: currentStage, error: errorMsg })
+            .eq('course_id', input.courseId)
+        } catch { /* best-effort */ }
       } finally {
         eventQueue.finish()
       }

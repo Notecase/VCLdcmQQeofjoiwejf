@@ -8,6 +8,7 @@ import { ArrowUp, Square } from 'lucide-vue-next'
 const props = defineProps<{
   isProcessing: boolean
   placeholder?: string
+  demoMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -54,11 +55,15 @@ function handleKeydown(e: KeyboardEvent) {
 
 const dynamicPlaceholder = ref('')
 watch(
-  () => props.isProcessing,
-  (streaming) => {
-    dynamicPlaceholder.value = streaming
-      ? 'Running...'
-      : props.placeholder || 'Write your message...'
+  () => [props.isProcessing, props.demoMode],
+  ([streaming, demo]) => {
+    if (demo) {
+      dynamicPlaceholder.value = 'AI chat available in full version'
+    } else {
+      dynamicPlaceholder.value = streaming
+        ? 'Running...'
+        : props.placeholder || 'Write your message...'
+    }
   },
   { immediate: true }
 )
@@ -86,7 +91,7 @@ defineExpose({ inputRef })
           ref="inputRef"
           v-model="inputValue"
           :placeholder="dynamicPlaceholder"
-          :disabled="isProcessing"
+          :disabled="isProcessing || demoMode"
           rows="1"
           @keydown="handleKeydown"
         />

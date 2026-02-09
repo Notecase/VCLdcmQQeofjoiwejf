@@ -48,14 +48,8 @@ const isReady = computed(() => props.course.status === 'ready')
     :class="{ clickable: isReady }"
     @click="isReady ? emit('open', course.id) : undefined"
   >
-    <!-- Header -->
+    <!-- Header - Status row with actions -->
     <div class="card-header">
-      <span
-        class="difficulty-badge"
-        :style="{ color: difficultyColor, borderColor: difficultyColor }"
-      >
-        {{ course.difficulty }}
-      </span>
       <span
         class="status-badge"
         :class="course.status"
@@ -67,7 +61,22 @@ const isReady = computed(() => props.course.status === 'ready')
         />
         {{ statusLabel }}
       </span>
+      <button
+        class="delete-btn"
+        title="Delete course"
+        @click.stop="emit('delete', course.id)"
+      >
+        <Trash2 :size="14" />
+      </button>
     </div>
+
+    <!-- Level badge -->
+    <span
+      class="difficulty-badge"
+      :style="{ color: difficultyColor, borderColor: difficultyColor }"
+    >
+      {{ course.difficulty }}
+    </span>
 
     <!-- Title & Topic -->
     <h4 class="card-title">{{ course.title }}</h4>
@@ -88,31 +97,15 @@ const isReady = computed(() => props.course.status === 'ready')
       </span>
     </div>
 
-    <!-- Progress -->
-    <div
-      v-if="isReady"
-      class="card-progress"
-    >
+    <!-- Progress - always show area for consistent height -->
+    <div class="card-progress">
       <ProgressBar
+        v-if="isReady"
         :value="course.progress"
         :show-label="true"
         color="#f59e0b"
         :height="5"
       />
-    </div>
-
-    <!-- Actions -->
-    <div
-      class="card-actions"
-      @click.stop
-    >
-      <button
-        class="delete-btn"
-        title="Delete course"
-        @click="emit('delete', course.id)"
-      >
-        <Trash2 :size="14" />
-      </button>
     </div>
   </div>
 </template>
@@ -124,6 +117,8 @@ const isReady = computed(() => props.course.status === 'ready')
   flex-direction: column;
   gap: 10px;
   padding: 18px;
+  height: 100%; /* Fill wrapper for uniform height */
+  min-height: 200px; /* Minimum card height */
   border-radius: var(--radius-card, 12px);
   background: var(--glass-bg, rgba(30, 30, 30, 0.6));
   backdrop-filter: blur(var(--glass-blur, 12px));
@@ -204,6 +199,7 @@ const isReady = computed(() => props.course.status === 'ready')
   color: var(--text-color-secondary, #94a3b8);
   line-height: 1.5;
   margin: 0;
+  flex-grow: 1; /* Push meta and progress to bottom */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -224,20 +220,12 @@ const isReady = computed(() => props.course.status === 'ready')
 }
 
 .card-progress {
-  margin-top: 2px;
+  margin-top: auto; /* Push to bottom */
+  min-height: 20px; /* Reserve space even when empty */
+  padding-top: 8px;
 }
 
-.card-actions {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  display: none;
-}
-
-.course-card:hover .card-actions {
-  display: flex;
-}
-
+/* Delete button - hidden by default, shown on card hover */
 .delete-btn {
   display: flex;
   align-items: center;
@@ -250,6 +238,11 @@ const isReady = computed(() => props.course.status === 'ready')
   color: var(--text-color-secondary, #64748b);
   cursor: pointer;
   transition: all var(--transition-fast, 150ms ease);
+  opacity: 0; /* Hidden by default */
+}
+
+.course-card:hover .delete-btn {
+  opacity: 1; /* Show on hover */
 }
 
 .delete-btn:hover {

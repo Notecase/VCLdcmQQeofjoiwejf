@@ -74,3 +74,4 @@ supabase/.temp/
 
 # Generated Vue SFC outputs
 **/*.vue.js
+.vercel

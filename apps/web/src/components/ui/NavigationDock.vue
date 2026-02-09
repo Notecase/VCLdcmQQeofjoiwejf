@@ -10,6 +10,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLayoutStore } from '@/stores'
 import { FileText, Calendar, GraduationCap, PanelLeft, PanelRight, Home } from 'lucide-vue-next'
+import { isDemoMode } from '@/utils/demo'
 
 // Props for pill mode
 defineProps<{
@@ -40,6 +41,8 @@ const isNoteActive = computed(() => {
 const isHomeActive = computed(() => {
   return route.path === '/' || route.name === 'home'
 })
+
+const inDemoMode = computed(() => isDemoMode())
 </script>
 
 <template>
@@ -109,6 +112,14 @@ const isHomeActive = computed(() => {
     >
       <Home :size="18" />
     </button>
+
+    <!-- Demo Mode Badge -->
+    <span
+      v-if="inDemoMode"
+      class="demo-badge"
+    >
+      Demo
+    </span>
   </nav>
 </template>
 
@@ -248,6 +259,19 @@ const isHomeActive = computed(() => {
 .nav-dock.pill-mode .dock-item {
   width: 28px;
   height: 28px;
+}
+
+/* Demo badge */
+.demo-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .nav-dock.pill-mode .dock-divider {

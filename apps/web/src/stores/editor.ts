@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
 import * as notesService from '@/services/notes.service'
 import * as subscriptionsService from '@/services/subscriptions.service'
-import { getDatabaseService, isServicesInitialized } from '@/services'
+import { isServicesInitialized } from '@/services'
 import { useAuthStore } from './auth'
 import type { Note, EditorState, NoteChangeEvent } from '@inkdown/shared'
+import { isDemoMode } from '@/utils/demo'
+import { DEMO_DOCUMENTS } from '@/data/demo-note-rl'
 
 // Re-export Note as Document for backward compatibility
 export type Document = Note
@@ -96,6 +98,11 @@ export const useEditorStore = defineStore('editor', {
       this.isLoadingDocuments = true
 
       try {
+        if (isDemoMode()) {
+          this.documents = DEMO_DOCUMENTS.map(d => ({ ...d }))
+          return
+        }
+
         if (!isServicesInitialized()) {
           console.warn('Services not initialized, using empty list')
           this.documents = []
@@ -103,23 +110,21 @@ export const useEditorStore = defineStore('editor', {
         }
 
         const authStore = useAuthStore()
+        const userId = authStore.user?.id
 
-        if (!authStore.user?.id) {
-          // Not authenticated, load from local storage or empty
+        if (!userId) {
           this.documents = []
           return
         }
 
-        // Load ALL notes (general + project notes) for sidebar display
-        const result = await notesService.getNotes(authStore.user.id)
+        // Load notes from IndexedDB (or Supabase)
+        const result = await notesService.getNotes(userId)
 
         if (result.error) {
           console.error('Failed to load notes:', result.error)
           this.documents = []
         } else {
           this.documents = result.data || []
-
-          // Start real-time sync after initial load
           this.startRealtimeSync()
         }
       } catch (error) {
@@ -137,16 +142,18 @@ export const useEditorStore = defineStore('editor', {
      * @param parentNoteId - Optional parent note ID to create as subnote (mutually exclusive with projectId)
      */
     async createDocument(projectId?: string, title: string = 'Untitled', parentNoteId?: string) {
-      const authStore = useAuthStore()
+      if (isDemoMode()) return null
 
+      const authStore = useAuthStore()
       if (!authStore.user?.id) {
         console.warn('Cannot create document: user not authenticated')
         return null
       }
+      const userId = authStore.user.id
 
       try {
         // Note: project_id and parent_note_id are mutually exclusive
-        const result = await notesService.createNote(authStore.user.id, {
+        const result = await notesService.createNote(userId, {
           title,
           content: '',
           project_id: parentNoteId ? undefined : projectId || undefined,
@@ -203,6 +210,12 @@ export const useEditorStore = defineStore('editor', {
      * Load and open a document by ID
      */
     async loadDocument(id: string) {
+      if (isDemoMode()) {
+        const doc = DEMO_DOCUMENTS.find(d => d.id === id)
+        if (doc) this.openDocument({ ...doc })
+        return
+      }
+
       this.isLoading = true
 
       try {
@@ -256,6 +269,7 @@ export const useEditorStore = defineStore('editor', {
      * Save the active document
      */
     async saveDocument() {
+      if (isDemoMode()) return
       const tab = this.activeTab
       if (!tab || tab.isSaved) return
 
@@ -332,6 +346,7 @@ export const useEditorStore = defineStore('editor', {
      * Delete a document
      */
     async deleteDocument(id: string) {
+      if (isDemoMode()) return
       try {
         const result = await notesService.deleteNote(id)
 

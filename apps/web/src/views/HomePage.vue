@@ -12,6 +12,7 @@ import { useAIStore } from '@/stores/ai'
 import { useDeepAgentStore } from '@/stores/deepAgent'
 import { useEditorStore, useLayoutStore } from '@/stores'
 import { useAIChat } from '@/services/ai.service'
+import { isDemoMode } from '@/utils/demo'
 import type { VirtualFile } from '@inkdown/shared/types'
 import ChatComposer from '@/components/ai/ChatComposer.vue'
 import ChatHero from '@/components/ai/ChatHero.vue'
@@ -62,7 +63,7 @@ function scrollToBottom() {
 }
 
 async function handleSubmit(value: string) {
-  if (!value.trim() || deepAgent.isChatStreaming) return
+  if (!value.trim() || deepAgent.isChatStreaming || isDemoMode()) return
   const autoOutputDestination = deepAgent.getAutoOutputDestination(value)
   if (deepAgent.requestOutputClarification(value)) return
   scrollToBottom()
@@ -344,6 +345,7 @@ onMounted(async () => {
           <!-- Composer at bottom -->
           <ChatComposer
             :is-processing="deepAgent.isChatStreaming"
+            :demo-mode="isDemoMode()"
             @submit="handleSubmit"
           >
             <template

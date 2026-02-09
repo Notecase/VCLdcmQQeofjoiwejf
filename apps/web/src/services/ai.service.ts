@@ -8,6 +8,8 @@
 import { useAIStore, type DiffHunk, type ThinkingStep } from '@/stores/ai'
 import { useAuthStore } from '@/stores/auth'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { buildEmptyAssistantFallback } from './ai.fallback'
+import { isDemoMode } from '@/utils/demo'
 import * as Diff from 'diff'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
@@ -18,12 +20,27 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
 
 export interface AgentRequestOptions {
   input: string
+  runtime?: 'legacy' | 'editor-deep'
+  threadId?: string
   context?: {
     noteIds?: string[]
     projectId?: string
+    workspaceId?: string
     currentNoteId?: string
+    currentBlockId?: string
+    selectedText?: string
     selectedBlockIds?: string[] // For clarification flow - user-selected targets (deprecated)
     selectedLineNumbers?: number[] // For clarification flow - line numbers are stable across re-parsing
+  }
+  editorContext?: {
+    workspaceId?: string
+    currentNoteId?: string
+    currentBlockId?: string
+    selectedBlockIds?: string[]
+    selectedText?: string
+    projectId?: string
+    noteIds?: string[]
+    selectedLineNumbers?: number[]
   }
   sessionId?: string
   stream?: boolean
@@ -31,6 +48,10 @@ export interface AgentRequestOptions {
 
 export interface StreamChunk {
   type:
+    | 'assistant-start'
+    | 'assistant-delta'
+    | 'assistant-final'
+    | 'done'
     | 'text-delta'
     | 'thinking'
     | 'tool-call'
@@ -39,6 +60,7 @@ export interface StreamChunk {
     | 'citation'
     | 'edit-proposal'
     | 'clarification-request'
+    | 'clarification-requested'
     | 'artifact'
     | 'code-preview'
     | 'finish'
@@ -118,7 +140,10 @@ export async function sendToSecretary(options: AgentRequestOptions): Promise<str
       method: 'POST',
       body: JSON.stringify({
         input: options.input,
+        runtime: options.runtime ?? 'editor-deep',
+        threadId: options.threadId,
         context: options.context,
+        editorContext: options.editorContext,
         sessionId: options.sessionId,
         stream: false,
       }),
@@ -459,7 +484,10 @@ async function streamFromAgent(agentType: string, options: AgentRequestOptions):
     method: 'POST',
     body: JSON.stringify({
       input: options.input,
+      runtime: options.runtime ?? 'editor-deep',
+      threadId: options.threadId,
       context: options.context,
+      editorContext: options.editorContext,
       sessionId: options.sessionId,
       stream: true,
     }),
@@ -508,6 +536,11 @@ async function processSSEResponse(
             const chunk: StreamChunk = JSON.parse(data)
 
             switch (chunk.type) {
+              case 'assistant-start':
+                store.setStatus('streaming')
+                break
+
+              case 'assistant-delta':
               case 'text-delta': {
                 fullContent += chunk.data as string
                 // Use activeSessionId directly to avoid computed property race condition
@@ -525,6 +558,20 @@ async function processSSEResponse(
                 break
               }
 
+              case 'assistant-final': {
+                const finalText = typeof chunk.data === 'string' ? chunk.data : ''
+                if (finalText && !fullContent.trim()) {
+                  fullContent = finalText
+                  const sessionId = store.activeSessionId
+                  if (sessionId && store.sessions[sessionId]) {
+                    store.appendToLastMessage(sessionId, finalText)
+                  }
+                }
+                store.setStatus('idle')
+                break
+              }
+
+              case 'done':
               case 'finish':
                 store.setStatus('idle')
                 break
@@ -569,9 +616,10 @@ async function processSSEResponse(
                 const toolData = chunk.data as {
                   name?: string
                   tool?: string
+                  toolName?: string
                   arguments?: Record<string, unknown>
                 }
-                const toolName = toolData.name || toolData.tool || 'unknown'
+                const toolName = toolData.name || toolData.tool || toolData.toolName || 'unknown'
                 const runningThoughts = store.thinkingSteps.filter(
                   (step) => step.status === 'running' && step.type !== 'tool'
                 )
@@ -647,6 +695,22 @@ async function processSSEResponse(
                 const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
                 runningSteps.forEach((step) => store.completeThinkingStep(step.id))
                 // Status is set to 'clarifying' inside setClarificationRequest
+                break
+              }
+
+              case 'clarification-requested': {
+                const clarificationData = chunk.data as {
+                  options?: ClarificationRequestData['options']
+                  reason?: string
+                }
+                store.setClarificationRequest({
+                  noteId: store.activeSession?.contextNoteIds?.[0] || '',
+                  instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
+                  options: clarificationData.options || [],
+                  reason: clarificationData.reason || 'Please provide more context.',
+                })
+                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+                runningSteps.forEach((step) => store.completeThinkingStep(step.id))
                 break
               }
 
@@ -813,12 +877,20 @@ export function useAIChat() {
     agentType: 'secretary' | 'chat' = 'secretary',
     context?: AgentRequestOptions['context']
   ) {
+    if (isDemoMode()) return
+
     // Clear any previous error
     store.clearError()
     store.clearThinkingSteps()
 
+    // Reuse active session by default for continuity unless agent type changes.
+    const activeSessionId = store.activeSessionId
+    const activeSession = activeSessionId ? store.sessions[activeSessionId] : null
+    const reusableSessionId =
+      activeSession && activeSession.agentType === agentType ? activeSessionId : undefined
+
     // Get or create session and capture the ID to use consistently
-    const session = store.getOrCreateSession(undefined, { agentType })
+    const session = store.getOrCreateSession(reusableSessionId, { agentType })
     const sessionId = session.id
 
     // Ensure activeSessionId is set correctly before streaming
@@ -838,16 +910,20 @@ export function useAIChat() {
 
     // Send to agent
     try {
+      let streamedResponse = ''
       if (agentType === 'chat') {
-        await sendToChat({
+        streamedResponse = await sendToChat({
           input: message,
           context,
           sessionId,
         })
       } else {
-        await sendToSecretary({
+        streamedResponse = await sendToSecretary({
           input: message,
+          runtime: 'editor-deep',
+          threadId: sessionId,
           context,
+          editorContext: context,
           sessionId,
         })
       }
@@ -861,11 +937,15 @@ export function useAIChat() {
           // Check if there's a pending edit or clarification - if so, empty response is expected
           const hasPendingEdit = store.pendingEdits.some((e) => e.noteId && e.status === 'pending')
           const hasPendingClarification = store.hasPendingClarification
+          const hasBackendError = Boolean(store.error)
+          const hasServerFinal = Boolean(streamedResponse.trim())
 
-          if (!hasPendingEdit && !hasPendingClarification) {
-            // No edit/clarification pending, so show a fallback message
-            lastMessage.content =
-              'I processed your request but had no additional response to provide.'
+          if (!hasPendingEdit && !hasPendingClarification && !hasBackendError && !hasServerFinal) {
+            lastMessage.content = buildEmptyAssistantFallback({
+              hasCurrentNote:
+                Boolean(context?.currentNoteId) ||
+                Boolean(currentSession.contextNoteIds && currentSession.contextNoteIds.length > 0),
+            })
           }
         }
       }

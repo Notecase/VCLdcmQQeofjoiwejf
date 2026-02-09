@@ -65,7 +65,21 @@ const router = createRouter({
       name: 'courseViewer',
       component: () => import('./views/CourseView.vue'),
     },
+    {
+      path: '/demo',
+      name: 'demo',
+      component: () => import('./views/DemoGateView.vue'),
+    },
   ],
+})
+
+// In production (no API backend), require demo mode for all routes
+const isProductionDemo = !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === ''
+router.beforeEach((to) => {
+  const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
+  if (isProductionDemo && !inDemoMode && to.name !== 'demo') {
+    return { name: 'demo' }
+  }
 })
 
 // Create app
@@ -81,8 +95,9 @@ app.use(ElementPlus)
  */
 async function initApp() {
   // Initialize service provider
-  // Use 'supabase' if configured, otherwise 'local' for offline mode
-  const provider = isSupabaseConfigured ? 'supabase' : 'local'
+  // Force local provider in demo mode so all data goes to IndexedDB
+  const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
+  const provider = inDemoMode ? 'local' : (isSupabaseConfigured ? 'supabase' : 'local')
 
   try {
     await initializeServices(provider)

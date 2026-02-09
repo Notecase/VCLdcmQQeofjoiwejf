@@ -206,6 +206,17 @@ export interface RejectOutlineRequest {
   feedback: string
 }
 
+// --- Lesson Ready Event (emitted per-lesson during content generation) ---
+
+export interface LessonReadyEvent {
+  lessonTitle: string
+  moduleTitle: string
+  lessonType: LessonType
+  lessonId: string
+  moduleId: string
+  markdownPreview: string
+}
+
 // --- Course Stream Events (SSE) ---
 
 export type CourseStreamEvent =
@@ -216,6 +227,7 @@ export type CourseStreamEvent =
       event: 'content_progress'
       data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }
     }
+  | { event: 'lesson_ready'; data: LessonReadyEvent }
   | { event: 'complete'; data: { courseId: string } }
   | { event: 'error'; data: { message: string; stage: GenerationStageType } }
 
@@ -319,6 +331,7 @@ export type CourseOrchestratorStreamEvent =
       event: 'content_progress'
       data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }
     }
+  | { event: 'lesson_ready'; data: LessonReadyEvent }
   | { event: 'complete'; data: { courseId: string } }
   | { event: 'error'; data: { message: string; stage: GenerationStageType } }
   | { event: 'done'; data?: string }

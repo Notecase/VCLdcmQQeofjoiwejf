@@ -18,6 +18,7 @@ import type {
   CourseTodoItem,
   ResearchProgress,
   GenerationStageType,
+  LessonReadyEvent,
 } from '@inkdown/shared/types'
 
 const API_BASE = '/api/course'
@@ -139,6 +140,7 @@ export async function streamGenerationProgress(
       totalModules: number
       totalLessons: number
     }) => void
+    onLessonReady?: (data: LessonReadyEvent) => void
     onComplete?: (data: { courseId: string }) => void
     onError?: (data: { message: string; stage: GenerationStageType }) => void
     // Orchestrator events (DeepAgentsJS)
@@ -255,6 +257,10 @@ export async function streamGenerationProgress(
                   totalLessons: number
                 }
               )
+              break
+
+            case 'lesson_ready':
+              callbacks.onLessonReady?.(eventData as LessonReadyEvent)
               break
 
             case 'agent-step':

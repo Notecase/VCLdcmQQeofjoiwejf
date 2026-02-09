@@ -126,6 +126,22 @@ export {
 } from './editor.agent'
 
 // ============================================================================
+// Editor Deep Agent (DeepAgents runtime for normal editor)
+// ============================================================================
+
+export {
+  EditorDeepAgent,
+  createEditorDeepAgent,
+  EditorConversationHistoryService,
+  EditorLongTermMemory,
+  type EditorDeepAgentConfig,
+  type EditorDeepAgentRequest,
+  type EditorDeepAgentEvent,
+  type EditorDeepAgentEventType,
+  type EditorRunState,
+} from './editor-deep'
+
+// ============================================================================
 // Planner Agent
 // ============================================================================
 

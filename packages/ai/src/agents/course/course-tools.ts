@@ -17,6 +17,8 @@ import type {
   Course,
   CourseModule,
   CourseOutline,
+  CourseOutlineLesson,
+  CourseOutlineModule,
   CourseSettings,
   CourseTodoItem,
   InterruptResponse,
@@ -268,7 +270,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
 
       const outline = parseOutlineJSON(content)
 
-      ctx.totalLessons.value = outline.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+      ctx.totalLessons.value = outline.modules.reduce((sum: number, m: CourseOutlineModule) => sum + m.lessons.length, 0)
 
       ctx.emitEvent({ type: 'progress', data: {
         courseId: ctx.courseId,
@@ -327,12 +329,12 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
 
       if (response.decision === 'approve') {
         ctx.approvedOutline.value = outline
-        ctx.totalLessons.value = outline.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+        ctx.totalLessons.value = outline.modules.reduce((sum: number, m: CourseOutlineModule) => sum + m.lessons.length, 0)
         return `Outline APPROVED. ${outline.modules.length} modules, ${ctx.totalLessons.value} lessons. Proceed with content generation.`
       } else if (response.decision === 'edit' && response.editedArgs?.outline) {
         const edited = response.editedArgs.outline as CourseOutline
         ctx.approvedOutline.value = edited
-        ctx.totalLessons.value = edited.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+        ctx.totalLessons.value = edited.modules.reduce((sum: number, m: CourseOutlineModule) => sum + m.lessons.length, 0)
         return `Outline EDITED. ${edited.modules.length} modules, ${ctx.totalLessons.value} lessons. Proceed with content generation.`
       } else {
         return `Outline REJECTED. Feedback: ${response.message ?? 'No feedback provided'}. Regenerate outline.`
@@ -359,7 +361,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
       const outline = ctx.approvedOutline.value
       if (!outline) return 'No approved outline. Generate and approve first.'
 
-      const modules: CourseModule[] = outline.modules.map(mod => ({
+      const modules: CourseModule[] = outline.modules.map((mod: CourseOutlineModule) => ({
         id: mod.id,
         courseId: ctx.courseId,
         title: mod.title,
@@ -367,7 +369,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
         order: mod.order,
         status: 'available' as const,
         progress: 0,
-        lessons: mod.lessons.map(les => ({
+        lessons: mod.lessons.map((les: CourseOutlineLesson) => ({
           id: les.id,
           moduleId: mod.id,
           title: les.title,
@@ -419,7 +421,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
       const outline = ctx.approvedOutline.value
       if (!outline) return 'No approved outline. Generate and approve first.'
 
-      const modules: CourseModule[] = outline.modules.map(mod => ({
+      const modules: CourseModule[] = outline.modules.map((mod: CourseOutlineModule) => ({
         id: mod.id,
         courseId: ctx.courseId,
         title: mod.title,
@@ -427,7 +429,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
         order: mod.order,
         status: 'available' as const,
         progress: 0,
-        lessons: mod.lessons.map(les => ({
+        lessons: mod.lessons.map((les: CourseOutlineLesson) => ({
           id: les.id,
           moduleId: mod.id,
           title: les.title,
@@ -453,7 +455,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
 
       ctx.assembledCourse.value = course
 
-      const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0)
+      const totalLessons = modules.reduce((sum: number, m: CourseModule) => sum + m.lessons.length, 0)
 
       ctx.emitEvent({ type: 'progress', data: {
         courseId: ctx.courseId,
@@ -621,10 +623,10 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
         const { queryRAG } = await import('./research/rag-indexer')
 
         // Filter lessons that are NOT quiz and NOT slides
-        const allLessons = outline.modules.flatMap(mod =>
+        const allLessons = outline.modules.flatMap((mod: CourseOutlineModule) =>
           mod.lessons
-            .filter(les => les.type !== 'quiz' && les.type !== 'slides')
-            .map(les => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
+            .filter((les: CourseOutlineLesson) => les.type !== 'quiz' && les.type !== 'slides')
+            .map((les: CourseOutlineLesson) => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
         )
 
         if (allLessons.length === 0) return 'No lecture/video/practice lessons found in outline.'
@@ -771,10 +773,10 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
         const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
         const { queryRAG } = await import('./research/rag-indexer')
 
-        const quizLessons = outline.modules.flatMap(mod =>
+        const quizLessons = outline.modules.flatMap((mod: CourseOutlineModule) =>
           mod.lessons
-            .filter(les => les.type === 'quiz')
-            .map(les => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
+            .filter((les: CourseOutlineLesson) => les.type === 'quiz')
+            .map((les: CourseOutlineLesson) => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
         )
 
         if (quizLessons.length === 0) return 'No quiz lessons found in outline.'
@@ -920,10 +922,10 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
         const { queryRAG } = await import('./research/rag-indexer')
         const { generateSlidesWithModel } = await import('./slide-generator')
 
-        const slideLessons = outline.modules.flatMap(mod =>
+        const slideLessons = outline.modules.flatMap((mod: CourseOutlineModule) =>
           mod.lessons
-            .filter(les => les.type === 'slides')
-            .map(les => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
+            .filter((les: CourseOutlineLesson) => les.type === 'slides')
+            .map((les: CourseOutlineLesson) => ({ ...les, moduleTitle: mod.title, moduleDescription: mod.description })),
         )
 
         if (slideLessons.length === 0) return 'No slide lessons found in outline.'

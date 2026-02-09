@@ -281,7 +281,7 @@ export async function runDeepResearch(
     const prompt = buildResearchPrompt(topic, focusAreas)
     interactionId = await startInteraction(prompt, geminiApiKey, requestTimeoutMs)
   }
-  catch (error) {
+  catch (error: unknown) {
     const message = error instanceof AppError ? error.message : String(error)
     onProgress?.({
       status: 'failed',
@@ -317,7 +317,7 @@ export async function runDeepResearch(
       interaction = await pollInteraction(interactionId, geminiApiKey, requestTimeoutMs)
       consecutivePollErrors = 0
     }
-    catch (error) {
+    catch (error: unknown) {
       const message = error instanceof AppError ? error.message : String(error)
       consecutivePollErrors++
       const timeStr = formatElapsedTime(startTime)

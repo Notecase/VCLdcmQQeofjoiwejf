@@ -8,6 +8,7 @@ import type {
   CourseModule,
   CourseOutline,
   CourseOutlineLesson,
+  CourseOutlineModule,
   LessonContent,
   PracticeProblem,
   SlideData,
@@ -29,8 +30,8 @@ export function parseOutlineJSON(text: string): CourseOutline {
   const usedModuleIds = new Set<string>()
   const usedLessonIds = new Set<string>()
 
-  const normalizedModules = parsed.modules.map((module, moduleIndex) => {
-    const normalizedLessons = module.lessons.map((lesson, lessonIndex) => ({
+  const normalizedModules = parsed.modules.map((module: CourseOutlineModule, moduleIndex: number) => {
+    const normalizedLessons = module.lessons.map((lesson: CourseOutlineLesson, lessonIndex: number) => ({
       ...lesson,
       id: normalizeUniqueUUID(lesson.id, usedLessonIds),
       order: normalizePositiveOrder(lesson.order, lessonIndex + 1),

@@ -696,7 +696,7 @@ export class MemoryService {
         `(###\\s*\\[${planId}\\][\\s\\S]*?-\\s*Progress:\\s*)(\\d+)(\\/\\d+)`,
         'i',
       )
-      content = content.replace(progressPattern, (_, prefix, current, total) => {
+      content = content.replace(progressPattern, (_: string, prefix: string, current: string, total: string) => {
         return `${prefix}${parseInt(current, 10) + count}${total}`
       })
     }
@@ -783,7 +783,7 @@ export class MemoryService {
         // Check if this day matches the plan's schedule
         const schedDays = plan.schedule.studyDays
         const isStudyDay = schedDays.includes('Daily')
-          || schedDays.some(d => d.toLowerCase().startsWith(dayName.toLowerCase().slice(0, 2)))
+          || schedDays.some((d: string) => d.toLowerCase().startsWith(dayName.toLowerCase().slice(0, 2)))
 
         if (isStudyDay) {
           entries.push(`${plan.id} - ${plan.currentTopic || plan.name}`)

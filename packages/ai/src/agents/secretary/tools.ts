@@ -7,6 +7,7 @@
 
 import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
+import type { LearningRoadmap, RoadmapCandidate } from '@inkdown/shared/types'
 import {
   parsePlanMarkdown,
   renderPlanEntryMarkdown,
@@ -291,7 +292,7 @@ export function createSecretaryTools(
       // Update Plan.md with the new entry
       const planFile = await memoryService.readFile('Plan.md')
       const currentContent = planFile?.content || ''
-      const updatedContent = insertPlanEntry(currentContent, planMdEntry)
+      const updatedContent = insertPlanEntry(currentContent, planMdEntry ?? '')
       await memoryService.writeFile('Plan.md', updatedContent)
 
       // Clear pending roadmap
@@ -321,20 +322,20 @@ export function createSecretaryTools(
       }
 
       let selected = roadmapId
-        ? candidates.find(c => c.id.toLowerCase() === roadmapId.toLowerCase())
+        ? candidates.find((c: ParsedRoadmapCandidate) => c.id.toLowerCase() === roadmapId.toLowerCase())
         : undefined
 
       if (!selected && candidates.length === 1) {
         selected = candidates[0]
       }
       if (!selected) {
-        return `Multiple roadmap candidates found. Specify roadmapId. Candidates: ${candidates.map(c => `[${c.id}] ${c.name}`).join(', ')}`
+        return `Multiple roadmap candidates found. Specify roadmapId. Candidates: ${candidates.map((c: ParsedRoadmapCandidate) => `[${c.id}] ${c.name}`).join(', ')}`
       }
 
       const planFile = await memoryService.readFile('Plan.md')
       const planContent = planFile?.content || ''
       const parsed = parsePlanMarkdown(planContent)
-      const alreadyActive = parsed.activePlans.some(p => p.id.toLowerCase() === selected.id.toLowerCase())
+      const alreadyActive = parsed.activePlans.some((p: LearningRoadmap) => p.id.toLowerCase() === selected.id.toLowerCase())
       if (alreadyActive) {
         return `Roadmap [${selected.id}] is already active in Plan.md.`
       }
@@ -363,7 +364,7 @@ export function createSecretaryTools(
       if (!context.activePlans.length) {
         if (context.activationSuggestion.action === 'needs_selection') {
           const candidates = context.activationSuggestion.candidates
-            .map(c => `[${c.id}] ${c.name}`)
+            .map((c: RoadmapCandidate) => `[${c.id}] ${c.name}`)
             .join(', ')
           return `No active plan is currently selected in Plan.md. I found multiple roadmap archives: ${candidates}. Call activate_roadmap with a roadmapId, then retry generate_daily_plan.`
         }
@@ -549,7 +550,7 @@ Output EXACTLY this format (for parsing):
           const escapedTime = escapeRegExp(taskTime)
           const linePattern = new RegExp(`(^- \\[[xX \\->]\\] )${escapedTime}(\\s*\\(\\d+\\s*(?:m|min|mins|minute|minutes)\\).*$)`, 'gmi')
           let updated = 0
-          content = content.replace(linePattern, (_, prefix: string, suffix: string) => {
+          content = content.replace(linePattern, (_match: string, prefix: string, suffix: string) => {
             updated += 1
             return `${prefix}${newTime}${suffix}`
           })
@@ -580,7 +581,7 @@ Output EXACTLY this format (for parsing):
           const escapedTime = escapeRegExp(taskTime)
           const durPattern = new RegExp(`(^- \\[[xX \\->]\\] ${escapedTime}\\s*\\()(\\d+)(\\s*(?:m|min|mins|minute|minutes)\\).*$)`, 'gmi')
           let updated = 0
-          content = content.replace(durPattern, (_, prefix: string, current: string, suffix: string) => {
+          content = content.replace(durPattern, (_match: string, prefix: string, current: string, suffix: string) => {
             updated += 1
             const currentMinutes = parseInt(current, 10)
             const nextMinutes = Number.isFinite(currentMinutes) ? currentMinutes + duration : duration
@@ -599,7 +600,7 @@ Output EXACTLY this format (for parsing):
             'gmi',
           )
           let updated = 0
-          content = content.replace(linePattern, (_, prefix: string, parenOpen: string, currentDur: string, parenClose: string, desc: string) => {
+          content = content.replace(linePattern, (_match: string, prefix: string, parenOpen: string, currentDur: string, parenClose: string, desc: string) => {
             updated += 1
             const finalTime = newTime || taskTime
             const finalDur = duration ?? parseInt(currentDur, 10)
@@ -693,9 +694,9 @@ Output EXACTLY this format (for parsing):
           }
 
           if (insertIdx === -1) {
-            const schedIdx = lines.findIndex(l => /^## Schedule/i.test(l))
+            const schedIdx = lines.findIndex((l: string) => /^## Schedule/i.test(l))
             if (schedIdx >= 0) {
-              const nextSection = lines.findIndex((l, i) => i > schedIdx && /^## /.test(l))
+              const nextSection = lines.findIndex((l: string, i: number) => i > schedIdx && /^## /.test(l))
               insertIdx = nextSection >= 0 ? nextSection : lines.length
             } else {
               insertIdx = lines.length

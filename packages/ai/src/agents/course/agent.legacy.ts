@@ -15,6 +15,7 @@ import type {
   Lesson,
   LessonVideoMatch,
   ResearchProgress,
+  YouTubeVideo,
 } from '@inkdown/shared/types'
 import { runDeepResearch, indexResearchReport, queryRAG } from './research'
 import type { DeepResearchResult, RAGIndex } from './research'
@@ -335,7 +336,7 @@ function createNodes(config: CourseAgentConfig) {
     for (const match of matches) {
       if (!match.selectedVideoId || match.videos.length === 0) continue
 
-      const selectedVideo = match.videos.find(v => v.videoId === match.selectedVideoId)
+      const selectedVideo = match.videos.find((v: YouTubeVideo) => v.videoId === match.selectedVideoId)
       if (!selectedVideo) continue
 
       for (const mod of state.generatedModules) {

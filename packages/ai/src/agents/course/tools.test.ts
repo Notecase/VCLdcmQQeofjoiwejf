@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { CourseOutlineModule, CourseOutlineLesson } from '@inkdown/shared/types'
 import { parseOutlineJSON } from './tools'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -64,8 +65,8 @@ describe('parseOutlineJSON', () => {
       ],
     }))
 
-    const moduleIds = outline.modules.map(m => m.id)
-    const lessonIds = outline.modules.flatMap(m => m.lessons.map(l => l.id))
+    const moduleIds = outline.modules.map((m: CourseOutlineModule) => m.id)
+    const lessonIds = outline.modules.flatMap((m: CourseOutlineModule) => m.lessons.map((l: CourseOutlineLesson) => l.id))
 
     expect(moduleIds.every(isUUID)).toBe(true)
     expect(lessonIds.every(isUUID)).toBe(true)

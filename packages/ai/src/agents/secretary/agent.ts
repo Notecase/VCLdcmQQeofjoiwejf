@@ -6,7 +6,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import type { SecretaryStreamEvent } from '@inkdown/shared/types'
+import type { SecretaryStreamEvent, RoadmapCandidate } from '@inkdown/shared/types'
 import { getTodayDate, getTomorrowDate, getDayOfWeek } from '@inkdown/shared/secretary'
 import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
@@ -228,7 +228,7 @@ export class SecretaryAgent {
       parts.push('\n### Activation Suggestion')
       parts.push(`- ${context.activationSuggestion.reason}`)
       if (context.activationSuggestion.candidates.length > 0) {
-        parts.push(`- Candidates: ${context.activationSuggestion.candidates.map(c => `[${c.id}] ${c.name}`).join(', ')}`)
+        parts.push(`- Candidates: ${context.activationSuggestion.candidates.map((c: RoadmapCandidate) => `[${c.id}] ${c.name}`).join(', ')}`)
       }
     }
 

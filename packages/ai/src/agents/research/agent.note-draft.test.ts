@@ -144,7 +144,7 @@ describe('ResearchAgent note draft mode', () => {
   })
 
   it('falls back to GPT-5.2 artifact generation when Ollama fails', async () => {
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
+    ollamaGenerateArtifactMock.mockImplementation(async () => {
       throw new Error('ollama unavailable')
     })
 
@@ -184,7 +184,7 @@ describe('ResearchAgent note draft mode', () => {
   })
 
   it('emits an artifact error and skips artifact block when primary and fallback generation both fail', async () => {
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
+    ollamaGenerateArtifactMock.mockImplementation(async () => {
       throw new Error('ollama unavailable')
     })
 

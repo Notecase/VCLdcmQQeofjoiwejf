@@ -2,7 +2,7 @@
 import BaseModal from '@/components/ai/modals/BaseModal.vue'
 import { AlertTriangle } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   title: string
   message: string
   confirmLabel?: string

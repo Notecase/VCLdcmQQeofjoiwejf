@@ -231,7 +231,10 @@ course.get('/generate/:threadId/stream', async (c) => {
     })
   }
 
-  const entry = orchestratorRegistry.get(threadId)!
+  const entry = orchestratorRegistry.get(threadId)
+  if (!entry) {
+    return c.json({ error: 'Orchestrator not found' }, 500)
+  }
 
   if (entry.streaming) {
     return c.json({ error: 'Generation already streaming on another connection' }, 409)

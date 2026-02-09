@@ -48,12 +48,12 @@ export function buildSrcDoc(content: ArtifactContent): string {
     '  <meta charset="UTF-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '  <!-- Tailwind CSS CDN -->',
-    '  <script src="https://cdn.tailwindcss.com"><\/script>',
+    '  <script src="https://cdn.tailwindcss.com"></script>',
     '  <!-- React and ReactDOM CDN -->',
-    '  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>',
-    '  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>',
+    '  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>',
+    '  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>',
     '  <!-- Babel for JSX transformation -->',
-    '  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>',
+    '  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>',
     '  <style>',
     '    /* Base reset */',
     '    *, *::before, *::after {',
@@ -96,7 +96,7 @@ export function buildSrcDoc(content: ArtifactContent): string {
       "      errorDiv.textContent = 'JavaScript Error: ' + error.message;",
       '      document.body.appendChild(errorDiv);',
       '    }',
-      '  <\/script>'
+      '  </script>'
     )
   }
 

@@ -297,7 +297,6 @@ function insertArtifactBlock(artifact: PendingArtifact) {
   if (!muya?.editor?.scrollPage) return
 
   const scrollPage = muya.editor.scrollPage
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ScrollPageClass = (scrollPage as any).constructor
 
   // Create artifact state with JSON-serialized content

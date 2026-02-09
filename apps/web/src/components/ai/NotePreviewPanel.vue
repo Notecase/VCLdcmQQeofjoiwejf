@@ -108,7 +108,7 @@ const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs, isDiffInjecting } = useDi
  * Calculate word count from markdown content
  */
 function calculateWordCount(markdown: string) {
-  const text = markdown.replace(/[#*`~\[\]()>_-]/g, ' ').trim()
+  const text = markdown.replace(/[#*`~[\]()>_-]/g, ' ').trim()
   const words = text.split(/\s+/).filter((w) => w.length > 0).length
   const characters = text.replace(/\s/g, '').length
   const paragraphs = markdown.split(/\n\n+/).filter((p) => p.trim().length > 0).length

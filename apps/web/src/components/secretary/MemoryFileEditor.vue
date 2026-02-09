@@ -39,6 +39,11 @@ function close() {
   store.selectedFilename = null
 }
 
+function discardAndClose() {
+  showUnsavedConfirm.value = false
+  close()
+}
+
 function requestClose() {
   if (isDirty.value) {
     showUnsavedConfirm.value = true
@@ -150,10 +155,7 @@ onUnmounted(() => {
       message="You have unsaved changes. Close anyway?"
       confirm-label="Discard"
       variant="danger"
-      @confirm="
-        showUnsavedConfirm = false
-        close()
-      "
+      @confirm="discardAndClose"
       @cancel="showUnsavedConfirm = false"
     />
   </div>

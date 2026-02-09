@@ -20,7 +20,13 @@ import type {
   LessonContent,
 } from '@inkdown/shared/types'
 import type { RAGIndex } from './research'
-import { createOrchestratorTools, createLessonWriterTools, createQuizWriterTools, createSlidesWriterTools, type CourseToolContext } from './course-tools'
+import {
+  createOrchestratorTools,
+  createLessonWriterTools,
+  createQuizWriterTools,
+  createSlidesWriterTools,
+  type CourseToolContext,
+} from './course-tools'
 
 // =============================================================================
 // AsyncEventQueue — resolves immediately when events arrive from any source
@@ -59,7 +65,9 @@ class AsyncEventQueue<T> {
       } else if (this.done) {
         return
       } else {
-        const item = await new Promise<T>((resolve) => { this.waiter = resolve })
+        const item = await new Promise<T>((resolve) => {
+          this.waiter = resolve
+        })
         if (this.done && this.queue.length === 0) return
         // Only yield real items (not the dummy from finish())
         if (item !== undefined) yield item
@@ -185,7 +193,10 @@ export class CourseOrchestrator {
     const eventQueue = new AsyncEventQueue<CourseOrchestratorStreamEvent>()
 
     // Emit initial events
-    eventQueue.push({ event: 'thinking', data: `Starting course generation for "${input.topic}"...` })
+    eventQueue.push({
+      event: 'thinking',
+      data: `Starting course generation for "${input.topic}"...`,
+    })
     eventQueue.push({
       event: 'progress',
       data: {
@@ -267,8 +278,16 @@ export class CourseOrchestrator {
     }
 
     const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
-    const geminiFlash = new ChatGoogleGenerativeAI({ model: 'gemini-3-flash-preview', apiKey: this.config.geminiApiKey, temperature: 0.7 })
-    const geminiPro = new ChatGoogleGenerativeAI({ model: 'gemini-3-pro-preview', apiKey: this.config.geminiApiKey, temperature: 0.7 })
+    const geminiFlash = new ChatGoogleGenerativeAI({
+      model: 'gemini-3-flash-preview',
+      apiKey: this.config.geminiApiKey,
+      temperature: 0.7,
+    })
+    const geminiPro = new ChatGoogleGenerativeAI({
+      model: 'gemini-3-pro-preview',
+      apiKey: this.config.geminiApiKey,
+      temperature: 0.7,
+    })
 
     const orchestratorTools = createOrchestratorTools(toolContext)
 
@@ -279,21 +298,24 @@ export class CourseOrchestrator {
       subagents: [
         {
           name: 'lesson-writer',
-          description: 'Generates all lecture, video, and practice lesson content in a single batch call. Delegate to this subagent after outline approval.',
+          description:
+            'Generates all lecture, video, and practice lesson content in a single batch call. Delegate to this subagent after outline approval.',
           systemPrompt: LESSON_WRITER_SUBAGENT_PROMPT,
           tools: createLessonWriterTools(toolContext) as any,
           model: geminiFlash,
         },
         {
           name: 'quiz-writer',
-          description: 'Generates all quiz content in a single batch call. Delegate to this subagent after lesson-writer completes.',
+          description:
+            'Generates all quiz content in a single batch call. Delegate to this subagent after lesson-writer completes.',
           systemPrompt: QUIZ_WRITER_SUBAGENT_PROMPT,
           tools: createQuizWriterTools(toolContext) as any,
           model: geminiFlash,
         },
         {
           name: 'slides-writer',
-          description: 'Generates all slide decks in a single batch call using higher-quality gemini-3-pro-preview. Delegate to this subagent after quiz-writer completes.',
+          description:
+            'Generates all slide decks in a single batch call using higher-quality gemini-3-pro-preview. Delegate to this subagent after quiz-writer completes.',
           systemPrompt: SLIDES_WRITER_SUBAGENT_PROMPT,
           tools: createSlidesWriterTools(toolContext) as any,
           model: geminiPro,
@@ -313,7 +335,12 @@ Please proceed through the full pipeline: research → index → outline → app
     let currentStage: GenerationStageType = 'research'
     const originalEmit = toolContext.emitEvent
     toolContext.emitEvent = (event) => {
-      if (event.type === 'progress' && event.data && typeof event.data === 'object' && 'stage' in event.data) {
+      if (
+        event.type === 'progress' &&
+        event.data &&
+        typeof event.data === 'object' &&
+        'stage' in event.data
+      ) {
         currentStage = (event.data as { stage: GenerationStageType }).stage
       }
       originalEmit(event)
@@ -323,10 +350,10 @@ Please proceed through the full pipeline: research → index → outline → app
     const agentTask = (async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const streamResult = await (agent as any).stream(
+        const streamResult = (await (agent as any).stream(
           { messages: [{ role: 'user', content: userMessage }] },
-          { configurable: { thread_id: input.courseId } },
-        ) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+          { configurable: { thread_id: input.courseId } }
+        )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
 
         const seenSubagents = new Set<string>()
 
@@ -374,17 +401,19 @@ Please proceed through the full pipeline: research → index → outline → app
                   })
                 }
 
-                const textContent = typeof msgObj.content === 'string'
-                  ? msgObj.content
-                  : Array.isArray(msgObj.content)
+                const textContent =
+                  typeof msgObj.content === 'string'
                     ? msgObj.content
-                      .map((part) => {
-                        if (typeof part === 'string') return part
-                        if (part && typeof part === 'object' && 'text' in (part as any)) return (part as any).text
-                        return ''
-                      })
-                      .join('')
-                    : ''
+                    : Array.isArray(msgObj.content)
+                      ? msgObj.content
+                          .map((part) => {
+                            if (typeof part === 'string') return part
+                            if (part && typeof part === 'object' && 'text' in (part as any))
+                              return (part as any).text
+                            return ''
+                          })
+                          .join('')
+                      : ''
 
                 if (textContent) {
                   eventQueue.push({ event: 'text', data: textContent })

@@ -20,6 +20,7 @@ Systematic debugging workflow for investigating and resolving logic mismatches, 
 ### Phase 1: Characterize the Mismatch
 
 **Questions to answer:**
+
 1. What is the expected behavior?
 2. What is the actual behavior?
 3. Where does the mismatch occur? (file, function, line)
@@ -27,6 +28,7 @@ Systematic debugging workflow for investigating and resolving logic mismatches, 
 5. What changed recently?
 
 **Gather evidence:**
+
 ```bash
 # Check recent commits
 git log --oneline -20
@@ -41,6 +43,7 @@ git log --oneline -10 -- "**/*.d.ts" "**/types/**"
 ### Phase 2: Isolate the Problem
 
 **Type Mismatch Debugging:**
+
 ```
 1. Run type-sync-checker agent
 2. Look for duplicate type definitions
@@ -52,6 +55,7 @@ git log --oneline -10 -- "**/*.d.ts" "**/types/**"
 ```
 
 **Logic Mismatch Debugging:**
+
 ```
 1. Add logging at key points
 2. Trace data flow from source to error
@@ -63,6 +67,7 @@ git log --oneline -10 -- "**/*.d.ts" "**/types/**"
 ```
 
 **Build Mismatch Debugging:**
+
 ```
 1. Run build-validator agent
 2. Check for stale builds
@@ -74,27 +79,35 @@ git log --oneline -10 -- "**/*.d.ts" "**/types/**"
 ### Phase 3: Common Mismatch Patterns
 
 #### Pattern A: Duplicate Type Definitions
+
 **Symptom:** Type works in one file, fails in another
 **Diagnosis:**
+
 ```
 Grep: "interface [TypeName]" or "type [TypeName] ="
 Check if multiple definitions exist
 ```
+
 **Solution:** Consolidate to @inkdown/shared/types
 
 #### Pattern B: Import Path Confusion
+
 **Symptom:** Module not found or wrong module loaded
 **Diagnosis:**
+
 ```
 Check tsconfig paths
 Check package.json exports
 Verify node_modules symlinks (pnpm)
 ```
+
 **Solution:** Use correct import path from package exports
 
 #### Pattern C: Stale Build Artifacts
+
 **Symptom:** Changes not reflected at runtime
 **Diagnosis:**
+
 ```bash
 # Check if dist is newer than src
 ls -la packages/shared/dist/
@@ -103,25 +116,32 @@ ls -la packages/shared/src/
 # Force rebuild
 pnpm clean && pnpm build
 ```
+
 **Solution:** Clean rebuild
 
 #### Pattern D: Circular Import
+
 **Symptom:** Undefined at runtime, works in tests
 **Diagnosis:**
+
 ```bash
 # Check for circular deps
 pnpm why @inkdown/shared
 ```
+
 **Solution:** Refactor to break cycle
 
 #### Pattern E: Version Mismatch
+
 **Symptom:** Works locally, fails in other environment
 **Diagnosis:**
+
 ```
 Run version-validator agent
 Check .nvmrc matches local Node
 Check pnpm-lock.yaml is committed
 ```
+
 **Solution:** Sync versions and lockfile
 
 ### Phase 4: Resolution Workflow
@@ -138,6 +158,7 @@ Check pnpm-lock.yaml is committed
 ### Phase 5: Prevention
 
 After fixing, consider:
+
 - Should this be caught by a hook?
 - Is there a missing guardrail?
 - Should type be consolidated?
@@ -170,17 +191,22 @@ After debugging, document:
 ## Mismatch Report
 
 ### Problem
+
 [Description of the mismatch]
 
 ### Root Cause
+
 [What caused the issue]
 
 ### Pattern
+
 [Which common pattern this matches]
 
 ### Solution
+
 [How it was fixed]
 
 ### Prevention
+
 [How to prevent recurrence]
 ```

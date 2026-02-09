@@ -23,7 +23,10 @@ const selectedPlan = ref<LearningRoadmap | null>(null)
           <span class="plan-badge">{{ plan.id }}</span>
           <span class="plan-name">{{ plan.name }}</span>
         </div>
-        <div v-if="plan.currentTopic" class="plan-topic">
+        <div
+          v-if="plan.currentTopic"
+          class="plan-topic"
+        >
           <BookOpen :size="12" />
           {{ plan.currentTopic }}
         </div>
@@ -35,12 +38,17 @@ const selectedPlan = ref<LearningRoadmap | null>(null)
             />
           </div>
           <span class="progress-text">
-            {{ plan.progress.currentDay }}/{{ plan.progress.totalDays }} days ({{ plan.progress.percentComplete }}%)
+            {{ plan.progress.currentDay }}/{{ plan.progress.totalDays }} days ({{
+              plan.progress.percentComplete
+            }}%)
           </span>
         </div>
-        <div v-if="plan.dateRange.start" class="plan-dates">
-          {{ plan.dateRange.start }} &mdash; {{ plan.dateRange.end }}
-          &middot; {{ plan.schedule.hoursPerDay }}h/day
+        <div
+          v-if="plan.dateRange.start"
+          class="plan-dates"
+        >
+          {{ plan.dateRange.start }} &mdash; {{ plan.dateRange.end }} &middot;
+          {{ plan.schedule.hoursPerDay }}h/day
         </div>
         <span class="view-link">View Details</span>
       </div>
@@ -141,7 +149,11 @@ const selectedPlan = ref<LearningRoadmap | null>(null)
 .progress-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--sec-primary, #10b981), var(--sec-primary-light, #34d399));
+  background: linear-gradient(
+    90deg,
+    var(--sec-primary, #10b981),
+    var(--sec-primary-light, #34d399)
+  );
   transition: width 0.3s ease;
 }
 

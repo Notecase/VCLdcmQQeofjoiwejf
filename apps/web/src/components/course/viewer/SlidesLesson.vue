@@ -39,20 +39,38 @@ function goToSlide(idx: number) {
       {{ lesson.title }}
     </h2>
 
-    <div v-if="slides.length > 0" class="slides-viewer">
+    <div
+      v-if="slides.length > 0"
+      class="slides-viewer"
+    >
       <!-- Current Slide -->
       <div class="slide-display">
-        <div v-if="currentSlideData" class="slide-content">
+        <div
+          v-if="currentSlideData"
+          class="slide-content"
+        >
           <h3 class="slide-title">{{ currentSlideData.title }}</h3>
-          <p v-if="currentSlideData.subtitle" class="slide-subtitle">
+          <p
+            v-if="currentSlideData.subtitle"
+            class="slide-subtitle"
+          >
             {{ currentSlideData.subtitle }}
           </p>
-          <ul v-if="currentSlideData.bullets?.length" class="slide-bullets">
-            <li v-for="(bullet, idx) in currentSlideData.bullets" :key="idx">
+          <ul
+            v-if="currentSlideData.bullets?.length"
+            class="slide-bullets"
+          >
+            <li
+              v-for="(bullet, idx) in currentSlideData.bullets"
+              :key="idx"
+            >
               {{ bullet }}
             </li>
           </ul>
-          <div v-if="currentSlideData.visual" class="slide-visual">
+          <div
+            v-if="currentSlideData.visual"
+            class="slide-visual"
+          >
             {{ currentSlideData.visual }}
           </div>
         </div>
@@ -92,19 +110,37 @@ function goToSlide(idx: number) {
       </div>
 
       <!-- Speaker Notes -->
-      <div v-if="currentSlideData?.notes" class="notes-section">
-        <button class="notes-toggle" @click="showNotes = !showNotes">
+      <div
+        v-if="currentSlideData?.notes"
+        class="notes-section"
+      >
+        <button
+          class="notes-toggle"
+          @click="showNotes = !showNotes"
+        >
           <span>Speaker Notes</span>
-          <ChevronUp v-if="showNotes" :size="14" />
-          <ChevronDown v-else :size="14" />
+          <ChevronUp
+            v-if="showNotes"
+            :size="14"
+          />
+          <ChevronDown
+            v-else
+            :size="14"
+          />
         </button>
-        <div v-if="showNotes" class="notes-text">
+        <div
+          v-if="showNotes"
+          class="notes-text"
+        >
           {{ currentSlideData.notes }}
         </div>
       </div>
     </div>
 
-    <div v-else class="no-slides">
+    <div
+      v-else
+      class="no-slides"
+    >
       <Presentation :size="40" />
       <p>No slides available for this lesson</p>
     </div>

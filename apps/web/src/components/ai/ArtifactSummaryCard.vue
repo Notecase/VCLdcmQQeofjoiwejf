@@ -9,14 +9,7 @@
  * - Styled consistently with ToolCallCard
  */
 import { ref } from 'vue'
-import {
-  ChevronDown,
-  Box,
-  ExternalLink,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-} from 'lucide-vue-next'
+import { ChevronDown, Box, ExternalLink, Pencil, Trash2, CheckCircle2 } from 'lucide-vue-next'
 
 defineProps<{
   title: string
@@ -50,31 +43,63 @@ function handleDeleteArtifact() {
 </script>
 
 <template>
-  <div class="artifact-card" :class="{ expanded }">
-    <button class="artifact-header" type="button" @click="toggle">
+  <div
+    class="artifact-card"
+    :class="{ expanded }"
+  >
+    <button
+      class="artifact-header"
+      type="button"
+      @click="toggle"
+    >
       <div class="artifact-info">
-        <Box :size="14" class="artifact-icon" />
+        <Box
+          :size="14"
+          class="artifact-icon"
+        />
         <span class="artifact-title">{{ title }}</span>
         <span class="created-label">created</span>
       </div>
       <div class="artifact-status">
-        <CheckCircle2 :size="12" class="success-icon" />
-        <ChevronDown :size="14" class="chevron" :class="{ rotated: !expanded }" />
+        <CheckCircle2
+          :size="12"
+          class="success-icon"
+        />
+        <ChevronDown
+          :size="14"
+          class="chevron"
+          :class="{ rotated: !expanded }"
+        />
       </div>
     </button>
 
     <Transition name="collapse">
-      <div v-if="expanded" class="artifact-body">
+      <div
+        v-if="expanded"
+        class="artifact-body"
+      >
         <div class="artifact-actions">
-          <button class="action-btn" type="button" @click="handleScrollToArtifact">
+          <button
+            class="action-btn"
+            type="button"
+            @click="handleScrollToArtifact"
+          >
             <ExternalLink :size="12" />
             <span>View in note</span>
           </button>
-          <button class="action-btn" type="button" @click="handleEditArtifact">
+          <button
+            class="action-btn"
+            type="button"
+            @click="handleEditArtifact"
+          >
             <Pencil :size="12" />
             <span>Edit code</span>
           </button>
-          <button class="action-btn delete" type="button" @click="handleDeleteArtifact">
+          <button
+            class="action-btn delete"
+            type="button"
+            @click="handleDeleteArtifact"
+          >
             <Trash2 :size="12" />
             <span>Delete</span>
           </button>

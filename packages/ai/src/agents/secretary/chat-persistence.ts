@@ -29,7 +29,9 @@ export class ChatPersistenceService {
    * Resolve a thread by either public thread_id or internal DB id.
    * This keeps the API resilient if older clients pass the internal id.
    */
-  private async resolveThread(threadIdentifier: string): Promise<{ id: string; threadId: string } | null> {
+  private async resolveThread(
+    threadIdentifier: string
+  ): Promise<{ id: string; threadId: string } | null> {
     const byThreadId = await this.supabase
       .from('secretary_threads')
       .select('id, thread_id')
@@ -74,14 +76,24 @@ export class ChatPersistenceService {
       throw new AppError(
         `Failed to create thread: ${error?.message ?? 'unknown'}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not create chat thread',
+        'Could not create chat thread'
       )
     }
 
     return { id: data.id, threadId: data.thread_id }
   }
 
-  async getThreads(userId: string): Promise<Array<{ id: string; threadId: string; title: string | null; createdAt: string; updatedAt: string }>> {
+  async getThreads(
+    userId: string
+  ): Promise<
+    Array<{
+      id: string
+      threadId: string
+      title: string | null
+      createdAt: string
+      updatedAt: string
+    }>
+  > {
     const { data, error } = await this.supabase
       .from('secretary_threads')
       .select('id, thread_id, title, created_at, updated_at')
@@ -92,11 +104,11 @@ export class ChatPersistenceService {
       throw new AppError(
         `Failed to fetch threads: ${error.message}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not load chat threads',
+        'Could not load chat threads'
       )
     }
 
-    return (data as ThreadRow[]).map(row => ({
+    return (data as ThreadRow[]).map((row) => ({
       id: row.id,
       threadId: row.thread_id,
       title: row.title,
@@ -105,13 +117,25 @@ export class ChatPersistenceService {
     }))
   }
 
-  async getMessages(threadId: string): Promise<Array<{ id: string; role: string; content: string; toolCalls: unknown | null; thinkingSteps: unknown | null; model: string | null; createdAt: string }>> {
+  async getMessages(
+    threadId: string
+  ): Promise<
+    Array<{
+      id: string
+      role: string
+      content: string
+      toolCalls: unknown | null
+      thinkingSteps: unknown | null
+      model: string | null
+      createdAt: string
+    }>
+  > {
     const thread = await this.resolveThread(threadId)
     if (!thread) {
       throw new AppError(
         `Thread not found: ${threadId}`,
         ErrorCode.DB_NOT_FOUND,
-        'Chat thread not found',
+        'Chat thread not found'
       )
     }
 
@@ -125,11 +149,11 @@ export class ChatPersistenceService {
       throw new AppError(
         `Failed to fetch messages: ${error.message}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not load chat messages',
+        'Could not load chat messages'
       )
     }
 
-    return (data as MessageRow[]).map(row => ({
+    return (data as MessageRow[]).map((row) => ({
       id: row.id,
       role: row.role,
       content: row.content,
@@ -143,14 +167,20 @@ export class ChatPersistenceService {
   async saveMessage(
     threadId: string,
     userId: string,
-    msg: { role: string; content: string; toolCalls?: unknown; thinkingSteps?: unknown; model?: string },
+    msg: {
+      role: string
+      content: string
+      toolCalls?: unknown
+      thinkingSteps?: unknown
+      model?: string
+    }
   ): Promise<{ id: string }> {
     const thread = await this.resolveThread(threadId)
     if (!thread) {
       throw new AppError(
         `Thread not found: ${threadId}`,
         ErrorCode.DB_NOT_FOUND,
-        'Chat thread not found',
+        'Chat thread not found'
       )
     }
 
@@ -172,7 +202,7 @@ export class ChatPersistenceService {
       throw new AppError(
         `Failed to save message: ${error?.message ?? 'unknown'}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not save chat message',
+        'Could not save chat message'
       )
     }
 
@@ -191,20 +221,17 @@ export class ChatPersistenceService {
       throw new AppError(
         `Thread not found: ${threadId}`,
         ErrorCode.DB_NOT_FOUND,
-        'Chat thread not found',
+        'Chat thread not found'
       )
     }
 
-    const { error } = await this.supabase
-      .from('secretary_threads')
-      .delete()
-      .eq('id', thread.id)
+    const { error } = await this.supabase.from('secretary_threads').delete().eq('id', thread.id)
 
     if (error) {
       throw new AppError(
         `Failed to delete thread: ${error.message}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not delete chat thread',
+        'Could not delete chat thread'
       )
     }
   }
@@ -215,7 +242,7 @@ export class ChatPersistenceService {
       throw new AppError(
         `Thread not found: ${threadId}`,
         ErrorCode.DB_NOT_FOUND,
-        'Chat thread not found',
+        'Chat thread not found'
       )
     }
 
@@ -228,7 +255,7 @@ export class ChatPersistenceService {
       throw new AppError(
         `Failed to update thread title: ${error.message}`,
         ErrorCode.DB_QUERY_FAILED,
-        'Could not update thread title',
+        'Could not update thread title'
       )
     }
   }

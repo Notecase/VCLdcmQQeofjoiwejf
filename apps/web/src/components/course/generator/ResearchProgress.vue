@@ -10,17 +10,23 @@ const props = defineProps<{
 
 const statusLabel = computed(() => {
   switch (props.progress.status) {
-    case 'starting': return 'Starting research...'
-    case 'researching': return 'Researching sources...'
-    case 'writing': return 'Writing report...'
-    case 'complete': return 'Research complete'
-    case 'failed': return 'Research failed'
-    default: return 'Researching...'
+    case 'starting':
+      return 'Starting research...'
+    case 'researching':
+      return 'Researching sources...'
+    case 'writing':
+      return 'Writing report...'
+    case 'complete':
+      return 'Research complete'
+    case 'failed':
+      return 'Research failed'
+    default:
+      return 'Researching...'
   }
 })
 
-const isActive = computed(() =>
-  props.progress.status === 'researching' || props.progress.status === 'writing',
+const isActive = computed(
+  () => props.progress.status === 'researching' || props.progress.status === 'writing'
 )
 </script>
 
@@ -31,13 +37,25 @@ const isActive = computed(() =>
         <Globe :size="16" />
         <span>Deep Research</span>
       </div>
-      <span class="research-status" :class="progress.status">{{ statusLabel }}</span>
+      <span
+        class="research-status"
+        :class="progress.status"
+        >{{ statusLabel }}</span
+      >
     </div>
 
-    <ProgressBar :value="progress.progress" :show-label="true" color="#3b82f6" :height="6" />
+    <ProgressBar
+      :value="progress.progress"
+      :show-label="true"
+      color="#3b82f6"
+      :height="6"
+    />
 
     <!-- Sources -->
-    <div v-if="progress.sources.length > 0" class="source-list">
+    <div
+      v-if="progress.sources.length > 0"
+      class="source-list"
+    >
       <div
         v-for="source in progress.sources"
         :key="source.url"
@@ -45,23 +63,42 @@ const isActive = computed(() =>
         :class="source.status"
       >
         <div class="source-icon">
-          <Loader2 v-if="source.status === 'reading'" :size="12" class="spinning" />
-          <Check v-else-if="source.status === 'done'" :size="12" />
-          <AlertCircle v-else-if="source.status === 'failed'" :size="12" />
-          <Globe v-else :size="12" />
+          <Loader2
+            v-if="source.status === 'reading'"
+            :size="12"
+            class="spinning"
+          />
+          <Check
+            v-else-if="source.status === 'done'"
+            :size="12"
+          />
+          <AlertCircle
+            v-else-if="source.status === 'failed'"
+            :size="12"
+          />
+          <Globe
+            v-else
+            :size="12"
+          />
         </div>
         <span class="source-title">{{ source.title || source.url }}</span>
       </div>
     </div>
 
     <!-- Partial Report -->
-    <div v-if="progress.partialReport && isActive" class="partial-report">
+    <div
+      v-if="progress.partialReport && isActive"
+      class="partial-report"
+    >
       <div class="report-label">Research Notes</div>
       <div class="report-text">{{ progress.partialReport.slice(-400) }}</div>
     </div>
 
     <!-- Thinking -->
-    <div v-if="progress.thinking && isActive" class="thinking-bubble">
+    <div
+      v-if="progress.thinking && isActive"
+      class="thinking-bubble"
+    >
       {{ progress.thinking.slice(-200) }}
     </div>
   </div>
@@ -212,8 +249,12 @@ const isActive = computed(() =>
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

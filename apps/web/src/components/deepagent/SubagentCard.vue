@@ -17,40 +17,84 @@ const expanded = ref(false)
 </script>
 
 <template>
-  <div class="subagent-card" :class="[subagent.status]">
-    <button class="card-header" type="button" @click="expanded = !expanded">
+  <div
+    class="subagent-card"
+    :class="[subagent.status]"
+  >
+    <button
+      class="card-header"
+      type="button"
+      @click="expanded = !expanded"
+    >
       <div class="header-left">
-        <Bot :size="14" class="agent-icon" />
+        <Bot
+          :size="14"
+          class="agent-icon"
+        />
         <span class="agent-name">{{ subagent.name }}</span>
         <span
           class="status-badge"
           :class="[subagent.status]"
         >
-          <Loader2 v-if="subagent.status === 'running'" :size="10" class="spin" />
-          <CheckCircle v-else-if="subagent.status === 'completed'" :size="10" />
-          <XCircle v-else-if="subagent.status === 'error'" :size="10" />
+          <Loader2
+            v-if="subagent.status === 'running'"
+            :size="10"
+            class="spin"
+          />
+          <CheckCircle
+            v-else-if="subagent.status === 'completed'"
+            :size="10"
+          />
+          <XCircle
+            v-else-if="subagent.status === 'error'"
+            :size="10"
+          />
           <span class="badge-text">{{ subagent.status }}</span>
         </span>
       </div>
-      <ChevronDown :size="14" class="chevron" :class="{ collapsed: !expanded }" />
+      <ChevronDown
+        :size="14"
+        class="chevron"
+        :class="{ collapsed: !expanded }"
+      />
     </button>
 
     <Transition name="collapse">
-      <div v-if="expanded" class="card-body">
-        <p v-if="subagent.description" class="agent-description">{{ subagent.description }}</p>
+      <div
+        v-if="expanded"
+        class="card-body"
+      >
+        <p
+          v-if="subagent.description"
+          class="agent-description"
+        >
+          {{ subagent.description }}
+        </p>
 
-        <div v-if="subagent.input" class="section">
+        <div
+          v-if="subagent.input"
+          class="section"
+        >
           <span class="section-label">Input</span>
           <pre class="section-content">{{ subagent.input }}</pre>
         </div>
 
-        <div v-if="subagent.output" class="section">
+        <div
+          v-if="subagent.output"
+          class="section"
+        >
           <span class="section-label">Output</span>
           <pre class="section-content output">{{ subagent.output }}</pre>
         </div>
 
-        <div v-if="subagent.status === 'running' && !subagent.output" class="running-hint">
-          <Loader2 :size="14" class="spin" />
+        <div
+          v-if="subagent.status === 'running' && !subagent.output"
+          class="running-hint"
+        >
+          <Loader2
+            :size="14"
+            class="spin"
+          />
           <span>Agent is working...</span>
         </div>
       </div>

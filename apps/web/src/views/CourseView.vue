@@ -24,22 +24,25 @@ const layoutStore = useLayoutStore()
 const explainStore = useCourseExplainStore()
 
 const contentAreaRef = ref<HTMLElement>()
-const { selectedText } = useTextSelection(contentAreaRef)
+const { selection } = useTextSelection(contentAreaRef)
 
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
 
 // Wire text selection to explain store
-watch(selectedText, (text) => {
-  if (text) explainStore.setHighlightedText(text)
+watch(selection, (sel) => {
+  if (sel) explainStore.setHighlightedText(sel.text, sel.surroundingContext, sel.sectionHeading)
 })
 
 // Clear chat on lesson switch
-watch(() => store.currentLesson?.id, () => {
-  explainStore.clearMessages()
-  explainStore.clearHighlightedText()
-})
+watch(
+  () => store.currentLesson?.id,
+  () => {
+    explainStore.clearMessages()
+    explainStore.clearHighlightedText()
+  }
+)
 
 onMounted(() => {
   const courseId = route.params.id as string
@@ -70,33 +73,58 @@ function capitalize(s: string): string {
 <template>
   <div class="course-view">
     <!-- Top Header -->
-    <header class="course-top-bar" :style="sidebarWidthStyle">
+    <header
+      class="course-top-bar"
+      :style="sidebarWidthStyle"
+    >
       <div class="dock-area">
         <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
       </div>
-      <button class="back-btn" @click="goBack">
+      <button
+        class="back-btn"
+        @click="goBack"
+      >
         <ArrowLeft :size="16" />
         Courses
       </button>
-      <div v-if="store.activeCourse" class="top-bar-info">
+      <div
+        v-if="store.activeCourse"
+        class="top-bar-info"
+      >
         <span class="course-name">{{ store.activeCourse.title }}</span>
         <div class="top-progress">
-          <ProgressBar :value="store.courseProgress" color="#f59e0b" :height="4" />
+          <ProgressBar
+            :value="store.courseProgress"
+            color="#f59e0b"
+            :height="4"
+          />
           <span class="progress-text">{{ store.courseProgress }}%</span>
         </div>
       </div>
     </header>
 
     <!-- Loading -->
-    <div v-if="!store.activeCourse" class="loading-state">
-      <Loader2 :size="24" class="spinning" />
+    <div
+      v-if="!store.activeCourse"
+      class="loading-state"
+    >
+      <Loader2
+        :size="24"
+        class="spinning"
+      />
       <span>Loading course...</span>
     </div>
 
     <!-- Body: Left Sidebar + Content -->
-    <div v-else class="course-body">
+    <div
+      v-else
+      class="course-body"
+    >
       <!-- Left Sidebar: Modules -->
-      <aside v-if="layoutStore.sidebarVisible" class="course-sidebar">
+      <aside
+        v-if="layoutStore.sidebarVisible"
+        class="course-sidebar"
+      >
         <CourseNav
           :modules="store.activeModules"
           :selected-module-index="store.selectedModuleIndex"
@@ -107,13 +135,22 @@ function capitalize(s: string): string {
 
       <!-- Main Content -->
       <div class="course-main">
-        <div ref="contentAreaRef" class="content-scroll">
+        <div
+          ref="contentAreaRef"
+          class="content-scroll"
+        >
           <div class="content-inner">
             <!-- Lesson info bar: type badge + duration | Mark Complete -->
-            <div v-if="store.currentLesson" class="lesson-info-bar">
+            <div
+              v-if="store.currentLesson"
+              class="lesson-info-bar"
+            >
               <div class="lesson-info-left">
                 <span class="lesson-type-badge">
-                  <LessonTypeIcon :type="store.currentLesson.type" :size="13" />
+                  <LessonTypeIcon
+                    :type="store.currentLesson.type"
+                    :size="13"
+                  />
                   {{ capitalize(store.currentLesson.type) }}
                 </span>
                 <span class="lesson-duration">
@@ -129,7 +166,10 @@ function capitalize(s: string): string {
                 <CheckCircle2 :size="14" />
                 Mark Complete
               </button>
-              <span v-else class="completed-badge">
+              <span
+                v-else
+                class="completed-badge"
+              >
                 <CheckCircle2 :size="14" />
                 Completed
               </span>
@@ -139,7 +179,10 @@ function capitalize(s: string): string {
               v-if="store.currentLesson"
               :lesson="store.currentLesson"
             />
-            <div v-else class="no-lesson">
+            <div
+              v-else
+              class="no-lesson"
+            >
               <p>Select a lesson from the sidebar to begin.</p>
             </div>
           </div>
@@ -175,9 +218,9 @@ function capitalize(s: string): string {
 .course-top-bar {
   display: flex;
   align-items: center;
-  height: 52px;
+  height: 56px;
   flex-shrink: 0;
-  padding: 0 20px 0 0;
+  padding: 8px 16px 8px 0;
   gap: 12px;
   background: var(--app-bg, #010409);
 }
@@ -397,8 +440,12 @@ function capitalize(s: string): string {
  * ============================================ */
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

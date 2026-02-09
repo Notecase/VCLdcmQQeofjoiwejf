@@ -7,6 +7,7 @@ This folder contains archived Claude Code plan-mode plans for the Inkdown projec
 Files follow the pattern: `YYYY-MM-DD-<short-kebab-case-topic>.md`
 
 Examples:
+
 - `2026-02-06-add-plan-archive.md`
 - `2026-02-06-secretary-roadmap-daily-sync.md`
 

@@ -17,7 +17,9 @@ function handleSave() {
   if (!noteText.value.trim()) return
   // In a full implementation, this would save to the notes system
   isSaved.value = true
-  setTimeout(() => { isSaved.value = false }, 2000)
+  setTimeout(() => {
+    isSaved.value = false
+  }, 2000)
 }
 </script>
 
@@ -28,7 +30,10 @@ function handleSave() {
         <FileText :size="14" />
         <span>Notes</span>
       </div>
-      <button class="close-btn" @click="emit('close')">
+      <button
+        class="close-btn"
+        @click="emit('close')"
+      >
         <X :size="16" />
       </button>
     </div>

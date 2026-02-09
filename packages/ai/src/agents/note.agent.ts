@@ -328,12 +328,10 @@ export class NoteAgent {
 
     // Final validation - explicit string check with strict null coalescing
     // This is critical because OpenAI SDK throws 400 error if content is null/undefined
-    const validatedSystemPrompt: string = (typeof systemPrompt === 'string' && systemPrompt.trim())
-      ? systemPrompt
-      : ACTION_PROMPTS.update
-    const validatedUserContent: string = (typeof userContent === 'string' && userContent.trim())
-      ? userContent
-      : safeInput
+    const validatedSystemPrompt: string =
+      typeof systemPrompt === 'string' && systemPrompt.trim() ? systemPrompt : ACTION_PROMPTS.update
+    const validatedUserContent: string =
+      typeof userContent === 'string' && userContent.trim() ? userContent : safeInput
 
     if (!validatedSystemPrompt || !validatedUserContent) {
       console.error('[NoteAgent] Content validation failed after fallback:', {
@@ -388,10 +386,11 @@ export class NoteAgent {
       console.log('[NoteAgent.stream] Chunk:', JSON.stringify(chunk).slice(0, 200))
 
       // Try multiple delta paths for GPT-5.2 compatibility
-      const delta = chunk.choices?.[0]?.delta?.content
-        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { content?: string })?.content
+      const delta =
+        chunk.choices?.[0]?.delta?.content ??
+        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
+        (chunk.choices?.[0] as { text?: string })?.text ??
+        (chunk.choices?.[0] as { content?: string })?.content
 
       if (delta) {
         fullContent += delta
@@ -509,10 +508,11 @@ export class NoteAgent {
       console.log('[NoteAgent.streamSurgicalEdit] Chunk:', JSON.stringify(chunk).slice(0, 200))
 
       // Try multiple delta paths for GPT-5.2 compatibility
-      const delta = chunk.choices?.[0]?.delta?.content
-        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { content?: string })?.content
+      const delta =
+        chunk.choices?.[0]?.delta?.content ??
+        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
+        (chunk.choices?.[0] as { text?: string })?.text ??
+        (chunk.choices?.[0] as { content?: string })?.content
 
       if (delta) {
         fullContent += delta
@@ -594,7 +594,6 @@ export class NoteAgent {
 
     const content = await this.generateContent(ACTION_PROMPTS.update, prompt)
     const title = this.extractTitle(content)
-
 
     const updateData: Record<string, string> = { content }
     if (title) updateData.title = title

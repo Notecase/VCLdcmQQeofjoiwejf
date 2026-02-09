@@ -64,10 +64,22 @@ describe('SecretaryStreamNormalizer', () => {
     const normalizer = new SecretaryStreamNormalizer()
 
     const firstCall = normalizer.normalizeToolCalls('agent', {
-      tool_calls: [{ id: 'call_1', name: 'modify_today_plan', args: { action: 'reschedule', taskTime: '10:00', newTime: '11:00' } }],
+      tool_calls: [
+        {
+          id: 'call_1',
+          name: 'modify_today_plan',
+          args: { action: 'reschedule', taskTime: '10:00', newTime: '11:00' },
+        },
+      ],
     })
     const replayWithNewId = normalizer.normalizeToolCalls('agent', {
-      tool_calls: [{ id: 'call_2', name: 'modify_today_plan', args: { action: 'reschedule', taskTime: '10:00', newTime: '11:00' } }],
+      tool_calls: [
+        {
+          id: 'call_2',
+          name: 'modify_today_plan',
+          args: { action: 'reschedule', taskTime: '10:00', newTime: '11:00' },
+        },
+      ],
     })
 
     expect(firstCall).toHaveLength(1)

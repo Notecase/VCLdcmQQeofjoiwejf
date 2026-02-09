@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const store = useSecretaryStore()
 
 const fileContent = computed(() => {
-  const file = store.memoryFiles.find(f => f.filename === props.roadmap.archiveFilename)
+  const file = store.memoryFiles.find((f) => f.filename === props.roadmap.archiveFilename)
   return file?.content || null
 })
 
@@ -24,7 +24,11 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
 </script>
 
 <template>
-  <BaseModal :title="roadmap.name" size="md" @close="emit('close')">
+  <BaseModal
+    :title="roadmap.name"
+    size="md"
+    @close="emit('close')"
+  >
     <template #icon>
       <BookOpen :size="20" />
     </template>
@@ -33,7 +37,10 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
       <!-- Meta row -->
       <div class="meta-row">
         <span class="id-badge">{{ roadmap.id }}</span>
-        <span v-if="roadmap.dateRange.start" class="meta-item">
+        <span
+          v-if="roadmap.dateRange.start"
+          class="meta-item"
+        >
           <Calendar :size="12" />
           {{ roadmap.dateRange.start }} &mdash; {{ roadmap.dateRange.end }}
         </span>
@@ -47,25 +54,41 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
       <div class="progress-section">
         <div class="progress-header">
           <span>Progress</span>
-          <span class="progress-value">{{ roadmap.progress.currentDay }}/{{ roadmap.progress.totalDays }} days ({{ progressPercent }}%)</span>
+          <span class="progress-value"
+            >{{ roadmap.progress.currentDay }}/{{ roadmap.progress.totalDays }} days ({{
+              progressPercent
+            }}%)</span
+          >
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
+          <div
+            class="progress-fill"
+            :style="{ width: `${progressPercent}%` }"
+          />
         </div>
       </div>
 
       <!-- Current topic -->
-      <div v-if="roadmap.currentTopic" class="current-topic">
+      <div
+        v-if="roadmap.currentTopic"
+        class="current-topic"
+      >
         <span class="topic-label">Current Topic:</span>
         <span>{{ roadmap.currentTopic }}</span>
       </div>
 
       <!-- File content -->
-      <div v-if="fileContent" class="file-content">
+      <div
+        v-if="fileContent"
+        class="file-content"
+      >
         <h4>Roadmap Details</h4>
         <pre class="content-block">{{ fileContent }}</pre>
       </div>
-      <p v-else class="no-content">
+      <p
+        v-else
+        class="no-content"
+      >
         No detailed roadmap file found at {{ roadmap.archiveFilename }}.
       </p>
     </div>

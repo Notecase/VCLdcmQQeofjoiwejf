@@ -70,7 +70,11 @@ const hasSelection = computed(() => selectedIds.value.size > 0)
 
 <template>
   <Transition name="dialog">
-    <div v-if="isVisible" class="clarification-overlay" @click.self="handleCancel">
+    <div
+      v-if="isVisible"
+      class="clarification-overlay"
+      @click.self="handleCancel"
+    >
       <div class="clarification-dialog">
         <!-- Header -->
         <div class="dialog-header">
@@ -95,13 +99,20 @@ const hasSelection = computed(() => selectedIds.value.size > 0)
           >
             <div class="option-checkbox">
               <div class="checkbox-inner">
-                <Check v-if="selectedIds.has(option.id)" :size="14" />
+                <Check
+                  v-if="selectedIds.has(option.id)"
+                  :size="14"
+                />
               </div>
             </div>
 
             <div class="option-content">
               <div class="option-header">
-                <component :is="getIcon(option.label)" :size="14" class="option-icon" />
+                <component
+                  :is="getIcon(option.label)"
+                  :size="14"
+                  class="option-icon"
+                />
                 <span class="option-label">{{ option.label }}</span>
                 <span class="option-line">Line {{ option.line }}</span>
               </div>
@@ -112,7 +123,11 @@ const hasSelection = computed(() => selectedIds.value.size > 0)
 
         <!-- Footer -->
         <div class="dialog-footer">
-          <button class="footer-btn cancel" type="button" @click="handleCancel">
+          <button
+            class="footer-btn cancel"
+            type="button"
+            @click="handleCancel"
+          >
             Cancel
           </button>
           <button
@@ -123,7 +138,11 @@ const hasSelection = computed(() => selectedIds.value.size > 0)
             @click="handleConfirm"
           >
             Edit Selected
-            <span v-if="hasSelection" class="selection-count">({{ selectedIds.size }})</span>
+            <span
+              v-if="hasSelection"
+              class="selection-count"
+              >({{ selectedIds.size }})</span
+            >
           </button>
         </div>
       </div>

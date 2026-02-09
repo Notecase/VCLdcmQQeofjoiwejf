@@ -42,7 +42,7 @@ export interface ResearchResult {
 export async function runPlannerSubagent(
   config: SubagentConfig,
   subject: string,
-  options?: { durationDays?: number; hoursPerDay?: number },
+  options?: { durationDays?: number; hoursPerDay?: number }
 ): Promise<RoadmapPreview> {
   const llm = new ChatOpenAI({
     openAIApiKey: config.openaiApiKey,
@@ -83,7 +83,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
 
 export async function runResearcherSubagent(
   config: SubagentConfig,
-  subject: string,
+  subject: string
 ): Promise<ResearchResult> {
   const llm = new ChatOpenAI({
     openAIApiKey: config.openaiApiKey,
@@ -101,12 +101,15 @@ export async function runResearcherSubagent(
 
   // Parse structured sections from the response
   const getSection = (heading: string): string[] => {
-    const pattern = new RegExp(`(?:#{1,3}\\s*)?${heading}[:\\s]*\\n([\\s\\S]*?)(?=\\n#{1,3}\\s|$)`, 'i')
+    const pattern = new RegExp(
+      `(?:#{1,3}\\s*)?${heading}[:\\s]*\\n([\\s\\S]*?)(?=\\n#{1,3}\\s|$)`,
+      'i'
+    )
     const match = content.match(pattern)
     if (!match) return []
     return match[1]
       .split('\n')
-      .map(l => l.replace(/^[-*]\s*/, '').trim())
+      .map((l) => l.replace(/^[-*]\s*/, '').trim())
       .filter(Boolean)
   }
 

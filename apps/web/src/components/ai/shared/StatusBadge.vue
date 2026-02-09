@@ -50,13 +50,20 @@ const statusConfig = computed(() => {
 </script>
 
 <template>
-  <span class="status-badge" :class="statusConfig.class">
+  <span
+    class="status-badge"
+    :class="statusConfig.class"
+  >
     <component
       :is="statusConfig.icon"
       :size="12"
       :class="{ spin: status === 'running' }"
     />
-    <span v-if="showLabel" class="status-label">{{ statusConfig.label }}</span>
+    <span
+      v-if="showLabel"
+      class="status-label"
+      >{{ statusConfig.label }}</span
+    >
   </span>
 </template>
 

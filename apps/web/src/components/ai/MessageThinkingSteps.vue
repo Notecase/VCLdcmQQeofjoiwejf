@@ -39,7 +39,7 @@ const visible = ref(true)
 
 // Get thinking steps for this specific message
 const steps = computed(() => store.getThinkingStepsForMessage(props.messageId))
-const hasRunningStep = computed(() => steps.value.some(s => s.status === 'running'))
+const hasRunningStep = computed(() => steps.value.some((s) => s.status === 'running'))
 const codePreview = computed(() => store.codePreview)
 
 // Show code preview only during this message's processing
@@ -122,7 +122,10 @@ function formatDuration(ms: number | undefined): string {
 
 <template>
   <Transition name="fade-collapse">
-    <div v-if="visible && steps.length > 0" class="message-thinking">
+    <div
+      v-if="visible && steps.length > 0"
+      class="message-thinking"
+    >
       <div
         v-for="(step, index) in steps"
         :key="step.id"
@@ -138,9 +141,16 @@ function formatDuration(ms: number | undefined): string {
             class="connector-dot"
             :style="{ backgroundColor: getStepColor(step.type) }"
           >
-            <Loader2 v-if="step.status === 'running'" :size="6" class="dot-spinner" />
+            <Loader2
+              v-if="step.status === 'running'"
+              :size="6"
+              class="dot-spinner"
+            />
           </div>
-          <div v-if="index < steps.length - 1 || showCodePreview" class="connector-line" />
+          <div
+            v-if="index < steps.length - 1 || showCodePreview"
+            class="connector-line"
+          />
         </div>
 
         <!-- Step content -->
@@ -155,10 +165,17 @@ function formatDuration(ms: number | undefined): string {
             <span class="step-description">{{ step.description }}</span>
           </div>
           <div class="step-meta">
-            <span v-if="step.durationMs" class="step-duration">
+            <span
+              v-if="step.durationMs"
+              class="step-duration"
+            >
               {{ formatDuration(step.durationMs) }}
             </span>
-            <XCircle v-if="step.status === 'error'" :size="12" class="error-icon" />
+            <XCircle
+              v-if="step.status === 'error'"
+              :size="12"
+              class="error-icon"
+            />
             <CheckCircle2
               v-else-if="step.status === 'complete'"
               :size="12"

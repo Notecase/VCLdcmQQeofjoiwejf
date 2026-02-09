@@ -20,7 +20,7 @@ const RESEARCH_API = `${API_BASE}/api/research`
 export async function sendResearchChat(
   message: string,
   threadId?: string,
-  outputPreference?: 'chat' | 'md_file' | 'note',
+  outputPreference?: 'chat' | 'md_file' | 'note'
 ): Promise<Response> {
   return authFetchSSE(`${RESEARCH_API}/chat`, {
     method: 'POST',
@@ -33,7 +33,7 @@ export async function sendResearchChat(
  */
 export async function sendInterruptResponse(
   threadId: string,
-  response: InterruptResponse,
+  response: InterruptResponse
 ): Promise<Response> {
   return authFetch(`${RESEARCH_API}/threads/${threadId}/interrupt-response`, {
     method: 'POST',
@@ -69,7 +69,7 @@ export async function deleteResearchThread(threadId: string): Promise<void> {
  */
 export async function updateResearchThread(
   threadId: string,
-  updates: { title?: string },
+  updates: { title?: string }
 ): Promise<void> {
   await authFetch(`${RESEARCH_API}/threads/${threadId}`, {
     method: 'PATCH',
@@ -79,7 +79,7 @@ export async function updateResearchThread(
 
 export async function saveResearchDraft(
   threadId: string,
-  payload: { title: string; content: string },
+  payload: { title: string; content: string }
 ): Promise<{ noteId: string; title: string; savedAt: string }> {
   const res = await authFetch(`${RESEARCH_API}/threads/${threadId}/save-draft`, {
     method: 'POST',

@@ -15,19 +15,27 @@ const emit = defineEmits<{
 
 const difficultyColor = computed(() => {
   switch (props.course.difficulty) {
-    case 'beginner': return '#10b981'
-    case 'intermediate': return '#f59e0b'
-    case 'advanced': return '#f85149'
-    default: return '#94a3b8'
+    case 'beginner':
+      return '#10b981'
+    case 'intermediate':
+      return '#f59e0b'
+    case 'advanced':
+      return '#f85149'
+    default:
+      return '#94a3b8'
   }
 })
 
 const statusLabel = computed(() => {
   switch (props.course.status) {
-    case 'generating': return 'Generating...'
-    case 'ready': return 'Ready'
-    case 'archived': return 'Archived'
-    default: return props.course.status
+    case 'generating':
+      return 'Generating...'
+    case 'ready':
+      return 'Ready'
+    case 'archived':
+      return 'Archived'
+    default:
+      return props.course.status
   }
 })
 
@@ -42,11 +50,21 @@ const isReady = computed(() => props.course.status === 'ready')
   >
     <!-- Header -->
     <div class="card-header">
-      <span class="difficulty-badge" :style="{ color: difficultyColor, borderColor: difficultyColor }">
+      <span
+        class="difficulty-badge"
+        :style="{ color: difficultyColor, borderColor: difficultyColor }"
+      >
         {{ course.difficulty }}
       </span>
-      <span class="status-badge" :class="course.status">
-        <Loader2 v-if="course.status === 'generating'" :size="12" class="spinning" />
+      <span
+        class="status-badge"
+        :class="course.status"
+      >
+        <Loader2
+          v-if="course.status === 'generating'"
+          :size="12"
+          class="spinning"
+        />
         {{ statusLabel }}
       </span>
     </div>
@@ -71,13 +89,28 @@ const isReady = computed(() => props.course.status === 'ready')
     </div>
 
     <!-- Progress -->
-    <div v-if="isReady" class="card-progress">
-      <ProgressBar :value="course.progress" :show-label="true" color="#f59e0b" :height="5" />
+    <div
+      v-if="isReady"
+      class="card-progress"
+    >
+      <ProgressBar
+        :value="course.progress"
+        :show-label="true"
+        color="#f59e0b"
+        :height="5"
+      />
     </div>
 
     <!-- Actions -->
-    <div class="card-actions" @click.stop>
-      <button class="delete-btn" title="Delete course" @click="emit('delete', course.id)">
+    <div
+      class="card-actions"
+      @click.stop
+    >
+      <button
+        class="delete-btn"
+        title="Delete course"
+        @click="emit('delete', course.id)"
+      >
         <Trash2 :size="14" />
       </button>
     </div>
@@ -225,8 +258,12 @@ const isReady = computed(() => props.course.status === 'ready')
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

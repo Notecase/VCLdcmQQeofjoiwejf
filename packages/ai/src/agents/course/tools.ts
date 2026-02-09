@@ -30,20 +30,24 @@ export function parseOutlineJSON(text: string): CourseOutline {
   const usedModuleIds = new Set<string>()
   const usedLessonIds = new Set<string>()
 
-  const normalizedModules = parsed.modules.map((module: CourseOutlineModule, moduleIndex: number) => {
-    const normalizedLessons = module.lessons.map((lesson: CourseOutlineLesson, lessonIndex: number) => ({
-      ...lesson,
-      id: normalizeUniqueUUID(lesson.id, usedLessonIds),
-      order: normalizePositiveOrder(lesson.order, lessonIndex + 1),
-    }))
+  const normalizedModules = parsed.modules.map(
+    (module: CourseOutlineModule, moduleIndex: number) => {
+      const normalizedLessons = module.lessons.map(
+        (lesson: CourseOutlineLesson, lessonIndex: number) => ({
+          ...lesson,
+          id: normalizeUniqueUUID(lesson.id, usedLessonIds),
+          order: normalizePositiveOrder(lesson.order, lessonIndex + 1),
+        })
+      )
 
-    return {
-      ...module,
-      id: normalizeUniqueUUID(module.id, usedModuleIds),
-      order: normalizePositiveOrder(module.order, moduleIndex + 1),
-      lessons: normalizedLessons,
+      return {
+        ...module,
+        id: normalizeUniqueUUID(module.id, usedModuleIds),
+        order: normalizePositiveOrder(module.order, moduleIndex + 1),
+        lessons: normalizedLessons,
+      }
     }
-  })
+  )
 
   return {
     ...parsed,
@@ -110,7 +114,7 @@ export function assembleCourse(
       focusAreas: string[]
       maxSlidesPerLesson: number
     }
-  },
+  }
 ): Course {
   const now = new Date().toISOString()
 
@@ -143,26 +147,29 @@ export async function saveCourseToSupabase(
   modules: CourseModule[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  onProgress?: (info: { modulesCompleted: number; totalModules: number }) => void,
+  onProgress?: (info: { modulesCompleted: number; totalModules: number }) => void
 ): Promise<void> {
   // Update the existing course record (created by POST /generate with status 'generating')
   console.log(`[saveCourseToSupabase] Updating course ${course.id}...`)
-  const { error: courseError } = await supabase.from('courses').update({
-    title: course.title,
-    topic: course.topic,
-    description: course.description,
-    difficulty: course.difficulty,
-    estimated_hours: course.estimatedHours,
-    prerequisites: course.prerequisites,
-    learning_objectives: course.learningObjectives,
-    status: course.status,
-    progress: course.progress,
-    settings: course.settings,
-    research_report: course.researchReport,
-    thinking_trace: course.thinkingTrace,
-    generated_at: course.generatedAt,
-    updated_at: new Date().toISOString(),
-  }).eq('id', course.id)
+  const { error: courseError } = await supabase
+    .from('courses')
+    .update({
+      title: course.title,
+      topic: course.topic,
+      description: course.description,
+      difficulty: course.difficulty,
+      estimated_hours: course.estimatedHours,
+      prerequisites: course.prerequisites,
+      learning_objectives: course.learningObjectives,
+      status: course.status,
+      progress: course.progress,
+      settings: course.settings,
+      research_report: course.researchReport,
+      thinking_trace: course.thinkingTrace,
+      generated_at: course.generatedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', course.id)
 
   if (courseError) {
     throw new Error(`Failed to save course: ${courseError.message}`)
@@ -222,7 +229,9 @@ export function extractMarkdownFallback(raw: string): string {
     // Take everything after "markdown": " and try to find the end
     let value = mdFieldMatch[1]
     // Remove trailing JSON structure (practiceProblems, keyTerms, etc.)
-    const trailingFieldMatch = value.search(/"\s*,\s*"(?:practiceProblems|keyTerms|keyPoints|slides)"/)
+    const trailingFieldMatch = value.search(
+      /"\s*,\s*"(?:practiceProblems|keyTerms|keyPoints|slides)"/
+    )
     if (trailingFieldMatch > 0) {
       value = value.slice(0, trailingFieldMatch)
     }
@@ -405,7 +414,8 @@ function normalizeProblem(raw: Record<string, unknown>): PracticeProblem {
 function normalizeQuestionType(type: unknown): PracticeProblem['type'] {
   const str = String(type ?? 'multiple-choice').toLowerCase()
   if (str === 'matching') return 'matching'
-  if (str === 'short-answer' || str === 'short_answer' || str === 'shortanswer') return 'short-answer'
+  if (str === 'short-answer' || str === 'short_answer' || str === 'shortanswer')
+    return 'short-answer'
   return 'multiple-choice'
 }
 

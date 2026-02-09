@@ -124,7 +124,11 @@ onUnmounted(() => {
     <!-- Left Area: Header + Editor Body -->
     <div class="left-area">
       <!-- Full-Width Header: Dock Area + Tabs Bar -->
-      <header class="editor-header" :class="{ 'sidebar-closed': !layoutStore.sidebarVisible }" :style="sidebarWidthStyle">
+      <header
+        class="editor-header"
+        :class="{ 'sidebar-closed': !layoutStore.sidebarVisible }"
+        :style="sidebarWidthStyle"
+      >
         <!-- Dock Area - Width transitions based on sidebar state -->
         <div class="dock-area">
           <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
@@ -168,7 +172,6 @@ onUnmounted(() => {
           >
             <Plus :size="16" />
           </button>
-
         </div>
       </header>
 
@@ -185,12 +188,18 @@ onUnmounted(() => {
             <NoteOutline v-if="isReady && editorStore.currentDocument" />
 
             <!-- Status bar above note content -->
-            <div v-if="isReady && editorStore.currentDocument" class="note-status">
+            <div
+              v-if="isReady && editorStore.currentDocument"
+              class="note-status"
+            >
               <span class="meta-item">
                 <Clock :size="12" />
                 Updated {{ lastUpdated }}
               </span>
-              <span class="status-badge" :class="{ saved: isSaved }">
+              <span
+                class="status-badge"
+                :class="{ saved: isSaved }"
+              >
                 {{ isSaved ? 'Saved' : 'Draft' }}
               </span>
               <span class="word-count">{{ wordCount }}</span>
@@ -284,7 +293,6 @@ onUnmounted(() => {
   flex-shrink: 0;
   transition: width 0.25s ease;
 }
-
 
 /* Tabs Bar - fills remaining space, slides left as dock-area shrinks */
 .tabs-bar {

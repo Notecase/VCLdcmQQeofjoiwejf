@@ -16,12 +16,7 @@ export {
   getParagraphsInSection,
 } from './structureParser'
 
-export type {
-  BlockType,
-  BlockNode,
-  OutlineItem,
-  ParsedNote,
-} from './structureParser'
+export type { BlockType, BlockNode, OutlineItem, ParsedNote } from './structureParser'
 
 // Target Identifier
 export {
@@ -52,10 +47,7 @@ export {
   CONTEXT_AFTER_END_MARKER,
 } from './contextExtractor'
 
-export type {
-  ExtractedContext,
-  ExtractionOptions,
-} from './contextExtractor'
+export type { ExtractedContext, ExtractionOptions } from './contextExtractor'
 
 // Surgical Merger
 export {
@@ -65,20 +57,12 @@ export {
   validateMerge,
 } from './surgicalMerger'
 
-export type {
-  MergeResult,
-  MergeOptions,
-} from './surgicalMerger'
+export type { MergeResult, MergeOptions } from './surgicalMerger'
 
 // Insertion Position Inferrer
-export {
-  inferInsertionPosition,
-  getPositionDescription,
-} from './insertionInferrer'
+export { inferInsertionPosition, getPositionDescription } from './insertionInferrer'
 
-export type {
-  InsertionPosition,
-} from './insertionInferrer'
+export type { InsertionPosition } from './insertionInferrer'
 
 // Intent Detection
 export { isCreateOperation } from './intentDetection'

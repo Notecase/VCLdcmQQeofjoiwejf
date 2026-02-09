@@ -4,12 +4,14 @@ import { Sparkles, Plus, X } from 'lucide-vue-next'
 import type { CourseDifficulty, CourseSettings } from '@inkdown/shared/types'
 
 const emit = defineEmits<{
-  submit: [payload: {
-    topic: string
-    difficulty: CourseDifficulty
-    settings: Partial<CourseSettings>
-    focusAreas: string[]
-  }]
+  submit: [
+    payload: {
+      topic: string
+      difficulty: CourseDifficulty
+      settings: Partial<CourseSettings>
+      focusAreas: string[]
+    },
+  ]
 }>()
 
 const topic = ref('')
@@ -72,8 +74,8 @@ function handleSubmit() {
     <div class="form-header">
       <h2>Create a New Course</h2>
       <p class="form-description">
-        Enter a topic and we'll generate a comprehensive course with lectures,
-        practice problems, quizzes, and more.
+        Enter a topic and we'll generate a comprehensive course with lectures, practice problems,
+        quizzes, and more.
       </p>
     </div>
 
@@ -86,7 +88,7 @@ function handleSubmit() {
         class="form-input"
         placeholder="e.g., Machine Learning Fundamentals, React.js Advanced Patterns"
         @keydown.enter="handleSubmit"
-      >
+      />
     </div>
 
     <!-- Difficulty -->
@@ -94,7 +96,7 @@ function handleSubmit() {
       <label class="form-label">Difficulty Level</label>
       <div class="difficulty-selector">
         <button
-          v-for="level in (['beginner', 'intermediate', 'advanced'] as const)"
+          v-for="level in ['beginner', 'intermediate', 'advanced'] as const"
           :key="level"
           class="difficulty-btn"
           :class="{ active: difficulty === level }"
@@ -115,15 +117,29 @@ function handleSubmit() {
           class="form-input"
           placeholder="Add a focus area..."
           @keydown="handleFocusAreaKeydown"
+        />
+        <button
+          class="add-btn"
+          :disabled="!focusAreaInput.trim()"
+          @click="addFocusArea"
         >
-        <button class="add-btn" :disabled="!focusAreaInput.trim()" @click="addFocusArea">
           <Plus :size="16" />
         </button>
       </div>
-      <div v-if="focusAreas.length > 0" class="focus-tags">
-        <span v-for="(area, idx) in focusAreas" :key="idx" class="focus-tag">
+      <div
+        v-if="focusAreas.length > 0"
+        class="focus-tags"
+      >
+        <span
+          v-for="(area, idx) in focusAreas"
+          :key="idx"
+          class="focus-tag"
+        >
           {{ area }}
-          <button class="remove-tag" @click="removeFocusArea(idx)">
+          <button
+            class="remove-tag"
+            @click="removeFocusArea(idx)"
+          >
             <X :size="12" />
           </button>
         </span>
@@ -131,31 +147,52 @@ function handleSubmit() {
     </div>
 
     <!-- Advanced Settings Toggle -->
-    <button class="toggle-advanced" @click="showAdvanced = !showAdvanced">
+    <button
+      class="toggle-advanced"
+      @click="showAdvanced = !showAdvanced"
+    >
       {{ showAdvanced ? 'Hide' : 'Show' }} Advanced Settings
     </button>
 
     <!-- Advanced Settings -->
-    <div v-if="showAdvanced" class="advanced-settings">
+    <div
+      v-if="showAdvanced"
+      class="advanced-settings"
+    >
       <div class="settings-grid">
         <label class="checkbox-label">
-          <input v-model="includeVideos" type="checkbox">
+          <input
+            v-model="includeVideos"
+            type="checkbox"
+          />
           <span>Include Videos</span>
         </label>
         <label class="checkbox-label">
-          <input v-model="includeSlides" type="checkbox">
+          <input
+            v-model="includeSlides"
+            type="checkbox"
+          />
           <span>Include Slides</span>
         </label>
         <label class="checkbox-label">
-          <input v-model="includePractice" type="checkbox">
+          <input
+            v-model="includePractice"
+            type="checkbox"
+          />
           <span>Include Practice</span>
         </label>
         <label class="checkbox-label">
-          <input v-model="includeQuizzes" type="checkbox">
+          <input
+            v-model="includeQuizzes"
+            type="checkbox"
+          />
           <span>Include Quizzes</span>
         </label>
         <label class="checkbox-label quick-test-label">
-          <input v-model="quickTest" type="checkbox">
+          <input
+            v-model="quickTest"
+            type="checkbox"
+          />
           <span>Quick Test Mode</span>
         </label>
       </div>
@@ -166,19 +203,35 @@ function handleSubmit() {
         </label>
         <div class="range-row">
           <span class="range-label">Weeks</span>
-          <input v-model.number="estimatedWeeks" type="range" min="1" max="12" step="1">
+          <input
+            v-model.number="estimatedWeeks"
+            type="range"
+            min="1"
+            max="12"
+            step="1"
+          />
           <span class="range-value">{{ estimatedWeeks }}</span>
         </div>
         <div class="range-row">
           <span class="range-label">Hrs/week</span>
-          <input v-model.number="hoursPerWeek" type="range" min="1" max="20" step="1">
+          <input
+            v-model.number="hoursPerWeek"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+          />
           <span class="range-value">{{ hoursPerWeek }}</span>
         </div>
       </div>
     </div>
 
     <!-- Submit -->
-    <button class="generate-btn" :disabled="!isValid" @click="handleSubmit">
+    <button
+      class="generate-btn"
+      :disabled="!isValid"
+      @click="handleSubmit"
+    >
       <Sparkles :size="16" />
       Generate Course
     </button>
@@ -390,7 +443,7 @@ function handleSubmit() {
   cursor: pointer;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   accent-color: #f59e0b;
 }
 
@@ -418,7 +471,7 @@ function handleSubmit() {
   min-width: 60px;
 }
 
-.range-row input[type="range"] {
+.range-row input[type='range'] {
   flex: 1;
   accent-color: #f59e0b;
 }

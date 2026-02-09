@@ -22,9 +22,7 @@ function parseStudyDays(scheduleStr: string): string[] {
     [/\bsun(day)?\b/i, 'Sun'],
   ]
 
-  const days = dayMap
-    .filter(([pattern]) => pattern.test(scheduleStr))
-    .map(([, day]) => day)
+  const days = dayMap.filter(([pattern]) => pattern.test(scheduleStr)).map(([, day]) => day)
   if (days.length > 0) return days
 
   // Fallback for compact forms like "MWF" or "TuThSa".
@@ -65,7 +63,10 @@ function parseHoursPerDay(scheduleText: string): number {
 }
 
 function extractSection(content: string, titleRegex: RegExp): string {
-  const pattern = new RegExp(`${titleRegex.source}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|\\n#\\s|$)`, 'i')
+  const pattern = new RegExp(
+    `${titleRegex.source}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|\\n#\\s|$)`,
+    'i'
+  )
   const match = content.match(pattern)
   return match?.[1]?.trim() || ''
 }
@@ -74,7 +75,7 @@ function buildWarning(
   code: string,
   message: string,
   file: string,
-  severity: 'info' | 'warning' | 'error' = 'warning',
+  severity: 'info' | 'warning' | 'error' = 'warning'
 ): ParserWarning {
   return { code, message, file, severity }
 }
@@ -107,12 +108,13 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
       buildWarning(
         'active_section_missing',
         'Missing "## Active Plans" section; attempting full-file parse.',
-        file,
-      ),
+        file
+      )
     )
   }
 
-  const headingPattern = /^###\s*\[([^\]]+)\]\s*(.+?)(?:\s*\((active|paused|completed|archived)\))?\s*$/gim
+  const headingPattern =
+    /^###\s*\[([^\]]+)\]\s*(.+?)(?:\s*\((active|paused|completed|archived)\))?\s*$/gim
   const headings = [...source.matchAll(headingPattern)]
   const plans: LearningRoadmap[] = []
 
@@ -127,7 +129,9 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
     const detail = source.slice(sectionStart, sectionEnd)
 
     if (!rawId) {
-      warnings.push(buildWarning('plan_id_missing', `Skipping roadmap "${name}" because ID is missing.`, file))
+      warnings.push(
+        buildWarning('plan_id_missing', `Skipping roadmap "${name}" because ID is missing.`, file)
+      )
       continue
     }
 
@@ -137,13 +141,15 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
           'plan_status_missing',
           `Roadmap [${rawId}] is missing an explicit status; defaulting to "active".`,
           file,
-          'info',
-        ),
+          'info'
+        )
       )
     }
 
     const progressMatch = detail.match(/-\s*progress:\s*(\d+)\s*\/\s*(\d+)/i)
-    const dateMatch = detail.match(/-\s*date:\s*(\d{4}-\d{2}-\d{2})\s*[-\u2013]\s*(\d{4}-\d{2}-\d{2})/i)
+    const dateMatch = detail.match(
+      /-\s*date:\s*(\d{4}-\d{2}-\d{2})\s*[-\u2013]\s*(\d{4}-\d{2}-\d{2})/i
+    )
     const scheduleMatch = detail.match(/-\s*schedule:\s*(.+)/i)
     const topicMatch = detail.match(/-\s*current:\s*(.+)/i)
 
@@ -177,34 +183,47 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
   }
 
   if (plans.length === 0) {
-    warnings.push(buildWarning('no_plans_parsed', 'No roadmap entries were parsed from Plan.md.', file, 'info'))
+    warnings.push(
+      buildWarning('no_plans_parsed', 'No roadmap entries were parsed from Plan.md.', file, 'info')
+    )
   }
 
   return {
     plans,
-    activePlans: plans.filter(p => p.status === 'active'),
+    activePlans: plans.filter((p) => p.status === 'active'),
     thisWeekSection: extractSection(content, /##\s*(?:This Week|THIS WEEK)/),
     warnings,
   }
 }
 
-export function parseDailyPlanMarkdown(content: string, date: string, filename = 'Today.md'): DailyPlanParseResult {
+export function parseDailyPlanMarkdown(
+  content: string,
+  date: string,
+  filename = 'Today.md'
+): DailyPlanParseResult {
   if (!content.trim()) {
-    return { plan: null, warnings: [buildWarning('daily_plan_empty', `${filename} is empty.`, filename, 'info')] }
+    return {
+      plan: null,
+      warnings: [buildWarning('daily_plan_empty', `${filename} is empty.`, filename, 'info')],
+    }
   }
 
   const warnings: ParserWarning[] = []
   const tasks: ScheduledTask[] = []
-  const taskPattern = /^-\s*\[([xX \->])\]\s*(\d{1,2}:\d{2})\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+?)\s*(?:\[(\w+)\])?\s*$/gim
+  const taskPattern =
+    /^-\s*\[([xX \->])\]\s*(\d{1,2}:\d{2})\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+?)\s*(?:\[(\w+)\])?\s*$/gim
   let match: RegExpExecArray | null
   let idx = 0
 
   while ((match = taskPattern.exec(content)) !== null) {
     const marker = match[1].toLowerCase()
     const status: ScheduledTask['status'] =
-      marker === 'x' ? 'completed'
-        : marker === '-' ? 'skipped'
-          : marker === '>' ? 'in_progress'
+      marker === 'x'
+        ? 'completed'
+        : marker === '-'
+          ? 'skipped'
+          : marker === '>'
+            ? 'in_progress'
             : 'pending'
 
     const line = match[0]
@@ -212,7 +231,10 @@ export function parseDailyPlanMarkdown(content: string, date: string, filename =
 
     tasks.push({
       id: `task-${idx++}`,
-      title: match[4].trim().replace(/\{note:[a-f0-9-]+\}/i, '').trim(),
+      title: match[4]
+        .trim()
+        .replace(/\{note:[a-f0-9-]+\}/i, '')
+        .trim(),
       type: 'learn',
       status,
       scheduledTime: match[2],
@@ -228,14 +250,14 @@ export function parseDailyPlanMarkdown(content: string, date: string, filename =
       buildWarning(
         'no_tasks_parsed',
         `No schedule tasks could be parsed from ${filename}. Ensure task lines use "- [ ] HH:MM (XXmin) ..." format.`,
-        filename,
-      ),
+        filename
+      )
     )
   }
 
   const totalMinutes = tasks.reduce((sum, t) => sum + t.durationMinutes, 0)
   const completedMinutes = tasks
-    .filter(t => t.status === 'completed')
+    .filter((t) => t.status === 'completed')
     .reduce((sum, t) => sum + t.durationMinutes, 0)
 
   const plan: DailyPlan = {

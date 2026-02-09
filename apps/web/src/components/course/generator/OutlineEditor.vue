@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { GripVertical, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-vue-next'
-import type { CourseOutline, CourseOutlineModule, CourseOutlineLesson, LessonType } from '@inkdown/shared/types'
+import type {
+  CourseOutline,
+  CourseOutlineModule,
+  CourseOutlineLesson,
+  LessonType,
+} from '@inkdown/shared/types'
 import LessonTypeIcon from '../shared/LessonTypeIcon.vue'
 
 const props = defineProps<{
@@ -14,11 +19,15 @@ const emit = defineEmits<{
 
 // Deep clone for local editing
 const localOutline = ref<CourseOutline>(JSON.parse(JSON.stringify(props.outline)))
-const expandedModules = ref<Set<string>>(new Set(props.outline.modules.map(m => m.id)))
+const expandedModules = ref<Set<string>>(new Set(props.outline.modules.map((m) => m.id)))
 
-watch(() => props.outline, (val) => {
-  localOutline.value = JSON.parse(JSON.stringify(val))
-}, { deep: true })
+watch(
+  () => props.outline,
+  (val) => {
+    localOutline.value = JSON.parse(JSON.stringify(val))
+  },
+  { deep: true }
+)
 
 function emitUpdate() {
   emit('update', JSON.parse(JSON.stringify(localOutline.value)))
@@ -55,13 +64,17 @@ function updateLessonType(lesson: CourseOutlineLesson, type: LessonType) {
 function removeModule(idx: number) {
   localOutline.value.modules.splice(idx, 1)
   // Re-order
-  localOutline.value.modules.forEach((m, i) => { m.order = i + 1 })
+  localOutline.value.modules.forEach((m, i) => {
+    m.order = i + 1
+  })
   emitUpdate()
 }
 
 function removeLesson(mod: CourseOutlineModule, lessonIdx: number) {
   mod.lessons.splice(lessonIdx, 1)
-  mod.lessons.forEach((l, i) => { l.order = i + 1 })
+  mod.lessons.forEach((l, i) => {
+    l.order = i + 1
+  })
   emitUpdate()
 }
 
@@ -99,7 +112,9 @@ function moveModule(fromIdx: number, direction: 'up' | 'down') {
   const temp = mods[fromIdx]
   mods[fromIdx] = mods[toIdx]
   mods[toIdx] = temp
-  mods.forEach((m, i) => { m.order = i + 1 })
+  mods.forEach((m, i) => {
+    m.order = i + 1
+  })
   emitUpdate()
 }
 
@@ -120,7 +135,10 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
         class="module-card"
       >
         <!-- Module Header -->
-        <div class="module-header" @click="toggleModule(mod.id)">
+        <div
+          class="module-header"
+          @click="toggleModule(mod.id)"
+        >
           <div class="module-drag">
             <button
               class="reorder-btn"
@@ -131,23 +149,35 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
             </button>
           </div>
           <div class="module-expand">
-            <ChevronDown v-if="expandedModules.has(mod.id)" :size="14" />
-            <ChevronRight v-else :size="14" />
+            <ChevronDown
+              v-if="expandedModules.has(mod.id)"
+              :size="14"
+            />
+            <ChevronRight
+              v-else
+              :size="14"
+            />
           </div>
           <input
             :value="mod.title"
             class="inline-edit module-title-input"
             @input="updateModuleTitle(mod, ($event.target as HTMLInputElement).value)"
             @click.stop
-          >
+          />
           <span class="lesson-count">{{ mod.lessons.length }} lessons</span>
-          <button class="icon-btn danger" @click.stop="removeModule(modIdx)">
+          <button
+            class="icon-btn danger"
+            @click.stop="removeModule(modIdx)"
+          >
             <Trash2 :size="14" />
           </button>
         </div>
 
         <!-- Module Body -->
-        <div v-if="expandedModules.has(mod.id)" class="module-body">
+        <div
+          v-if="expandedModules.has(mod.id)"
+          class="module-body"
+        >
           <textarea
             :value="mod.description"
             class="inline-edit module-desc"
@@ -163,26 +193,43 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
               :key="lesson.id"
               class="lesson-row"
             >
-              <LessonTypeIcon :type="lesson.type" :size="14" />
+              <LessonTypeIcon
+                :type="lesson.type"
+                :size="14"
+              />
               <input
                 :value="lesson.title"
                 class="inline-edit lesson-title-input"
                 @input="updateLessonTitle(lesson, ($event.target as HTMLInputElement).value)"
-              >
+              />
               <select
                 :value="lesson.type"
                 class="type-select"
-                @change="updateLessonType(lesson, ($event.target as HTMLSelectElement).value as LessonType)"
+                @change="
+                  updateLessonType(lesson, ($event.target as HTMLSelectElement).value as LessonType)
+                "
               >
-                <option v-for="t in lessonTypes" :key="t" :value="t">{{ t }}</option>
+                <option
+                  v-for="t in lessonTypes"
+                  :key="t"
+                  :value="t"
+                >
+                  {{ t }}
+                </option>
               </select>
-              <button class="icon-btn danger" @click="removeLesson(mod, lessonIdx)">
+              <button
+                class="icon-btn danger"
+                @click="removeLesson(mod, lessonIdx)"
+              >
                 <Trash2 :size="12" />
               </button>
             </div>
           </div>
 
-          <button class="add-lesson-btn" @click="addLesson(mod)">
+          <button
+            class="add-lesson-btn"
+            @click="addLesson(mod)"
+          >
             <Plus :size="14" />
             Add Lesson
           </button>
@@ -190,7 +237,10 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
       </div>
     </div>
 
-    <button class="add-module-btn" @click="addModule">
+    <button
+      class="add-module-btn"
+      @click="addModule"
+    >
       <Plus :size="16" />
       Add Module
     </button>
@@ -255,7 +305,8 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
   background: var(--glass-bg-hover, rgba(50, 50, 50, 0.65));
 }
 
-.module-drag, .module-expand {
+.module-drag,
+.module-expand {
   display: flex;
   align-items: center;
   color: var(--text-color-secondary, #64748b);
@@ -284,7 +335,9 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
   padding: 2px 6px;
   border-radius: var(--radius-xs, 4px);
   outline: none;
-  transition: border-color var(--transition-fast, 150ms ease), background var(--transition-fast, 150ms ease);
+  transition:
+    border-color var(--transition-fast, 150ms ease),
+    background var(--transition-fast, 150ms ease);
 }
 
 .inline-edit:hover,

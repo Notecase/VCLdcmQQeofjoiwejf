@@ -119,7 +119,9 @@ export function extractContext(
   console.log('[extractContext] Content extraction:', {
     totalTargets: sortedTargets.length,
     contentBlocksOnly: contentBlocks.length,
-    excludedSections: sortedTargets.filter((b) => b.type === 'section').map((b) => b.metadata?.heading),
+    excludedSections: sortedTargets
+      .filter((b) => b.type === 'section')
+      .map((b) => b.metadata?.heading),
   })
 
   // Extract following context
@@ -135,18 +137,15 @@ export function extractContext(
   // Build outline string if requested
   let outlineStr = ''
   if (includeOutline && parsed.outline.length > 0) {
-    outlineStr = 'Document structure:\n' + parsed.outline
-      .map((o) => '  '.repeat(o.level - 1) + `- ${o.heading} (line ${o.line})`)
-      .join('\n')
+    outlineStr =
+      'Document structure:\n' +
+      parsed.outline
+        .map((o) => '  '.repeat(o.level - 1) + `- ${o.heading} (line ${o.line})`)
+        .join('\n')
   }
 
   // Build full prompt
-  const fullPrompt = buildEditPrompt(
-    precedingContext,
-    targetContent,
-    followingContext,
-    outlineStr
-  )
+  const fullPrompt = buildEditPrompt(precedingContext, targetContent, followingContext, outlineStr)
 
   // Extract heading info for heading-based merge (immune to line number bugs)
   // If first target is a section, use its heading directly
@@ -184,7 +183,8 @@ export function extractContext(
   // Calculate start line for the edit region
   // If we filtered out sections, use the first content block's line, not the heading line
   const firstContentBlock = contentBlocks.length > 0 ? contentBlocks[0] : firstTarget
-  const lastContentBlock = contentBlocks.length > 0 ? contentBlocks[contentBlocks.length - 1] : lastTarget
+  const lastContentBlock =
+    contentBlocks.length > 0 ? contentBlocks[contentBlocks.length - 1] : lastTarget
 
   return {
     precedingContext,
@@ -249,9 +249,10 @@ export function extractInsertionContext(
     }
 
     const refBlock = parsed.blocks[refIndex]
-    const refDesc = refBlock.type === 'section' && refBlock.metadata?.heading
-      ? `section "${refBlock.metadata.heading}"`
-      : `${refBlock.type} at line ${refBlock.startLine}`
+    const refDesc =
+      refBlock.type === 'section' && refBlock.metadata?.heading
+        ? `section "${refBlock.metadata.heading}"`
+        : `${refBlock.type} at line ${refBlock.startLine}`
 
     if (position === 'before') {
       const start = Math.max(0, refIndex - precedingBlocks)
@@ -283,15 +284,18 @@ export function extractInsertionContext(
   // Build context strings
   let contextStr = contextBlocks.map((b) => b.content).join('\n\n')
   if (contextStr.length > maxContextChars * 2) {
-    contextStr = contextStr.slice(0, maxContextChars) + '\n...\n' + contextStr.slice(-maxContextChars)
+    contextStr =
+      contextStr.slice(0, maxContextChars) + '\n...\n' + contextStr.slice(-maxContextChars)
   }
 
   // Build outline string if requested
   let outlineStr = ''
   if (includeOutline && parsed.outline.length > 0) {
-    outlineStr = 'Document structure:\n' + parsed.outline
-      .map((o) => '  '.repeat(o.level - 1) + `- ${o.heading} (line ${o.line})`)
-      .join('\n')
+    outlineStr =
+      'Document structure:\n' +
+      parsed.outline
+        .map((o) => '  '.repeat(o.level - 1) + `- ${o.heading} (line ${o.line})`)
+        .join('\n')
   }
 
   // insertionPoint is always defined by the code paths above
@@ -391,9 +395,7 @@ export function extractEditedContent(aiResponse: string): string {
 
   if (startMarkerIndex !== -1 && endMarkerIndex !== -1 && endMarkerIndex > startMarkerIndex) {
     // Extract content between markers
-    return aiResponse
-      .slice(startMarkerIndex + EDIT_START_MARKER.length, endMarkerIndex)
-      .trim()
+    return aiResponse.slice(startMarkerIndex + EDIT_START_MARKER.length, endMarkerIndex).trim()
   }
 
   // No markers found - assume entire response is the edited content
@@ -404,14 +406,18 @@ export function extractEditedContent(aiResponse: string): string {
   const contextBeforeStart = content.indexOf(CONTEXT_BEFORE_MARKER)
   const contextBeforeEnd = content.indexOf(CONTEXT_BEFORE_END_MARKER)
   if (contextBeforeStart !== -1 && contextBeforeEnd !== -1) {
-    content = content.slice(0, contextBeforeStart) + content.slice(contextBeforeEnd + CONTEXT_BEFORE_END_MARKER.length)
+    content =
+      content.slice(0, contextBeforeStart) +
+      content.slice(contextBeforeEnd + CONTEXT_BEFORE_END_MARKER.length)
   }
 
   // Remove context after block if present
   const contextAfterStart = content.indexOf(CONTEXT_AFTER_MARKER)
   const contextAfterEnd = content.indexOf(CONTEXT_AFTER_END_MARKER)
   if (contextAfterStart !== -1 && contextAfterEnd !== -1) {
-    content = content.slice(0, contextAfterStart) + content.slice(contextAfterEnd + CONTEXT_AFTER_END_MARKER.length)
+    content =
+      content.slice(0, contextAfterStart) +
+      content.slice(contextAfterEnd + CONTEXT_AFTER_END_MARKER.length)
   }
 
   return content.trim()

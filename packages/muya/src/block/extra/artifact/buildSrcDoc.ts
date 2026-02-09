@@ -65,7 +65,7 @@ export function buildSrcDoc(content: ArtifactContent): string {
     '    body {',
     '      margin: 0;',
     '      padding: 0;',
-    '      font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;',
+    "      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;",
     '      line-height: 1.5;',
     '      color: #1a1a1a;',
     '      background: transparent;',
@@ -90,13 +90,13 @@ export function buildSrcDoc(content: ArtifactContent): string {
       '    try {',
       javascript,
       '    } catch (error) {',
-      '      console.error(\'Artifact JS Error:\', error);',
-      '      const errorDiv = document.createElement(\'div\');',
-      '      errorDiv.style.cssText = \'padding: 16px; background: #fee; color: #c00; border-radius: 8px; font-family: monospace; white-space: pre-wrap;\';',
-      '      errorDiv.textContent = \'JavaScript Error: \' + error.message;',
+      "      console.error('Artifact JS Error:', error);",
+      "      const errorDiv = document.createElement('div');",
+      "      errorDiv.style.cssText = 'padding: 16px; background: #fee; color: #c00; border-radius: 8px; font-family: monospace; white-space: pre-wrap;';",
+      "      errorDiv.textContent = 'JavaScript Error: ' + error.message;",
       '      document.body.appendChild(errorDiv);',
       '    }',
-      '  <\/script>',
+      '  <\/script>'
     )
   }
 

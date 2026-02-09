@@ -42,11 +42,17 @@ function shortDate(dateStr: string): string {
       </div>
     </div>
 
-    <div v-if="visibleStats.length === 0" class="empty-chart">
+    <div
+      v-if="visibleStats.length === 0"
+      class="empty-chart"
+    >
       <p>No history data yet</p>
     </div>
 
-    <div v-else class="chart-bars">
+    <div
+      v-else
+      class="chart-bars"
+    >
       <div
         v-for="stat in visibleStats"
         :key="stat.date"

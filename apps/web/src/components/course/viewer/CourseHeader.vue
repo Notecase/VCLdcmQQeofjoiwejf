@@ -34,10 +34,16 @@ function capitalize(s: string): string {
     </div>
 
     <!-- Lesson info and action -->
-    <div v-if="currentLesson" class="header-right">
+    <div
+      v-if="currentLesson"
+      class="header-right"
+    >
       <div class="lesson-info">
         <span class="lesson-type-badge">
-          <LessonTypeIcon :type="currentLesson.type" :size="13" />
+          <LessonTypeIcon
+            :type="currentLesson.type"
+            :size="13"
+          />
           {{ capitalize(currentLesson.type) }}
         </span>
         <span class="lesson-duration">
@@ -53,7 +59,10 @@ function capitalize(s: string): string {
         <CheckCircle2 :size="14" />
         Mark Complete
       </button>
-      <span v-else class="completed-badge">
+      <span
+        v-else
+        class="completed-badge"
+      >
         <CheckCircle2 :size="14" />
         Completed
       </span>

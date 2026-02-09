@@ -100,7 +100,11 @@ class ArtifactBlock extends Parent {
     if (updates.customHeight !== undefined && updates.customHeight !== this.meta.customHeight) {
       const oldHeight = this.meta.customHeight ?? 300 // Default height
       this.meta.customHeight = updates.customHeight
-      this.jsonState.replaceOperation([...basePath, 'meta', 'customHeight'], oldHeight, updates.customHeight)
+      this.jsonState.replaceOperation(
+        [...basePath, 'meta', 'customHeight'],
+        oldHeight,
+        updates.customHeight
+      )
     }
 
     // Update code block text if changed

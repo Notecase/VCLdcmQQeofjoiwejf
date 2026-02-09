@@ -20,6 +20,7 @@ A lightweight, reusable read-only markdown renderer wrapping Muya.
 **Props**: `markdown: string` (the raw markdown to render)
 
 **Key design decisions**:
+
 - **No plugin registration** — skip all `Muya.use()` calls. EditorArea may have already registered plugins globally (they're stored on `Muya.plugins` static array), but they remain dormant when `contenteditable='false'`
 - **`markRaw()`** — CRITICAL: wrap Muya instance to prevent Vue proxy issues (breaks `structuredClone()`)
 - **`contenteditable='false'`** — override the hardcoded `'true'` in `getContainer()` (`muya.ts:242`) immediately after construction
@@ -57,39 +58,48 @@ const muyaInstance = ref<InstanceType<typeof Muya> | null>(null)
 function initializeMuya() {
   if (!containerRef.value) return
 
-  muyaInstance.value = markRaw(new Muya(containerRef.value, {
-    markdown: props.markdown || '',
-    focusMode: false,
-    hideQuickInsertHint: true,
-    hideLinkPopup: true,
-    spellcheckEnabled: false,
-    math: true,
-    superSubScript: true,
-    footnote: true,
-    isGitlabCompatibilityEnabled: true,
-    disableHtml: false,
-    mermaidTheme: 'dark',
-    codeBlockLineNumbers: false,
-  }))
+  muyaInstance.value = markRaw(
+    new Muya(containerRef.value, {
+      markdown: props.markdown || '',
+      focusMode: false,
+      hideQuickInsertHint: true,
+      hideLinkPopup: true,
+      spellcheckEnabled: false,
+      math: true,
+      superSubScript: true,
+      footnote: true,
+      isGitlabCompatibilityEnabled: true,
+      disableHtml: false,
+      mermaidTheme: 'dark',
+      codeBlockLineNumbers: false,
+    })
+  )
 
   // Override hardcoded contenteditable="true"
   muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
   muyaInstance.value.domNode.classList.remove('mu-show-quick-insert-hint')
 }
 
-watch(() => props.markdown, (newMd) => {
-  if (muyaInstance.value && newMd !== undefined) {
-    muyaInstance.value.setContent(newMd || '', false)
-    // Re-apply readonly after content replacement
-    muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
+watch(
+  () => props.markdown,
+  (newMd) => {
+    if (muyaInstance.value && newMd !== undefined) {
+      muyaInstance.value.setContent(newMd || '', false)
+      // Re-apply readonly after content replacement
+      muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
+    }
   }
-})
+)
 
 onMounted(() => initializeMuya())
 
 onUnmounted(() => {
   if (muyaInstance.value) {
-    try { muyaInstance.value.destroy() } catch { /* ignore cleanup errors */ }
+    try {
+      muyaInstance.value.destroy()
+    } catch {
+      /* ignore cleanup errors */
+    }
     muyaInstance.value = null
   }
 })
@@ -102,7 +112,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.muya-renderer { /* wrapper for scoping */ }
+.muya-renderer {
+  /* wrapper for scoping */
+}
 
 .muya-renderer-container {
   outline: none;
@@ -135,6 +147,7 @@ onUnmounted(() => {
 **File**: `apps/web/src/components/course/viewer/LectureLesson.vue`
 
 **Changes**:
+
 1. Import `MuyaRenderer` component
 2. Replace `<div class="lecture-body" v-html="lesson.content.markdown" />` (line 22) with:
    ```html
@@ -147,6 +160,7 @@ onUnmounted(() => {
 **File**: `apps/web/src/components/course/viewer/PracticeLesson.vue`
 
 **Changes**:
+
 1. Import `MuyaRenderer`
 2. Replace line 50: `<div v-if="lesson.content.markdown" class="intro-content" v-html="lesson.content.markdown" />` with:
    ```html
@@ -159,10 +173,14 @@ onUnmounted(() => {
 **File**: `apps/web/src/components/course/viewer/QuizLesson.vue`
 
 **Changes**:
+
 1. Import `MuyaRenderer`
 2. Replace line 84: `<div v-if="lesson.content.markdown && !quizSubmitted" class="quiz-intro" v-html="lesson.content.markdown" />` with:
    ```html
-   <MuyaRenderer v-if="lesson.content.markdown && !quizSubmitted" :markdown="lesson.content.markdown" />
+   <MuyaRenderer
+     v-if="lesson.content.markdown && !quizSubmitted"
+     :markdown="lesson.content.markdown"
+   />
    ```
 3. Remove the `.quiz-intro` CSS rule (lines 202-206)
 
@@ -171,6 +189,7 @@ onUnmounted(() => {
 **File**: `apps/web/src/components/course/viewer/VideoLesson.vue`
 
 **Changes**:
+
 1. Import `MuyaRenderer`
 2. Replace line 91: `<div v-if="lesson.content.markdown" class="supplementary-content" v-html="lesson.content.markdown" />` with:
    ```html
@@ -209,25 +228,25 @@ This creates visual hierarchy: dark chrome (header + sidebar) with a brighter re
 
 ## Key Technical Notes
 
-| Topic | Detail |
-|-------|--------|
-| **Muya.plugins is static** | Plugins registered by EditorArea persist globally. MuyaRenderer instances will have those plugins instantiated but they remain dormant with `contenteditable='false'` |
-| **Multiple instances safe** | Codebase already runs EditorArea + NotePreviewPanel simultaneously. Each Muya gets its own Editor/EventCenter/ScrollPage |
-| **Performance** | Only ONE lesson visible at a time (LessonContent.vue dispatches by type). Typical content is 50-500 lines — well within Muya's envelope |
-| **getContainer() replaces DOM** | `muya.ts:246` calls `originContainer.replaceWith(newContainer)`. The Vue `ref` points to original, but `muyaInstance.domNode` is the live container |
-| **CSS already globally loaded** | EditorArea imports Muya CSS globally. MuyaRenderer imports redundantly for safety — Vite deduplicates |
-| **Theme variables** | Muya consumes `--editor-color`, `--editor-bg-color`, etc. from `variables.css` — dark theme works automatically |
+| Topic                           | Detail                                                                                                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Muya.plugins is static**      | Plugins registered by EditorArea persist globally. MuyaRenderer instances will have those plugins instantiated but they remain dormant with `contenteditable='false'` |
+| **Multiple instances safe**     | Codebase already runs EditorArea + NotePreviewPanel simultaneously. Each Muya gets its own Editor/EventCenter/ScrollPage                                              |
+| **Performance**                 | Only ONE lesson visible at a time (LessonContent.vue dispatches by type). Typical content is 50-500 lines — well within Muya's envelope                               |
+| **getContainer() replaces DOM** | `muya.ts:246` calls `originContainer.replaceWith(newContainer)`. The Vue `ref` points to original, but `muyaInstance.domNode` is the live container                   |
+| **CSS already globally loaded** | EditorArea imports Muya CSS globally. MuyaRenderer imports redundantly for safety — Vite deduplicates                                                                 |
+| **Theme variables**             | Muya consumes `--editor-color`, `--editor-bg-color`, etc. from `variables.css` — dark theme works automatically                                                       |
 
 ## Files Summary
 
-| Action | File |
-|--------|------|
-| **CREATE** | `apps/web/src/components/shared/MuyaRenderer.vue` |
-| **MODIFY** | `apps/web/src/components/course/viewer/LectureLesson.vue` |
+| Action     | File                                                       |
+| ---------- | ---------------------------------------------------------- |
+| **CREATE** | `apps/web/src/components/shared/MuyaRenderer.vue`          |
+| **MODIFY** | `apps/web/src/components/course/viewer/LectureLesson.vue`  |
 | **MODIFY** | `apps/web/src/components/course/viewer/PracticeLesson.vue` |
-| **MODIFY** | `apps/web/src/components/course/viewer/QuizLesson.vue` |
-| **MODIFY** | `apps/web/src/components/course/viewer/VideoLesson.vue` |
-| **MODIFY** | `apps/web/src/views/CourseView.vue` |
+| **MODIFY** | `apps/web/src/components/course/viewer/QuizLesson.vue`     |
+| **MODIFY** | `apps/web/src/components/course/viewer/VideoLesson.vue`    |
+| **MODIFY** | `apps/web/src/views/CourseView.vue`                        |
 
 ## Verification
 

@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  Search, Database, BarChart3, Map, CheckCircle2,
-  FileText, Film, ClipboardCheck, Loader2,
+  Search,
+  Database,
+  BarChart3,
+  Map,
+  CheckCircle2,
+  FileText,
+  Film,
+  ClipboardCheck,
+  Loader2,
 } from 'lucide-vue-next'
 import type { GenerationStageType } from '@inkdown/shared/types'
 import ProgressBar from '../shared/ProgressBar.vue'
@@ -32,9 +39,7 @@ const stages: StageInfo[] = [
   { key: 'complete', label: 'Complete', icon: CheckCircle2 },
 ]
 
-const stageIndex = computed(() =>
-  stages.findIndex(s => s.key === props.stage),
-)
+const stageIndex = computed(() => stages.findIndex((s) => s.key === props.stage))
 
 function stageStatus(idx: number): 'done' | 'active' | 'pending' {
   if (idx < stageIndex.value) return 'done'
@@ -56,29 +61,58 @@ function stageStatus(idx: number): 'done' | 'active' | 'pending' {
         :class="stageStatus(idx)"
       >
         <div class="stage-icon">
-          <CheckCircle2 v-if="stageStatus(idx) === 'done'" :size="18" />
-          <Loader2 v-else-if="stageStatus(idx) === 'active'" :size="18" class="spinning" />
-          <component :is="s.icon" v-else :size="18" />
+          <CheckCircle2
+            v-if="stageStatus(idx) === 'done'"
+            :size="18"
+          />
+          <Loader2
+            v-else-if="stageStatus(idx) === 'active'"
+            :size="18"
+            class="spinning"
+          />
+          <component
+            :is="s.icon"
+            v-else
+            :size="18"
+          />
         </div>
         <span class="stage-label">{{ s.label }}</span>
-        <div v-if="idx < stages.length - 1" class="stage-connector" :class="stageStatus(idx)" />
+        <div
+          v-if="idx < stages.length - 1"
+          class="stage-connector"
+          :class="stageStatus(idx)"
+        />
       </div>
     </div>
 
     <!-- Overall Progress Bar -->
     <div class="overall-progress">
-      <ProgressBar :value="progress" :show-label="true" color="#f59e0b" :height="8" />
+      <ProgressBar
+        :value="progress"
+        :show-label="true"
+        color="#f59e0b"
+        :height="8"
+      />
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner">
+    <div
+      v-if="error"
+      class="error-banner"
+    >
       {{ error }}
     </div>
 
     <!-- Thinking Output -->
-    <div v-if="thinking && !error" class="thinking-output">
+    <div
+      v-if="thinking && !error"
+      class="thinking-output"
+    >
       <div class="thinking-header">
-        <Loader2 :size="14" class="spinning" />
+        <Loader2
+          :size="14"
+          class="spinning"
+        />
         <span>AI is thinking...</span>
       </div>
       <div class="thinking-text">{{ thinking.slice(-500) }}</div>
@@ -216,8 +250,12 @@ function stageStatus(idx: number): 'done' | 'active' | 'pending' {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

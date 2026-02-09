@@ -192,11 +192,7 @@ export {
 // Explain Agent (Course AI Tutor)
 // ============================================================================
 
-export {
-  ExplainAgent,
-  createExplainAgent,
-  type ExplainAgentConfig,
-} from './explain'
+export { ExplainAgent, createExplainAgent, type ExplainAgentConfig } from './explain'
 
 // ============================================================================
 // Course Orchestrator (AI Course Generation Pipeline)
@@ -278,7 +274,16 @@ import { ResearchAgent } from './research'
 import { ExplainAgent } from './explain'
 // AgenticAgent is exported above but not used in factory (standalone usage)
 
-export type AgentType = 'chat' | 'note' | 'editor' | 'planner' | 'agentic' | 'deep' | 'secretary' | 'research' | 'explain'
+export type AgentType =
+  | 'chat'
+  | 'note'
+  | 'editor'
+  | 'planner'
+  | 'agentic'
+  | 'deep'
+  | 'secretary'
+  | 'research'
+  | 'explain'
 
 export interface AgentConfig {
   supabase: SupabaseClient
@@ -293,7 +298,15 @@ export interface AgentConfig {
 export function createAgent(
   type: AgentType,
   config: AgentConfig
-): ChatAgent | NoteAgent | EditorAgent | PlannerAgent | InkdownDeepAgent | SecretaryAgent | ResearchAgent | ExplainAgent {
+):
+  | ChatAgent
+  | NoteAgent
+  | EditorAgent
+  | PlannerAgent
+  | InkdownDeepAgent
+  | SecretaryAgent
+  | ResearchAgent
+  | ExplainAgent {
   switch (type) {
     case 'chat':
       return new ChatAgent(config)

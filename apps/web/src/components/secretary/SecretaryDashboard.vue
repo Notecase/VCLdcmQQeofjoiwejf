@@ -36,14 +36,23 @@ const todayFormatted = computed(() => {
 <template>
   <div class="secretary-dashboard">
     <!-- Error Banner -->
-    <div v-if="store.error" class="error-banner">
+    <div
+      v-if="store.error"
+      class="error-banner"
+    >
       <span>{{ store.error }}</span>
-      <button class="dismiss-btn" @click="store.error = null">
+      <button
+        class="dismiss-btn"
+        @click="store.error = null"
+      >
         <X :size="14" />
       </button>
     </div>
 
-    <div v-if="parserWarningSummary" class="warning-banner">
+    <div
+      v-if="parserWarningSummary"
+      class="warning-banner"
+    >
       <span>{{ parserWarningSummary }}</span>
     </div>
 

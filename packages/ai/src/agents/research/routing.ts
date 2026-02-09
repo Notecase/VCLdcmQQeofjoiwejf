@@ -10,14 +10,14 @@ export type ResearchOutputPreference = RequestOutputPreference
 
 export function classifyResearchRequest(
   message: string,
-  outputPreference?: ResearchOutputPreference,
+  outputPreference?: ResearchOutputPreference
 ): ResearchRequestMode {
   return classifyRequestPolicyMode(message, outputPreference)
 }
 
 export function shouldEnableResearchFiles(
   message: string,
-  outputPreference?: ResearchOutputPreference,
+  outputPreference?: ResearchOutputPreference
 ): boolean {
   return shouldUseResearchFileTools(message, outputPreference)
 }

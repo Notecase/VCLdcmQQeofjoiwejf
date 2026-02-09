@@ -23,7 +23,7 @@ export interface RenderPlanEntryInput {
  */
 export function renderDailyPlanMarkdown(
   plan: DailyPlan,
-  options: RenderDailyPlanOptions = {},
+  options: RenderDailyPlanOptions = {}
 ): string {
   const existing = options.existingContent || ''
   const header = existing.match(/^#\s+.+$/m)?.[0] || options.defaultHeader || "# Today's Plan"
@@ -40,13 +40,18 @@ export function renderDailyPlanMarkdown(
 
   for (const task of plan.tasks) {
     const marker =
-      task.status === 'completed' ? 'x'
-        : task.status === 'skipped' ? '-'
-          : task.status === 'in_progress' ? '>'
+      task.status === 'completed'
+        ? 'x'
+        : task.status === 'skipped'
+          ? '-'
+          : task.status === 'in_progress'
+            ? '>'
             : ' '
     const noteTag = task.noteId ? ` {note:${task.noteId}}` : ''
     const planTag = task.planId ? ` [${task.planId}]` : ''
-    lines.push(`- [${marker}] ${task.scheduledTime} (${task.durationMinutes}min) ${task.title}${noteTag}${planTag}`)
+    lines.push(
+      `- [${marker}] ${task.scheduledTime} (${task.durationMinutes}min) ${task.title}${noteTag}${planTag}`
+    )
   }
 
   const focusMatch = existing.match(/\*\*Focus:\*\*\s*(.+)/)

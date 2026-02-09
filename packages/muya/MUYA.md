@@ -9,6 +9,7 @@ This document defines conventions, constraints, and guardrails for Claude Code w
 These 7 rules MUST be followed when working with Muya. Violating them leads to subtle bugs and wasted time.
 
 ### Rule 1: DOM Ownership
+
 Every DOM element inside `.mu-container` has a `__MUYA_BLOCK__` property pointing to its block instance.
 
 ```typescript
@@ -19,6 +20,7 @@ const block = domElement['__MUYA_BLOCK__']
 **Why it matters**: Muya manages DOM-Block relationships. Direct DOM manipulation without understanding this breaks selection, state sync, and undo/redo.
 
 ### Rule 2: Block Children Rule
+
 **Custom UI must be CHILDREN of blocks, NOT siblings or overlays.**
 
 ```typescript
@@ -33,6 +35,7 @@ domNode.insertBefore(btn, domNode.firstChild)
 **Why it matters**: Overlay positioning drifts on scroll/resize and creates z-index conflicts with Muya's floating panels.
 
 ### Rule 3: No Coordinate Math
+
 **Never calculate absolute positions for editor-aligned elements.**
 
 ```typescript
@@ -47,21 +50,23 @@ scrollPage.insertAfter(newBlock, refBlock, 'api')
 **Why it matters**: Coordinate calculations become stale on content reflow, window resize, and scroll events.
 
 ### Rule 4: State Flow
+
 **Changes flow through JSONState OT operations, not direct DOM mutation.**
 
 ```typescript
 // CORRECT: Use 'user' source to trigger OT operations
-scrollPage.append(newBlock, 'user')        // Tracked in undo/redo
+scrollPage.append(newBlock, 'user') // Tracked in undo/redo
 scrollPage.insertAfter(block, ref, 'user') // Triggers json-change event
 
 // CORRECT: Use 'api' source for programmatic changes (no undo tracking)
-block.remove('api')                        // Silent removal
+block.remove('api') // Silent removal
 
 // WRONG: Direct DOM mutation (bypasses state sync)
 domNode.textContent = 'new content'
 ```
 
 ### Rule 5: Selection Rule
+
 **Use Muya's Selection API, not native DOM selection.**
 
 ```typescript
@@ -76,6 +81,7 @@ document.execCommand(...)          // Never use
 ```
 
 ### Rule 6: Block Creation
+
 **Always use `ScrollPage.loadBlock(name).create(muya, state)`.**
 
 ```typescript
@@ -90,6 +96,7 @@ const block = new ParagraphBlock(muya, state) // May bypass registration
 ```
 
 ### Rule 7: Event Rule
+
 **Use `eventCenter.attachDOMEvent()` for proper cleanup.**
 
 ```typescript
@@ -198,34 +205,34 @@ if (block) {
 
 ### Block Names Reference
 
-| Block Name | Type | Description |
-|------------|------|-------------|
-| `scrollpage` | Parent | Root container, holds all top-level blocks |
-| `paragraph` | Parent | Basic text paragraph |
-| `atx-heading` | Parent | ATX-style heading (# Heading) |
-| `setext-heading` | Parent | Setext-style heading (underlined) |
-| `code-block` | Parent | Fenced or indented code block |
-| `code` | Parent | Inner code container |
-| `block-quote` | Parent | Blockquote container |
-| `bullet-list` | Parent | Unordered list |
-| `order-list` | Parent | Ordered list |
-| `list-item` | Parent | List item |
-| `task-list` | Parent | Task/checkbox list |
-| `task-list-item` | Parent | Task list item |
-| `table` | Parent | Table container |
-| `table.inner` | Parent | Table inner structure |
-| `table.row` | Parent | Table row |
-| `table.cell` | Parent | Table cell |
-| `thematic-break` | Parent | Horizontal rule (---) |
-| `html-block` | Parent | Raw HTML block |
-| `math-block` | Parent | Display math ($$...$$) |
-| `diagram` | Parent | Mermaid/PlantUML/Vega-Lite |
-| `frontmatter` | Parent | YAML frontmatter |
-| `paragraph.content` | Content | Paragraph text content |
-| `atxheading.content` | Content | Heading text content |
-| `codeblock.content` | Content | Code text content |
-| `table.cell.content` | Content | Table cell text content |
-| `language-input` | Content | Code block language input |
+| Block Name           | Type    | Description                                |
+| -------------------- | ------- | ------------------------------------------ |
+| `scrollpage`         | Parent  | Root container, holds all top-level blocks |
+| `paragraph`          | Parent  | Basic text paragraph                       |
+| `atx-heading`        | Parent  | ATX-style heading (# Heading)              |
+| `setext-heading`     | Parent  | Setext-style heading (underlined)          |
+| `code-block`         | Parent  | Fenced or indented code block              |
+| `code`               | Parent  | Inner code container                       |
+| `block-quote`        | Parent  | Blockquote container                       |
+| `bullet-list`        | Parent  | Unordered list                             |
+| `order-list`         | Parent  | Ordered list                               |
+| `list-item`          | Parent  | List item                                  |
+| `task-list`          | Parent  | Task/checkbox list                         |
+| `task-list-item`     | Parent  | Task list item                             |
+| `table`              | Parent  | Table container                            |
+| `table.inner`        | Parent  | Table inner structure                      |
+| `table.row`          | Parent  | Table row                                  |
+| `table.cell`         | Parent  | Table cell                                 |
+| `thematic-break`     | Parent  | Horizontal rule (---)                      |
+| `html-block`         | Parent  | Raw HTML block                             |
+| `math-block`         | Parent  | Display math ($$...$$)                     |
+| `diagram`            | Parent  | Mermaid/PlantUML/Vega-Lite                 |
+| `frontmatter`        | Parent  | YAML frontmatter                           |
+| `paragraph.content`  | Content | Paragraph text content                     |
+| `atxheading.content` | Content | Heading text content                       |
+| `codeblock.content`  | Content | Code text content                          |
+| `table.cell.content` | Content | Table cell text content                    |
+| `language-input`     | Content | Code block language input                  |
 
 ### Block Registration
 
@@ -244,13 +251,13 @@ const block = BlockClass.create(muya, state)
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `packages/muya/src/block/base/treeNode.ts` | Base class, DOM ownership |
-| `packages/muya/src/block/base/parent.ts` | Container operations (insertBefore, insertAfter, append) |
-| `packages/muya/src/block/base/content.ts` | Leaf blocks, text handling, cursor management |
-| `packages/muya/src/block/scrollPage/index.ts` | Root container, block registry |
-| `packages/muya/src/config/index.ts` | BLOCK_DOM_PROPERTY constant |
+| File                                          | Purpose                                                  |
+| --------------------------------------------- | -------------------------------------------------------- |
+| `packages/muya/src/block/base/treeNode.ts`    | Base class, DOM ownership                                |
+| `packages/muya/src/block/base/parent.ts`      | Container operations (insertBefore, insertAfter, append) |
+| `packages/muya/src/block/base/content.ts`     | Leaf blocks, text handling, cursor management            |
+| `packages/muya/src/block/scrollPage/index.ts` | Root container, block registry                           |
+| `packages/muya/src/config/index.ts`           | BLOCK_DOM_PROPERTY constant                              |
 
 ---
 
@@ -262,13 +269,13 @@ Muya uses JSON OT (Operational Transform) for state management. All content chan
 
 ```typescript
 // State changes are tracked via the 'source' parameter
-block.append(newBlock, 'user')  // Tracked: creates OT operation
-block.append(newBlock, 'api')   // Silent: no OT operation
+block.append(newBlock, 'user') // Tracked: creates OT operation
+block.append(newBlock, 'api') // Silent: no OT operation
 
 // The jsonState object handles operations
-this.jsonState.insertOperation(path, state)  // Insert
-this.jsonState.removeOperation(path)          // Remove
-this.jsonState.editOperation(path, textOp)    // Edit text
+this.jsonState.insertOperation(path, state) // Insert
+this.jsonState.removeOperation(path) // Remove
+this.jsonState.editOperation(path, textOp) // Edit text
 ```
 
 ### State Structure
@@ -446,7 +453,7 @@ Navigate the block tree to find specific blocks:
 ```typescript
 // Find block by index (0-based)
 const scrollPage = muya.editor.scrollPage
-const block = scrollPage.find(3)  // Fourth block
+const block = scrollPage.find(3) // Fourth block
 
 // Query block by path
 const block = scrollPage.queryBlock([2, 'children', 0])
@@ -509,10 +516,10 @@ function calculatePositions() {
 block.domNode.textContent = 'New content'
 
 // WRONG: Removing elements via DOM
-element.remove()  // Doesn't update Muya's state
+element.remove() // Doesn't update Muya's state
 
 // WRONG: Adding elements as siblings
-parentElement.appendChild(newElement)  // Not tracked by Muya
+parentElement.appendChild(newElement) // Not tracked by Muya
 ```
 
 **Why it fails**: Breaks state sync, undo/redo, and document serialization.
@@ -602,18 +609,18 @@ eventCenter.on('json-change', handler)
 eventCenter.on('selection-change', handler)
 eventCenter.off('json-change', handler)
 eventCenter.emit('custom-event', data)
-eventCenter.once('one-time-event', handler)  // Auto-removes after first call
+eventCenter.once('one-time-event', handler) // Auto-removes after first call
 ```
 
 ### Key Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `json-change` | Document content changed | State changes |
-| `selection-change` | Cursor/selection moved | Selection info |
-| `muya-float` | Floating panel shown/hidden | Panel info |
-| `content-change` | Block content updated | Block, changes |
-| `stateChange` | Editor state changed | New state |
+| Event              | Description                 | Payload        |
+| ------------------ | --------------------------- | -------------- |
+| `json-change`      | Document content changed    | State changes  |
+| `selection-change` | Cursor/selection moved      | Selection info |
+| `muya-float`       | Floating panel shown/hidden | Panel info     |
+| `content-change`   | Block content updated       | Block, changes |
+| `stateChange`      | Editor state changed        | New state      |
 
 ### Floating Panel System
 
@@ -626,15 +633,15 @@ if (muya.ui.shownFloat.size > 0) {
 }
 
 // Float names
-'mu-format-picker'      // Format toolbar
-'mu-table-picker'       // Table size picker
-'mu-quick-insert'       // Quick insert menu (/)
-'mu-emoji-picker'       // Emoji selector
-'mu-front-menu'         // Turn Into menu
-'mu-list-picker'        // List type picker
-'mu-image-selector'     // Image selector
-'mu-table-column-tools' // Table column toolbar
-'mu-table-bar-tools'    // Table row toolbar
+;('mu-format-picker') // Format toolbar
+;('mu-table-picker') // Table size picker
+;('mu-quick-insert') // Quick insert menu (/)
+;('mu-emoji-picker') // Emoji selector
+;('mu-front-menu') // Turn Into menu
+;('mu-list-picker') // List type picker
+;('mu-image-selector') // Image selector
+;('mu-table-column-tools') // Table column toolbar
+;('mu-table-bar-tools') // Table row toolbar
 ```
 
 ---
@@ -656,18 +663,18 @@ Content blocks (paragraph, heading, code, etc.) render via `update()`. The base 
 
 The inline renderer processes these token types:
 
-| Token Type | Description |
-|------------|-------------|
-| `em` | Emphasis (*text*) |
-| `strong` | Strong (**text**) |
-| `del` | Strikethrough (~~text~~) |
-| `inline_code` | Inline code (\`code\`) |
-| `inline_math` | Inline math ($x^2$) |
-| `link` | Links [text](url) |
-| `image` | Images ![alt](src) |
-| `html_tag` | HTML tags <tag> |
-| `emoji` | Emoji :emoji: |
-| `footnote_identifier` | Footnote [^id] |
+| Token Type            | Description              |
+| --------------------- | ------------------------ |
+| `em`                  | Emphasis (_text_)        |
+| `strong`              | Strong (**text**)        |
+| `del`                 | Strikethrough (~~text~~) |
+| `inline_code`         | Inline code (\`code\`)   |
+| `inline_math`         | Inline math ($x^2$)      |
+| `link`                | Links [text](url)        |
+| `image`               | Images ![alt](src)       |
+| `html_tag`            | HTML tags <tag>          |
+| `emoji`               | Emoji :emoji:            |
+| `footnote_identifier` | Footnote [^id]           |
 
 ---
 
@@ -790,16 +797,16 @@ console.log(selection.getSelection())
 
 ### Common Issues and Solutions
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| `structuredClone() error` | Vue Proxy wrapping Muya | Use `markRaw()` when storing Muya in ref |
-| Content not updating | Direct DOM manipulation | Use `setMarkdown()` or block APIs |
-| Selection jumps/lost | Native selection API | Use Muya's Selection API |
-| Memory leaks | Event listeners not cleaned | Use `eventCenter.attachDOMEvent()` |
-| Z-index conflicts | Overlay outside Muya | Inject as children, not overlays |
-| Positions drift on scroll | Coordinate math for positioning | Use DOM hierarchy positioning |
-| Undo/redo broken | Using 'api' source | Use 'user' source for user actions |
-| Block type not rendering | Block name not registered | Check `ScrollPage.loadBlock()` returns value |
+| Issue                     | Cause                           | Solution                                     |
+| ------------------------- | ------------------------------- | -------------------------------------------- |
+| `structuredClone() error` | Vue Proxy wrapping Muya         | Use `markRaw()` when storing Muya in ref     |
+| Content not updating      | Direct DOM manipulation         | Use `setMarkdown()` or block APIs            |
+| Selection jumps/lost      | Native selection API            | Use Muya's Selection API                     |
+| Memory leaks              | Event listeners not cleaned     | Use `eventCenter.attachDOMEvent()`           |
+| Z-index conflicts         | Overlay outside Muya            | Inject as children, not overlays             |
+| Positions drift on scroll | Coordinate math for positioning | Use DOM hierarchy positioning                |
+| Undo/redo broken          | Using 'api' source              | Use 'user' source for user actions           |
+| Block type not rendering  | Block name not registered       | Check `ScrollPage.loadBlock()` returns value |
 
 ### Getting Block from DOM Element
 

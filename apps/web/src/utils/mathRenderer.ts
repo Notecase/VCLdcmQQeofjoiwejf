@@ -7,6 +7,8 @@
 import katex from 'katex'
 import 'katex/dist/contrib/mhchem.min.js'
 import 'katex/dist/katex.min.css'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 // Cache for rendered math expressions
 const mathCache = new Map<string, string>()
@@ -156,6 +158,106 @@ export function renderBasicMarkdown(content: string): string {
   html = html.replace(/\n/g, '<br>')
 
   return html
+}
+
+/**
+ * Render content with full markdown (via marked) + all LaTeX math delimiters (via KaTeX).
+ *
+ * Supports: $...$, $$...$$, \(...\), \[...\] math delimiters,
+ * plus full markdown (headings, lists, blockquotes, tables, links, etc.)
+ */
+export function renderMathMarkdown(content: string): string {
+  if (!content) return ''
+
+  const placeholders: string[] = []
+  let placeholderIndex = 0
+
+  function addPlaceholder(html: string): string {
+    const placeholder = `MATHPLACEHOLDER${placeholderIndex++}END`
+    placeholders.push(html)
+    return placeholder
+  }
+
+  let text = content
+
+  // Step 1: Protect code blocks from math parsing
+  text = text.replace(/```[\s\S]*?```/g, (match) => addPlaceholder(match))
+  text = text.replace(/`[^`]+`/g, (match) => addPlaceholder(match))
+
+  // Step 2: Extract and render all math delimiters (order matters: display before inline)
+
+  // \[...\] → display math
+  text = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, math) => {
+    return addPlaceholder(`<div class="math-display">${renderMath(math.trim(), true)}</div>`)
+  })
+
+  // $$...$$ → display math
+  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => {
+    return addPlaceholder(`<div class="math-display">${renderMath(math.trim(), true)}</div>`)
+  })
+
+  // \(...\) → inline math
+  text = text.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => {
+    return addPlaceholder(`<span class="math-inline">${renderMath(math.trim(), false)}</span>`)
+  })
+
+  // $...$ → inline math (skip currency-like patterns)
+  text = text.replace(/\$([^$\n]+?)\$/g, (match, math) => {
+    if (/^\d+\.?\d*$/.test(math.trim())) return match
+    return addPlaceholder(`<span class="math-inline">${renderMath(math.trim(), false)}</span>`)
+  })
+
+  // Step 3: Restore code block placeholders before marked parses them
+  // (code blocks were protected so math inside code stays literal)
+  for (let i = 0; i < placeholderIndex; i++) {
+    const placeholder = `MATHPLACEHOLDER${i}END`
+    if (
+      text.includes(placeholder) &&
+      (placeholders[i].startsWith('```') || placeholders[i].startsWith('`'))
+    ) {
+      text = text.replace(placeholder, placeholders[i])
+      // Mark as restored so we don't double-restore later
+      placeholders[i] = ''
+    }
+  }
+
+  // Step 4: Run marked for full markdown rendering
+  const html = marked.parse(text, { async: false }) as string
+
+  // Step 5: Sanitize with DOMPurify (allow KaTeX classes/styles)
+  let sanitized = DOMPurify.sanitize(html, {
+    ADD_ATTR: ['class', 'style', 'aria-hidden', 'data-lang'],
+    ADD_TAGS: [
+      'span',
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mo',
+      'mn',
+      'msup',
+      'msub',
+      'mfrac',
+      'mover',
+      'munder',
+      'munderover',
+      'msqrt',
+      'mroot',
+      'mtable',
+      'mtr',
+      'mtd',
+      'annotation',
+    ],
+  })
+
+  // Step 6: Restore remaining math placeholders
+  for (let i = 0; i < placeholderIndex; i++) {
+    if (placeholders[i]) {
+      sanitized = sanitized.replace(`MATHPLACEHOLDER${i}END`, placeholders[i])
+    }
+  }
+
+  return sanitized
 }
 
 /**

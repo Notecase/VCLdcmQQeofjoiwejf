@@ -24,7 +24,7 @@ export function isCreateOperation(message: string, hasNoteId: boolean): boolean 
     /\bnew\s+note\s+(about|on|for|regarding)\b/i,
   ]
 
-  if (explicitNewNotePatterns.some(p => p.test(lower))) {
+  if (explicitNewNotePatterns.some((p) => p.test(lower))) {
     return true // Create new note even if one is already open
   }
 
@@ -36,7 +36,7 @@ export function isCreateOperation(message: string, hasNoteId: boolean): boolean 
       /\bjot\s+down\b/i,
     ]
 
-    if (createPatterns.some(p => p.test(lower))) {
+    if (createPatterns.some((p) => p.test(lower))) {
       return true
     }
 

@@ -23,15 +23,21 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
   const isStreaming = ref(false)
   const error = ref<string | null>(null)
   const highlightedText = ref<string | null>(null)
+  const highlightSurroundingContext = ref<string | null>(null)
+  const highlightSection = ref<string | null>(null)
 
   let abortController: AbortController | null = null
 
-  function setHighlightedText(text: string) {
+  function setHighlightedText(text: string, surroundingContext?: string, sectionHeading?: string) {
     highlightedText.value = text
+    highlightSurroundingContext.value = surroundingContext || null
+    highlightSection.value = sectionHeading || null
   }
 
   function clearHighlightedText() {
     highlightedText.value = null
+    highlightSurroundingContext.value = null
+    highlightSection.value = null
   }
 
   function clearMessages() {
@@ -67,8 +73,13 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
 
     // Build conversation history (exclude current message)
     const conversationHistory = messages.value
-      .filter(m => m.id !== userMsg.id)
-      .map(m => ({ role: m.role, content: m.content }))
+      .filter((m) => m.id !== userMsg.id)
+      .map((m) => ({
+        role: m.role,
+        content: m.highlightContext
+          ? `[Regarding: "${m.highlightContext}"]\n${m.content}`
+          : m.content,
+      }))
 
     // Prepare assistant message placeholder
     const assistantMsg: ExplainMessage = {
@@ -79,8 +90,14 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
     }
     messages.value.push(assistantMsg)
 
+    // Capture context before clearing
+    const sentSurroundingContext = highlightSurroundingContext.value || undefined
+    const sentHighlightSection = highlightSection.value || undefined
+
     // Clear highlight after sending
     highlightedText.value = null
+    highlightSurroundingContext.value = null
+    highlightSection.value = null
     isStreaming.value = true
     abortController = new AbortController()
 
@@ -91,6 +108,8 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
           message,
           lessonContext,
           highlightedText: userMsg.highlightContext,
+          highlightSurroundingContext: sentSurroundingContext,
+          highlightSection: sentHighlightSection,
           conversationHistory,
         }),
         signal: abortController.signal,
@@ -124,27 +143,23 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
             if (event.event === 'text') {
               assistantMsg.content += event.data
               // Trigger reactivity
-              const idx = messages.value.findIndex(m => m.id === assistantMsg.id)
+              const idx = messages.value.findIndex((m) => m.id === assistantMsg.id)
               if (idx >= 0) {
                 messages.value[idx] = { ...assistantMsg }
               }
-            }
-            else if (event.event === 'error') {
+            } else if (event.event === 'error') {
               error.value = event.data
             }
-          }
-          catch {
+          } catch {
             // Skip malformed SSE lines
           }
         }
       }
-    }
-    catch (err) {
+    } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         error.value = err instanceof Error ? err.message : 'Failed to get response'
       }
-    }
-    finally {
+    } finally {
       isStreaming.value = false
       abortController = null
     }

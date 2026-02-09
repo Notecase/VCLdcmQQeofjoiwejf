@@ -40,23 +40,11 @@ const inputRef = ref<HTMLTextAreaElement | null>(null)
 const showThreads = ref(false)
 const isExpanded = ref(false)
 
-const streamingMessage = computed(() => {
-  if (!store.isChatStreaming) return null
-  return {
-    id: 'streaming',
-    role: 'assistant' as const,
-    content: store.streamingContent,
-    createdAt: new Date(),
-    toolCalls: store.streamingToolCalls.length > 0 ? [...store.streamingToolCalls] : undefined,
-    thinkingSteps: store.streamingThinkingSteps.length > 0 ? [...store.streamingThinkingSteps] : undefined,
-  }
-})
-
-const hasMessages = computed(() => store.chatMessages.length > 0 || !!streamingMessage.value)
+const hasMessages = computed(() => store.chatMessages.length > 0)
 
 const activeThreadTitle = computed(() => {
   if (!store.activeThreadId) return 'New AI chat'
-  const thread = store.threads.find(t => t.id === store.activeThreadId)
+  const thread = store.threads.find((t) => t.id === store.activeThreadId)
   return thread?.title || 'AI chat'
 })
 
@@ -99,25 +87,34 @@ function autoResize() {
 watch(inputValue, () => nextTick(autoResize))
 
 // Auto-scroll
-watch(() => store.chatMessages.length, () => {
-  nextTick(() => {
-    if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-  })
-})
-watch(() => store.streamingContent, () => {
-  nextTick(() => {
-    if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-  })
-})
-
-// Focus input when opened
-watch(() => props.open, (val) => {
-  if (val) {
+watch(
+  () => store.chatMessages.length,
+  () => {
     nextTick(() => {
-      setTimeout(() => inputRef.value?.focus(), 100)
+      if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
     })
   }
-})
+)
+watch(
+  () => store.streamingContent,
+  () => {
+    nextTick(() => {
+      if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+    })
+  }
+)
+
+// Focus input when opened
+watch(
+  () => props.open,
+  (val) => {
+    if (val) {
+      nextTick(() => {
+        setTimeout(() => inputRef.value?.focus(), 100)
+      })
+    }
+  }
+)
 </script>
 
 <template>
@@ -130,51 +127,103 @@ watch(() => props.open, (val) => {
       >
         <!-- Header -->
         <div class="popup-header">
-          <button class="thread-selector" @click="showThreads = !showThreads">
+          <button
+            class="thread-selector"
+            @click="showThreads = !showThreads"
+          >
             <span class="thread-title">{{ activeThreadTitle }}</span>
-            <ChevronDown :size="14" class="chevron" :class="{ rotated: showThreads }" />
+            <ChevronDown
+              :size="14"
+              class="chevron"
+              :class="{ rotated: showThreads }"
+            />
           </button>
           <div class="header-controls">
-            <button class="ctrl-btn" title="New chat" @click="handleNewChat">
+            <button
+              class="ctrl-btn"
+              title="New chat"
+              @click="handleNewChat"
+            >
               <SquarePen :size="15" />
             </button>
-            <button class="ctrl-btn" title="Expand" @click="isExpanded = !isExpanded">
+            <button
+              class="ctrl-btn"
+              title="Expand"
+              @click="isExpanded = !isExpanded"
+            >
               <Maximize2 :size="15" />
             </button>
-            <button class="ctrl-btn" title="Minimize" @click="emit('close')">
+            <button
+              class="ctrl-btn"
+              title="Minimize"
+              @click="emit('close')"
+            >
               <Minus :size="15" />
             </button>
           </div>
         </div>
 
         <!-- Thread List (dropdown) -->
-        <div v-if="showThreads" class="thread-dropdown">
+        <div
+          v-if="showThreads"
+          class="thread-dropdown"
+        >
           <ThreadList />
         </div>
 
         <!-- Body -->
-        <div ref="messagesRef" class="popup-body">
+        <div
+          ref="messagesRef"
+          class="popup-body"
+        >
           <!-- Empty State — Notion style -->
-          <div v-if="!hasMessages" class="empty-state">
+          <div
+            v-if="!hasMessages"
+            class="empty-state"
+          >
             <div class="ai-icon-ring">
               <Shell :size="28" />
             </div>
             <h3 class="empty-title">How can I help you today?</h3>
             <div class="quick-actions">
-              <button class="action-row" @click="handleQuickAction('Plan my day based on active roadmaps')">
-                <CalendarCheck :size="16" class="action-icon" />
+              <button
+                class="action-row"
+                @click="handleQuickAction('Plan my day based on active roadmaps')"
+              >
+                <CalendarCheck
+                  :size="16"
+                  class="action-icon"
+                />
                 <span>Plan my day</span>
               </button>
-              <button class="action-row" @click="handleQuickAction('Show my active plans and progress')">
-                <Route :size="16" class="action-icon" />
+              <button
+                class="action-row"
+                @click="handleQuickAction('Show my active plans and progress')"
+              >
+                <Route
+                  :size="16"
+                  class="action-icon"
+                />
                 <span>Review my progress</span>
               </button>
-              <button class="action-row" @click="handleQuickAction('Summarize what I studied today')">
-                <FileText :size="16" class="action-icon" />
+              <button
+                class="action-row"
+                @click="handleQuickAction('Summarize what I studied today')"
+              >
+                <FileText
+                  :size="16"
+                  class="action-icon"
+                />
                 <span>Summarize today</span>
               </button>
-              <button class="action-row" @click="handleQuickAction('Create a new learning roadmap')">
-                <BookOpen :size="16" class="action-icon" />
+              <button
+                class="action-row"
+                @click="handleQuickAction('Create a new learning roadmap')"
+              >
+                <BookOpen
+                  :size="16"
+                  class="action-icon"
+                />
                 <span>Create a roadmap</span>
               </button>
             </div>
@@ -186,12 +235,7 @@ watch(() => props.open, (val) => {
               v-for="msg in store.chatMessages"
               :key="msg.id"
               :message="msg"
-              :is-streaming="false"
-            />
-            <SecretaryMessageCard
-              v-if="streamingMessage"
-              :message="streamingMessage"
-              :is-streaming="true"
+              :is-streaming="Boolean(msg._streaming)"
             />
           </template>
         </div>
@@ -209,13 +253,25 @@ watch(() => props.open, (val) => {
           />
           <div class="input-footer">
             <div class="input-left">
-              <button class="input-tool" title="History" @click="showThreads = !showThreads">
+              <button
+                class="input-tool"
+                title="History"
+                @click="showThreads = !showThreads"
+              >
                 <History :size="15" />
               </button>
-              <button class="input-tool" title="Search" disabled>
+              <button
+                class="input-tool"
+                title="Search"
+                disabled
+              >
                 <Search :size="15" />
               </button>
-              <button class="input-tool" title="Translate" disabled>
+              <button
+                class="input-tool"
+                title="Translate"
+                disabled
+              >
                 <Languages :size="15" />
               </button>
             </div>
@@ -227,8 +283,15 @@ watch(() => props.open, (val) => {
                 :disabled="!inputValue.trim() || store.isChatStreaming"
                 @click="handleSubmit"
               >
-                <Loader2 v-if="store.isChatStreaming" :size="14" class="spin" />
-                <ArrowUp v-else :size="14" />
+                <Loader2
+                  v-if="store.isChatStreaming"
+                  :size="14"
+                  class="spin"
+                />
+                <ArrowUp
+                  v-else
+                  :size="14"
+                />
               </button>
             </div>
           </div>
@@ -528,7 +591,9 @@ watch(() => props.open, (val) => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Transition ── */

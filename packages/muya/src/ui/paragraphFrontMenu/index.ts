@@ -1,3 +1,4 @@
+import type { ReferenceElement } from '@floating-ui/dom'
 import type { VNode } from 'snabbdom'
 import type Parent from '../../block/base/parent'
 import type { Muya } from '../../index'
@@ -21,6 +22,7 @@ import './index.css'
 const MAX_SUBMENU_HEIGHT = 400
 const ITEM_HEIGHT = 28
 const PADDING = 10
+const FRONT_CONTROLS_CLASS = 'mu-front-controls-enabled'
 
 function renderIcon({ label, icon }: { label: string; icon: string }) {
   return h(
@@ -67,20 +69,41 @@ export class ParagraphFrontMenu extends BaseFloat {
     this.listen()
   }
 
+  private isFrontControlsEnabled() {
+    return this.muya.domNode.classList.contains(FRONT_CONTROLS_CLASS)
+  }
+
+  private isBlockFromCurrentEditor(block: Parent | null) {
+    return Boolean(block?.domNode && this.muya.domNode.contains(block.domNode))
+  }
+
   override listen() {
     const { container } = this
     const { eventCenter } = this.muya
     super.listen()
 
     eventCenter.subscribe('muya-front-menu', ({ reference, block }) => {
-      if (reference) {
-        this.block = block
+      const menuBlock = (block ?? null) as Parent | null
+
+      if (!this.isFrontControlsEnabled()) {
+        this.hide()
+        this.reference = null
+        this.block = null
+        return
+      }
+
+      if (reference && this.isBlockFromCurrentEditor(menuBlock)) {
+        this.block = menuBlock
         this.reference = reference
 
         setTimeout(() => {
           this.show(reference)
           this.render()
         }, 0)
+      } else {
+        this.hide()
+        this.reference = null
+        this.block = null
       }
     })
 
@@ -91,6 +114,14 @@ export class ParagraphFrontMenu extends BaseFloat {
     }
 
     eventCenter.attachDOMEvent(container!, 'mouseleave', enterLeaveHandler)
+  }
+
+  override show(reference: ReferenceElement, cb: (...args: unknown[]) => void = () => {}) {
+    if (!this.isFrontControlsEnabled() || !this.isBlockFromCurrentEditor(this.block)) {
+      this.hide()
+      return
+    }
+    super.show(reference, cb)
   }
 
   /**

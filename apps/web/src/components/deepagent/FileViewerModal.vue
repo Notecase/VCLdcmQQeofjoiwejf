@@ -9,16 +9,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { VirtualFile } from '@inkdown/shared/types'
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'
-import {
-  X,
-  Copy,
-  Download,
-  Edit,
-  Save,
-  FileText,
-  Check,
-  BookOpen,
-} from 'lucide-vue-next'
+import { X, Copy, Download, Edit, Save, FileText, Check, BookOpen } from 'lucide-vue-next'
 import MarkdownContent from './MarkdownContent.vue'
 
 const props = defineProps<{
@@ -39,15 +30,18 @@ const copied = ref(false)
 const codeRef = ref<HTMLElement | null>(null)
 
 // Reset state when file changes
-watch(() => props.file, (f) => {
-  if (f) {
-    editContent.value = f.content
-    editFilename.value = f.name
-    editMode.value = false
-    copied.value = false
-    nextTick(highlightCode)
+watch(
+  () => props.file,
+  (f) => {
+    if (f) {
+      editContent.value = f.content
+      editFilename.value = f.name
+      editMode.value = false
+      copied.value = false
+      nextTick(highlightCode)
+    }
   }
-})
+)
 
 const isMarkdown = computed(() => props.file?.name.endsWith('.md') ?? false)
 
@@ -114,9 +108,10 @@ async function handleCopy() {
   try {
     await navigator.clipboard.writeText(props.file.content)
     copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
-  }
-  catch {
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch {
     // Clipboard API may not be available
   }
 }
@@ -147,7 +142,11 @@ const numberedLines = computed(() => {
 
 <template>
   <Transition name="modal">
-    <div v-if="visible && file" class="modal-backdrop" @click="handleBackdropClick">
+    <div
+      v-if="visible && file"
+      class="modal-backdrop"
+      @click="handleBackdropClick"
+    >
       <div class="modal-container">
         <!-- Header -->
         <div class="modal-header">
@@ -156,28 +155,63 @@ const numberedLines = computed(() => {
               <FileText :size="13" />
               <span>.{{ fileExtension || 'txt' }}</span>
             </div>
-            <button class="close-pill" type="button" title="Close" @click="emit('close')">
+            <button
+              class="close-pill"
+              type="button"
+              title="Close"
+              @click="emit('close')"
+            >
               <X :size="14" />
             </button>
           </div>
 
           <div class="header-title">
             <h2 v-if="!editMode">{{ file.name }}</h2>
-            <input v-else v-model="editFilename" class="filename-input" type="text" />
+            <input
+              v-else
+              v-model="editFilename"
+              class="filename-input"
+              type="text"
+            />
           </div>
 
           <div class="header-actions">
-            <button v-if="!editMode" class="hdr-btn" type="button" @click="enterEdit">
+            <button
+              v-if="!editMode"
+              class="hdr-btn"
+              type="button"
+              @click="enterEdit"
+            >
               <Edit :size="13" /> Edit
             </button>
-            <button class="hdr-btn" :class="{ success: copied }" type="button" @click="handleCopy">
-              <Check v-if="copied" :size="13" /> <Copy v-else :size="13" />
+            <button
+              class="hdr-btn"
+              :class="{ success: copied }"
+              type="button"
+              @click="handleCopy"
+            >
+              <Check
+                v-if="copied"
+                :size="13"
+              />
+              <Copy
+                v-else
+                :size="13"
+              />
               {{ copied ? 'Copied' : 'Copy' }}
             </button>
-            <button class="hdr-btn" type="button" @click="handleDownload">
+            <button
+              class="hdr-btn"
+              type="button"
+              @click="handleDownload"
+            >
               <Download :size="13" /> Download
             </button>
-            <button class="hdr-btn accent" type="button" @click="handleSaveAsNote">
+            <button
+              class="hdr-btn accent"
+              type="button"
+              @click="handleSaveAsNote"
+            >
               <BookOpen :size="13" /> Save as Note
             </button>
           </div>
@@ -193,17 +227,28 @@ const numberedLines = computed(() => {
           />
 
           <!-- Markdown rendering -->
-          <div v-else-if="isMarkdown" class="markdown-viewer">
+          <div
+            v-else-if="isMarkdown"
+            class="markdown-viewer"
+          >
             <MarkdownContent :content="file.content" />
           </div>
 
           <!-- Code rendering with line numbers -->
-          <div v-else class="code-viewer">
+          <div
+            v-else
+            class="code-viewer"
+          >
             <table class="code-table">
               <tbody>
-                <tr v-for="(line, idx) in numberedLines" :key="idx">
+                <tr
+                  v-for="(line, idx) in numberedLines"
+                  :key="idx"
+                >
                   <td class="line-number">{{ idx + 1 }}</td>
-                  <td class="line-content"><pre><code ref="codeRef" :class="`language-${prismLanguage}`">{{ line }}</code></pre></td>
+                  <td class="line-content">
+                    <pre><code ref="codeRef" :class="`language-${prismLanguage}`">{{ line }}</code></pre>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -211,9 +256,22 @@ const numberedLines = computed(() => {
         </div>
 
         <!-- Footer (edit mode only) -->
-        <div v-if="editMode" class="modal-footer">
-          <button class="btn btn-ghost" type="button" @click="exitEdit">Cancel</button>
-          <button class="btn btn-primary" type="button" @click="handleSave">
+        <div
+          v-if="editMode"
+          class="modal-footer"
+        >
+          <button
+            class="btn btn-ghost"
+            type="button"
+            @click="exitEdit"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            type="button"
+            @click="handleSave"
+          >
             <Save :size="12" />
             Save Changes
           </button>

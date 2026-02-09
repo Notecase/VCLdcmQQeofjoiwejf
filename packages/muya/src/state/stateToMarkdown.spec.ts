@@ -15,15 +15,11 @@ describe('ExportMarkdown - order list defaults', () => {
         children: [
           {
             name: 'list-item',
-            children: [
-              { name: 'paragraph', text: 'Biodiversity' },
-            ],
+            children: [{ name: 'paragraph', text: 'Biodiversity' }],
           },
           {
             name: 'list-item',
-            children: [
-              { name: 'paragraph', text: 'Climate influence' },
-            ],
+            children: [{ name: 'paragraph', text: 'Climate influence' }],
           },
         ],
       },

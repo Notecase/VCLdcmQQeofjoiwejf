@@ -97,7 +97,10 @@ export class NoteSubagent {
         fullContent += chunk.data as string
         yield {
           type: 'progress',
-          data: { progress: Math.min(90, fullContent.length / 20), message: 'Generating content...' },
+          data: {
+            progress: Math.min(90, fullContent.length / 20),
+            message: 'Generating content...',
+          },
         }
         yield { type: 'content', data: chunk.data }
       } else if (chunk.type === 'thinking') {

@@ -3,10 +3,7 @@
  * ChatComposer - Wide, short chat input composer with send/stop buttons.
  */
 import { ref, watch, nextTick, onMounted } from 'vue'
-import {
-  ArrowUp,
-  Square,
-} from 'lucide-vue-next'
+import { ArrowUp, Square } from 'lucide-vue-next'
 
 const props = defineProps<{
   isProcessing: boolean
@@ -56,9 +53,15 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 const dynamicPlaceholder = ref('')
-watch(() => props.isProcessing, (streaming) => {
-  dynamicPlaceholder.value = streaming ? 'Running...' : (props.placeholder || 'Write your message...')
-}, { immediate: true })
+watch(
+  () => props.isProcessing,
+  (streaming) => {
+    dynamicPlaceholder.value = streaming
+      ? 'Running...'
+      : props.placeholder || 'Write your message...'
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   setTimeout(() => {
@@ -72,7 +75,10 @@ defineExpose({ inputRef })
 <template>
   <footer class="chat-composer">
     <div class="composer-card">
-      <div v-if="$slots.top" class="composer-top">
+      <div
+        v-if="$slots.top"
+        class="composer-top"
+      >
         <slot name="top" />
       </div>
       <div class="composer-body">
@@ -122,7 +128,9 @@ defineExpose({ inputRef })
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   overflow: hidden;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .composer-card:focus-within {

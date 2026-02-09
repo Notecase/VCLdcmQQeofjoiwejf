@@ -59,7 +59,10 @@ function formatDate(dateStr: string): string {
         :class="{ active: store.selectedFilename === file.filename }"
         @click="selectRootFile(file.filename)"
       >
-        <FileText :size="14" class="file-icon" />
+        <FileText
+          :size="14"
+          class="file-icon"
+        />
         <div class="file-info">
           <span class="file-name">{{ file.filename }}</span>
           <span class="file-meta">
@@ -76,7 +79,10 @@ function formatDate(dateStr: string): string {
       :class="{ active: inHistoryRoute }"
       @click="openHistoryFolder"
     >
-      <History :size="14" class="file-icon" />
+      <History
+        :size="14"
+        class="file-icon"
+      />
       <div class="file-info">
         <span class="file-name">History</span>
         <span class="file-meta">Archived daily plans</span>
@@ -88,7 +94,10 @@ function formatDate(dateStr: string): string {
       :class="{ active: inPlansRoute }"
       @click="openPlansFolder"
     >
-      <Folder :size="14" class="file-icon" />
+      <Folder
+        :size="14"
+        class="file-icon"
+      />
       <div class="file-info">
         <span class="file-name">Plans</span>
         <span class="file-meta">Roadmap archives</span>

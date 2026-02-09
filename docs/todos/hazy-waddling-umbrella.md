@@ -10,6 +10,7 @@
 After fixing the `run_deep_research` duplicate bug, the course generation pipeline still has 3 related bugs that compound into the user-visible symptoms: **103% progress bar**, **UI stuck on "Generating Content"**, and **wasted Gemini API calls**.
 
 From the backend logs:
+
 ```
 [batch_generate_lessons] Starting: 13 lessons      ← 1st call
 [batch_generate_lessons] Lessons complete: 12/13    ← 1 error
@@ -34,6 +35,7 @@ The LLM orchestrator retries `batch_generate_lessons` because the first call ret
 ### Bug 2: Frontend progress exceeds 100%
 
 The `onContentProgress` handler (`course.ts:186-190`) computes:
+
 ```typescript
 generationProgress.value = 65 + Math.round(((data.lessonIndex + 1) / data.totalLessons) * 25)
 ```
@@ -42,12 +44,14 @@ With double-counted `completedLessons` (30 completed, 20 total):
 `65 + Math.round((30/20) * 25) = 65 + 38 = 103%`
 
 Two sub-issues:
+
 - No `Math.min` clamp to prevent exceeding 100
 - No `>=` monotonic guard (unlike `onProgress` at line 169), so it can also jump backward
 
 ### Bug 3: `onComplete` doesn't finalize UI state
 
 `onComplete` (`course.ts:193-201`) sets `isGenerating = false` but doesn't:
+
 - Set `generationStage = 'complete'` (stays at `'content'`)
 - Set `generationProgress = 100` (stays at 103)
 - Clear `generationThinking = ''` ("AI is thinking..." stays visible)
@@ -69,6 +73,7 @@ Two sub-issues:
 Add `lessonsStarted`, `quizzesStarted`, `slidesStarted` flags — same pattern as existing `researchStarted` (line 91).
 
 **a) `createLessonWriterTools` (line 535):**
+
 ```typescript
 export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolInterface[] {
   let lessonsStarted = false                        // NEW
@@ -85,6 +90,7 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
 ```
 
 **b) `createQuizWriterTools` (line 661):**
+
 ```typescript
 export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInterface[] {
   let quizzesStarted = false                        // NEW
@@ -101,6 +107,7 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
 ```
 
 **c) `createSlidesWriterTools` (line 784):**
+
 ```typescript
 export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolInterface[] {
   let slidesStarted = false                         // NEW
@@ -121,6 +128,7 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
 **File: `apps/web/src/stores/course.ts`**
 
 **a) `onProgress` handler (line 166-172) — add `Math.min` clamp:**
+
 ```typescript
 onProgress: (progress) => {
   generationStage.value = progress.stage
@@ -133,6 +141,7 @@ onProgress: (progress) => {
 ```
 
 **b) `onContentProgress` handler (line 186-190) — add clamp + monotonic guard:**
+
 ```typescript
 onContentProgress: (data) => {
   generationStage.value = 'content'
@@ -185,11 +194,11 @@ The `save_to_supabase` tool's `complete` event is the authoritative one (fires w
 
 ## Files Summary
 
-| File | Changes |
-|------|---------|
+| File                                            | Changes                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
 | `packages/ai/src/agents/course/course-tools.ts` | Add 3 guard flags: `lessonsStarted`, `quizzesStarted`, `slidesStarted` |
-| `apps/web/src/stores/course.ts` | Clamp progress, add monotonic guard, finalize state in `onComplete` |
-| `packages/ai/src/agents/course/orchestrator.ts` | Remove duplicate `complete` event (line 400) |
+| `apps/web/src/stores/course.ts`                 | Clamp progress, add monotonic guard, finalize state in `onComplete`    |
+| `packages/ai/src/agents/course/orchestrator.ts` | Remove duplicate `complete` event (line 400)                           |
 
 **No changes to:** `deep-research.ts`, `course.service.ts`, `CourseGeneratorView.vue`, prompts, types, DB schema
 

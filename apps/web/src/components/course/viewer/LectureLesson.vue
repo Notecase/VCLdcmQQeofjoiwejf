@@ -20,13 +20,24 @@ const practiceProblems = computed(() => props.lesson.content.practiceProblems ??
     </h2>
 
     <!-- Markdown content -->
-    <MuyaRenderer v-if="lesson.content.markdown" :markdown="lesson.content.markdown" selectable />
+    <MuyaRenderer
+      v-if="lesson.content.markdown"
+      :markdown="lesson.content.markdown"
+      selectable
+    />
 
     <!-- Key Terms -->
-    <div v-if="keyTerms.length > 0" class="key-terms">
+    <div
+      v-if="keyTerms.length > 0"
+      class="key-terms"
+    >
       <h3 class="section-heading">Key Terms</h3>
       <div class="terms-grid">
-        <div v-for="(kt, idx) in keyTerms" :key="idx" class="term-card">
+        <div
+          v-for="(kt, idx) in keyTerms"
+          :key="idx"
+          class="term-card"
+        >
           <dt class="term-word">{{ kt.term }}</dt>
           <dd class="term-def">{{ kt.definition }}</dd>
         </div>
@@ -34,14 +45,24 @@ const practiceProblems = computed(() => props.lesson.content.practiceProblems ??
     </div>
 
     <!-- Practice Problems -->
-    <div v-if="practiceProblems.length > 0" class="practice-section">
+    <div
+      v-if="practiceProblems.length > 0"
+      class="practice-section"
+    >
       <h3 class="section-heading">Practice Problems</h3>
-      <div v-for="(p, idx) in practiceProblems" :key="p.id" class="practice-item">
+      <div
+        v-for="(p, idx) in practiceProblems"
+        :key="p.id"
+        class="practice-item"
+      >
         <div class="practice-question">
           <span class="practice-num">{{ idx + 1 }}.</span>
           {{ p.question }}
         </div>
-        <div v-if="p.sampleAnswer" class="practice-answer">
+        <div
+          v-if="p.sampleAnswer"
+          class="practice-answer"
+        >
           <span class="answer-label">Sample Answer:</span> {{ p.sampleAnswer }}
         </div>
       </div>

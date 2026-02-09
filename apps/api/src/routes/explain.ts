@@ -27,10 +27,16 @@ const ExplainChatSchema = z.object({
     transcript: z.string().optional(),
   }),
   highlightedText: z.string().optional(),
-  conversationHistory: z.array(z.object({
-    role: z.enum(['user', 'assistant']),
-    content: z.string(),
-  })).optional(),
+  highlightSurroundingContext: z.string().optional(),
+  highlightSection: z.string().optional(),
+  conversationHistory: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string(),
+      })
+    )
+    .optional(),
 })
 
 /**
@@ -58,8 +64,7 @@ explain.post('/chat', zValidator('json', ExplainChatSchema), async (c) => {
           data: JSON.stringify(event),
         })
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error('explain.chat.error', {
         userId: auth.userId,
         error: error instanceof Error ? error.message : String(error),

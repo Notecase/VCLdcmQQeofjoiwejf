@@ -7,6 +7,7 @@ Currently, AI responses on the home page render via `MarkdownContent.vue` (using
 **Goal**: Replace `MarkdownContent` with Muya-based rendering for ALL assistant messages, and for new note creation, show an inline preview card with diff styling and a Save button (preview-before-commit flow).
 
 **Two scenarios after this change:**
+
 - **Regular responses** (roadmaps, explanations, etc.): Rendered in a rounded Muya card. Read-only. Not saved.
 - **New note creation** ("create a note about X"): Same Muya card but editable, with green diff blocks showing additions, and a "Save" button. Note is NOT saved until user clicks Save.
 - **Editing existing notes** ("add a paragraph to my X note"): Chat shows summary message ("I added 2 paragraphs"). Diffs appear in the right-side NotePreviewPanel (existing behavior, unchanged).
@@ -128,21 +129,24 @@ private async *streamNoteCreate(message: string): AsyncGenerator<ResearchStreamE
 **File:** `apps/web/src/components/deepagent/MuyaResponseCard.vue` (NEW)
 
 ### Props
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `content` | `string` | `''` | Markdown content to render |
-| `mode` | `'readonly' \| 'note-preview'` | `'readonly'` | Determines editability and UI |
-| `isStreaming` | `boolean` | `false` | Whether content is still streaming |
-| `noteTitle` | `string` | `''` | Title shown in note-preview header |
-| `isSaved` | `boolean` | `false` | Shows "Saved" badge vs Save button |
+
+| Prop          | Type                           | Default      | Description                        |
+| ------------- | ------------------------------ | ------------ | ---------------------------------- |
+| `content`     | `string`                       | `''`         | Markdown content to render         |
+| `mode`        | `'readonly' \| 'note-preview'` | `'readonly'` | Determines editability and UI      |
+| `isStreaming` | `boolean`                      | `false`      | Whether content is still streaming |
+| `noteTitle`   | `string`                       | `''`         | Title shown in note-preview header |
+| `isSaved`     | `boolean`                      | `false`      | Shows "Saved" badge vs Save button |
 
 ### Emits
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `save` | `{ title: string, content: string }` | User clicked Save |
-| `content-change` | `string` | User edited content in note-preview mode |
+
+| Event            | Payload                              | Description                              |
+| ---------------- | ------------------------------------ | ---------------------------------------- |
+| `save`           | `{ title: string, content: string }` | User clicked Save                        |
+| `content-change` | `string`                             | User edited content in note-preview mode |
 
 ### Template structure
+
 ```
 <div class="muya-response-card" :class="{ 'note-preview': isNotePreview }">
   <!-- Note preview header (only in note-preview mode) -->
@@ -160,6 +164,7 @@ private async *streamNoteCreate(message: string): AsyncGenerator<ResearchStreamE
 ```
 
 ### Muya lifecycle
+
 1. **onMounted**: Create Muya instance with `markRaw()`, import Muya CSS
 2. **Plugin registration**: Minimal set — NO ParagraphFrontButton, NO ParagraphFrontMenu for readonly. Full set for note-preview mode.
 3. **Content watch**: Debounced `setMarkdown()` — 150ms debounce during streaming, immediate when streaming ends
@@ -176,6 +181,7 @@ private async *streamNoteCreate(message: string): AsyncGenerator<ResearchStreamE
 6. **onUnmounted**: Call `muya.destroy()`, cleanup
 
 ### CSS
+
 - Rounded card: `border-radius: 16px`, subtle border, same background as Muya editor
 - Green diff blocks: Reuse existing `.mu-diff-addition` CSS (green left border + subtle green tint)
 - Card header: flex row with title + save button
@@ -189,11 +195,13 @@ private async *streamNoteCreate(message: string): AsyncGenerator<ResearchStreamE
 **File:** `apps/web/src/stores/deepAgent.ts`
 
 ### New state
+
 ```typescript
 const pendingNotePreview = ref<{ title: string; content: string } | null>(null)
 ```
 
 ### Handle `note-preview-ready` event (in `handleStreamEvent`)
+
 ```typescript
 case 'note-preview-ready': {
   let previewData: { title: string; content: string }
@@ -208,6 +216,7 @@ case 'note-preview-ready': {
 ```
 
 ### New action: `saveNoteFromPreview()`
+
 ```typescript
 async function saveNoteFromPreview(content?: string) {
   const preview = pendingNotePreview.value
@@ -246,10 +255,12 @@ async function saveNoteFromPreview(content?: string) {
 ```
 
 ### Also clear `pendingNotePreview` on new message / new thread
+
 In `sendChatMessage()` at the top: `pendingNotePreview.value = null`
 In `createNewThread()`: `pendingNotePreview.value = null`
 
 ### Export new refs and actions
+
 Add `pendingNotePreview` and `saveNoteFromPreview` to the store return.
 
 ---
@@ -261,6 +272,7 @@ Add `pendingNotePreview` and `saveNoteFromPreview` to the store return.
 ### Replace MarkdownContent with MuyaResponseCard
 
 **Import change:**
+
 ```typescript
 // Remove: import MarkdownContent from '@/components/deepagent/MarkdownContent.vue'
 // Add:
@@ -268,16 +280,17 @@ import MuyaResponseCard from '@/components/deepagent/MuyaResponseCard.vue'
 ```
 
 ### Historical messages (chatMessages loop)
+
 Replace `<MarkdownContent :content="msg.content" />` with:
+
 ```vue
-<MuyaResponseCard
-  :content="msg.content"
-  mode="readonly"
-/>
+<MuyaResponseCard :content="msg.content" mode="readonly" />
 ```
 
 ### Streaming message
+
 Replace `<MarkdownContent :content="deepAgent.streamingContent" />` with:
+
 ```vue
 <MuyaResponseCard
   :content="deepAgent.streamingContent"
@@ -290,6 +303,7 @@ Replace `<MarkdownContent :content="deepAgent.streamingContent" />` with:
 ```
 
 ### Add save handler
+
 ```typescript
 async function handleNoteSave(payload: { title: string; content: string }) {
   await deepAgent.saveNoteFromPreview(payload.content)
@@ -297,6 +311,7 @@ async function handleNoteSave(payload: { title: string; content: string }) {
 ```
 
 ### Stop triggering NotePreviewPanel for new notes
+
 The `note-navigate` event handler in deepAgent store currently opens the preview panel. Since we no longer emit `note-navigate` for new note creation (we emit `note-preview-ready` instead), the preview panel will naturally stop appearing for this flow. No change needed — the `note-navigate` handler still works for edit flows triggered by the Secretary agent.
 
 ---
@@ -306,6 +321,7 @@ The `note-navigate` event handler in deepAgent store currently opens the preview
 **Approach:** Reuse existing `.mu-diff-block` and `.mu-diff-addition` CSS classes that are already defined for the editor diff system. The MuyaResponseCard imports Muya CSS, which includes these classes. If additional styling is needed for the card context, add scoped styles.
 
 Key styles needed in MuyaResponseCard:
+
 ```css
 .muya-response-card {
   border-radius: 16px;
@@ -327,8 +343,12 @@ Key styles needed in MuyaResponseCard:
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.save-btn { /* primary button styles */ }
-.saved-badge { color: #4ade80; /* green */ }
+.save-btn {
+  /* primary button styles */
+}
+.saved-badge {
+  color: #4ade80; /* green */
+}
 
 /* Diff styling for note preview (all additions) */
 .muya-response-card .mu-diff-addition {
@@ -342,14 +362,14 @@ Key styles needed in MuyaResponseCard:
 
 ## Files to Modify / Create
 
-| File | Action | Priority |
-|------|--------|----------|
-| `packages/shared/src/types/research.ts` | Add `note-preview-ready` event type | HIGH |
-| `packages/ai/src/agents/note.agent.ts` | Support `skipAutoSave` for create action | HIGH |
-| `packages/ai/src/agents/research/agent.ts` | Preview-first note creation in `streamNoteCreate()` | HIGH |
-| `apps/web/src/components/deepagent/MuyaResponseCard.vue` | **NEW** — Muya-based response card | HIGH |
-| `apps/web/src/stores/deepAgent.ts` | Handle `note-preview-ready`, add save action | HIGH |
-| `apps/web/src/views/HomePage.vue` | Replace MarkdownContent with MuyaResponseCard | HIGH |
+| File                                                     | Action                                              | Priority |
+| -------------------------------------------------------- | --------------------------------------------------- | -------- |
+| `packages/shared/src/types/research.ts`                  | Add `note-preview-ready` event type                 | HIGH     |
+| `packages/ai/src/agents/note.agent.ts`                   | Support `skipAutoSave` for create action            | HIGH     |
+| `packages/ai/src/agents/research/agent.ts`               | Preview-first note creation in `streamNoteCreate()` | HIGH     |
+| `apps/web/src/components/deepagent/MuyaResponseCard.vue` | **NEW** — Muya-based response card                  | HIGH     |
+| `apps/web/src/stores/deepAgent.ts`                       | Handle `note-preview-ready`, add save action        | HIGH     |
+| `apps/web/src/views/HomePage.vue`                        | Replace MarkdownContent with MuyaResponseCard       | HIGH     |
 
 ---
 

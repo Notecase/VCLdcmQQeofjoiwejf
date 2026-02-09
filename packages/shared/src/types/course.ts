@@ -212,7 +212,10 @@ export type CourseStreamEvent =
   | { event: 'progress'; data: CourseGenerationProgress }
   | { event: 'research_progress'; data: ResearchProgress }
   | { event: 'outline_ready'; data: { outline: CourseOutline; thinking: string } }
-  | { event: 'content_progress'; data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number } }
+  | {
+      event: 'content_progress'
+      data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }
+    }
   | { event: 'complete'; data: { courseId: string } }
   | { event: 'error'; data: { message: string; stage: GenerationStageType } }
 
@@ -275,22 +278,47 @@ export interface CourseTodoItem {
   agentName?: string
 }
 
-export type CourseSubAgentName = 'researcher' | 'outline-planner' | 'lesson-writer' | 'quiz-writer' | 'slides-writer' | 'video-matcher' | 'assembler'
+export type CourseSubAgentName =
+  | 'researcher'
+  | 'outline-planner'
+  | 'lesson-writer'
+  | 'quiz-writer'
+  | 'slides-writer'
+  | 'video-matcher'
+  | 'assembler'
 
 // Extended stream events for DeepAgentsJS orchestrator
 export type CourseOrchestratorStreamEvent =
   | { event: 'thinking'; data: string }
   | { event: 'agent-step'; data: CourseAgentStep }
   | { event: 'todo-update'; data: { todos: CourseTodoItem[] } }
-  | { event: 'subagent-start'; data: { id: string; name: CourseSubAgentName; status: 'running'; startedAt: string } }
-  | { event: 'subagent-result'; data: { id: string; name: CourseSubAgentName; status: 'completed' | 'error'; completedAt: string; output?: string } }
+  | {
+      event: 'subagent-start'
+      data: { id: string; name: CourseSubAgentName; status: 'running'; startedAt: string }
+    }
+  | {
+      event: 'subagent-result'
+      data: {
+        id: string
+        name: CourseSubAgentName
+        status: 'completed' | 'error'
+        completedAt: string
+        output?: string
+      }
+    }
   | { event: 'text'; data: string }
   | { event: 'tool_call'; data: string }
   | { event: 'tool_result'; data: string }
-  | { event: 'interrupt'; data: { id: string; type: 'outline_approval'; outline: CourseOutline; thinking: string } }
+  | {
+      event: 'interrupt'
+      data: { id: string; type: 'outline_approval'; outline: CourseOutline; thinking: string }
+    }
   | { event: 'progress'; data: CourseGenerationProgress }
   | { event: 'research_progress'; data: ResearchProgress }
-  | { event: 'content_progress'; data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number } }
+  | {
+      event: 'content_progress'
+      data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }
+    }
   | { event: 'complete'; data: { courseId: string } }
   | { event: 'error'; data: { message: string; stage: GenerationStageType } }
   | { event: 'done'; data?: string }

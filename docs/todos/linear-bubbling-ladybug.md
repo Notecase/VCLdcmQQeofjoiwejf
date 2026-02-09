@@ -32,31 +32,36 @@ Spawn **5 teammates** using **Opus 4.6** for each:
 ### Task Execution Order
 
 **Phase 1** (types-agent only):
+
 - Define all shared types in `packages/shared/src/types/course.ts`
 - Create Supabase migration for course tables
 - Export from `packages/shared/src/types/index.ts`
 
 **Phase 2** (research-agent + content-agent, after Phase 1):
+
 - Research-agent: Build Gemini Deep Research pipeline with async polling + RAG indexing
 - Content-agent: Build LangGraph course generation pipeline (outline → content → video → finalize)
 
 **Phase 3** (api-agent, after Phase 2):
+
 - Build Hono routes for course generation, polling, approval, and course retrieval
 
 **Phase 4** (frontend-agent, after Phase 3):
+
 - Build the full Coursera-like course viewer with Vue 3 components and Pinia store
 
 **Phase 5** (all agents):
+
 - Integration testing, wiring everything together
 
 ### File Ownership (NO CONFLICTS)
 
-| Agent | Owns These Files/Folders |
-|-------|--------------------------|
-| types-agent | `packages/shared/src/types/course.ts`, `supabase/migrations/010_courses.sql` |
-| research-agent | `packages/ai/src/agents/course/research/` (new folder) |
-| content-agent | `packages/ai/src/agents/course/` (top-level files: `index.ts`, `agent.ts`, `prompts.ts`, `tools.ts`, `video-matcher.ts`) |
-| api-agent | `apps/api/src/routes/course.ts` |
+| Agent          | Owns These Files/Folders                                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| types-agent    | `packages/shared/src/types/course.ts`, `supabase/migrations/010_courses.sql`                                                                          |
+| research-agent | `packages/ai/src/agents/course/research/` (new folder)                                                                                                |
+| content-agent  | `packages/ai/src/agents/course/` (top-level files: `index.ts`, `agent.ts`, `prompts.ts`, `tools.ts`, `video-matcher.ts`)                              |
+| api-agent      | `apps/api/src/routes/course.ts`                                                                                                                       |
 | frontend-agent | `apps/web/src/views/CourseView.vue`, `apps/web/src/views/CourseGeneratorView.vue`, `apps/web/src/components/course/`, `apps/web/src/stores/course.ts` |
 
 ---
@@ -84,13 +89,13 @@ Stage 5: Finalize             → Assemble complete course, assign video URLs
 
 Each lesson has a specific type with tailored content:
 
-| Type | Content | Description |
-|------|---------|-------------|
-| `lecture` | Markdown + practice problems | Detailed text content with LaTeX math, examples, step-by-step explanations |
-| `video` | Video overview + YouTube embed | Pre/post viewing questions, key concepts, embedded YouTube video |
-| `slides` | Slide deck (6-20 slides) | Title, subtitle, bullets, speaker notes per slide |
-| `practice` | Worked examples + problems | Concept recap, worked example, 5-8 graded problems |
-| `quiz` | Assessment questions | 8-10 multiple choice questions, mixed difficulty |
+| Type       | Content                        | Description                                                                |
+| ---------- | ------------------------------ | -------------------------------------------------------------------------- |
+| `lecture`  | Markdown + practice problems   | Detailed text content with LaTeX math, examples, step-by-step explanations |
+| `video`    | Video overview + YouTube embed | Pre/post viewing questions, key concepts, embedded YouTube video           |
+| `slides`   | Slide deck (6-20 slides)       | Title, subtitle, bullets, speaker notes per slide                          |
+| `practice` | Worked examples + problems     | Concept recap, worked example, 5-8 graded problems                         |
+| `quiz`     | Assessment questions           | 8-10 multiple choice questions, mixed difficulty                           |
 
 ### Note3's Human-in-the-Loop Pattern
 
@@ -106,6 +111,7 @@ Each lesson has a specific type with tailored content:
 ### Note3's Content Coherence Strategy
 
 Each lesson generation includes context from previous lessons:
+
 - Track `lessonSummaries` (title, concepts introduced, summary) per generated lesson
 - Pass last 5 lesson summaries as context to each new lesson prompt
 - Prompt says: "Reference concepts from previous lessons... Do NOT repeat explanations already covered... Build progressively on established knowledge"
@@ -113,6 +119,7 @@ Each lesson generation includes context from previous lessons:
 ### Note3's YouTube Video Matching
 
 For `video` type lessons:
+
 - Search YouTube Data API v3 with query: `"{lesson title} tutorial"`
 - Return top 3 results with videoId, title, channel, thumbnail, description
 - Auto-select top result, user can override
@@ -127,6 +134,7 @@ For `video` type lessons:
 Use `@langchain/langgraph` for the course generation state machine. Each pipeline stage is a graph node.
 
 **Key imports:**
+
 ```typescript
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { ChatAnthropic } from '@langchain/anthropic'
@@ -136,6 +144,7 @@ import { z } from 'zod'
 ```
 
 **Model Selection:**
+
 - **Opus 4.6** (`claude-opus-4-6`): All reasoning — topic analysis, outline generation, lecture content, quiz generation, practice problems, video overviews
 - **Gemini** (`gemini-3-pro-preview`): Slide generation ONLY (visual/presentation content)
 - **Gemini Deep Research** (`deep-research-pro-preview-12-2025`): Deep research phase ONLY
@@ -202,11 +211,11 @@ export interface Course {
   prerequisites: string[]
   learningObjectives: string[]
   status: CourseStatus
-  progress: number                    // 0-100 overall completion
+  progress: number // 0-100 overall completion
   settings: CourseSettings
-  researchReport: string | null       // Raw deep research report
-  thinkingTrace: string | null        // AI reasoning trace
-  generatedAt: string                 // ISO timestamp
+  researchReport: string | null // Raw deep research report
+  thinkingTrace: string | null // AI reasoning trace
+  generatedAt: string // ISO timestamp
   createdAt: string
   updatedAt: string
 }
@@ -218,7 +227,7 @@ export interface CourseModule {
   description: string
   order: number
   status: ModuleStatus
-  progress: number                    // 0-100 module completion
+  progress: number // 0-100 module completion
   lessons: Lesson[]
 }
 
@@ -227,7 +236,7 @@ export interface Lesson {
   moduleId: string
   title: string
   type: LessonType
-  duration: string                    // "15 min", "30 min"
+  duration: string // "15 min", "30 min"
   order: number
   status: LessonStatus
   content: LessonContent
@@ -235,17 +244,17 @@ export interface Lesson {
 }
 
 export interface LessonContent {
-  markdown: string                    // Main content (all lesson types)
+  markdown: string // Main content (all lesson types)
   practiceProblems?: PracticeProblem[]
-  slides?: SlideData[]                // For 'slides' type
-  videoUrl?: string                   // For 'video' type
-  videoId?: string                    // YouTube video ID
+  slides?: SlideData[] // For 'slides' type
+  videoUrl?: string // For 'video' type
+  videoId?: string // YouTube video ID
   videoThumbnail?: string
   videoChannel?: string
-  keyPoints?: string[]                // For 'video' and 'lecture' types
-  timestamps?: { time: string; label: string }[]  // For 'video' type
-  transcript?: string                 // For 'video' type
-  keyTerms?: { term: string; definition: string }[]  // For 'lecture'/'reading'
+  keyPoints?: string[] // For 'video' and 'lecture' types
+  timestamps?: { time: string; label: string }[] // For 'video' type
+  transcript?: string // For 'video' type
+  keyTerms?: { term: string; definition: string }[] // For 'lecture'/'reading'
 }
 
 export interface SlideData {
@@ -253,20 +262,20 @@ export interface SlideData {
   title: string
   subtitle?: string
   bullets?: string[]
-  notes?: string                      // Speaker notes
-  visual?: string                     // Diagram description
+  notes?: string // Speaker notes
+  visual?: string // Diagram description
 }
 
 export interface PracticeProblem {
   id: string
   type: 'multiple-choice' | 'matching' | 'short-answer'
   question: string
-  options?: string[]                  // For multiple-choice
-  correctIndex?: number               // For multiple-choice
-  pairs?: { left: string; right: string }[]  // For matching
-  sampleAnswer?: string               // For short-answer
+  options?: string[] // For multiple-choice
+  correctIndex?: number // For multiple-choice
+  pairs?: { left: string; right: string }[] // For matching
+  sampleAnswer?: string // For short-answer
   explanation: string
-  rubric?: string[]                   // For short-answer grading
+  rubric?: string[] // For short-answer grading
 }
 
 // --- Course Settings ---
@@ -279,21 +288,21 @@ export interface CourseSettings {
   estimatedWeeks: number
   hoursPerWeek: number
   focusAreas: string[]
-  maxSlidesPerLesson: number          // Default: 20
+  maxSlidesPerLesson: number // Default: 20
 }
 
 // --- Generation Pipeline Types ---
 
 export type GenerationStageType =
-  | 'research'       // Deep Research phase
-  | 'indexing'        // RAG indexing phase
-  | 'analysis'        // Topic analysis
-  | 'planning'        // Outline generation
-  | 'approval'        // Waiting for human approval
-  | 'content'         // Lesson content generation
-  | 'multimedia'      // Video matching + slide generation
-  | 'review'          // Final quality review
-  | 'complete'        // Done
+  | 'research' // Deep Research phase
+  | 'indexing' // RAG indexing phase
+  | 'analysis' // Topic analysis
+  | 'planning' // Outline generation
+  | 'approval' // Waiting for human approval
+  | 'content' // Lesson content generation
+  | 'multimedia' // Video matching + slide generation
+  | 'review' // Final quality review
+  | 'complete' // Done
 
 export interface CourseOutline {
   title: string
@@ -330,10 +339,10 @@ export interface CourseGenerationProgress {
   courseId: string
   threadId: string
   stage: GenerationStageType
-  stageProgress: number               // 0-100 within current stage
-  overallProgress: number             // 0-100 total
-  thinkingOutput: string              // AI reasoning trace
-  currentNode: string                 // Current LangGraph node
+  stageProgress: number // 0-100 within current stage
+  overallProgress: number // 0-100 total
+  thinkingOutput: string // AI reasoning trace
+  currentNode: string // Current LangGraph node
   error?: string
 }
 
@@ -375,13 +384,13 @@ export interface CourseGenerationResponse {
 export interface ApproveOutlineRequest {
   threadId: string
   courseId: string
-  modifiedOutline?: CourseOutline      // User-edited outline (optional)
+  modifiedOutline?: CourseOutline // User-edited outline (optional)
 }
 
 export interface RejectOutlineRequest {
   threadId: string
   courseId: string
-  feedback: string                     // Why rejected, what to change
+  feedback: string // Why rejected, what to change
 }
 
 // --- Course Stream Events (SSE) ---
@@ -390,7 +399,10 @@ export type CourseStreamEvent =
   | { event: 'progress'; data: CourseGenerationProgress }
   | { event: 'research_progress'; data: ResearchProgress }
   | { event: 'outline_ready'; data: { outline: CourseOutline; thinking: string } }
-  | { event: 'content_progress'; data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number } }
+  | {
+      event: 'content_progress'
+      data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }
+    }
   | { event: 'complete'; data: { courseId: string } }
   | { event: 'error'; data: { message: string; stage: GenerationStageType } }
 
@@ -401,8 +413,8 @@ export interface QuizAttempt {
   lessonId: string
   courseId: string
   userId: string
-  answers: Record<string, number | string>  // problemId → answer
-  score: number                              // 0-100
+  answers: Record<string, number | string> // problemId → answer
+  score: number // 0-100
   passed: boolean
   submittedAt: string
 }
@@ -410,9 +422,9 @@ export interface QuizAttempt {
 export interface CourseProgress {
   courseId: string
   userId: string
-  completedLessons: string[]           // Lesson IDs
-  quizScores: Record<string, number>   // lessonId → best score
-  totalProgress: number                // 0-100
+  completedLessons: string[] // Lesson IDs
+  quizScores: Record<string, number> // lessonId → best score
+  totalProgress: number // 0-100
   lastAccessedAt: string
   startedAt: string
 }
@@ -435,6 +447,7 @@ export interface LessonVideoMatch {
 ```
 
 **Also re-export from `packages/shared/src/types/index.ts`:**
+
 ```typescript
 export * from './course'
 ```
@@ -618,8 +631,8 @@ import type { ResearchProgress, ResearchSource } from '@inkdown/shared/types'
 
 const RESEARCH_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/interactions'
 const RESEARCH_AGENT_MODEL = 'deep-research-pro-preview-12-2025'
-const POLL_INTERVAL_MS = 5000    // 5 seconds
-const MAX_POLLS = 120            // 10 minute timeout
+const POLL_INTERVAL_MS = 5000 // 5 seconds
+const MAX_POLLS = 120 // 10 minute timeout
 
 export interface DeepResearchConfig {
   geminiApiKey: string
@@ -641,9 +654,8 @@ export async function runDeepResearch(
   const { geminiApiKey, onProgress } = config
 
   // Build research prompt
-  const focusSection = focusAreas.length > 0
-    ? `\nFOCUS AREAS:\n${focusAreas.map(a => `- ${a}`).join('\n')}`
-    : ''
+  const focusSection =
+    focusAreas.length > 0 ? `\nFOCUS AREAS:\n${focusAreas.map((a) => `- ${a}`).join('\n')}` : ''
 
   const researchPrompt = `Research comprehensive, accurate, up-to-date content for creating an educational course about: "${topic}"
 ${focusSection}
@@ -699,7 +711,7 @@ Provide DETAILED, WELL-SOURCED information. This will be used as the source of t
 
     // Step 2: Poll for completion
     for (let poll = 0; poll < MAX_POLLS; poll++) {
-      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
 
       const pollResponse = await fetch(
         `${RESEARCH_API_BASE}/${interactionId}?key=${geminiApiKey}`,
@@ -766,8 +778,12 @@ Provide DETAILED, WELL-SOURCED information. This will be used as the source of t
     }
 
     // Timeout
-    return { success: false, report: null, sources: [], error: 'Research timed out after 10 minutes' }
-
+    return {
+      success: false,
+      report: null,
+      sources: [],
+      error: 'Research timed out after 10 minutes',
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
     onProgress?.({
@@ -798,10 +814,7 @@ export interface RAGIndex {
   chunks: { text: string; embedding: number[] }[]
 }
 
-export async function indexResearchReport(
-  report: string,
-  geminiApiKey: string
-): Promise<RAGIndex> {
+export async function indexResearchReport(report: string, geminiApiKey: string): Promise<RAGIndex> {
   // 1. Split report into chunks (512 chars, 50 char overlap)
   // 2. Embed each chunk using Gemini text-embedding-004
   // 3. Return in-memory index
@@ -860,9 +873,16 @@ import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { ChatAnthropic } from '@langchain/anthropic'
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
 import type {
-  CourseOutline, Course, CourseModule, Lesson, LessonContent,
-  CourseSettings, GenerationStageType, ResearchSource, LessonVideoMatch,
-  CourseGenerationProgress
+  CourseOutline,
+  Course,
+  CourseModule,
+  Lesson,
+  LessonContent,
+  CourseSettings,
+  GenerationStageType,
+  ResearchSource,
+  LessonVideoMatch,
+  CourseGenerationProgress,
 } from '@inkdown/shared/types'
 import { runDeepResearch } from './research'
 import { indexResearchReport, queryRAG, type RAGIndex } from './research/rag-indexer'
@@ -954,8 +974,7 @@ export function createCourseGenerationGraph(config: CourseAgentConfig) {
 
   // Node 3: Analyze Topic (Opus 4.6)
   graph.addNode('analyzeTopic', async (state) => {
-    const prompt = PROMPTS.ANALYSIS
-      .replace('{TOPIC}', state.topic)
+    const prompt = PROMPTS.ANALYSIS.replace('{TOPIC}', state.topic)
       .replace('{DIFFICULTY}', state.difficulty)
       .replace('{FOCUS_AREAS}', state.focusAreas.join(', ') || 'None')
     const response = await opus.invoke(prompt)
@@ -972,8 +991,7 @@ export function createCourseGenerationGraph(config: CourseAgentConfig) {
       ? `\nIMPORTANT: Address this feedback from the user:\n${state.outlineFeedback}\n`
       : ''
 
-    const prompt = PROMPTS.OUTLINE
-      .replace('{TOPIC}', state.topic)
+    const prompt = PROMPTS.OUTLINE.replace('{TOPIC}', state.topic)
       .replace('{DIFFICULTY}', state.difficulty)
       .replace('{FOCUS_AREAS}', state.focusAreas.join(', ') || 'None')
       .replace('{RESEARCH_CONTEXT}', researchContext)
@@ -1007,15 +1025,17 @@ export function createCourseGenerationGraph(config: CourseAgentConfig) {
         // Get RAG context for this lesson
         let ragContext = ''
         if (state.ragIndex) {
-          ragContext = await queryRAG(
-            state.ragIndex, lessonOutline.title, config.geminiApiKey
-          )
+          ragContext = await queryRAG(state.ragIndex, lessonOutline.title, config.geminiApiKey)
         }
 
         // Build previous lessons context for coherence
-        const prevContext = completedLessons.slice(-5).map((l, idx) =>
-          `${idx + 1}. "${l.title}" (${l.moduleTitle}) — covered: ${l.topics.join(', ')}`
-        ).join('\n')
+        const prevContext = completedLessons
+          .slice(-5)
+          .map(
+            (l, idx) =>
+              `${idx + 1}. "${l.title}" (${l.moduleTitle}) — covered: ${l.topics.join(', ')}`
+          )
+          .join('\n')
 
         // Get type-specific prompt
         const prompt = PROMPTS[lessonOutline.type.toUpperCase()]
@@ -1051,11 +1071,20 @@ export function createCourseGenerationGraph(config: CourseAgentConfig) {
         })
 
         // Report progress
-        const pct = 30 + Math.round(((i * moduleOutline.lessons.length + lessonOutline.order) /
-          (outline.modules.length * moduleOutline.lessons.length)) * 50)
+        const pct =
+          30 +
+          Math.round(
+            ((i * moduleOutline.lessons.length + lessonOutline.order) /
+              (outline.modules.length * moduleOutline.lessons.length)) *
+              50
+          )
         config.onProgress?.({
-          courseId: '', threadId: '', stage: 'content',
-          stageProgress: pct, overallProgress: pct, thinkingOutput: '',
+          courseId: '',
+          threadId: '',
+          stage: 'content',
+          stageProgress: pct,
+          overallProgress: pct,
+          thinkingOutput: '',
           currentNode: `Module ${i + 1}, Lesson ${lessonOutline.order}`,
         })
       }
@@ -1085,9 +1114,7 @@ export function createCourseGenerationGraph(config: CourseAgentConfig) {
     if (!state.settings.includeVideos || !config.youtubeApiKey) {
       return { lessonVideos: [], stageProgress: 85 }
     }
-    const lessonVideos = await matchVideosForLessons(
-      state.generatedModules, config.youtubeApiKey
-    )
+    const lessonVideos = await matchVideosForLessons(state.generatedModules, config.youtubeApiKey)
     return { lessonVideos, stageProgress: 90 }
   })
 
@@ -1128,7 +1155,7 @@ export const PROMPTS = {
   ANALYSIS: `You are an expert curriculum designer...`, // Same pattern as Note3 ANALYSIS_PROMPT
 
   OUTLINE: `You are an expert curriculum designer creating a comprehensive course...
-Return ONLY JSON matching the CourseOutline schema...`,  // Same as Note3 OUTLINE_PROMPT
+Return ONLY JSON matching the CourseOutline schema...`, // Same as Note3 OUTLINE_PROMPT
 
   LECTURE: `Create detailed LECTURE content...
 Include: introduction, clear explanations, step-by-step breakdowns, key definitions (use LaTeX!),
@@ -1155,6 +1182,7 @@ Return ONLY JSON: { "markdown": "...", "practiceProblems": [...] }`,
 ```
 
 **CRITICAL**: Each prompt MUST include:
+
 - `{RESEARCH_CONTEXT}` — RAG-retrieved research context for accuracy
 - `{PREVIOUS_LESSONS}` — Last 5 lesson summaries for coherence
 - `{LESSON_TITLE}`, `{KEY_TOPICS}`, `{LEARNING_OBJECTIVES}`, `{MODULE_CONTEXT}`, `{COURSE_CONTEXT}`
@@ -1189,10 +1217,18 @@ export async function matchVideosForLessons(
   return matches
 }
 
-async function searchYouTube(query: string, apiKey: string, maxResults: number): Promise<YouTubeVideo[]> {
+async function searchYouTube(
+  query: string,
+  apiKey: string,
+  maxResults: number
+): Promise<YouTubeVideo[]> {
   const params = new URLSearchParams({
-    part: 'snippet', type: 'video', q: query,
-    maxResults: String(maxResults), videoEmbeddable: 'true', key: apiKey,
+    part: 'snippet',
+    type: 'video',
+    q: query,
+    maxResults: String(maxResults),
+    videoEmbeddable: 'true',
+    key: apiKey,
   })
   const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`)
   if (!res.ok) return []
@@ -1252,19 +1288,35 @@ course.post('/generate', async (c) => {
 
   // Create course record in Supabase (status: 'generating')
   await supabase.from('courses').insert({
-    id: courseId, user_id: userId, title: `Generating: ${topic}`,
-    topic, difficulty: difficulty || 'intermediate', status: 'generating',
+    id: courseId,
+    user_id: userId,
+    title: `Generating: ${topic}`,
+    topic,
+    difficulty: difficulty || 'intermediate',
+    status: 'generating',
     settings: settings || {},
   })
 
   // Create generation thread record
   await supabase.from('course_generation_threads').insert({
-    course_id: courseId, user_id: userId, thread_id: threadId,
-    status: 'running', current_stage: 'research',
+    course_id: courseId,
+    user_id: userId,
+    thread_id: threadId,
+    status: 'running',
+    current_stage: 'research',
   })
 
   // Start generation in background (non-blocking)
-  startGenerationInBackground(courseId, threadId, topic, difficulty, settings, focusAreas, userId, supabase)
+  startGenerationInBackground(
+    courseId,
+    threadId,
+    topic,
+    difficulty,
+    settings,
+    focusAreas,
+    userId,
+    supabase
+  )
 
   return c.json({ courseId, threadId, status: 'running' })
 })
@@ -1455,6 +1507,7 @@ export { course }
 ```
 
 **Register routes** in `apps/api/src/index.ts`:
+
 ```typescript
 import { course } from './routes/course'
 app.route('/api/course', course)
@@ -1470,9 +1523,17 @@ app.route('/api/course', course)
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
-  Course, CourseModule, Lesson, CourseOutline, CourseSettings,
-  CourseDifficulty, CourseGenerationProgress, ResearchProgress,
-  GenerationStageType, QuizAttempt, PracticeProblem
+  Course,
+  CourseModule,
+  Lesson,
+  CourseOutline,
+  CourseSettings,
+  CourseDifficulty,
+  CourseGenerationProgress,
+  ResearchProgress,
+  GenerationStageType,
+  QuizAttempt,
+  PracticeProblem,
 } from '@inkdown/shared/types'
 
 export const useCourseStore = defineStore('course', () => {
@@ -1507,21 +1568,34 @@ export const useCourseStore = defineStore('course', () => {
 
   // --- Computed ---
   const currentModule = computed(() => activeModules.value[selectedModuleIndex.value] || null)
-  const currentLesson = computed(() => currentModule.value?.lessons[selectedLessonIndex.value] || null)
+  const currentLesson = computed(
+    () => currentModule.value?.lessons[selectedLessonIndex.value] || null
+  )
   const courseProgress = computed(() => {
     if (!activeModules.value.length) return 0
     const totalLessons = activeModules.value.reduce((s, m) => s + m.lessons.length, 0)
-    const completedLessons = activeModules.value.reduce((s, m) =>
-      s + m.lessons.filter(l => l.status === 'completed').length, 0)
+    const completedLessons = activeModules.value.reduce(
+      (s, m) => s + m.lessons.filter((l) => l.status === 'completed').length,
+      0
+    )
     return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
   })
 
   // --- Actions ---
 
-  async function fetchCourses() { /* GET /api/course */ }
-  async function fetchCourse(courseId: string) { /* GET /api/course/:id */ }
+  async function fetchCourses() {
+    /* GET /api/course */
+  }
+  async function fetchCourse(courseId: string) {
+    /* GET /api/course/:id */
+  }
 
-  async function startGeneration(topic: string, difficulty: CourseDifficulty, settings: Partial<CourseSettings>, focusAreas: string[]) {
+  async function startGeneration(
+    topic: string,
+    difficulty: CourseDifficulty,
+    settings: Partial<CourseSettings>,
+    focusAreas: string[]
+  ) {
     /* POST /api/course/generate → set isGenerating, start polling SSE stream */
   }
 
@@ -1557,20 +1631,51 @@ export const useCourseStore = defineStore('course', () => {
     practiceAnswers.value[problemId] = answer
   }
 
-  function submitPractice() { practiceSubmitted.value = true }
-  function resetPractice() { practiceAnswers.value = {}; practiceSubmitted.value = false }
+  function submitPractice() {
+    practiceSubmitted.value = true
+  }
+  function resetPractice() {
+    practiceAnswers.value = {}
+    practiceSubmitted.value = false
+  }
 
   return {
-    courses, isLoadingCourses, activeCourse, activeModules,
-    selectedModuleIndex, selectedLessonIndex, sidebarOpen, notesPanelOpen,
-    isGenerating, generationThreadId, generationCourseId, generationStage,
-    generationProgress, generationThinking, researchProgress, pendingOutline,
-    isAwaitingApproval, generationError,
-    practiceAnswers, practiceSubmitted, currentSlide,
-    currentModule, currentLesson, courseProgress,
-    fetchCourses, fetchCourse, startGeneration, approveOutline, rejectOutline,
-    cancelGeneration, completeLesson, submitQuiz, selectLesson,
-    handleAnswer, submitPractice, resetPractice,
+    courses,
+    isLoadingCourses,
+    activeCourse,
+    activeModules,
+    selectedModuleIndex,
+    selectedLessonIndex,
+    sidebarOpen,
+    notesPanelOpen,
+    isGenerating,
+    generationThreadId,
+    generationCourseId,
+    generationStage,
+    generationProgress,
+    generationThinking,
+    researchProgress,
+    pendingOutline,
+    isAwaitingApproval,
+    generationError,
+    practiceAnswers,
+    practiceSubmitted,
+    currentSlide,
+    currentModule,
+    currentLesson,
+    courseProgress,
+    fetchCourses,
+    fetchCourse,
+    startGeneration,
+    approveOutline,
+    rejectOutline,
+    cancelGeneration,
+    completeLesson,
+    submitQuiz,
+    selectLesson,
+    handleAnswer,
+    submitPractice,
+    resetPractice,
   }
 })
 ```
@@ -1632,24 +1737,27 @@ apps/web/src/components/course/
 Follow the React reference component's design system, adapted to Inkdown's Vue/CSS patterns:
 
 **Color Palette:**
+
 ```css
---course-bg-primary: #FAF9F7;
---course-bg-secondary: #FFFFFF;
---course-bg-tertiary: #F5F3EF;
---course-accent-warm: #D97706;        /* Primary accent (amber) */
---course-accent-blue: #3B82F6;        /* Video lessons */
---course-accent-purple: #8B5CF6;      /* Slide lessons */
---course-accent-green: #10B981;       /* Reading/lecture lessons */
---course-accent-red: #EF4444;         /* Wrong answers */
+--course-bg-primary: #faf9f7;
+--course-bg-secondary: #ffffff;
+--course-bg-tertiary: #f5f3ef;
+--course-accent-warm: #d97706; /* Primary accent (amber) */
+--course-accent-blue: #3b82f6; /* Video lessons */
+--course-accent-purple: #8b5cf6; /* Slide lessons */
+--course-accent-green: #10b981; /* Reading/lecture lessons */
+--course-accent-red: #ef4444; /* Wrong answers */
 ```
 
 **Typography:**
+
 ```css
---course-font-display: 'Fraunces', Georgia, serif;   /* Headings */
---course-font-body: 'Source Sans 3', system-ui;       /* Body text */
+--course-font-display: 'Fraunces', Georgia, serif; /* Headings */
+--course-font-body: 'Source Sans 3', system-ui; /* Body text */
 ```
 
 **Layout (3-panel):**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ HEADER: Logo, course title, progress, notes toggle, help          │
@@ -1677,17 +1785,20 @@ Follow the React reference component's design system, adapted to Inkdown's Vue/C
 After all agents finish their parts, verify these integration points:
 
 ### Types → All Packages
+
 - [ ] `@inkdown/shared/types` exports all course types correctly
 - [ ] All agents import types from `@inkdown/shared/types`, not local definitions
 - [ ] Migration file creates all 6 tables with correct constraints
 
 ### Research Pipeline → Content Pipeline
+
 - [ ] `runDeepResearch()` returns `DeepResearchResult` with report + sources
 - [ ] `indexResearchReport()` creates RAG index from research report
 - [ ] `queryRAG()` retrieves relevant context for each lesson
 - [ ] Research report saved to `course_generation_threads.research_report`
 
 ### Content Pipeline → API
+
 - [ ] Course generation graph runs all nodes in sequence
 - [ ] Approval gate pauses at `generateOutline` node, resumes after `approve`
 - [ ] Rejection loop regenerates outline with feedback
@@ -1695,6 +1806,7 @@ After all agents finish their parts, verify these integration points:
 - [ ] Progress events emitted via `onProgress` callback
 
 ### API → Frontend
+
 - [ ] `POST /api/course/generate` returns courseId + threadId
 - [ ] SSE stream emits progress, research_progress, outline_ready, complete events
 - [ ] `POST /api/course/generate/:threadId/approve` resumes generation
@@ -1702,12 +1814,14 @@ After all agents finish their parts, verify these integration points:
 - [ ] `GET /api/course/:id` returns full course with modules and lessons
 
 ### Frontend → Router
+
 - [ ] `/courses` lists all generated courses
 - [ ] `/courses/generate` shows topic input → generation progress → outline review
 - [ ] `/courses/:id` loads full Coursera-like course viewer
 - [ ] Navigation between routes works correctly
 
 ### Data Flow (End-to-End)
+
 - [ ] User enters topic → POST /generate → background pipeline starts
 - [ ] Research progress streams via SSE → frontend shows sources + progress
 - [ ] Outline generated → presented for review → user approves/rejects
@@ -1718,6 +1832,7 @@ After all agents finish their parts, verify these integration points:
 - [ ] Lesson completion → progress bar updates → module completion tracking
 
 ### Dependencies to Install
+
 ```bash
 # In packages/ai/
 pnpm add @langchain/langgraph @langchain/anthropic @langchain/google-genai @langchain/core @google/genai zod
@@ -1727,6 +1842,7 @@ pnpm add @langchain/langgraph @langchain/anthropic @langchain/google-genai @lang
 ```
 
 ### Environment Variables Required
+
 ```env
 ANTHROPIC_API_KEY=sk-ant-...          # Opus 4.6 for content generation
 GEMINI_API_KEY=AIza...                 # Deep Research + Slides + RAG embeddings
@@ -1754,6 +1870,7 @@ Keep the MVP focused. Do NOT build these in the first pass:
 - ~~Integration with existing Secretary roadmaps~~ — Phase 2
 
 **DO build in Phase 1:**
+
 - Deep research with Gemini Deep Research Agent
 - Full 6-stage generation pipeline with human-in-the-loop
 - All 5 lesson types (lecture, video, slides, practice, quiz)
@@ -1778,6 +1895,7 @@ You are coordinating 5 agents to build the AI Course Generation feature:
 7. **Run `pnpm build && pnpm typecheck`** to verify everything compiles
 
 The total feature adds:
+
 - ~1 types file + ~1 migration file
 - ~6 research pipeline files
 - ~6 content generation files (agent, prompts, tools, video-matcher, slide-generator, index)
@@ -1787,12 +1905,14 @@ The total feature adds:
 - ~3 router changes
 
 **Model usage:**
+
 - **Opus 4.6** (`claude-opus-4-6`): ALL reasoning — analysis, outlines, lectures, quizzes, practice
 - **Gemini 3 Pro** (`gemini-3-pro-preview`): Slide generation ONLY
 - **Gemini Deep Research** (`deep-research-pro-preview-12-2025`): Research phase ONLY
 - **Gemini Embeddings** (`text-embedding-004`): RAG vector embeddings
 
 **Key reference files to read first:**
+
 - `docs/plans/2026-02-05-ai-secretary-agent-team-prompt.md` — Architecture pattern
 - `packages/ai/src/agents/secretary/` — Existing agent implementation patterns
 - `packages/shared/src/types/secretary.ts` — Types pattern to follow

@@ -43,27 +43,42 @@ const tabs: { id: TabId; label: string; icon: typeof Files }[] = [
         type="button"
         @click="activeTab = tab.id"
       >
-        <component :is="tab.icon" :size="14" />
+        <component
+          :is="tab.icon"
+          :size="14"
+        />
         <span>{{ tab.label }}</span>
       </button>
     </div>
 
     <!-- Tab content -->
     <div class="tab-content">
-      <div v-if="activeTab === 'files'" class="tab-pane">
+      <div
+        v-if="activeTab === 'files'"
+        class="tab-pane"
+      >
         <FileGrid
           :files="files"
           @select="(f) => emit('selectFile', f)"
         />
       </div>
 
-      <div v-else-if="activeTab === 'todos'" class="tab-pane">
+      <div
+        v-else-if="activeTab === 'todos'"
+        class="tab-pane"
+      >
         <TodoPanel :todos="todos" />
       </div>
 
-      <div v-else-if="activeTab === 'preview'" class="tab-pane preview-pane">
+      <div
+        v-else-if="activeTab === 'preview'"
+        class="tab-pane preview-pane"
+      >
         <div class="preview-placeholder">
-          <Eye :size="32" class="placeholder-icon" />
+          <Eye
+            :size="32"
+            class="placeholder-icon"
+          />
           <span class="placeholder-text">Select a file to preview</span>
         </div>
       </div>

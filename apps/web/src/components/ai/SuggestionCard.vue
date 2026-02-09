@@ -131,23 +131,46 @@ function handleReject() {
     <!-- Diff header -->
     <div class="diff-header">
       <div class="diff-stats">
-        <span v-if="additionCount > 0" class="stat additions">+{{ additionCount }}</span>
-        <span v-if="deletionCount > 0" class="stat deletions">-{{ deletionCount }}</span>
+        <span
+          v-if="additionCount > 0"
+          class="stat additions"
+          >+{{ additionCount }}</span
+        >
+        <span
+          v-if="deletionCount > 0"
+          class="stat deletions"
+          >-{{ deletionCount }}</span
+        >
       </div>
 
-      <div v-if="isPending" class="diff-actions">
-        <button class="action-btn accept" type="button" @click="handleAccept">
+      <div
+        v-if="isPending"
+        class="diff-actions"
+      >
+        <button
+          class="action-btn accept"
+          type="button"
+          @click="handleAccept"
+        >
           <Check :size="12" />
           <span>Accept</span>
           <KeyboardShortcut keys="⌘↵" />
         </button>
-        <button class="action-btn reject" type="button" @click="handleReject">
+        <button
+          class="action-btn reject"
+          type="button"
+          @click="handleReject"
+        >
           <X :size="12" />
           <span>Reject</span>
           <KeyboardShortcut keys="⌘⌫" />
         </button>
       </div>
-      <StatusBadge v-else :status="hunk.status" show-label />
+      <StatusBadge
+        v-else
+        :status="hunk.status"
+        show-label
+      />
     </div>
 
     <!-- GitHub unified diff lines -->

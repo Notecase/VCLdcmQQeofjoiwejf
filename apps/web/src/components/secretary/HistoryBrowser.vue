@@ -36,7 +36,10 @@ function extractDate(filename: string): string {
   <div class="history-browser">
     <div class="history-header">
       <h3>History</h3>
-      <button class="back-btn" @click="backToDashboard">
+      <button
+        class="back-btn"
+        @click="backToDashboard"
+      >
         Back to Dashboard
       </button>
     </div>
@@ -45,23 +48,35 @@ function extractDate(filename: string): string {
       Archived daily plans used to compute dashboard completion and streak analytics.
     </p>
 
-    <div v-if="store.historyEntries.length === 0" class="empty-state">
+    <div
+      v-if="store.historyEntries.length === 0"
+      class="empty-state"
+    >
       No archived daily plans yet.
     </div>
 
-    <div v-else class="history-list">
+    <div
+      v-else
+      class="history-list"
+    >
       <button
         v-for="entry in store.historyEntries"
         :key="entry.filename"
         class="history-entry"
         @click="openEntry(entry.filename)"
       >
-        <FileText :size="14" class="entry-icon" />
+        <FileText
+          :size="14"
+          class="entry-icon"
+        />
         <div class="entry-info">
           <span class="entry-date">{{ extractDate(entry.filename) }}</span>
           <span class="entry-filename">{{ entry.filename }}</span>
         </div>
-        <span v-if="entry.updatedAt" class="entry-meta">
+        <span
+          v-if="entry.updatedAt"
+          class="entry-meta"
+        >
           <Clock :size="10" />
           {{ formatDate(entry.updatedAt) }}
         </span>

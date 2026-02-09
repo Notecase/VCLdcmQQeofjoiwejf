@@ -18,10 +18,7 @@ import {
 } from '@inkdown/shared/secretary'
 import { MemoryService } from './memory'
 import { runPlannerSubagent, type RoadmapPreview } from './subagents'
-import {
-  parseRoadmapCandidatesFromFiles,
-  type ParsedRoadmapCandidate,
-} from './roadmap-candidates'
+import { parseRoadmapCandidatesFromFiles, type ParsedRoadmapCandidate } from './roadmap-candidates'
 
 // ============================================================================
 // Pending Roadmap Cache (module-level, keyed by userId)
@@ -77,14 +74,21 @@ function minutesToTime(minutes: number): string {
 }
 
 /** Regex that matches a task line and captures: prefix, time, parenOpen, duration, parenClose, description */
-const TASK_LINE_RE = /^(- \[[xX \->=]\] )(\d{1,2}:\d{2})(\s*\()(\d+)(\s*(?:m|min|mins|minute|minutes)\)\s*)(.+)$/
+const TASK_LINE_RE =
+  /^(- \[[xX \->=]\] )(\d{1,2}:\d{2})(\s*\()(\d+)(\s*(?:m|min|mins|minute|minutes)\)\s*)(.+)$/
 
-function extractRoadmapMeta(content: string, fallbackDays: number, fallbackHours: number): {
+function extractRoadmapMeta(
+  content: string,
+  fallbackDays: number,
+  fallbackHours: number
+): {
   durationDays: number
   hoursPerDay: number
   schedule: string
 } {
-  const durationMatch = content.match(/\*\*Duration:\*\*\s*(\d+(?:\.\d+)?)\s*(day|days|week|weeks|month|months)?/i)
+  const durationMatch = content.match(
+    /\*\*Duration:\*\*\s*(\d+(?:\.\d+)?)\s*(day|days|week|weeks|month|months)?/i
+  )
   const rawDuration = durationMatch ? parseFloat(durationMatch[1]) : NaN
   const durationUnit = durationMatch?.[2]?.toLowerCase() || 'days'
 
@@ -113,7 +117,11 @@ function extractRoadmapMeta(content: string, fallbackDays: number, fallbackHours
   }
 }
 
-function buildPlanEntryFromRoadmap(candidate: ParsedRoadmapCandidate, startDate?: string, timezone?: string): string {
+function buildPlanEntryFromRoadmap(
+  candidate: ParsedRoadmapCandidate,
+  startDate?: string,
+  timezone?: string
+): string {
   const start = startDate || getTodayDate(timezone)
   const meta = extractRoadmapMeta(candidate.content, 14, 2)
   const durationDays = meta.durationDays
@@ -144,10 +152,7 @@ export interface SecretaryToolsConfig {
   timezone?: string
 }
 
-export function createSecretaryTools(
-  memoryService: MemoryService,
-  config: SecretaryToolsConfig,
-) {
+export function createSecretaryTools(memoryService: MemoryService, config: SecretaryToolsConfig) {
   const readMemoryFile = tool(
     async ({ filename }) => {
       const file = await memoryService.readFile(filename)
@@ -156,11 +161,12 @@ export function createSecretaryTools(
     },
     {
       name: 'read_memory_file',
-      description: 'Read a memory file by filename (e.g., "Plan.md", "AI.md", "Today.md", "Tomorrow.md", "Plans/optics.md")',
+      description:
+        'Read a memory file by filename (e.g., "Plan.md", "AI.md", "Today.md", "Tomorrow.md", "Plans/optics.md")',
       schema: z.object({
         filename: z.string().describe('The filename to read'),
       }),
-    },
+    }
   )
 
   const writeMemoryFile = tool(
@@ -175,22 +181,23 @@ export function createSecretaryTools(
         filename: z.string().describe('The filename to write'),
         content: z.string().describe('The content to write'),
       }),
-    },
+    }
   )
 
   const listMemoryFiles = tool(
     async ({ prefix }) => {
       const files = await memoryService.listFiles(prefix || undefined)
       if (files.length === 0) return 'No memory files found.'
-      return files.map(f => `- ${f.filename} (updated: ${f.updatedAt})`).join('\n')
+      return files.map((f) => `- ${f.filename} (updated: ${f.updatedAt})`).join('\n')
     },
     {
       name: 'list_memory_files',
-      description: 'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
+      description:
+        'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
       schema: z.object({
         prefix: z.string().optional().describe('Optional directory prefix filter'),
       }),
-    },
+    }
   )
 
   const deleteMemoryFile = tool(
@@ -204,7 +211,7 @@ export function createSecretaryTools(
       schema: z.object({
         filename: z.string().describe('The filename to delete'),
       }),
-    },
+    }
   )
 
   const renameMemoryFile = tool(
@@ -217,12 +224,13 @@ export function createSecretaryTools(
     },
     {
       name: 'rename_memory_file',
-      description: 'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
+      description:
+        'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
       schema: z.object({
         oldFilename: z.string().describe('Current filename'),
         newFilename: z.string().describe('New filename'),
       }),
-    },
+    }
   )
 
   const createRoadmap = tool(
@@ -231,7 +239,7 @@ export function createSecretaryTools(
       const preview = await runPlannerSubagent(
         { openaiApiKey: config.openaiApiKey, model: config.model },
         subject,
-        { durationDays: durationDays || 14, hoursPerDay: hoursPerDay || 2 },
+        { durationDays: durationDays || 14, hoursPerDay: hoursPerDay || 2 }
       )
 
       // Store as pending roadmap for this user
@@ -241,13 +249,14 @@ export function createSecretaryTools(
     },
     {
       name: 'create_roadmap',
-      description: 'Generate a structured learning roadmap preview using AI. Returns a preview that must be confirmed before saving via save_roadmap.',
+      description:
+        'Generate a structured learning roadmap preview using AI. Returns a preview that must be confirmed before saving via save_roadmap.',
       schema: z.object({
         subject: z.string().describe('The subject/topic for the roadmap'),
         durationDays: z.number().optional().describe('Duration in days (default: 14)'),
         hoursPerDay: z.number().optional().describe('Study hours per day (default: 2)'),
       }),
-    },
+    }
   )
 
   const saveRoadmap = tool(
@@ -274,7 +283,8 @@ export function createSecretaryTools(
       const fallbackHours = pending?.hoursPerDay || 2
       const meta = extractRoadmapMeta(content, fallbackDays, fallbackHours)
       const end = addDays(start, meta.durationDays - 1)
-      const currentTopic = planMdEntry?.match(/-\s*Current:\s*(.+)/i)?.[1]?.trim() || 'Week 1 - Getting started'
+      const currentTopic =
+        planMdEntry?.match(/-\s*Current:\s*(.+)/i)?.[1]?.trim() || 'Week 1 - Getting started'
 
       // Normalize to canonical Plan.md format to prevent stale or conflicting summaries.
       planMdEntry = renderPlanEntryMarkdown({
@@ -302,15 +312,33 @@ export function createSecretaryTools(
     },
     {
       name: 'save_roadmap',
-      description: 'Save a confirmed roadmap to Plan.md and Plans/<id>-roadmap.md. Uses pending roadmap if roadmapContent not provided.',
+      description:
+        'Save a confirmed roadmap to Plan.md and Plans/<id>-roadmap.md. Uses pending roadmap if roadmapContent not provided.',
       schema: z.object({
-        planId: z.string().optional().describe('Short plan ID (e.g., "OPT", "AWS"). Optional when a pending roadmap exists.'),
-        planName: z.string().optional().describe('Full plan name. Optional when a pending roadmap exists.'),
-        roadmapContent: z.string().optional().describe('Full roadmap markdown content. If omitted, uses the pending roadmap from create_roadmap.'),
-        planMdEntry: z.string().optional().describe('Plan.md entry line. If omitted, auto-generated.'),
-        startDate: z.string().optional().describe('Start date in YYYY-MM-DD format (default: today)'),
+        planId: z
+          .string()
+          .optional()
+          .describe('Short plan ID (e.g., "OPT", "AWS"). Optional when a pending roadmap exists.'),
+        planName: z
+          .string()
+          .optional()
+          .describe('Full plan name. Optional when a pending roadmap exists.'),
+        roadmapContent: z
+          .string()
+          .optional()
+          .describe(
+            'Full roadmap markdown content. If omitted, uses the pending roadmap from create_roadmap.'
+          ),
+        planMdEntry: z
+          .string()
+          .optional()
+          .describe('Plan.md entry line. If omitted, auto-generated.'),
+        startDate: z
+          .string()
+          .optional()
+          .describe('Start date in YYYY-MM-DD format (default: today)'),
       }),
-    },
+    }
   )
 
   const activateRoadmap = tool(
@@ -322,7 +350,9 @@ export function createSecretaryTools(
       }
 
       let selected = roadmapId
-        ? candidates.find((c: ParsedRoadmapCandidate) => c.id.toLowerCase() === roadmapId.toLowerCase())
+        ? candidates.find(
+            (c: ParsedRoadmapCandidate) => c.id.toLowerCase() === roadmapId.toLowerCase()
+          )
         : undefined
 
       if (!selected && candidates.length === 1) {
@@ -335,7 +365,9 @@ export function createSecretaryTools(
       const planFile = await memoryService.readFile('Plan.md')
       const planContent = planFile?.content || ''
       const parsed = parsePlanMarkdown(planContent)
-      const alreadyActive = parsed.activePlans.some((p: LearningRoadmap) => p.id.toLowerCase() === selected.id.toLowerCase())
+      const alreadyActive = parsed.activePlans.some(
+        (p: LearningRoadmap) => p.id.toLowerCase() === selected.id.toLowerCase()
+      )
       if (alreadyActive) {
         return `Roadmap [${selected.id}] is already active in Plan.md.`
       }
@@ -347,12 +379,19 @@ export function createSecretaryTools(
     },
     {
       name: 'activate_roadmap',
-      description: 'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
+      description:
+        'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
       schema: z.object({
-        roadmapId: z.string().optional().describe('Roadmap ID (e.g., "RL"). Optional if there is only one roadmap candidate.'),
-        startDate: z.string().optional().describe('Activation start date YYYY-MM-DD (default: today).'),
+        roadmapId: z
+          .string()
+          .optional()
+          .describe('Roadmap ID (e.g., "RL"). Optional if there is only one roadmap candidate.'),
+        startDate: z
+          .string()
+          .optional()
+          .describe('Activation start date YYYY-MM-DD (default: today).'),
       }),
-    },
+    }
   )
 
   const generateDailyPlan = tool(
@@ -373,9 +412,12 @@ export function createSecretaryTools(
 
       // Build a detailed context string for the LLM to use
       const prefs = context.preferences
-      const planSummaries = context.activePlans.map(p =>
-        `- [${p.id}] ${p.name} (${p.progress.currentDay}/${p.progress.totalDays} days, ${p.progress.percentComplete}% complete)\n  Current: ${p.currentTopic || 'N/A'}`,
-      ).join('\n')
+      const planSummaries = context.activePlans
+        .map(
+          (p) =>
+            `- [${p.id}] ${p.name} (${p.progress.currentDay}/${p.progress.totalDays} days, ${p.progress.percentComplete}% complete)\n  Current: ${p.currentTopic || 'N/A'}`
+        )
+        .join('\n')
 
       // Read detailed archive for each active plan
       const archiveDetails: string[] = []
@@ -383,10 +425,15 @@ export function createSecretaryTools(
         const archive = await memoryService.readFile(plan.archiveFilename)
         if (archive) {
           // Extract only the relevant day section (next ~500 chars)
-          const dayPattern = new RegExp(`##\\s*Day\\s+${plan.progress.currentDay + 1}[\\s\\S]*?(?=##\\s*Day|$)`, 'i')
+          const dayPattern = new RegExp(
+            `##\\s*Day\\s+${plan.progress.currentDay + 1}[\\s\\S]*?(?=##\\s*Day|$)`,
+            'i'
+          )
           const dayMatch = archive.content.match(dayPattern)
           if (dayMatch) {
-            archiveDetails.push(`### ${plan.id} - Day ${plan.progress.currentDay + 1}\n${dayMatch[0].trim().slice(0, 500)}`)
+            archiveDetails.push(
+              `### ${plan.id} - Day ${plan.progress.currentDay + 1}\n${dayMatch[0].trim().slice(0, 500)}`
+            )
           }
         }
       }
@@ -404,7 +451,7 @@ export function createSecretaryTools(
 
       const dayName = getDayNameForDate(targetDate)
       const isWeekend = ['Saturday', 'Sunday'].includes(dayName)
-      const studyHours = isWeekend ? (prefs?.weekendHours || 6) : (prefs?.weekdayHours || 4)
+      const studyHours = isWeekend ? prefs?.weekendHours || 6 : prefs?.weekdayHours || 4
       const startTime = prefs?.focusTime.bestStart || '09:00'
       const breakFreq = prefs?.breakFrequency || 45
       const breakDur = prefs?.breakDuration || 15
@@ -414,20 +461,27 @@ export function createSecretaryTools(
       let historyContext = ''
       if (analytics.recentDays > 0) {
         historyContext = `\nHistorical Patterns (last ${analytics.recentDays} days):\n- Avg completion: ${analytics.avgCompletionRate}%\n- Current streak: ${analytics.currentStreak} days`
-        if (analytics.struggledTopics.length > 0) historyContext += `\n- Frequently struggled with: ${analytics.struggledTopics.join(', ')}`
-        if (analytics.moodTrend.length > 0) historyContext += `\n- Recent mood trend: ${analytics.moodTrend.join(' → ')}`
-        if (analytics.avgCompletionRate < 50) historyContext += '\nNote: User has been completing less than half their tasks. Consider suggesting a lighter schedule.'
+        if (analytics.struggledTopics.length > 0)
+          historyContext += `\n- Frequently struggled with: ${analytics.struggledTopics.join(', ')}`
+        if (analytics.moodTrend.length > 0)
+          historyContext += `\n- Recent mood trend: ${analytics.moodTrend.join(' → ')}`
+        if (analytics.avgCompletionRate < 50)
+          historyContext +=
+            '\nNote: User has been completing less than half their tasks. Consider suggesting a lighter schedule.'
       }
 
       // Load recurring blocks and carryover tasks
       let recurringContext = ''
       if (context.recurringBlocks) {
         const dayNameShort = dayName.slice(0, 3)
-        const blockLines = context.recurringBlocks.split('\n')
-          .filter(l => l.startsWith('- **'))
-          .filter(l => l.includes('Daily') || l.toLowerCase().includes(dayNameShort.toLowerCase()))
+        const blockLines = context.recurringBlocks
+          .split('\n')
+          .filter((l) => l.startsWith('- **'))
+          .filter(
+            (l) => l.includes('Daily') || l.toLowerCase().includes(dayNameShort.toLowerCase())
+          )
         if (blockLines.length > 0) {
-          recurringContext = `\nBLOCKED TIMES (do NOT schedule study during these):\n${blockLines.map(l => `  ${l}`).join('\n')}`
+          recurringContext = `\nBLOCKED TIMES (do NOT schedule study during these):\n${blockLines.map((l) => `  ${l}`).join('\n')}`
         }
       }
 
@@ -476,7 +530,9 @@ Output EXACTLY this format (for parsing):
 - What went well:`
 
       const response = await llm.invoke([
-        new SystemMessage('You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.'),
+        new SystemMessage(
+          'You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.'
+        ),
         new HumanMessage(prompt),
       ])
 
@@ -494,12 +550,16 @@ Output EXACTLY this format (for parsing):
     },
     {
       name: 'generate_daily_plan',
-      description: 'Generate a time-blocked daily study plan based on active roadmaps and preferences. Reads context, generates via AI, and writes to Today.md or Tomorrow.md.',
+      description:
+        'Generate a time-blocked daily study plan based on active roadmaps and preferences. Reads context, generates via AI, and writes to Today.md or Tomorrow.md.',
       schema: z.object({
         targetDate: z.string().describe('Target date in YYYY-MM-DD format'),
-        isForTomorrow: z.boolean().default(false).describe('Whether this is for tomorrow (writes to Tomorrow.md)'),
+        isForTomorrow: z
+          .boolean()
+          .default(false)
+          .describe('Whether this is for tomorrow (writes to Tomorrow.md)'),
       }),
-    },
+    }
   )
 
   const saveReflection = tool(
@@ -523,7 +583,7 @@ Output EXACTLY this format (for parsing):
         mood: z.enum(['great', 'good', 'okay', 'struggling', 'overwhelmed']),
         text: z.string().optional().describe('Free-text reflection notes'),
       }),
-    },
+    }
   )
 
   const modifyPlan = tool(
@@ -538,7 +598,10 @@ Output EXACTLY this format (for parsing):
         case 'remove': {
           if (!taskTime) return 'taskTime is required for remove action.'
           const escapedTime = escapeRegExp(taskTime)
-          const linePattern = new RegExp(`^- \\[[xX \\->]\\] ${escapedTime}\\s*\\(\\d+\\s*(?:m|min|mins|minute|minutes)\\).*$(?:\\n)?`, 'gmi')
+          const linePattern = new RegExp(
+            `^- \\[[xX \\->]\\] ${escapedTime}\\s*\\(\\d+\\s*(?:m|min|mins|minute|minutes)\\).*$(?:\\n)?`,
+            'gmi'
+          )
           const matches = content.match(linePattern) || []
           if (matches.length === 0) return `No tasks matched time ${taskTime}.`
           content = content.replace(linePattern, '')
@@ -548,25 +611,33 @@ Output EXACTLY this format (for parsing):
         case 'reschedule': {
           if (!taskTime || !newTime) return 'taskTime and newTime are required for reschedule.'
           const escapedTime = escapeRegExp(taskTime)
-          const linePattern = new RegExp(`(^- \\[[xX \\->]\\] )${escapedTime}(\\s*\\(\\d+\\s*(?:m|min|mins|minute|minutes)\\).*$)`, 'gmi')
+          const linePattern = new RegExp(
+            `(^- \\[[xX \\->]\\] )${escapedTime}(\\s*\\(\\d+\\s*(?:m|min|mins|minute|minutes)\\).*$)`,
+            'gmi'
+          )
           let updated = 0
-          content = content.replace(linePattern, (_match: string, prefix: string, suffix: string) => {
-            updated += 1
-            return `${prefix}${newTime}${suffix}`
-          })
+          content = content.replace(
+            linePattern,
+            (_match: string, prefix: string, suffix: string) => {
+              updated += 1
+              return `${prefix}${newTime}${suffix}`
+            }
+          )
           if (updated === 0) return `No tasks matched time ${taskTime}.`
           await memoryService.writeFile(filename, content)
           return `Rescheduled ${updated} task(s) from ${taskTime} to ${newTime}.`
         }
         case 'add': {
-          if (!newTime || !taskDescription) return 'newTime and taskDescription are required for add.'
+          if (!newTime || !taskDescription)
+            return 'newTime and taskDescription are required for add.'
           const dur = duration || 45
           const newLine = `- [ ] ${newTime} (${dur}min) ${taskDescription}`
           const scheduleIdx = content.indexOf('## Schedule')
           if (scheduleIdx >= 0) {
             const nextSectionIdx = content.indexOf('\n## ', scheduleIdx + 12)
             if (nextSectionIdx >= 0) {
-              content = content.slice(0, nextSectionIdx) + '\n' + newLine + content.slice(nextSectionIdx)
+              content =
+                content.slice(0, nextSectionIdx) + '\n' + newLine + content.slice(nextSectionIdx)
             } else {
               content += '\n' + newLine
             }
@@ -579,34 +650,53 @@ Output EXACTLY this format (for parsing):
         case 'extend': {
           if (!taskTime || !duration) return 'taskTime and duration are required for extend.'
           const escapedTime = escapeRegExp(taskTime)
-          const durPattern = new RegExp(`(^- \\[[xX \\->]\\] ${escapedTime}\\s*\\()(\\d+)(\\s*(?:m|min|mins|minute|minutes)\\).*$)`, 'gmi')
+          const durPattern = new RegExp(
+            `(^- \\[[xX \\->]\\] ${escapedTime}\\s*\\()(\\d+)(\\s*(?:m|min|mins|minute|minutes)\\).*$)`,
+            'gmi'
+          )
           let updated = 0
-          content = content.replace(durPattern, (_match: string, prefix: string, current: string, suffix: string) => {
-            updated += 1
-            const currentMinutes = parseInt(current, 10)
-            const nextMinutes = Number.isFinite(currentMinutes) ? currentMinutes + duration : duration
-            return `${prefix}${nextMinutes}${suffix}`
-          })
+          content = content.replace(
+            durPattern,
+            (_match: string, prefix: string, current: string, suffix: string) => {
+              updated += 1
+              const currentMinutes = parseInt(current, 10)
+              const nextMinutes = Number.isFinite(currentMinutes)
+                ? currentMinutes + duration
+                : duration
+              return `${prefix}${nextMinutes}${suffix}`
+            }
+          )
           if (updated === 0) return `No tasks matched time ${taskTime}.`
           await memoryService.writeFile(filename, content)
           return `Extended ${updated} task(s) at ${taskTime} by ${duration} minutes.`
         }
         case 'update': {
           if (!taskTime) return 'taskTime is required for update action.'
-          if (!newTime && !duration && !taskDescription) return 'At least one of newTime, duration, or taskDescription is required for update.'
+          if (!newTime && !duration && !taskDescription)
+            return 'At least one of newTime, duration, or taskDescription is required for update.'
           const escapedTime = escapeRegExp(taskTime)
           const linePattern = new RegExp(
             `(^- \\[[xX \\->]\\] )${escapedTime}(\\s*\\()(\\d+)(\\s*(?:m|min|mins|minute|minutes)\\)\\s*)(.+)$`,
-            'gmi',
+            'gmi'
           )
           let updated = 0
-          content = content.replace(linePattern, (_match: string, prefix: string, parenOpen: string, currentDur: string, parenClose: string, desc: string) => {
-            updated += 1
-            const finalTime = newTime || taskTime
-            const finalDur = duration ?? parseInt(currentDur, 10)
-            const finalDesc = taskDescription || desc
-            return `${prefix}${finalTime}${parenOpen}${finalDur}${parenClose}${finalDesc}`
-          })
+          content = content.replace(
+            linePattern,
+            (
+              _match: string,
+              prefix: string,
+              parenOpen: string,
+              currentDur: string,
+              parenClose: string,
+              desc: string
+            ) => {
+              updated += 1
+              const finalTime = newTime || taskTime
+              const finalDur = duration ?? parseInt(currentDur, 10)
+              const finalDesc = taskDescription || desc
+              return `${prefix}${finalTime}${parenOpen}${finalDur}${parenClose}${finalDesc}`
+            }
+          )
           if (updated === 0) return `No tasks matched time ${taskTime}.`
           await memoryService.writeFile(filename, content)
           const changes: string[] = []
@@ -619,16 +709,25 @@ Output EXACTLY this format (for parsing):
     },
     {
       name: 'modify_plan',
-      description: "Modify today's or tomorrow's schedule: remove, reschedule, add, extend, or update tasks. Use 'update' to set a task's time range (e.g. 'from 11am to 4pm' = update with newTime='11:00', duration=300). Use `target` to specify which plan.",
+      description:
+        "Modify today's or tomorrow's schedule: remove, reschedule, add, extend, or update tasks. Use 'update' to set a task's time range (e.g. 'from 11am to 4pm' = update with newTime='11:00', duration=300). Use `target` to specify which plan.",
       schema: z.object({
         action: z.enum(['remove', 'reschedule', 'add', 'extend', 'update']),
-        target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to modify: today or tomorrow'),
+        target: z
+          .enum(['today', 'tomorrow'])
+          .default('today')
+          .describe('Which plan to modify: today or tomorrow'),
         taskTime: z.string().optional().describe('Current task time (HH:MM) to modify'),
         newTime: z.string().optional().describe('New time (HH:MM) for reschedule or add'),
         taskDescription: z.string().optional().describe('Task description for add action'),
-        duration: z.number().optional().describe('Duration in minutes. For add/update: sets absolute duration. For extend: adds to existing duration.'),
+        duration: z
+          .number()
+          .optional()
+          .describe(
+            'Duration in minutes. For add/update: sets absolute duration. For extend: adds to existing duration.'
+          ),
       }),
-    },
+    }
   )
 
   // ==========================================================================
@@ -636,7 +735,17 @@ Output EXACTLY this format (for parsing):
   // ==========================================================================
 
   const bulkModifyPlan = tool(
-    async ({ action, target, afterTime, shiftMinutes, blockStart, blockDuration, blockDescription, taskTimeA, taskTimeB }) => {
+    async ({
+      action,
+      target,
+      afterTime,
+      shiftMinutes,
+      blockStart,
+      blockDuration,
+      blockDescription,
+      taskTimeA,
+      taskTimeB,
+    }) => {
       const filename = target === 'tomorrow' ? 'Tomorrow.md' : 'Today.md'
       const file = await memoryService.readFile(filename)
       if (!file) return `No ${filename} found.`
@@ -651,7 +760,8 @@ Output EXACTLY this format (for parsing):
 
       switch (action) {
         case 'shift_after': {
-          if (!afterTime || shiftMinutes === undefined) return 'afterTime and shiftMinutes are required for shift_after.'
+          if (!afterTime || shiftMinutes === undefined)
+            return 'afterTime and shiftMinutes are required for shift_after.'
           const threshold = timeToMinutes(afterTime)
           let shifted = 0
           for (let i = 0; i < lines.length; i++) {
@@ -670,7 +780,8 @@ Output EXACTLY this format (for parsing):
           return `Shifted ${shifted} task(s) after ${afterTime} by ${shiftMinutes > 0 ? '+' : ''}${shiftMinutes} minutes.`
         }
         case 'insert_block': {
-          if (!blockStart || !blockDuration) return 'blockStart and blockDuration are required for insert_block.'
+          if (!blockStart || !blockDuration)
+            return 'blockStart and blockDuration are required for insert_block.'
           const blockStartMin = timeToMinutes(blockStart)
           const blockEndMin = blockStartMin + blockDuration
           const desc = blockDescription || 'Blocked'
@@ -696,7 +807,9 @@ Output EXACTLY this format (for parsing):
           if (insertIdx === -1) {
             const schedIdx = lines.findIndex((l: string) => /^## Schedule/i.test(l))
             if (schedIdx >= 0) {
-              const nextSection = lines.findIndex((l: string, i: number) => i > schedIdx && /^## /.test(l))
+              const nextSection = lines.findIndex(
+                (l: string, i: number) => i > schedIdx && /^## /.test(l)
+              )
               insertIdx = nextSection >= 0 ? nextSection : lines.length
             } else {
               insertIdx = lines.length
@@ -734,19 +847,37 @@ Output EXACTLY this format (for parsing):
     },
     {
       name: 'bulk_modify_plan',
-      description: "Bulk schedule operations on today's or tomorrow's plan. Use shift_after to push all tasks after a time, insert_block to add a blocked period and reflow tasks, or swap to exchange two tasks' content. For single-task edits, use modify_plan instead.",
+      description:
+        "Bulk schedule operations on today's or tomorrow's plan. Use shift_after to push all tasks after a time, insert_block to add a blocked period and reflow tasks, or swap to exchange two tasks' content. For single-task edits, use modify_plan instead.",
       schema: z.object({
         action: z.enum(['shift_after', 'insert_block', 'swap']),
         target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to modify'),
-        afterTime: z.string().optional().describe('HH:MM — for shift_after: shift tasks at/after this time'),
-        shiftMinutes: z.number().optional().describe('Minutes to shift (positive=later, negative=earlier). Required for shift_after.'),
-        blockStart: z.string().optional().describe('HH:MM — for insert_block: start of blocked time'),
-        blockDuration: z.number().optional().describe('Minutes — for insert_block: duration of blocked time'),
-        blockDescription: z.string().optional().describe('Description of the block (e.g., "Doctor appointment")'),
+        afterTime: z
+          .string()
+          .optional()
+          .describe('HH:MM — for shift_after: shift tasks at/after this time'),
+        shiftMinutes: z
+          .number()
+          .optional()
+          .describe(
+            'Minutes to shift (positive=later, negative=earlier). Required for shift_after.'
+          ),
+        blockStart: z
+          .string()
+          .optional()
+          .describe('HH:MM — for insert_block: start of blocked time'),
+        blockDuration: z
+          .number()
+          .optional()
+          .describe('Minutes — for insert_block: duration of blocked time'),
+        blockDescription: z
+          .string()
+          .optional()
+          .describe('Description of the block (e.g., "Doctor appointment")'),
         taskTimeA: z.string().optional().describe('HH:MM — for swap: first task time'),
         taskTimeB: z.string().optional().describe('HH:MM — for swap: second task time'),
       }),
-    },
+    }
   )
 
   const carryOverTasks = tool(
@@ -762,16 +893,18 @@ Output EXACTLY this format (for parsing):
       }
       if (!sourceContent) return `No ${source === 'yesterday' ? 'history' : 'Today.md'} file found.`
 
-      const taskLineRe = /^- \[([xX \->=])\] (\d{1,2}:\d{2})\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+)$/gm
+      const taskLineRe =
+        /^- \[([xX \->=])\] (\d{1,2}:\d{2})\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+)$/gm
       const incomplete: Array<{ duration: string; desc: string }> = []
       let match
       while ((match = taskLineRe.exec(sourceContent)) !== null) {
         const status = match[1]
-        const isIncomplete = filter === 'pending_only'
-          ? status === ' '
-          : filter === 'in_progress_only'
-            ? status === '>'
-            : (status === ' ' || status === '>')
+        const isIncomplete =
+          filter === 'pending_only'
+            ? status === ' '
+            : filter === 'in_progress_only'
+              ? status === '>'
+              : status === ' ' || status === '>'
         if (isIncomplete) {
           incomplete.push({ duration: match[3], desc: match[4] })
         }
@@ -783,14 +916,18 @@ Output EXACTLY this format (for parsing):
       const destFile = await memoryService.readFile(destFilename)
       let destContent = destFile?.content || ''
 
-      const carryLines = incomplete.map(t => `- [ ] --:-- (${t.duration}min) ${t.desc}`)
+      const carryLines = incomplete.map((t) => `- [ ] --:-- (${t.duration}min) ${t.desc}`)
       const carrySection = `\n### Carried Over\n\n${carryLines.join('\n')}`
 
       const schedIdx = destContent.indexOf('## Schedule')
       if (schedIdx >= 0) {
         const nextSectionIdx = destContent.indexOf('\n## ', schedIdx + 12)
         if (nextSectionIdx >= 0) {
-          destContent = destContent.slice(0, nextSectionIdx) + '\n' + carrySection + destContent.slice(nextSectionIdx)
+          destContent =
+            destContent.slice(0, nextSectionIdx) +
+            '\n' +
+            carrySection +
+            destContent.slice(nextSectionIdx)
         } else {
           destContent += '\n' + carrySection
         }
@@ -799,18 +936,28 @@ Output EXACTLY this format (for parsing):
       }
 
       await memoryService.writeFile(destFilename, destContent)
-      const taskList = incomplete.map(t => `  - (${t.duration}min) ${t.desc}`).join('\n')
+      const taskList = incomplete.map((t) => `  - (${t.duration}min) ${t.desc}`).join('\n')
       return `Carried over ${incomplete.length} task(s) to ${destFilename}:\n${taskList}`
     },
     {
       name: 'carry_over_tasks',
-      description: "Move incomplete tasks from today's plan (or yesterday's history) to tomorrow's or today's plan. Tasks are added with --:-- time (unscheduled) for the user or AI to assign slots.",
+      description:
+        "Move incomplete tasks from today's plan (or yesterday's history) to tomorrow's or today's plan. Tasks are added with --:-- time (unscheduled) for the user or AI to assign slots.",
       schema: z.object({
-        source: z.enum(['today', 'yesterday']).default('today').describe('Where to pull incomplete tasks from'),
-        destination: z.enum(['today', 'tomorrow']).default('tomorrow').describe('Where to add carried-over tasks'),
-        filter: z.enum(['all_incomplete', 'pending_only', 'in_progress_only']).default('all_incomplete').describe('Which tasks to carry over'),
+        source: z
+          .enum(['today', 'yesterday'])
+          .default('today')
+          .describe('Where to pull incomplete tasks from'),
+        destination: z
+          .enum(['today', 'tomorrow'])
+          .default('tomorrow')
+          .describe('Where to add carried-over tasks'),
+        filter: z
+          .enum(['all_incomplete', 'pending_only', 'in_progress_only'])
+          .default('all_incomplete')
+          .describe('Which tasks to carry over'),
       }),
-    },
+    }
   )
 
   const manageRecurringBlocks = tool(
@@ -851,16 +998,26 @@ Output EXACTLY this format (for parsing):
     },
     {
       name: 'manage_recurring_blocks',
-      description: 'Add, list, or remove recurring time blocks (meetings, gym, etc.) stored in Recurring.md. These blocks are respected during plan generation — the AI avoids scheduling study during blocked times.',
+      description:
+        'Add, list, or remove recurring time blocks (meetings, gym, etc.) stored in Recurring.md. These blocks are respected during plan generation — the AI avoids scheduling study during blocked times.',
       schema: z.object({
         action: z.enum(['add', 'list', 'remove']),
-        name: z.string().optional().describe('Name of the recurring block (e.g., "Team Standup", "Gym")'),
-        days: z.array(z.string()).optional().describe('Days of week (e.g., ["Mon","Wed","Fri"] or ["Daily"])'),
+        name: z
+          .string()
+          .optional()
+          .describe('Name of the recurring block (e.g., "Team Standup", "Gym")'),
+        days: z
+          .array(z.string())
+          .optional()
+          .describe('Days of week (e.g., ["Mon","Wed","Fri"] or ["Daily"])'),
         startTime: z.string().optional().describe('Start time HH:MM'),
         endTime: z.string().optional().describe('End time HH:MM'),
-        category: z.enum(['work', 'personal', 'health', 'other']).optional().describe('Category of the block'),
+        category: z
+          .enum(['work', 'personal', 'health', 'other'])
+          .optional()
+          .describe('Category of the block'),
       }),
-    },
+    }
   )
 
   const logActivity = tool(
@@ -911,7 +1068,8 @@ Output EXACTLY this format (for parsing):
     },
     {
       name: 'log_activity',
-      description: 'Log a completed activity retroactively. Inserts a pre-completed task (marked [x]) into the schedule at the correct chronological position.',
+      description:
+        'Log a completed activity retroactively. Inserts a pre-completed task (marked [x]) into the schedule at the correct chronological position.',
       schema: z.object({
         description: z.string().describe('What was done (e.g., "Watched async Rust tutorial")'),
         startTime: z.string().describe('When it started (HH:MM)'),
@@ -919,7 +1077,7 @@ Output EXACTLY this format (for parsing):
         planId: z.string().optional().describe('Associate with a roadmap plan ID (e.g., "RUST")'),
         target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to log to'),
       }),
-    },
+    }
   )
 
   return [

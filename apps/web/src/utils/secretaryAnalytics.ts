@@ -9,19 +9,21 @@ export interface DailyStats {
 }
 
 export function computeDailyCompletionRates(entries: MemoryFile[]): DailyStats[] {
-  return entries.map((entry) => {
-    const { total, completed } = parseTaskCounts(entry.content)
-    const dateMatch = entry.filename.match(/(\d{4}-\d{2}-\d{2})/)
-    return {
-      date: dateMatch?.[1] || entry.filename,
-      totalTasks: total,
-      completedTasks: completed,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-    }
-  }).sort((a, b) => a.date.localeCompare(b.date))
+  return entries
+    .map((entry) => {
+      const { total, completed } = parseTaskCounts(entry.content)
+      const dateMatch = entry.filename.match(/(\d{4}-\d{2}-\d{2})/)
+      return {
+        date: dateMatch?.[1] || entry.filename,
+        totalTasks: total,
+        completedTasks: completed,
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      }
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
-export function computeStreak(entries: MemoryFile[]): { current: number, longest: number } {
+export function computeStreak(entries: MemoryFile[]): { current: number; longest: number } {
   const dates = entries
     .map((e) => {
       const m = e.filename.match(/(\d{4}-\d{2}-\d{2})/)
@@ -103,7 +105,7 @@ export function computeWeeklySummary(entries: MemoryFile[]): {
   }
 }
 
-function parseTaskCounts(content: string): { total: number, completed: number } {
+function parseTaskCounts(content: string): { total: number; completed: number } {
   const taskPattern = /^-\s*\[([x \->])\]/gm
   let total = 0
   let completed = 0

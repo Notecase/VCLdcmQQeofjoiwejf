@@ -5,6 +5,7 @@
 ## Context
 
 The course system has three interconnected bugs:
+
 1. `/courses` shows "24 courses" in the header but the grid is **completely empty**
 2. Clicking "+ New Course" changes URL to `/courses/generate` but the **view doesn't switch** (requires page refresh)
 3. Going back from the generate page to courses shows no courses
@@ -14,6 +15,7 @@ All three trace to a **single root cause**: the API returns Supabase rows with *
 ## Root Cause Analysis
 
 ### Bug 1: Empty course grid
+
 - `GET /api/course/list` (line 640) SELECTs: `id, title, topic, description, difficulty, estimated_hours, status, progress, created_at, updated_at, generated_at`
 - It does **NOT** select `learning_objectives` or `prerequisites`
 - `CourseCard.vue` line 69 accesses `course.learningObjectives.length`
@@ -23,11 +25,13 @@ All three trace to a **single root cause**: the API returns Supabase rows with *
 - Header shows "24 courses" because `courseStore.courses.length` still works
 
 ### Bug 2: Navigation doesn't update UI
+
 - The TypeError crashes from CourseCard during rendering corrupt Vue 3's reactive scheduler
 - `router.push()` updates the URL via History API, but the router-view component swap never executes
 - Page refresh works because it creates a fresh Vue instance without rendering corruption
 
 ### Bug 3: Going back shows no courses
+
 - Same as Bug 1 — cards crash on render after `fetchCourses()` populates the store
 
 ## Fix Plan
@@ -62,12 +66,14 @@ Add `Lesson` to the existing type imports from `@inkdown/shared/types`.
 **File:** `apps/web/src/services/course.service.ts`
 
 **`fetchCourses()`** (~line 282): Apply `mapCourseFromApi` to each item:
+
 ```typescript
 const rawCourses = (result.courses ?? result) as Array<Record<string, unknown>>
 return rawCourses.map(mapCourseFromApi)
 ```
 
 **`fetchCourse()`** (~line 296): Apply mappers to course and modules:
+
 ```typescript
 const raw = await response.json()
 return {
@@ -81,16 +87,17 @@ return {
 **File:** `apps/web/src/components/course/list/CourseCard.vue`
 
 Belt-and-suspenders safety even though mappers guarantee defaults:
+
 - Line 65: `{{ course.estimatedHours ?? 0 }}h`
 - Line 69: `{{ (course.learningObjectives ?? []).length }} objectives`
 
 ## Files Changed
 
-| File | Change | Impact |
-|------|--------|--------|
-| `apps/api/src/routes/course.ts` | Add `learning_objectives, prerequisites` to SELECT (lines 620, 640) | 2 lines |
-| `apps/web/src/services/course.service.ts` | Add mapper functions + apply in `fetchCourses()` and `fetchCourse()` | ~60 new + ~10 modified |
-| `apps/web/src/components/course/list/CourseCard.vue` | Defensive null guards (lines 65, 69) | 2 lines |
+| File                                                 | Change                                                               | Impact                 |
+| ---------------------------------------------------- | -------------------------------------------------------------------- | ---------------------- |
+| `apps/api/src/routes/course.ts`                      | Add `learning_objectives, prerequisites` to SELECT (lines 620, 640)  | 2 lines                |
+| `apps/web/src/services/course.service.ts`            | Add mapper functions + apply in `fetchCourses()` and `fetchCourse()` | ~60 new + ~10 modified |
+| `apps/web/src/components/course/list/CourseCard.vue` | Defensive null guards (lines 65, 69)                                 | 2 lines                |
 
 ## What This Does NOT Change
 

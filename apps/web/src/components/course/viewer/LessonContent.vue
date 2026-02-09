@@ -13,12 +13,30 @@ defineProps<{
 
 <template>
   <div class="lesson-content-wrapper">
-    <LectureLesson v-if="lesson.type === 'lecture'" :lesson="lesson" />
-    <VideoLesson v-else-if="lesson.type === 'video'" :lesson="lesson" />
-    <SlidesLesson v-else-if="lesson.type === 'slides'" :lesson="lesson" />
-    <PracticeLesson v-else-if="lesson.type === 'practice'" :lesson="lesson" />
-    <QuizLesson v-else-if="lesson.type === 'quiz'" :lesson="lesson" />
-    <div v-else class="unknown-type">
+    <LectureLesson
+      v-if="lesson.type === 'lecture'"
+      :lesson="lesson"
+    />
+    <VideoLesson
+      v-else-if="lesson.type === 'video'"
+      :lesson="lesson"
+    />
+    <SlidesLesson
+      v-else-if="lesson.type === 'slides'"
+      :lesson="lesson"
+    />
+    <PracticeLesson
+      v-else-if="lesson.type === 'practice'"
+      :lesson="lesson"
+    />
+    <QuizLesson
+      v-else-if="lesson.type === 'quiz'"
+      :lesson="lesson"
+    />
+    <div
+      v-else
+      class="unknown-type"
+    >
       <p>Unknown lesson type: {{ lesson.type }}</p>
     </div>
   </div>

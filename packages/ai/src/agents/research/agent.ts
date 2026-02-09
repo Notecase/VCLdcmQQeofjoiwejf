@@ -14,7 +14,11 @@ import type {
   InterruptData,
   InterruptResponse,
 } from '@inkdown/shared/types'
-import { getResearchSystemPrompt, RESEARCH_SUBAGENT_PROMPT, WRITER_SUBAGENT_PROMPT } from './prompts'
+import {
+  getResearchSystemPrompt,
+  RESEARCH_SUBAGENT_PROMPT,
+  WRITER_SUBAGENT_PROMPT,
+} from './prompts'
 import { createResearchTools, type ResearchToolContext } from './tools'
 import { ResearchStreamNormalizer } from './stream-normalizer'
 import {
@@ -92,7 +96,9 @@ export class ResearchAgent {
   }
 
   private get artifactFallbackModel(): string {
-    return this.config.artifactFallbackModel ?? process.env.RESEARCH_ARTIFACT_FALLBACK_MODEL ?? 'gpt-5.2'
+    return (
+      this.config.artifactFallbackModel ?? process.env.RESEARCH_ARTIFACT_FALLBACK_MODEL ?? 'gpt-5.2'
+    )
   }
 
   /**
@@ -219,7 +225,7 @@ export class ResearchAgent {
 
   private async *streamNoteDraft(
     message: string,
-    threadId: string,
+    threadId: string
   ): AsyncGenerator<ResearchStreamEvent> {
     const OpenAI = (await import('openai')).default
     const client = new OpenAI({ apiKey: this.config.openaiApiKey })
@@ -231,11 +237,11 @@ export class ResearchAgent {
 
     const prompt = originalContent
       ? [
-        'You are editing an existing note draft in markdown format.',
-        'Return updated markdown only (no fences). Keep it structured and concise.',
-        `Current draft:\n${originalContent}`,
-        `User request:\n${message}`,
-      ].join('\n\n')
+          'You are editing an existing note draft in markdown format.',
+          'Return updated markdown only (no fences). Keep it structured and concise.',
+          `Current draft:\n${originalContent}`,
+          `User request:\n${message}`,
+        ].join('\n\n')
       : message
 
     const stream = await client.chat.completions.create({
@@ -307,7 +313,11 @@ export class ResearchAgent {
           data: `Generating artifact with Ollama ${this.artifactModel}...`,
         }
         const payload = await this.generateStudyTimerArtifactWithOllama(artifactPrompt)
-        finalizedContent = appendArtifactToDraft(finalizedContent, payload, buildStudyTimerIntroLines())
+        finalizedContent = appendArtifactToDraft(
+          finalizedContent,
+          payload,
+          buildStudyTimerIntroLines()
+        )
         artifactAdded = true
       } catch (ollamaError) {
         yield {
@@ -317,11 +327,17 @@ export class ResearchAgent {
 
         try {
           const payload = await this.generateStudyTimerArtifactWithOpenAI(artifactPrompt)
-          finalizedContent = appendArtifactToDraft(finalizedContent, payload, buildStudyTimerIntroLines())
+          finalizedContent = appendArtifactToDraft(
+            finalizedContent,
+            payload,
+            buildStudyTimerIntroLines()
+          )
           artifactAdded = true
         } catch (fallbackError) {
-          const ollamaMessage = ollamaError instanceof Error ? ollamaError.message : String(ollamaError)
-          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+          const ollamaMessage =
+            ollamaError instanceof Error ? ollamaError.message : String(ollamaError)
+          const fallbackMessage =
+            fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
           yield {
             event: 'error',
             data: `Artifact generation failed (Ollama + ${this.artifactFallbackModel}): ${ollamaMessage}; ${fallbackMessage}`,
@@ -342,7 +358,9 @@ export class ResearchAgent {
           title: firstTitle,
           originalContent,
           currentContent: finalizedContent,
-          delta: finalizedContent.startsWith(generated) ? finalizedContent.slice(generated.length) : '',
+          delta: finalizedContent.startsWith(generated)
+            ? finalizedContent.slice(generated.length)
+            : '',
           noteId: existingDraft?.noteId,
         }),
       }
@@ -486,7 +504,7 @@ export class ResearchAgent {
   private async *streamResearchMode(
     message: string,
     threadId: string,
-    outputPreference?: ResearchOutputPreference,
+    outputPreference?: ResearchOutputPreference
   ): AsyncGenerator<ResearchStreamEvent> {
     const { createDeepAgent } = await import('deepagents')
     const { ChatOpenAI } = await import('@langchain/openai')
@@ -546,10 +564,10 @@ export class ResearchAgent {
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const streamResult = await (agent as any).stream(
+    const streamResult = (await (agent as any).stream(
       { messages: [{ role: 'user', content: message }] },
-      { configurable: { thread_id: threadId } },
-    ) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+      { configurable: { thread_id: threadId } }
+    )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
 
     const normalizer = new ResearchStreamNormalizer()
     const subagentLifecycle = new SubagentLifecycle(['researcher', 'writer'])

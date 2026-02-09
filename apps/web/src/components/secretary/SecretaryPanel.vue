@@ -15,8 +15,8 @@ const store = useSecretaryStore()
 
 const todayFocus = computed(() => {
   return store.activePlans
-    .filter(p => p.status === 'active' && p.currentTopic)
-    .map(p => ({ id: p.id, topic: p.currentTopic }))
+    .filter((p) => p.status === 'active' && p.currentTopic)
+    .map((p) => ({ id: p.id, topic: p.currentTopic }))
 })
 
 const dailyStats = computed(() => computeDailyCompletionRates(store.historyEntries))
@@ -33,17 +33,32 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
         <Target :size="14" />
         Today's Focus
       </h4>
-      <div v-if="todayFocus.length > 0" class="focus-list">
-        <div v-for="item in todayFocus" :key="item.id" class="focus-card">
+      <div
+        v-if="todayFocus.length > 0"
+        class="focus-list"
+      >
+        <div
+          v-for="item in todayFocus"
+          :key="item.id"
+          class="focus-card"
+        >
           <span class="focus-badge">{{ item.id }}</span>
           <span class="focus-topic">{{ item.topic }}</span>
         </div>
       </div>
-      <p v-else class="empty-text">No active topics for today.</p>
+      <p
+        v-else
+        class="empty-text"
+      >
+        No active topics for today.
+      </p>
     </div>
 
     <!-- Analytics -->
-    <div v-if="hasAnalytics" class="panel-section analytics-sidebar">
+    <div
+      v-if="hasAnalytics"
+      class="panel-section analytics-sidebar"
+    >
       <StreakBadge
         :current-streak="streak.current"
         :longest-streak="streak.longest"
@@ -65,20 +80,47 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
         Quick Actions
       </h4>
       <div class="quick-actions">
-        <button class="quick-btn" @click="store.sendChatMessage('Show my active plans and progress')">
-          <Eye :size="14" class="btn-icon" />
+        <button
+          class="quick-btn"
+          @click="store.sendChatMessage('Show my active plans and progress')"
+        >
+          <Eye
+            :size="14"
+            class="btn-icon"
+          />
           <span>View Plans</span>
-          <ChevronRight :size="14" class="btn-chevron" />
+          <ChevronRight
+            :size="14"
+            class="btn-chevron"
+          />
         </button>
-        <button class="quick-btn" @click="store.sendChatMessage('Update my preferences')">
-          <Settings :size="14" class="btn-icon" />
+        <button
+          class="quick-btn"
+          @click="store.sendChatMessage('Update my preferences')"
+        >
+          <Settings
+            :size="14"
+            class="btn-icon"
+          />
           <span>Preferences</span>
-          <ChevronRight :size="14" class="btn-chevron" />
+          <ChevronRight
+            :size="14"
+            class="btn-chevron"
+          />
         </button>
-        <button class="quick-btn" @click="store.refreshMemoryFiles()">
-          <RefreshCw :size="14" class="btn-icon" />
+        <button
+          class="quick-btn"
+          @click="store.refreshMemoryFiles()"
+        >
+          <RefreshCw
+            :size="14"
+            class="btn-icon"
+          />
           <span>Refresh Data</span>
-          <ChevronRight :size="14" class="btn-chevron" />
+          <ChevronRight
+            :size="14"
+            class="btn-chevron"
+          />
         </button>
       </div>
     </div>

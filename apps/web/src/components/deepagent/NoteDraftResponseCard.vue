@@ -3,6 +3,7 @@ import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 
 import type { DeepAgentNoteDraft } from '@/stores/deepAgent'
 import { useAIStore } from '@/stores/ai'
 import { usePreferencesStore } from '@/stores'
+import { getNoteDraftDiffScopeId } from '@/stores/deepAgent.note-draft'
 import { useDiffBlocks } from '@/composables/useDiffBlocks'
 import { computeDiffHunks } from '@/services/ai.service'
 import { registerMuyaPlugins } from '@/utils/muyaPlugins'
@@ -41,12 +42,16 @@ const streamingApplyTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const STREAMING_APPLY_INTERVAL_MS = 80
 
 const syntheticNoteId = computed(() => {
-  const thread = props.threadId || 'thread'
-  return `draft:${thread}:${props.noteDraft.draftId}`
+  return getNoteDraftDiffScopeId(props.noteDraft.draftId, props.threadId)
 })
 
 const saveDisabled = computed(() =>
-  Boolean(props.isStreaming || props.noteDraft.isSaving || !localTitle.value.trim() || !localContent.value.trim()),
+  Boolean(
+    props.isStreaming ||
+    props.noteDraft.isSaving ||
+    !localTitle.value.trim() ||
+    !localContent.value.trim()
+  )
 )
 
 const pendingDiffCount = computed(() => aiStore.getDiffBlocksForNote(syntheticNoteId.value).length)
@@ -68,21 +73,33 @@ const statusClass = computed(() => {
   return 'draft'
 })
 
-const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
+// Guard: true while onSync is propagating an update back to the parent.
+// Prevents the content watcher from seeing the resulting prop change as "external"
+// and re-triggering diff application (which was the root cause of Bug 3).
+const isSyncingContent = ref(false)
+
+const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs, isDiffInjecting } = useDiffBlocks(
   muyaInstance as unknown as Parameters<typeof useDiffBlocks>[0],
   syntheticNoteId as unknown as Parameters<typeof useDiffBlocks>[1],
   {
     onSync: (markdown: string) => {
       if (
-        markdown === props.noteDraft.currentContent
-        && localTitle.value === props.noteDraft.title
+        markdown === props.noteDraft.currentContent &&
+        localTitle.value === props.noteDraft.title
       ) {
         return
       }
+      isSyncingContent.value = true
       localContent.value = markdown
       emit('update', { title: localTitle.value, content: markdown })
+      // Clear after the watcher cycle completes (double nextTick ensures Vue reactivity settles)
+      nextTick(() =>
+        nextTick(() => {
+          isSyncingContent.value = false
+        })
+      )
     },
-  },
+  }
 )
 
 function applyPendingDiff() {
@@ -152,39 +169,39 @@ function initializeMuya() {
   if (!editorRef.value || muyaInstance.value) return
   registerMuyaPlugins({ frontControls: false })
 
-  muyaInstance.value = markRaw(new Muya(editorRef.value, {
-    markdown: localContent.value,
-    focusMode: false,
-    preferLooseListItem: preferencesStore.preferLooseListItem,
-    autoPairBracket: preferencesStore.autoPairBracket,
-    autoPairMarkdownSyntax: preferencesStore.autoPairMarkdownSyntax,
-    autoPairQuote: preferencesStore.autoPairQuote,
-    bulletListMarker: preferencesStore.bulletListMarker,
-    orderListDelimiter: preferencesStore.orderListDelimiter,
-    tabSize: preferencesStore.tabSize,
-    fontSize: Math.max(preferencesStore.fontSize - 1, 14),
-    lineHeight: preferencesStore.lineHeight,
-    codeBlockLineNumbers: preferencesStore.codeBlockLineNumbers,
-    listIndentation: preferencesStore.listIndentation,
-    hideQuickInsertHint: preferencesStore.hideQuickInsertHint,
-    hideLinkPopup: preferencesStore.hideLinkPopup,
-    spellcheckEnabled: false,
-    trimUnnecessaryCodeBlockEmptyLines: preferencesStore.trimUnnecessaryCodeBlockEmptyLines,
-    mermaidTheme: preferencesStore.theme.includes('dark') ? 'dark' : 'default',
-    vegaTheme: preferencesStore.theme.includes('dark') ? 'dark' : 'latimes',
-    superSubScript: true,
-    footnote: true,
-    isGitlabCompatibilityEnabled: true,
-    disableHtml: false,
-  }))
+  muyaInstance.value = markRaw(
+    new Muya(editorRef.value, {
+      markdown: localContent.value,
+      focusMode: false,
+      preferLooseListItem: preferencesStore.preferLooseListItem,
+      autoPairBracket: preferencesStore.autoPairBracket,
+      autoPairMarkdownSyntax: preferencesStore.autoPairMarkdownSyntax,
+      autoPairQuote: preferencesStore.autoPairQuote,
+      bulletListMarker: preferencesStore.bulletListMarker,
+      orderListDelimiter: preferencesStore.orderListDelimiter,
+      tabSize: preferencesStore.tabSize,
+      fontSize: Math.max(preferencesStore.fontSize - 1, 14),
+      lineHeight: preferencesStore.lineHeight,
+      codeBlockLineNumbers: preferencesStore.codeBlockLineNumbers,
+      listIndentation: preferencesStore.listIndentation,
+      hideQuickInsertHint: preferencesStore.hideQuickInsertHint,
+      hideLinkPopup: preferencesStore.hideLinkPopup,
+      spellcheckEnabled: false,
+      trimUnnecessaryCodeBlockEmptyLines: preferencesStore.trimUnnecessaryCodeBlockEmptyLines,
+      mermaidTheme: preferencesStore.theme.includes('dark') ? 'dark' : 'default',
+      vegaTheme: preferencesStore.theme.includes('dark') ? 'dark' : 'latimes',
+      superSubScript: true,
+      footnote: true,
+      isGitlabCompatibilityEnabled: true,
+      disableHtml: false,
+    })
+  )
 
   muyaInstance.value.on('json-change', () => {
-    if (isApplyingExternalUpdate.value || isHydratingFromProps.value) return
+    if (isApplyingExternalUpdate.value || isHydratingFromProps.value || isDiffInjecting.value)
+      return
     const markdown = muyaInstance.value?.getMarkdown() || ''
-    if (
-      markdown === props.noteDraft.currentContent
-      && localTitle.value === props.noteDraft.title
-    ) {
+    if (markdown === props.noteDraft.currentContent && localTitle.value === props.noteDraft.title) {
       return
     }
     localContent.value = markdown
@@ -206,6 +223,9 @@ watch(
     proposedContent: props.noteDraft.proposedContent || props.noteDraft.currentContent || '',
   }),
   (draft) => {
+    // Skip if this update was triggered by our own onSync callback
+    if (isSyncingContent.value) return
+
     const nextContent = draft.proposedContent
     const currentMarkdown = muyaInstance.value?.getMarkdown() || localContent.value
     const titleChanged = draft.title !== localTitle.value
@@ -245,7 +265,7 @@ watch(
     }
 
     isHydratingFromProps.value = false
-  },
+  }
 )
 
 watch(
@@ -260,7 +280,7 @@ watch(
     if (wasStreaming) {
       flushStreamingMarkdownQueue({ rebuildDiff: true })
     }
-  },
+  }
 )
 
 watch(localTitle, (title) => {
@@ -278,13 +298,17 @@ watch(
       clearAllDiffs()
       aiStore.clearPendingEdits(syntheticNoteId.value)
       if (muyaInstance.value) {
-        try { muyaInstance.value.destroy() } catch { /* ignore */ }
+        try {
+          muyaInstance.value.destroy()
+        } catch {
+          /* ignore */
+        }
         muyaInstance.value = null
       }
     } else {
       nextTick(() => initializeMuya())
     }
-  },
+  }
 )
 
 onMounted(() => {
@@ -299,25 +323,39 @@ onUnmounted(() => {
   clearAllDiffs()
   aiStore.clearPendingEdits(syntheticNoteId.value)
   if (muyaInstance.value) {
-    try { muyaInstance.value.destroy() } catch { /* ignore */ }
+    try {
+      muyaInstance.value.destroy()
+    } catch {
+      /* ignore */
+    }
     muyaInstance.value = null
   }
 })
 </script>
 
 <template>
-  <div v-if="noteDraft.hidden" class="draft-collapsed">
+  <div
+    v-if="noteDraft.hidden"
+    class="draft-collapsed"
+  >
     <div class="collapsed-meta">
       <span class="collapsed-title">{{ noteDraft.title }}</span>
       <span class="collapsed-status">Unsaved draft hidden</span>
     </div>
-    <button class="action-button reopen" type="button" @click="emit('reopen')">
+    <button
+      class="action-button reopen"
+      type="button"
+      @click="emit('reopen')"
+    >
       <Eye :size="14" />
       Open draft
     </button>
   </div>
 
-  <div v-else class="note-draft-card">
+  <div
+    v-else
+    class="note-draft-card"
+  >
     <div class="card-header">
       <input
         v-model="localTitle"
@@ -327,13 +365,28 @@ onUnmounted(() => {
       />
 
       <div class="header-actions">
-        <span class="status-badge" :class="statusClass">
-          <Loader2 v-if="noteDraft.isSaving" :size="12" class="spin" />
-          <Check v-else-if="noteDraft.isSaved" :size="12" />
+        <span
+          class="status-badge"
+          :class="statusClass"
+        >
+          <Loader2
+            v-if="noteDraft.isSaving"
+            :size="12"
+            class="spin"
+          />
+          <Check
+            v-else-if="noteDraft.isSaved"
+            :size="12"
+          />
           {{ statusLabel }}
         </span>
         <span class="word-count">{{ wordCount }}</span>
-        <button class="icon-button" type="button" title="Hide draft" @click="emit('hide')">
+        <button
+          class="icon-button"
+          type="button"
+          title="Hide draft"
+          @click="emit('hide')"
+        >
           <EyeOff :size="14" />
         </button>
       </div>
@@ -348,16 +401,32 @@ onUnmounted(() => {
     </div>
 
     <div class="card-footer">
-      <div class="diff-actions" v-if="pendingDiffCount > 0">
-        <button class="action-button accept" type="button" @click="acceptAllDiffs">
+      <div
+        class="diff-actions"
+        v-if="pendingDiffCount > 0"
+      >
+        <button
+          class="action-button accept"
+          type="button"
+          @click="acceptAllDiffs"
+        >
           Accept All
         </button>
-        <button class="action-button reject" type="button" @click="rejectAllDiffs">
+        <button
+          class="action-button reject"
+          type="button"
+          @click="rejectAllDiffs"
+        >
           Reject All
         </button>
       </div>
 
-      <button class="action-button save" type="button" :disabled="saveDisabled" @click="handleSave">
+      <button
+        class="action-button save"
+        type="button"
+        :disabled="saveDisabled"
+        @click="handleSave"
+      >
         <Save :size="14" />
         Save
       </button>

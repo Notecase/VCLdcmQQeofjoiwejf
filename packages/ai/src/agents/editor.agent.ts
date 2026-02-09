@@ -12,7 +12,11 @@
  */
 
 import { z } from 'zod'
-import type { ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import type {
+  ChatCompletion,
+  ChatCompletionChunk,
+  ChatCompletionMessageParam,
+} from 'openai/resources/chat/completions'
 import type { Stream } from 'openai/streaming'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { executeTool, ToolContext, ToolResult } from '../tools'
@@ -209,7 +213,17 @@ export class EditorAgent {
    * Stream the secretary agent response
    */
   async *stream(input: EditorAgentInput): AsyncGenerator<{
-    type: 'intent' | 'thinking' | 'tool-call' | 'tool-result' | 'text-delta' | 'edit-proposal' | 'clarification-request' | 'artifact' | 'code-preview' | 'finish'
+    type:
+      | 'intent'
+      | 'thinking'
+      | 'tool-call'
+      | 'tool-result'
+      | 'text-delta'
+      | 'edit-proposal'
+      | 'clarification-request'
+      | 'artifact'
+      | 'code-preview'
+      | 'finish'
     data: unknown
   }> {
     // Ensure message is a valid string
@@ -471,7 +485,15 @@ export class EditorAgent {
     intent: IntentClassification,
     message: string
   ): AsyncGenerator<{
-    type: 'tool-call' | 'tool-result' | 'text-delta' | 'thinking' | 'edit-proposal' | 'clarification-request' | 'artifact' | 'code-preview'
+    type:
+      | 'tool-call'
+      | 'tool-result'
+      | 'text-delta'
+      | 'thinking'
+      | 'edit-proposal'
+      | 'clarification-request'
+      | 'artifact'
+      | 'code-preview'
     data: unknown
   }> {
     const toolContext: ToolContext = {
@@ -640,10 +662,11 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       console.log('[streamChat] Chunk:', JSON.stringify(chunk).slice(0, 200))
 
       // Try multiple delta paths for GPT-5.2 compatibility
-      const delta = chunk.choices?.[0]?.delta?.content
-        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { content?: string })?.content
+      const delta =
+        chunk.choices?.[0]?.delta?.content ??
+        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
+        (chunk.choices?.[0] as { text?: string })?.text ??
+        (chunk.choices?.[0] as { content?: string })?.content
 
       if (delta) {
         yield { type: 'text-delta', data: delta }
@@ -696,7 +719,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     selectedBlockIds?: string[] // For clarification flow - legacy UUID-based matching (deprecated)
   ): AsyncGenerator<{
     type: 'text-delta' | 'thinking' | 'edit-proposal' | 'clarification-request'
-    data: string | { noteId: string; blockId?: string; original: string; proposed: string } | { options: ClarificationOption[]; reason: string }
+    data:
+      | string
+      | { noteId: string; blockId?: string; original: string; proposed: string }
+      | { options: ClarificationOption[]; reason: string }
   }> {
     // Use noteId from intent params, falling back to current note context
     const rawNoteId =
@@ -742,10 +768,15 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     // If note is empty and user wants to "make a note about X", write to current note
     // This prevents the clarification dialog from appearing for empty notes
     if (!originalContent.trim()) {
-      const isCreateLikeInstruction = /\b(make|write|create)\s+(a\s+)?(note|content|something)\s+(about|on|for|regarding)\b/i.test(safeMessage)
+      const isCreateLikeInstruction =
+        /\b(make|write|create)\s+(a\s+)?(note|content|something)\s+(about|on|for|regarding)\b/i.test(
+          safeMessage
+        )
 
       if (isCreateLikeInstruction) {
-        console.log('[EditorAgent] Empty note with create-like instruction, using full document edit')
+        console.log(
+          '[EditorAgent] Empty note with create-like instruction, using full document edit'
+        )
         yield* this.streamFullDocumentEdit(noteId, originalContent, safeMessage, 'update')
         return
       }
@@ -768,8 +799,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
 
     // Detect ADD operations that don't need target identification
     // These operations generate new content for the whole document rather than editing specific sections
-    const addPatterns = /\b(add|insert|create|append|write|generate)\s+(a|an|new|some)?\s*(table|summary|section|list|paragraph|content|diagram|chart|heading|conclusion|introduction)/i
-    const isAddOperation = addPatterns.test(safeMessage) &&
+    const addPatterns =
+      /\b(add|insert|create|append|write|generate)\s+(a|an|new|some)?\s*(table|summary|section|list|paragraph|content|diagram|chart|heading|conclusion|introduction)/i
+    const isAddOperation =
+      addPatterns.test(safeMessage) &&
       !safeMessage.toLowerCase().includes('edit') &&
       !safeMessage.toLowerCase().includes('modify') &&
       !safeMessage.toLowerCase().includes('change') &&
@@ -825,25 +858,27 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       const instructionLower = safeMessage.toLowerCase()
 
       // Try to find the best match among clarification options
-      const scoredOptions = targetResult.clarificationOptions.map(opt => {
-        const label = opt.label.toLowerCase().replace('section: ', '')
-        let score = 0
+      const scoredOptions = targetResult.clarificationOptions
+        .map((opt) => {
+          const label = opt.label.toLowerCase().replace('section: ', '')
+          let score = 0
 
-        // Check if instruction contains the section label
-        if (instructionLower.includes(label)) {
-          score += 0.6
-        }
+          // Check if instruction contains the section label
+          if (instructionLower.includes(label)) {
+            score += 0.6
+          }
 
-        // Check word overlap between label and instruction
-        const labelWords = label.split(/\s+/).filter(w => w.length > 2)
-        const instructionWords = instructionLower.split(/\s+/).filter(w => w.length > 2)
-        const overlap = labelWords.filter(w => instructionWords.includes(w)).length
-        if (labelWords.length > 0) {
-          score += (overlap / labelWords.length) * 0.4
-        }
+          // Check word overlap between label and instruction
+          const labelWords = label.split(/\s+/).filter((w) => w.length > 2)
+          const instructionWords = instructionLower.split(/\s+/).filter((w) => w.length > 2)
+          const overlap = labelWords.filter((w) => instructionWords.includes(w)).length
+          if (labelWords.length > 0) {
+            score += (overlap / labelWords.length) * 0.4
+          }
 
-        return { opt, score }
-      }).sort((a, b) => b.score - a.score)
+          return { opt, score }
+        })
+        .sort((a, b) => b.score - a.score)
 
       console.log('[EditorAgent] Clarification auto-selection scores:', {
         topScore: scoredOptions[0]?.score,
@@ -854,8 +889,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       // Auto-select if:
       // 1. Top match has significant score (>= 0.5)
       // 2. AND (only one option OR significantly higher than second)
-      const shouldAutoSelect = scoredOptions[0]?.score >= 0.5 &&
-        (scoredOptions.length === 1 || scoredOptions[0].score > (scoredOptions[1]?.score || 0) + 0.2)
+      const shouldAutoSelect =
+        scoredOptions[0]?.score >= 0.5 &&
+        (scoredOptions.length === 1 ||
+          scoredOptions[0].score > (scoredOptions[1]?.score || 0) + 0.2)
 
       if (shouldAutoSelect) {
         console.log('[EditorAgent] Auto-selecting:', scoredOptions[0].opt.label)
@@ -875,7 +912,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
 
     // Step 4: Handle case where no targets found
     if (targetResult.targets.length === 0) {
-      yield { type: 'text-delta', data: 'Could not identify which section to edit. Please be more specific about which part of the note you want to change.' }
+      yield {
+        type: 'text-delta',
+        data: 'Could not identify which section to edit. Please be more specific about which part of the note you want to change.',
+      }
       return
     }
 
@@ -886,7 +926,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     }
 
     // Step 6: Extract focused context with markers
-    yield { type: 'thinking', data: `Preparing ${targetResult.targets.length} section(s) for editing...` }
+    yield {
+      type: 'thinking',
+      data: `Preparing ${targetResult.targets.length} section(s) for editing...`,
+    }
 
     const context = extractContext(parsed, targetResult.targets, {
       precedingBlocks: 1,
@@ -933,12 +976,7 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     // Step 8: Merge the edited section back into the full document
     yield { type: 'thinking', data: 'Merging changes...' }
 
-    const mergeResult = mergeEditedSection(
-      originalContent,
-      editedSection,
-      context,
-      parsed
-    )
+    const mergeResult = mergeEditedSection(originalContent, editedSection, context, parsed)
 
     if (!mergeResult.success) {
       console.error('[EditorAgent] Merge failed:', mergeResult.message)
@@ -965,9 +1003,15 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       .join(', ')
 
     if (changedSections) {
-      yield { type: 'text-delta', data: `I've prepared changes to ${changedSections}. Review them in your note and click + to accept or − to reject.` }
+      yield {
+        type: 'text-delta',
+        data: `I've prepared changes to ${changedSections}. Review them in your note and click + to accept or − to reject.`,
+      }
     } else {
-      yield { type: 'text-delta', data: 'I\'ve prepared the changes. Review them in your note and click + to accept or − to reject.' }
+      yield {
+        type: 'text-delta',
+        data: "I've prepared the changes. Review them in your note and click + to accept or − to reject.",
+      }
     }
   }
 
@@ -1022,7 +1066,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
           proposed: proposedContent,
         },
       }
-      yield { type: 'text-delta', data: 'I\'ve prepared the changes. Review them in your note and click + to accept or − to reject.' }
+      yield {
+        type: 'text-delta',
+        data: "I've prepared the changes. Review them in your note and click + to accept or − to reject.",
+      }
     } else {
       yield { type: 'text-delta', data: 'Could not generate the changes. Please try again.' }
     }
@@ -1046,16 +1093,13 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     yield { type: 'thinking', data: `Will insert content at ${position} of document...` }
 
     // 2. Extract insertion context (includes fullPrompt with outline)
-    const referenceBlockId = position === 'end'
-      ? parsed.blocks[parsed.blocks.length - 1]?.id
-      : parsed.blocks[0]?.id
+    const referenceBlockId =
+      position === 'end' ? parsed.blocks[parsed.blocks.length - 1]?.id : parsed.blocks[0]?.id
 
-    const context = extractInsertionContext(
-      parsed,
-      position,
-      referenceBlockId,
-      { maxContextChars: 500, includeOutline: true }
-    )
+    const context = extractInsertionContext(parsed, position, referenceBlockId, {
+      maxContextChars: 500,
+      includeOutline: true,
+    })
 
     // 3. Generate ONLY the new content using the insertion prompt
     yield { type: 'thinking', data: 'Generating new content...' }
@@ -1105,18 +1149,22 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       },
     }
 
-    yield { type: 'text-delta', data: `I've added new content at the ${position} of your note. Review the changes and click + to accept or \u2212 to reject.` }
+    yield {
+      type: 'text-delta',
+      data: `I've added new content at the ${position} of your note. Review the changes and click + to accept or \u2212 to reject.`,
+    }
   }
 
   /**
    * Stream CREATE note operation
    * Creates a brand new note without going through edit/section flows
    */
-  private async *streamNoteCreate(
-    instruction: string
-  ): AsyncGenerator<{
+  private async *streamNoteCreate(instruction: string): AsyncGenerator<{
     type: 'text-delta' | 'thinking' | 'edit-proposal' | 'clarification-request'
-    data: string | { noteId: string; blockId?: string; original: string; proposed: string } | { options: ClarificationOption[]; reason: string }
+    data:
+      | string
+      | { noteId: string; blockId?: string; original: string; proposed: string }
+      | { options: ClarificationOption[]; reason: string }
   }> {
     yield { type: 'thinking', data: 'Creating new note...' }
 
@@ -1212,7 +1260,7 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       tableMarkdown += '| ' + tableData.headers.join(' | ') + ' |\n'
       tableMarkdown += '| ' + tableData.headers.map(() => '---').join(' | ') + ' |\n'
       for (const row of tableData.rows) {
-        const cells = row.map(cell => String(cell).replace(/\|/g, '\\|'))
+        const cells = row.map((cell) => String(cell).replace(/\|/g, '\\|'))
         tableMarkdown += '| ' + cells.join(' | ') + ' |\n'
       }
 
@@ -1228,7 +1276,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
         },
       }
 
-      yield { type: 'text-delta', data: `I've prepared a table "${tableData.title}" with ${tableData.rows.length} rows. Review the changes and click + to accept or − to reject.` }
+      yield {
+        type: 'text-delta',
+        data: `I've prepared a table "${tableData.title}" with ${tableData.rows.length} rows. Review the changes and click + to accept or − to reject.`,
+      }
       return
     }
 
@@ -1327,22 +1378,34 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
 
     for await (const chunk of stream) {
       // Try multiple delta paths for GPT-5.2 compatibility
-      const delta = chunk.choices?.[0]?.delta?.content
-        ?? (chunk.choices?.[0]?.delta as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { text?: string })?.text
-        ?? (chunk.choices?.[0] as { content?: string })?.content
+      const delta =
+        chunk.choices?.[0]?.delta?.content ??
+        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
+        (chunk.choices?.[0] as { text?: string })?.text ??
+        (chunk.choices?.[0] as { content?: string })?.content
 
       if (delta) {
         fullContent += delta
 
         // Detect CSS section and emit thinking step
-        if (!hasSeenCss && (fullContent.includes('```css') || fullContent.includes('<CSS_CODE>') || fullContent.includes('"css":'))) {
+        if (
+          !hasSeenCss &&
+          (fullContent.includes('```css') ||
+            fullContent.includes('<CSS_CODE>') ||
+            fullContent.includes('"css":'))
+        ) {
           hasSeenCss = true
           yield { type: 'thinking', data: { description: 'Adding styles', type: 'write' } }
         }
 
         // Detect JavaScript section and emit thinking step
-        if (!hasSeenJs && (fullContent.includes('```javascript') || fullContent.includes('```js') || fullContent.includes('<JAVASCRIPT_CODE>') || fullContent.includes('"javascript":'))) {
+        if (
+          !hasSeenJs &&
+          (fullContent.includes('```javascript') ||
+            fullContent.includes('```js') ||
+            fullContent.includes('<JAVASCRIPT_CODE>') ||
+            fullContent.includes('"javascript":'))
+        ) {
           hasSeenJs = true
           yield { type: 'thinking', data: { description: 'Adding interactivity', type: 'tool' } }
         }
@@ -1401,10 +1464,13 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
    */
   private detectCurrentPhase(content: string): 'html' | 'css' | 'javascript' {
     // Check what section we're currently in based on markers
-    const hasJs = content.includes('```javascript') || content.includes('```js') ||
-      content.includes('<JAVASCRIPT_CODE>') || content.includes('"javascript":')
-    const hasCss = content.includes('```css') || content.includes('<CSS_CODE>') ||
-      content.includes('"css":')
+    const hasJs =
+      content.includes('```javascript') ||
+      content.includes('```js') ||
+      content.includes('<JAVASCRIPT_CODE>') ||
+      content.includes('"javascript":')
+    const hasCss =
+      content.includes('```css') || content.includes('<CSS_CODE>') || content.includes('"css":')
 
     if (hasJs) {
       // Check if JS block is still being written (no closing ```)
@@ -1416,7 +1482,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
           // For markdown blocks, check for closing ```
           if (marker.startsWith('```') && !afterJs.includes('```')) return 'javascript'
           // For XML-style, check for closing tag
-          if (marker === '<JAVASCRIPT_CODE>' && !afterJs.includes('</JAVASCRIPT_CODE>')) return 'javascript'
+          if (marker === '<JAVASCRIPT_CODE>' && !afterJs.includes('</JAVASCRIPT_CODE>'))
+            return 'javascript'
           // For JSON, check if still in the value (no closing quote + comma/brace)
           if (marker === '"javascript":' && !afterJs.match(/",?\s*[}]/)) return 'javascript'
         }
@@ -1502,7 +1569,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     // === Markdown code blocks ===
     if (!result.html || !result.css || !result.javascript) {
       let normalizedContent = content
-      normalizedContent = normalizedContent.replace(/``(javascript|js|html|css)\s*[\r\n]/gi, '```$1\n')
+      normalizedContent = normalizedContent.replace(
+        /``(javascript|js|html|css)\s*[\r\n]/gi,
+        '```$1\n'
+      )
       normalizedContent = normalizedContent.replace(/``(\s*[\r\n]|$)/g, '```$1')
 
       if (!result.html) {
@@ -1557,7 +1627,9 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const attemptParse = (text: string): Record<string, unknown> | null => {
       try {
         const parsed = JSON.parse(text)
-        return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null
+        return typeof parsed === 'object' && parsed !== null
+          ? (parsed as Record<string, unknown>)
+          : null
       } catch {
         return null
       }
@@ -1579,7 +1651,10 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     }
 
     const directParsed = attemptParse(trimmed)
-    if (directParsed && (directParsed.html || directParsed.css || directParsed.javascript || directParsed.title)) {
+    if (
+      directParsed &&
+      (directParsed.html || directParsed.css || directParsed.javascript || directParsed.title)
+    ) {
       return {
         title: toString(directParsed.title),
         html: toString(directParsed.html),
@@ -1591,7 +1666,13 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const extracted = this.extractFirstJsonObject(content)
     if (extracted) {
       const extractedParsed = attemptParse(extracted)
-      if (extractedParsed && (extractedParsed.html || extractedParsed.css || extractedParsed.javascript || extractedParsed.title)) {
+      if (
+        extractedParsed &&
+        (extractedParsed.html ||
+          extractedParsed.css ||
+          extractedParsed.javascript ||
+          extractedParsed.title)
+      ) {
         return {
           title: toString(extractedParsed.title),
           html: toString(extractedParsed.html),
@@ -1700,7 +1781,10 @@ ${artifact.javascript || ''}
     )
   }
 
-  private async createArtifactCompletion(message: string, stream: true): Promise<Stream<ChatCompletionChunk>>
+  private async createArtifactCompletion(
+    message: string,
+    stream: true
+  ): Promise<Stream<ChatCompletionChunk>>
   private async createArtifactCompletion(message: string, stream?: false): Promise<ChatCompletion>
   private async createArtifactCompletion(message: string, stream = false) {
     const OpenAI = (await import('openai')).default
@@ -1753,7 +1837,9 @@ ${artifact.javascript || ''}
    * Extract a human-readable title from the artifact creation message
    */
   private extractArtifactTitle(message: string): string {
-    const match = message.match(/(?:create|make|build)\s+(?:an?\s+)?artifact\s+(?:that\s+)?(?:demonstrates?|shows?)\s+(.+)/i)
+    const match = message.match(
+      /(?:create|make|build)\s+(?:an?\s+)?artifact\s+(?:that\s+)?(?:demonstrates?|shows?)\s+(.+)/i
+    )
     if (match) return match[1].slice(0, 50).trim()
     return `Artifact ${new Date().toISOString().split('T')[0]}`
   }
@@ -1773,7 +1859,7 @@ ${artifact.javascript || ''}
       /\btable\s+(of|with|containing|showing)\s+/i,
     ]
 
-    return createPatterns.some(p => p.test(lower))
+    return createPatterns.some((p) => p.test(lower))
   }
 
   /**

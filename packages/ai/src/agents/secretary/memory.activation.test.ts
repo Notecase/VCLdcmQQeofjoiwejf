@@ -13,7 +13,10 @@ class FakeMemoryService {
   private files = new Map<string, string>()
   private context: MemoryContext
 
-  constructor(initialFiles: Array<{ filename: string; content: string }>, context?: Partial<MemoryContext>) {
+  constructor(
+    initialFiles: Array<{ filename: string; content: string }>,
+    context?: Partial<MemoryContext>
+  ) {
     for (const file of initialFiles) {
       this.files.set(file.filename, file.content)
     }
@@ -105,9 +108,15 @@ class FakeMemoryService {
   }
 
   // Unused members to satisfy structural compatibility in tests.
-  async initializeDefaults(): Promise<MemoryFile[]> { return [] }
-  async performDayTransition(): Promise<{ transitioned: boolean }> { return { transitioned: false } }
-  async checkAndExpandWeek(): Promise<boolean> { return false }
+  async initializeDefaults(): Promise<MemoryFile[]> {
+    return []
+  }
+  async performDayTransition(): Promise<{ transitioned: boolean }> {
+    return { transitioned: false }
+  }
+  async checkAndExpandWeek(): Promise<boolean> {
+    return false
+  }
   async getContextDiagnostics(): Promise<{
     activePlansParsed: number
     roadmapFilesFound: number
@@ -128,7 +137,7 @@ class FakeMemoryService {
 }
 
 function getToolByName(tools: unknown[], name: string): any {
-  const tool = (tools as any[]).find(t => t?.name === name)
+  const tool = (tools as any[]).find((t) => t?.name === name)
   if (!tool) throw new Error(`Tool ${name} not found`)
   return tool
 }
@@ -139,7 +148,8 @@ describe('secretary roadmap activation tools', () => {
       { filename: 'Plan.md', content: '# Learning Plans\n\n## Active Plans\n\n' },
       {
         filename: 'Plans/rl-roadmap.md',
-        content: '# [RL] Reinforcement Learning\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** Daily 2h/day\n',
+        content:
+          '# [RL] Reinforcement Learning\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** Daily 2h/day\n',
       },
     ])
 
@@ -235,7 +245,8 @@ describe('save_roadmap normalization', () => {
       planId: 'RL',
       planName: 'Reinforcement Learning',
       startDate: '2026-02-06',
-      roadmapContent: '# [RL] Reinforcement Learning\n\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** MWF 2h/day\n',
+      roadmapContent:
+        '# [RL] Reinforcement Learning\n\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** MWF 2h/day\n',
     })
 
     const plan = await mem.readFile('Plan.md')
@@ -246,7 +257,7 @@ describe('save_roadmap normalization', () => {
   })
 })
 
-describe('modify_today_plan behavior', () => {
+describe('modify_plan behavior', () => {
   it('returns a clear no-op message when taskTime is missing from Today.md', async () => {
     const mem = new FakeMemoryService([
       {
@@ -265,7 +276,7 @@ describe('modify_today_plan behavior', () => {
       openaiApiKey: 'test',
       userId: 'user',
     })
-    const modify = getToolByName(tools, 'modify_today_plan')
+    const modify = getToolByName(tools, 'modify_plan')
 
     const result = await modify.invoke({
       action: 'reschedule',
@@ -297,7 +308,7 @@ describe('modify_today_plan behavior', () => {
       openaiApiKey: 'test',
       userId: 'user',
     })
-    const modify = getToolByName(tools, 'modify_today_plan')
+    const modify = getToolByName(tools, 'modify_plan')
 
     const result = await modify.invoke({
       action: 'reschedule',
@@ -328,7 +339,7 @@ describe('modify_today_plan behavior', () => {
       openaiApiKey: 'test',
       userId: 'user',
     })
-    const modify = getToolByName(tools, 'modify_today_plan')
+    const modify = getToolByName(tools, 'modify_plan')
 
     const result = await modify.invoke({
       action: 'extend',

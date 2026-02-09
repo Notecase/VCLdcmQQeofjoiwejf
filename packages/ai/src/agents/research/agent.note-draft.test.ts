@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchAgent } from './agent'
 
-const {
-  createMock,
-  getOllamaCloudMock,
-  ollamaGenerateArtifactMock,
-} = vi.hoisted(() => ({
+const { createMock, getOllamaCloudMock, ollamaGenerateArtifactMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
   getOllamaCloudMock: vi.fn(),
   ollamaGenerateArtifactMock: vi.fn(),
@@ -37,12 +33,14 @@ function createTextStream(chunks: string[]) {
   }
 }
 
-function createArtifactPayload(overrides: Partial<{
-  title: string
-  html: string
-  css: string
-  javascript: string
-}> = {}) {
+function createArtifactPayload(
+  overrides: Partial<{
+    title: string
+    html: string
+    css: string
+    javascript: string
+  }> = {}
+) {
   return JSON.stringify({
     title: overrides.title ?? 'Study Timer',
     html: overrides.html ?? '<div id="timer">25:00</div>',
@@ -73,7 +71,7 @@ describe('ResearchAgent note draft mode', () => {
       }
     })
 
-    ollamaGenerateArtifactMock.mockImplementation(async function *() {
+    ollamaGenerateArtifactMock.mockImplementation(async function* () {
       yield createArtifactPayload()
     })
   })
@@ -101,15 +99,14 @@ describe('ResearchAgent note draft mode', () => {
       events.push(event)
     }
 
-    expect(events.some(e => e.event === 'note-draft-delta')).toBe(true)
-    expect(events.some(e => e.event === 'note-draft')).toBe(true)
-    expect(events.some(e => e.event === 'note-navigate')).toBe(false)
+    expect(events.some((e) => e.event === 'note-draft-delta')).toBe(true)
+    expect(events.some((e) => e.event === 'note-draft')).toBe(true)
+    expect(events.some((e) => e.event === 'note-navigate')).toBe(false)
 
-    const draftEvent = events.find(e => e.event === 'note-draft')
+    const draftEvent = events.find((e) => e.event === 'note-draft')
     expect(draftEvent).toBeTruthy()
-    const payload = typeof draftEvent?.data === 'string'
-      ? JSON.parse(draftEvent.data)
-      : draftEvent?.data
+    const payload =
+      typeof draftEvent?.data === 'string' ? JSON.parse(draftEvent.data) : draftEvent?.data
 
     expect(payload.proposedContent).toContain('# Black Holes')
     expect(payload.draftId).toBeTruthy()
@@ -137,19 +134,17 @@ describe('ResearchAgent note draft mode', () => {
       threadId: 'thread-delta',
     })) {
       if (event.event !== 'note-draft-delta') continue
-      const payload = typeof event.data === 'string'
-        ? JSON.parse(event.data)
-        : event.data
+      const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
       payloads.push(payload as Record<string, unknown>)
     }
 
     expect(payloads.length).toBeGreaterThan(1)
     expect(payloads[0].currentContent).toBeDefined()
-    expect(payloads.slice(1).some(p => p.currentContent === undefined)).toBe(true)
+    expect(payloads.slice(1).some((p) => p.currentContent === undefined)).toBe(true)
   })
 
   it('falls back to GPT-5.2 artifact generation when Ollama fails', async () => {
-    ollamaGenerateArtifactMock.mockImplementation(async function *() {
+    ollamaGenerateArtifactMock.mockImplementation(async function* () {
       throw new Error('ollama unavailable')
     })
 
@@ -176,21 +171,20 @@ describe('ResearchAgent note draft mode', () => {
       events.push(event)
     }
 
-    const draftEvent = events.find(e => e.event === 'note-draft')
-    const payload = typeof draftEvent?.data === 'string'
-      ? JSON.parse(draftEvent.data)
-      : draftEvent?.data
+    const draftEvent = events.find((e) => e.event === 'note-draft')
+    const payload =
+      typeof draftEvent?.data === 'string' ? JSON.parse(draftEvent.data) : draftEvent?.data
 
     const fallbackCalls = createMock.mock.calls.filter(([arg]) => arg && arg.stream === false)
 
     expect(getOllamaCloudMock).toHaveBeenCalledTimes(1)
     expect(fallbackCalls.length).toBeGreaterThan(0)
     expect(payload.proposedContent).toContain('```artifact')
-    expect(events.some(e => e.event === 'error')).toBe(false)
+    expect(events.some((e) => e.event === 'error')).toBe(false)
   })
 
   it('emits an artifact error and skips artifact block when primary and fallback generation both fail', async () => {
-    ollamaGenerateArtifactMock.mockImplementation(async function *() {
+    ollamaGenerateArtifactMock.mockImplementation(async function* () {
       throw new Error('ollama unavailable')
     })
 
@@ -215,12 +209,11 @@ describe('ResearchAgent note draft mode', () => {
       events.push(event)
     }
 
-    const draftEvent = events.find(e => e.event === 'note-draft')
-    const payload = typeof draftEvent?.data === 'string'
-      ? JSON.parse(draftEvent.data)
-      : draftEvent?.data
+    const draftEvent = events.find((e) => e.event === 'note-draft')
+    const payload =
+      typeof draftEvent?.data === 'string' ? JSON.parse(draftEvent.data) : draftEvent?.data
 
-    const errorEvent = events.find(e => e.event === 'error')
+    const errorEvent = events.find((e) => e.event === 'error')
     expect(errorEvent).toBeTruthy()
     expect(String(errorEvent?.data).toLowerCase()).toContain('artifact')
     expect(payload.proposedContent).not.toContain('```artifact')
@@ -243,7 +236,7 @@ describe('ResearchAgent note draft mode', () => {
       events.push(event)
     }
 
-    expect(events.some(e => e.event === 'note-draft')).toBe(true)
-    expect(events.some(e => e.event === 'note-navigate')).toBe(false)
+    expect(events.some((e) => e.event === 'note-draft')).toBe(true)
+    expect(events.some((e) => e.event === 'note-navigate')).toBe(false)
   })
 })

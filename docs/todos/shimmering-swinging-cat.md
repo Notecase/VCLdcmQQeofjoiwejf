@@ -3,6 +3,7 @@
 ## Context
 
 The starting page (HomePage) currently has:
+
 - A "Start a guided session" hero banner that feels AI-generic — **remove**
 - 4 recommendation cards in a 2x2 grid with icons/descriptions — too busy
 - A chat composer footer that takes too much vertical space
@@ -21,58 +22,58 @@ Replace all blue accent colors with pure monochrome. The primary becomes white (
 
 ### Dark theme changes (lines 7-261):
 
-| Variable | Old | New |
-|----------|-----|-----|
-| `--primary-color` (L16) | `#7c9ef8` | `#ffffff` |
-| `--primary-gradient` (L17) | `linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%)` | `linear-gradient(135deg, #ffffff 0%, #d1d5db 100%)` |
-| `--theme-color` (L27) | `#7c9ef8` | `#ffffff` |
-| `--highlight-color` (L28) | `rgba(102, 177, 255, 0.6)` | `rgba(255, 255, 255, 0.25)` |
-| `--selection-color` (L29) | `rgba(102, 177, 255, 0.3)` | `rgba(255, 255, 255, 0.15)` |
-| `--themeColor` (L53) | `#7c9ef8` | `#ffffff` |
-| `--themeColor90`-`10` (L54-62) | `rgba(124, 158, 248, N)` | `rgba(255, 255, 255, N)` |
-| `--highlightColor` (L65) | `rgba(102, 177, 255, 0.6)` | `rgba(255, 255, 255, 0.25)` |
-| `--selectionColor` (L66) | `rgba(102, 177, 255, 0.3)` | `rgba(255, 255, 255, 0.15)` |
-| `--ai-tab-underline` (L113) | `#58a6ff` | `#ffffff` |
-| `--ai-focus-ring` (L131) | `rgba(88, 166, 255, 0.08)` | `rgba(255, 255, 255, 0.08)` |
-| `--ai-gradient-overlay` (L134) | blue gradient | `linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%)` |
-| `--chat-message-streaming` (L142) | `rgba(88, 166, 255, 0.03)` | `rgba(255, 255, 255, 0.03)` |
-| `--chat-card-border-hover` (L146) | `rgba(88, 166, 255, 0.2)` | `rgba(255, 255, 255, 0.15)` |
-| `--stream-cursor` (L151) | `#58a6ff` | `#ffffff` |
-| `--stream-pulse` (L152) | `rgba(88, 166, 255, 0.3)` | `rgba(255, 255, 255, 0.3)` |
-| `--stream-glow` (L153) | blue glow | `0 0 0 1px rgba(255, 255, 255, 0.3)` |
-| `--role-user-bg` (L156) | `rgba(88, 166, 255, 0.15)` | `rgba(255, 255, 255, 0.08)` |
-| `--role-user-color` (L157) | `#58a6ff` | `#e2e8f0` |
-| `--timeline-active-glow` (L189) | `rgba(88, 166, 255, 0.4)` | `rgba(255, 255, 255, 0.3)` |
-| `--tool-running-border` (L195) | `rgba(88, 166, 255, 0.4)` | `rgba(255, 255, 255, 0.3)` |
-| `--tool-running-glow` (L196) | `rgba(88, 166, 255, 0.15)` | `rgba(255, 255, 255, 0.1)` |
+| Variable                          | Old                                                 | New                                                                      |
+| --------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------ |
+| `--primary-color` (L16)           | `#7c9ef8`                                           | `#ffffff`                                                                |
+| `--primary-gradient` (L17)        | `linear-gradient(135deg, #7c9ef8 0%, #a78bfa 100%)` | `linear-gradient(135deg, #ffffff 0%, #d1d5db 100%)`                      |
+| `--theme-color` (L27)             | `#7c9ef8`                                           | `#ffffff`                                                                |
+| `--highlight-color` (L28)         | `rgba(102, 177, 255, 0.6)`                          | `rgba(255, 255, 255, 0.25)`                                              |
+| `--selection-color` (L29)         | `rgba(102, 177, 255, 0.3)`                          | `rgba(255, 255, 255, 0.15)`                                              |
+| `--themeColor` (L53)              | `#7c9ef8`                                           | `#ffffff`                                                                |
+| `--themeColor90`-`10` (L54-62)    | `rgba(124, 158, 248, N)`                            | `rgba(255, 255, 255, N)`                                                 |
+| `--highlightColor` (L65)          | `rgba(102, 177, 255, 0.6)`                          | `rgba(255, 255, 255, 0.25)`                                              |
+| `--selectionColor` (L66)          | `rgba(102, 177, 255, 0.3)`                          | `rgba(255, 255, 255, 0.15)`                                              |
+| `--ai-tab-underline` (L113)       | `#58a6ff`                                           | `#ffffff`                                                                |
+| `--ai-focus-ring` (L131)          | `rgba(88, 166, 255, 0.08)`                          | `rgba(255, 255, 255, 0.08)`                                              |
+| `--ai-gradient-overlay` (L134)    | blue gradient                                       | `linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%)` |
+| `--chat-message-streaming` (L142) | `rgba(88, 166, 255, 0.03)`                          | `rgba(255, 255, 255, 0.03)`                                              |
+| `--chat-card-border-hover` (L146) | `rgba(88, 166, 255, 0.2)`                           | `rgba(255, 255, 255, 0.15)`                                              |
+| `--stream-cursor` (L151)          | `#58a6ff`                                           | `#ffffff`                                                                |
+| `--stream-pulse` (L152)           | `rgba(88, 166, 255, 0.3)`                           | `rgba(255, 255, 255, 0.3)`                                               |
+| `--stream-glow` (L153)            | blue glow                                           | `0 0 0 1px rgba(255, 255, 255, 0.3)`                                     |
+| `--role-user-bg` (L156)           | `rgba(88, 166, 255, 0.15)`                          | `rgba(255, 255, 255, 0.08)`                                              |
+| `--role-user-color` (L157)        | `#58a6ff`                                           | `#e2e8f0`                                                                |
+| `--timeline-active-glow` (L189)   | `rgba(88, 166, 255, 0.4)`                           | `rgba(255, 255, 255, 0.3)`                                               |
+| `--tool-running-border` (L195)    | `rgba(88, 166, 255, 0.4)`                           | `rgba(255, 255, 255, 0.3)`                                               |
+| `--tool-running-glow` (L196)      | `rgba(88, 166, 255, 0.15)`                          | `rgba(255, 255, 255, 0.1)`                                               |
 
 ### Light theme changes (lines 263-517):
 
-| Variable | Old | New |
-|----------|-----|-----|
-| `--primary-color` (L273) | `#7c9ef8` | `#1a1a1a` |
-| `--primary-gradient` (L274) | blue-purple gradient | `linear-gradient(135deg, #1a1a1a 0%, #404040 100%)` |
-| `--theme-color` (L284) | `#7c9ef8` | `#1a1a1a` |
-| `--highlight-color` (L285) | `rgba(33, 150, 243, 0.3)` | `rgba(0, 0, 0, 0.15)` |
-| `--selection-color` (L286) | `rgba(33, 150, 243, 0.15)` | `rgba(0, 0, 0, 0.1)` |
-| `--themeColor` (L310) | `#7c9ef8` | `#1a1a1a` |
-| `--themeColor90`-`10` (L311-319) | `rgba(124, 158, 248, N)` | `rgba(26, 26, 26, N)` |
-| `--highlightColor` (L322) | `rgba(33, 150, 243, 0.3)` | `rgba(0, 0, 0, 0.15)` |
-| `--selectionColor` (L323) | `rgba(33, 150, 243, 0.15)` | `rgba(0, 0, 0, 0.1)` |
-| `--ai-input-focus` (L375) | `rgba(124, 158, 248, 0.2)` | `rgba(0, 0, 0, 0.1)` |
-| `--ai-cmd-header` (L376) | `#7c9ef8` | `#1a1a1a` |
-| `--ai-focus-ring` (L387) | `rgba(124, 158, 248, 0.1)` | `rgba(0, 0, 0, 0.06)` |
-| `--ai-gradient-overlay` (L390) | blue gradient | `linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, transparent 50%)` |
-| `--chat-message-streaming` (L398) | `rgba(124, 158, 248, 0.04)` | `rgba(0, 0, 0, 0.03)` |
-| `--chat-card-border-hover` (L402) | `rgba(124, 158, 248, 0.3)` | `rgba(0, 0, 0, 0.15)` |
-| `--stream-cursor` (L407) | `#7c9ef8` | `#1a1a1a` |
-| `--stream-pulse` (L408) | `rgba(124, 158, 248, 0.3)` | `rgba(0, 0, 0, 0.2)` |
-| `--stream-glow` (L409) | blue glow | `0 0 0 1px rgba(0, 0, 0, 0.2)` |
-| `--role-user-bg` (L412) | `rgba(124, 158, 248, 0.15)` | `rgba(0, 0, 0, 0.06)` |
-| `--role-user-color` (L413) | `#5b7fd6` | `#334155` |
-| `--timeline-active-glow` (L445) | `rgba(124, 158, 248, 0.4)` | `rgba(0, 0, 0, 0.2)` |
-| `--tool-running-border` (L451) | `rgba(124, 158, 248, 0.4)` | `rgba(0, 0, 0, 0.2)` |
-| `--tool-running-glow` (L452) | `rgba(124, 158, 248, 0.15)` | `rgba(0, 0, 0, 0.08)` |
+| Variable                          | Old                         | New                                                                |
+| --------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| `--primary-color` (L273)          | `#7c9ef8`                   | `#1a1a1a`                                                          |
+| `--primary-gradient` (L274)       | blue-purple gradient        | `linear-gradient(135deg, #1a1a1a 0%, #404040 100%)`                |
+| `--theme-color` (L284)            | `#7c9ef8`                   | `#1a1a1a`                                                          |
+| `--highlight-color` (L285)        | `rgba(33, 150, 243, 0.3)`   | `rgba(0, 0, 0, 0.15)`                                              |
+| `--selection-color` (L286)        | `rgba(33, 150, 243, 0.15)`  | `rgba(0, 0, 0, 0.1)`                                               |
+| `--themeColor` (L310)             | `#7c9ef8`                   | `#1a1a1a`                                                          |
+| `--themeColor90`-`10` (L311-319)  | `rgba(124, 158, 248, N)`    | `rgba(26, 26, 26, N)`                                              |
+| `--highlightColor` (L322)         | `rgba(33, 150, 243, 0.3)`   | `rgba(0, 0, 0, 0.15)`                                              |
+| `--selectionColor` (L323)         | `rgba(33, 150, 243, 0.15)`  | `rgba(0, 0, 0, 0.1)`                                               |
+| `--ai-input-focus` (L375)         | `rgba(124, 158, 248, 0.2)`  | `rgba(0, 0, 0, 0.1)`                                               |
+| `--ai-cmd-header` (L376)          | `#7c9ef8`                   | `#1a1a1a`                                                          |
+| `--ai-focus-ring` (L387)          | `rgba(124, 158, 248, 0.1)`  | `rgba(0, 0, 0, 0.06)`                                              |
+| `--ai-gradient-overlay` (L390)    | blue gradient               | `linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, transparent 50%)` |
+| `--chat-message-streaming` (L398) | `rgba(124, 158, 248, 0.04)` | `rgba(0, 0, 0, 0.03)`                                              |
+| `--chat-card-border-hover` (L402) | `rgba(124, 158, 248, 0.3)`  | `rgba(0, 0, 0, 0.15)`                                              |
+| `--stream-cursor` (L407)          | `#7c9ef8`                   | `#1a1a1a`                                                          |
+| `--stream-pulse` (L408)           | `rgba(124, 158, 248, 0.3)`  | `rgba(0, 0, 0, 0.2)`                                               |
+| `--stream-glow` (L409)            | blue glow                   | `0 0 0 1px rgba(0, 0, 0, 0.2)`                                     |
+| `--role-user-bg` (L412)           | `rgba(124, 158, 248, 0.15)` | `rgba(0, 0, 0, 0.06)`                                              |
+| `--role-user-color` (L413)        | `#5b7fd6`                   | `#334155`                                                          |
+| `--timeline-active-glow` (L445)   | `rgba(124, 158, 248, 0.4)`  | `rgba(0, 0, 0, 0.2)`                                               |
+| `--tool-running-border` (L451)    | `rgba(124, 158, 248, 0.4)`  | `rgba(0, 0, 0, 0.2)`                                               |
+| `--tool-running-glow` (L452)      | `rgba(124, 158, 248, 0.15)` | `rgba(0, 0, 0, 0.08)`                                              |
 
 **Note**: `--ai-cmd-header` in dark theme (L120) is `#d8b4fe` (purple) — keep as-is, it's separate from the blue issue.
 
@@ -85,6 +86,7 @@ Replace all blue accent colors with pure monochrome. The primary becomes white (
 Complete rewrite. Remove hero banner. Replace 2x2 grid with a minimal single-column list.
 
 ### Script changes:
+
 - Remove icon imports (`Sparkles`, `Brain`, `Code`, `Lightbulb`)
 - Remove `icon: Component` from `Recommendation` interface
 - Remove `icon` property from each recommendation object
@@ -183,8 +185,14 @@ Complete rewrite. Remove hero banner. Replace 2x2 grid with a minimal single-col
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 ```
 
@@ -246,20 +254,20 @@ Replace `.composer-input` + `.composer-actions` with a single `.composer-body`:
 
 ```css
 .chat-composer {
-  padding: 0 24px 12px;  /* was 0 24px 20px */
+  padding: 0 24px 12px; /* was 0 24px 20px */
   flex-shrink: 0;
 }
 
 .composer-card {
-  background: rgba(255, 255, 255, 0.04);  /* was 0.06 — more subtle */
+  background: rgba(255, 255, 255, 0.04); /* was 0.06 — more subtle */
   border: 1px solid var(--border-color, #333338);
-  border-radius: 14px;  /* was 16 */
+  border-radius: 14px; /* was 16 */
   overflow: hidden;
   transition: border-color 0.15s;
 }
 
 .composer-card:focus-within {
-  border-color: rgba(255, 255, 255, 0.2);  /* monochrome focus — no primary-color */
+  border-color: rgba(255, 255, 255, 0.2); /* monochrome focus — no primary-color */
 }
 
 .composer-body {
@@ -278,8 +286,8 @@ Replace `.composer-input` + `.composer-actions` with a single `.composer-body`:
   font-size: 14px;
   font-family: inherit;
   color: var(--text-color, #e2e8f0);
-  min-height: 24px;  /* was 28 */
-  max-height: 120px;  /* was 140 */
+  min-height: 24px; /* was 28 */
+  max-height: 120px; /* was 140 */
   overflow-y: auto;
   padding: 2px 0;
 }
@@ -308,8 +316,8 @@ Replace `.composer-input` + `.composer-actions` with a single `.composer-body`:
 }
 
 .send-btn.active {
-  background: #ffffff;  /* pure white button */
-  color: #0d1117;       /* dark text on white */
+  background: #ffffff; /* pure white button */
+  color: #0d1117; /* dark text on white */
   cursor: pointer;
 }
 
@@ -386,7 +394,7 @@ Restructure the header into a multi-row layout with file type badge, large title
   max-width: 1000px;
   background: var(--surface-1, #0d1117);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;  /* was 12 */
+  border-radius: 16px; /* was 12 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -502,12 +510,12 @@ Also increase markdown body padding: `.markdown-viewer { padding: 28px 32px; }` 
 
 These files used in this task have hardcoded blue values to replace:
 
-| File | Line | Old | New |
-|------|------|-----|-----|
-| `HomePage.vue` | 458 | `rgba(88, 166, 255, 0.08)` | `rgba(255, 255, 255, 0.05)` |
-| `ChatHero.vue` | 105, 106, 125 | `rgba(124, 158, 248, ...)` | Removed (entire file rewritten) |
-| `ChatComposer.vue` | 136, 198, 200 | `--primary-color, #7c9ef8` fallbacks | `rgba(255, 255, 255, 0.2)` and `#ffffff` |
-| `FileViewerModal.vue` | 305, 334, 338 | `--primary-color, #7c9ef8` | `--primary-color, #ffffff` (auto via var) |
+| File                  | Line          | Old                                  | New                                       |
+| --------------------- | ------------- | ------------------------------------ | ----------------------------------------- |
+| `HomePage.vue`        | 458           | `rgba(88, 166, 255, 0.08)`           | `rgba(255, 255, 255, 0.05)`               |
+| `ChatHero.vue`        | 105, 106, 125 | `rgba(124, 158, 248, ...)`           | Removed (entire file rewritten)           |
+| `ChatComposer.vue`    | 136, 198, 200 | `--primary-color, #7c9ef8` fallbacks | `rgba(255, 255, 255, 0.2)` and `#ffffff`  |
+| `FileViewerModal.vue` | 305, 334, 338 | `--primary-color, #7c9ef8`           | `--primary-color, #ffffff` (auto via var) |
 
 **Out of scope for this task**: 40+ other files with hardcoded blue. These use `var(--primary-color)` references that will automatically pick up the new value from variables.css. Files with hardcoded `rgba(124, 158, 248, ...)` or `#58a6ff` values in other components can be cleaned up in a follow-up pass.
 

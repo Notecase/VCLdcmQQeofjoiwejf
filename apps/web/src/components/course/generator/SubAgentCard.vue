@@ -12,15 +12,19 @@ const props = defineProps<{
 const initial = computed(() => props.name.charAt(0).toUpperCase())
 
 const displayName = computed(() =>
-  props.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+  props.name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 )
 
 const statusColor = computed(() => {
   switch (props.status) {
-    case 'running': return 'var(--status-running, #f59e0b)'
-    case 'completed': return 'var(--status-completed, #22c55e)'
-    case 'error': return 'var(--status-error, #ef4444)'
-    default: return 'var(--status-pending, #6b7280)'
+    case 'running':
+      return 'var(--status-running, #f59e0b)'
+    case 'completed':
+      return 'var(--status-completed, #22c55e)'
+    case 'error':
+      return 'var(--status-error, #ef4444)'
+    default:
+      return 'var(--status-pending, #6b7280)'
   }
 })
 
@@ -35,20 +39,43 @@ const elapsed = computed(() => {
 </script>
 
 <template>
-  <div class="subagent-card" :class="status">
-    <div class="agent-icon" :style="{ borderColor: statusColor }">
+  <div
+    class="subagent-card"
+    :class="status"
+  >
+    <div
+      class="agent-icon"
+      :style="{ borderColor: statusColor }"
+    >
       <span class="agent-initial">{{ initial }}</span>
     </div>
 
     <div class="agent-info">
       <span class="agent-name">{{ displayName }}</span>
-      <span v-if="elapsed" class="agent-elapsed">{{ elapsed }}</span>
+      <span
+        v-if="elapsed"
+        class="agent-elapsed"
+        >{{ elapsed }}</span
+      >
     </div>
 
-    <div class="agent-status-badge" :class="status">
-      <Loader2 v-if="status === 'running'" :size="12" class="spinning" />
-      <CheckCircle2 v-else-if="status === 'completed'" :size="12" />
-      <AlertCircle v-else-if="status === 'error'" :size="12" />
+    <div
+      class="agent-status-badge"
+      :class="status"
+    >
+      <Loader2
+        v-if="status === 'running'"
+        :size="12"
+        class="spinning"
+      />
+      <CheckCircle2
+        v-else-if="status === 'completed'"
+        :size="12"
+      />
+      <AlertCircle
+        v-else-if="status === 'error'"
+        :size="12"
+      />
       <span>{{ status }}</span>
     </div>
   </div>
@@ -153,8 +180,12 @@ const elapsed = computed(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

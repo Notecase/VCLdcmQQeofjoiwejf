@@ -18,7 +18,10 @@ const emit = defineEmits<{
 
 <template>
   <div class="file-grid-container">
-    <div v-if="files.length > 0" class="file-grid">
+    <div
+      v-if="files.length > 0"
+      class="file-grid"
+    >
       <FileCard
         v-for="file in files"
         :key="file.name"
@@ -26,8 +29,14 @@ const emit = defineEmits<{
         @click="emit('select', file)"
       />
     </div>
-    <div v-else class="empty-state">
-      <FolderOpen :size="32" class="empty-icon" />
+    <div
+      v-else
+      class="empty-state"
+    >
+      <FolderOpen
+        :size="32"
+        class="empty-icon"
+      />
       <span class="empty-text">No files generated yet</span>
     </div>
   </div>

@@ -7,13 +7,7 @@
  */
 import { ref, computed } from 'vue'
 import type { ResearchToolCall } from '@inkdown/shared/types'
-import {
-  CircleCheckBig,
-  Loader2,
-  AlertCircle,
-  Terminal,
-  ChevronDown,
-} from 'lucide-vue-next'
+import { CircleCheckBig, Loader2, AlertCircle, Terminal, ChevronDown } from 'lucide-vue-next'
 
 const props = defineProps<{
   toolCall: ResearchToolCall
@@ -23,21 +17,29 @@ const expanded = ref(false)
 
 const statusIcon = computed(() => {
   switch (props.toolCall.status) {
-    case 'complete': return CircleCheckBig
+    case 'complete':
+      return CircleCheckBig
     case 'running':
-    case 'pending': return Loader2
-    case 'error': return AlertCircle
-    default: return Terminal
+    case 'pending':
+      return Loader2
+    case 'error':
+      return AlertCircle
+    default:
+      return Terminal
   }
 })
 
 const statusClass = computed(() => {
   switch (props.toolCall.status) {
-    case 'complete': return 'status-complete'
+    case 'complete':
+      return 'status-complete'
     case 'running':
-    case 'pending': return 'status-pending'
-    case 'error': return 'status-error'
-    default: return 'status-default'
+    case 'pending':
+      return 'status-pending'
+    case 'error':
+      return 'status-error'
+    default:
+      return 'status-default'
   }
 })
 
@@ -66,27 +68,51 @@ function isLongValue(value: unknown): boolean {
 </script>
 
 <template>
-  <div class="tool-call-box" :class="{ expanded }">
-    <button class="tool-header" type="button" @click="expanded = !expanded">
+  <div
+    class="tool-call-box"
+    :class="{ expanded }"
+  >
+    <button
+      class="tool-header"
+      type="button"
+      @click="expanded = !expanded"
+    >
       <div class="tool-header-left">
         <component
           :is="statusIcon"
           :size="14"
           class="tool-status-icon"
-          :class="[statusClass, { spin: toolCall.status === 'running' || toolCall.status === 'pending' }]"
+          :class="[
+            statusClass,
+            { spin: toolCall.status === 'running' || toolCall.status === 'pending' },
+          ]"
         />
         <span class="tool-name">{{ toolCall.toolName }}</span>
       </div>
-      <ChevronDown :size="14" class="tool-chevron" :class="{ collapsed: !expanded }" />
+      <ChevronDown
+        :size="14"
+        class="tool-chevron"
+        :class="{ collapsed: !expanded }"
+      />
     </button>
 
     <Transition name="collapse">
-      <div v-if="expanded" class="tool-body">
+      <div
+        v-if="expanded"
+        class="tool-body"
+      >
         <!-- Arguments -->
-        <div v-if="argEntries.length > 0" class="tool-section">
+        <div
+          v-if="argEntries.length > 0"
+          class="tool-section"
+        >
           <span class="section-header">ARGUMENTS</span>
           <div class="arg-list">
-            <div v-for="[key, val] in argEntries" :key="key" class="arg-item">
+            <div
+              v-for="[key, val] in argEntries"
+              :key="key"
+              class="arg-item"
+            >
               <button
                 v-if="isLongValue(val)"
                 class="arg-key clickable"
@@ -100,21 +126,28 @@ function isLongValue(value: unknown): boolean {
                   :class="{ collapsed: !expandedArgs.has(key) }"
                 />
               </button>
-              <span v-else class="arg-key">
+              <span
+                v-else
+                class="arg-key"
+              >
                 <span class="arg-key-text">{{ key }}</span>
               </span>
               <Transition name="collapse">
                 <pre
                   v-if="!isLongValue(val) || expandedArgs.has(key)"
                   class="arg-value"
-                >{{ formatArgValue(val) }}</pre>
+                  >{{ formatArgValue(val) }}</pre
+                >
               </Transition>
             </div>
           </div>
         </div>
 
         <!-- Result -->
-        <div v-if="toolCall.result" class="tool-section">
+        <div
+          v-if="toolCall.result"
+          class="tool-section"
+        >
           <span class="section-header">RESULT</span>
           <pre class="result-content">{{ toolCall.result }}</pre>
         </div>
@@ -296,7 +329,9 @@ function isLongValue(value: unknown): boolean {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .collapse-enter-active,

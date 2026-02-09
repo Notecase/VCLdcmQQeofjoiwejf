@@ -6,10 +6,7 @@
  */
 
 import type { BlockNode, ParsedNote } from './structureParser'
-import {
-  findBlocksByHeading,
-  findBlocksByContent,
-} from './structureParser'
+import { findBlocksByHeading, findBlocksByContent } from './structureParser'
 
 // ============================================================================
 // Types
@@ -90,9 +87,7 @@ const TYPE_ALIASES: Record<string, string[]> = {
  * Parse position reference from instruction
  * Examples: "first paragraph", "part 1", "second section", "last bullet"
  */
-function parsePositionReference(
-  instruction: string
-): { position: number; type: string } | null {
+function parsePositionReference(instruction: string): { position: number; type: string } | null {
   const lower = instruction.toLowerCase()
 
   // Check for ordinal + type patterns
@@ -163,7 +158,8 @@ function extractSectionReferences(instruction: string): string[] {
 
   // Also try without "the": "edit why it matters section"
   // Use greedy quantifier for full phrase capture
-  const directPattern = /(?:edit|update|change|modify|expand|improve|make)\s+(\w+(?:\s+\w+){0,4})\s+section/gi
+  const directPattern =
+    /(?:edit|update|change|modify|expand|improve|make)\s+(\w+(?:\s+\w+){0,4})\s+section/gi
   while ((match = directPattern.exec(lower)) !== null) {
     const candidate = match[1].trim()
     if (!refs.includes(candidate)) {
@@ -206,10 +202,7 @@ function looksLikeHeading(content: string): boolean {
  * Get only the intro blocks of a section (content before any subheading).
  * Returns paragraph blocks if present; otherwise returns all intro blocks.
  */
-function getSectionIntroTargets(
-  parsed: ParsedNote,
-  sectionId: string
-): BlockNode[] {
+function getSectionIntroTargets(parsed: ParsedNote, sectionId: string): BlockNode[] {
   const section = parsed.blocks.find((b) => b.id === sectionId)
   if (!section || section.type !== 'section') return []
 
@@ -306,12 +299,10 @@ function tryExactPhraseMatch(instruction: string, parsed: ParsedNote): TargetRes
   })
 
   // Collect all section headings
-  const sections = parsed.blocks.filter(
-    (b) => b.type === 'section' && b.metadata?.heading
-  )
+  const sections = parsed.blocks.filter((b) => b.type === 'section' && b.metadata?.heading)
 
   // Track best match for fuzzy matching fallback
-  let bestMatch: { block: typeof sections[0]; score: number } | null = null
+  let bestMatch: { block: (typeof sections)[0]; score: number } | null = null
 
   for (const block of sections) {
     const heading = (block.metadata?.heading || '').toLowerCase()
@@ -335,17 +326,17 @@ function tryExactPhraseMatch(instruction: string, parsed: ParsedNote): TargetRes
     }
     // FUZZY MATCH: Word overlap for partial matches
     else if (extractedSection) {
-      const extractedWords = extractedSection.split(/\s+/).filter(w => w.length > 2)
-      const headingWords = heading.split(/\s+/).filter(w => w.length > 2)
+      const extractedWords = extractedSection.split(/\s+/).filter((w) => w.length > 2)
+      const headingWords = heading.split(/\s+/).filter((w) => w.length > 2)
 
       if (extractedWords.length > 0 && headingWords.length > 0) {
         // Count how many extracted words appear in heading
-        const overlap = extractedWords.filter(w => headingWords.includes(w)).length
+        const overlap = extractedWords.filter((w) => headingWords.includes(w)).length
         const overlapScore = overlap / Math.max(extractedWords.length, 1)
 
         // Require at least 50% word overlap for fuzzy match
         if (overlapScore >= 0.5) {
-          score = 0.3 + (overlapScore * 0.4) // 0.5 to 0.7 range
+          score = 0.3 + overlapScore * 0.4 // 0.5 to 0.7 range
         }
       }
     }
@@ -360,9 +351,8 @@ function tryExactPhraseMatch(instruction: string, parsed: ParsedNote): TargetRes
       const useFullSection = shouldEditFullSection(instruction)
       const sectionIntro = getSectionIntroTargets(parsed, block.id)
       const sectionWithContent = getSectionWithContent(parsed, block.id)
-      const targets = useFullSection || sectionIntro.length === 0
-        ? sectionWithContent
-        : sectionIntro
+      const targets =
+        useFullSection || sectionIntro.length === 0 ? sectionWithContent : sectionIntro
 
       console.log('[tryExactPhraseMatch] High-confidence match:', {
         heading: block.metadata?.heading,
@@ -385,9 +375,7 @@ function tryExactPhraseMatch(instruction: string, parsed: ParsedNote): TargetRes
     const useFullSection = shouldEditFullSection(instruction)
     const sectionIntro = getSectionIntroTargets(parsed, bestMatch.block.id)
     const sectionWithContent = getSectionWithContent(parsed, bestMatch.block.id)
-    const targets = useFullSection || sectionIntro.length === 0
-      ? sectionWithContent
-      : sectionIntro
+    const targets = useFullSection || sectionIntro.length === 0 ? sectionWithContent : sectionIntro
 
     console.log('[tryExactPhraseMatch] Fuzzy match:', {
       heading: bestMatch.block.metadata?.heading,
@@ -419,17 +407,14 @@ export function identifyTargets(
   parsed: ParsedNote,
   options: IdentifyOptions = {}
 ): TargetResult {
-  const {
-    maxTargets = 3,
-    fallbackToAll = false,
-  } = options
+  const { maxTargets = 3, fallbackToAll = false } = options
 
   // Debug logging for troubleshooting
   console.log('[identifyTargets] Input:', {
     instruction,
     sectionHeadings: parsed.blocks
-      .filter(b => b.type === 'section')
-      .map(b => ({ heading: b.metadata?.heading, line: b.startLine })),
+      .filter((b) => b.type === 'section')
+      .map((b) => ({ heading: b.metadata?.heading, line: b.startLine })),
   })
 
   // Check for whole document edit
@@ -450,11 +435,11 @@ export function identifyTargets(
     console.log('[identifyTargets] Exact match result:', {
       matchType: exactMatch.matchType,
       targetCount: exactMatch.targets.length,
-      targetLines: exactMatch.targets.map(t => ({
+      targetLines: exactMatch.targets.map((t) => ({
         type: t.type,
         start: t.startLine,
         end: t.endLine,
-        heading: t.metadata?.heading
+        heading: t.metadata?.heading,
       })),
       reason: exactMatch.reason,
     })
@@ -482,9 +467,8 @@ export function identifyTargets(
         confidence: 0.95,
         matchType: 'heading',
         needsClarification: sectionCount > maxTargets,
-        clarificationOptions: sectionCount > maxTargets
-          ? buildClarificationOptions(sectionBlocks)
-          : undefined,
+        clarificationOptions:
+          sectionCount > maxTargets ? buildClarificationOptions(sectionBlocks) : undefined,
         reason: `Found section(s) matching quoted reference`,
       }
     }
@@ -494,8 +478,9 @@ export function identifyTargets(
   const posRef = parsePositionReference(instruction)
   if (posRef) {
     const blockType = posRef.type as BlockNode['type']
-    const filteredBlocks = parsed.blocks.filter((b) => b.type === blockType ||
-      (blockType === 'section' && b.type === 'section'))
+    const filteredBlocks = parsed.blocks.filter(
+      (b) => b.type === blockType || (blockType === 'section' && b.type === 'section')
+    )
 
     let position = posRef.position
     if (position === -1) {
@@ -547,9 +532,7 @@ export function identifyTargets(
           confidence: 0.6,
           matchType: 'heading',
           needsClarification: true,
-          clarificationOptions: buildClarificationOptions(
-            sectionBlocks
-          ),
+          clarificationOptions: buildClarificationOptions(sectionBlocks),
           reason: `Found ${sectionCount} possible sections - clarification needed`,
         }
       }
@@ -600,9 +583,8 @@ export function identifyTargets(
         confidence: 0.65,
         matchType: 'content',
         needsClarification: contentMatches.length > 1,
-        clarificationOptions: contentMatches.length > 1
-          ? buildClarificationOptions(contentMatches)
-          : undefined,
+        clarificationOptions:
+          contentMatches.length > 1 ? buildClarificationOptions(contentMatches) : undefined,
         reason: `Found ${contentMatches.length} blocks with matching content`,
       }
     }
@@ -631,7 +613,8 @@ export function identifyTargets(
       clarificationOptions: buildClarificationOptions(
         parsed.blocks.filter((b) => b.type === 'section').slice(0, 5)
       ),
-      reason: 'No specific target found - will edit entire document. Please confirm or select a specific section.',
+      reason:
+        'No specific target found - will edit entire document. Please confirm or select a specific section.',
     }
   }
 
@@ -652,11 +635,11 @@ export function identifyTargets(
   console.log('[identifyTargets] Result:', {
     matchType: result.matchType,
     targetCount: result.targets.length,
-    targetLines: result.targets.map(t => ({
+    targetLines: result.targets.map((t) => ({
       type: t.type,
       start: t.startLine,
       end: t.endLine,
-      heading: t.metadata?.heading
+      heading: t.metadata?.heading,
     })),
     needsClarification: result.needsClarification,
     reason: result.reason,
@@ -755,10 +738,7 @@ function buildClarificationOptions(blocks: BlockNode[]): ClarificationOption[] {
  * was re-parsed between clarification request and resolution.
  * Prefer selectTargetsByLineNumber() for stable matching.
  */
-export function selectTargetsById(
-  parsed: ParsedNote,
-  blockIds: string[]
-): TargetResult {
+export function selectTargetsById(parsed: ParsedNote, blockIds: string[]): TargetResult {
   const targets = parsed.blocks.filter((b) => blockIds.includes(b.id))
 
   if (targets.length === 0) {
@@ -791,10 +771,7 @@ export function selectTargetsById(
  * @param lineNumbers - Line numbers from the original clarification options
  * @returns TargetResult with matched blocks
  */
-export function selectTargetsByLineNumber(
-  parsed: ParsedNote,
-  lineNumbers: number[]
-): TargetResult {
+export function selectTargetsByLineNumber(parsed: ParsedNote, lineNumbers: number[]): TargetResult {
   // Find blocks where startLine matches one of the requested line numbers
   const targets = parsed.blocks.filter((b) => lineNumbers.includes(b.startLine))
 
@@ -842,10 +819,7 @@ export function selectTargetsByLineNumber(
  * Get section and all its content blocks
  * Useful for editing a whole section including paragraphs, lists, etc.
  */
-export function getSectionWithContent(
-  parsed: ParsedNote,
-  sectionId: string
-): BlockNode[] {
+export function getSectionWithContent(parsed: ParsedNote, sectionId: string): BlockNode[] {
   const section = parsed.blocks.find((b) => b.id === sectionId)
   if (!section || section.type !== 'section') {
     return section ? [section] : []
@@ -875,7 +849,7 @@ export function getSectionWithContent(
     sectionHeading: section.metadata?.heading,
     sectionLevel,
     blocksIncluded: result.length,
-    blockTypes: result.map(b => b.type),
+    blockTypes: result.map((b) => b.type),
   })
 
   return result
@@ -892,10 +866,7 @@ export function getSectionWithContent(
  * When a section block is matched by heading, it only contains the heading line.
  * This helper expands each section to include all content blocks under it.
  */
-function expandSectionTargets(
-  parsed: ParsedNote,
-  blocks: BlockNode[]
-): BlockNode[] {
+function expandSectionTargets(parsed: ParsedNote, blocks: BlockNode[]): BlockNode[] {
   const result: BlockNode[] = []
   const seenIds = new Set<string>()
 
@@ -934,9 +905,10 @@ function expandSectionTargetsForInstruction(
   for (const block of blocks) {
     if (block.type === 'section') {
       const introTargets = getSectionIntroTargets(parsed, block.id)
-      const expanded = useFullSection || introTargets.length === 0
-        ? getSectionWithContent(parsed, block.id)
-        : introTargets
+      const expanded =
+        useFullSection || introTargets.length === 0
+          ? getSectionWithContent(parsed, block.id)
+          : introTargets
 
       for (const b of expanded) {
         if (!seenIds.has(b.id)) {

@@ -7,12 +7,15 @@ import '@inkdown/muya/assets/styles/index.css'
 import 'katex/dist/katex.min.css'
 import 'prismjs/themes/prism.css'
 
-const props = withDefaults(defineProps<{
-  markdown: string
-  selectable?: boolean
-}>(), {
-  selectable: false,
-})
+const props = withDefaults(
+  defineProps<{
+    markdown: string
+    selectable?: boolean
+  }>(),
+  {
+    selectable: false,
+  }
+)
 
 const containerRef = ref<HTMLElement>()
 const muyaInstance = ref<InstanceType<typeof Muya> | null>(null)
@@ -20,38 +23,47 @@ const muyaInstance = ref<InstanceType<typeof Muya> | null>(null)
 function initializeMuya() {
   if (!containerRef.value) return
 
-  muyaInstance.value = markRaw(new Muya(containerRef.value, {
-    markdown: props.markdown || '',
-    focusMode: false,
-    hideQuickInsertHint: true,
-    hideLinkPopup: true,
-    spellcheckEnabled: false,
-    superSubScript: true,
-    footnote: true,
-    isGitlabCompatibilityEnabled: true,
-    disableHtml: false,
-    mermaidTheme: 'dark',
-    codeBlockLineNumbers: false,
-  }))
+  muyaInstance.value = markRaw(
+    new Muya(containerRef.value, {
+      markdown: props.markdown || '',
+      focusMode: false,
+      hideQuickInsertHint: true,
+      hideLinkPopup: true,
+      spellcheckEnabled: false,
+      superSubScript: true,
+      footnote: true,
+      isGitlabCompatibilityEnabled: true,
+      disableHtml: false,
+      mermaidTheme: 'dark',
+      codeBlockLineNumbers: false,
+    })
+  )
 
   // Override hardcoded contenteditable="true" from getContainer()
   muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
   muyaInstance.value.domNode.classList.remove('mu-show-quick-insert-hint')
 }
 
-watch(() => props.markdown, (newMd) => {
-  if (muyaInstance.value && newMd !== undefined) {
-    muyaInstance.value.setContent(newMd || '', false)
-    // Re-apply readonly after content replacement
-    muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
+watch(
+  () => props.markdown,
+  (newMd) => {
+    if (muyaInstance.value && newMd !== undefined) {
+      muyaInstance.value.setContent(newMd || '', false)
+      // Re-apply readonly after content replacement
+      muyaInstance.value.domNode.setAttribute('contenteditable', 'false')
+    }
   }
-})
+)
 
 onMounted(() => initializeMuya())
 
 onUnmounted(() => {
   if (muyaInstance.value) {
-    try { muyaInstance.value.destroy() } catch { /* ignore cleanup errors */ }
+    try {
+      muyaInstance.value.destroy()
+    } catch {
+      /* ignore cleanup errors */
+    }
     muyaInstance.value = null
   }
 })
@@ -59,7 +71,11 @@ onUnmounted(() => {
 
 <template>
   <div class="muya-renderer">
-    <div ref="containerRef" class="muya-renderer-container" :class="{ selectable }" />
+    <div
+      ref="containerRef"
+      class="muya-renderer-container"
+      :class="{ selectable }"
+    />
   </div>
 </template>
 

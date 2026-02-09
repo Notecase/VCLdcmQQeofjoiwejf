@@ -80,17 +80,19 @@ const DEFAULT_SETTINGS: CourseSettings = {
 const GenerateSchema = z.object({
   topic: z.string().min(1).max(500),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'),
-  settings: z.object({
-    includeVideos: z.boolean().optional(),
-    includeSlides: z.boolean().optional(),
-    includePractice: z.boolean().optional(),
-    includeQuizzes: z.boolean().optional(),
-    estimatedWeeks: z.number().int().min(1).max(52).optional(),
-    hoursPerWeek: z.number().min(1).max(40).optional(),
-    focusAreas: z.array(z.string()).optional(),
-    maxSlidesPerLesson: z.number().int().min(1).max(50).optional(),
-    quickTest: z.boolean().optional(),
-  }).optional(),
+  settings: z
+    .object({
+      includeVideos: z.boolean().optional(),
+      includeSlides: z.boolean().optional(),
+      includePractice: z.boolean().optional(),
+      includeQuizzes: z.boolean().optional(),
+      estimatedWeeks: z.number().int().min(1).max(52).optional(),
+      hoursPerWeek: z.number().min(1).max(40).optional(),
+      focusAreas: z.array(z.string()).optional(),
+      maxSlidesPerLesson: z.number().int().min(1).max(50).optional(),
+      quickTest: z.boolean().optional(),
+    })
+    .optional(),
   focusAreas: z.array(z.string()).optional(),
 })
 
@@ -272,7 +274,9 @@ course.get('/generate/:threadId/stream', async (c) => {
           } catch {
             // Client disconnected — keep processing generation so DB state still reaches complete/error.
             clientConnected = false
-            console.warn(`[Course SSE] Client disconnected for thread ${threadId}; continuing generation in background.`)
+            console.warn(
+              `[Course SSE] Client disconnected for thread ${threadId}; continuing generation in background.`
+            )
           }
         }
 
@@ -293,7 +297,11 @@ course.get('/generate/:threadId/stream', async (c) => {
         }
 
         if (event.event === 'interrupt') {
-          const interruptData = event.data as unknown as { type: string; outline?: CourseOutline; thinking?: string }
+          const interruptData = event.data as unknown as {
+            type: string
+            outline?: CourseOutline
+            thinking?: string
+          }
           if (interruptData.type === 'outline_approval' && interruptData.outline) {
             lastKnownStage = 'approval'
             await auth.supabase
@@ -347,7 +355,12 @@ course.get('/generate/:threadId/stream', async (c) => {
             .eq('user_id', auth.userId)
             .single()
 
-          if (shouldMarkThreadAsErrorAfterStreamEnd(latestThread?.status as string | null | undefined, observedTerminalEvent)) {
+          if (
+            shouldMarkThreadAsErrorAfterStreamEnd(
+              latestThread?.status as string | null | undefined,
+              observedTerminalEvent
+            )
+          ) {
             const diagnosticError = buildMissingTerminalEventErrorMessage(lastKnownStage)
             await auth.supabase
               .from('course_generation_threads')
@@ -372,7 +385,10 @@ course.get('/generate/:threadId/stream', async (c) => {
             orchestratorRegistry.delete(threadId)
           }
         } catch (streamEndError) {
-          console.error(`[Course SSE] Failed to enforce terminal status for thread ${threadId}:`, streamEndError)
+          console.error(
+            `[Course SSE] Failed to enforce terminal status for thread ${threadId}:`,
+            streamEndError
+          )
         }
       }
 
@@ -617,7 +633,9 @@ course.get('/', async (c) => {
 
   const { data: courses, error } = await auth.supabase
     .from('courses')
-    .select('id, title, topic, description, difficulty, estimated_hours, learning_objectives, prerequisites, status, progress, created_at, updated_at, generated_at')
+    .select(
+      'id, title, topic, description, difficulty, estimated_hours, learning_objectives, prerequisites, status, progress, created_at, updated_at, generated_at'
+    )
     .eq('user_id', auth.userId)
     .order('created_at', { ascending: false })
 
@@ -637,7 +655,9 @@ course.get('/list', async (c) => {
 
   const { data: courses, error } = await auth.supabase
     .from('courses')
-    .select('id, title, topic, description, difficulty, estimated_hours, learning_objectives, prerequisites, status, progress, created_at, updated_at, generated_at')
+    .select(
+      'id, title, topic, description, difficulty, estimated_hours, learning_objectives, prerequisites, status, progress, created_at, updated_at, generated_at'
+    )
     .eq('user_id', auth.userId)
     .order('created_at', { ascending: false })
 
@@ -726,7 +746,11 @@ course.get('/:id', async (c) => {
  * Shared handler for marking a lesson as complete.
  * Used by both PUT and POST route variants.
  */
-async function handleLessonComplete(auth: ReturnType<typeof requireAuth>, courseId: string, lessonId: string) {
+async function handleLessonComplete(
+  auth: ReturnType<typeof requireAuth>,
+  courseId: string,
+  lessonId: string
+) {
   const now = new Date().toISOString()
 
   // Verify course ownership
@@ -755,27 +779,32 @@ async function handleLessonComplete(auth: ReturnType<typeof requireAuth>, course
   const { data: allLessons } = await auth.supabase
     .from('course_lessons')
     .select('id, status, module_id')
-    .in('module_id', (
-      await auth.supabase
-        .from('course_modules')
-        .select('id')
-        .eq('course_id', courseId)
-    ).data?.map((m: { id: string }) => m.id) ?? [])
+    .in(
+      'module_id',
+      (await auth.supabase.from('course_modules').select('id').eq('course_id', courseId)).data?.map(
+        (m: { id: string }) => m.id
+      ) ?? []
+    )
 
   const totalLessons = allLessons?.length ?? 0
-  const completedLessons = allLessons?.filter((l: { status: string }) => l.status === 'completed').length ?? 0
+  const completedLessons =
+    allLessons?.filter((l: { status: string }) => l.status === 'completed').length ?? 0
   const totalProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
   // Upsert course_progress
-  await auth.supabase
-    .from('course_progress')
-    .upsert({
+  await auth.supabase.from('course_progress').upsert(
+    {
       course_id: courseId,
       user_id: auth.userId,
-      completed_lessons: allLessons?.filter((l: { status: string }) => l.status === 'completed').map((l: { id: string }) => l.id) ?? [],
+      completed_lessons:
+        allLessons
+          ?.filter((l: { status: string }) => l.status === 'completed')
+          .map((l: { id: string }) => l.id) ?? [],
       total_progress: totalProgress,
       last_accessed_at: now,
-    }, { onConflict: 'course_id,user_id' })
+    },
+    { onConflict: 'course_id,user_id' }
+  )
 
   // Update course progress
   await auth.supabase
@@ -830,7 +859,7 @@ async function handleQuizSubmit(
   auth: ReturnType<typeof requireAuth>,
   courseId: string,
   lessonId: string,
-  answers: Record<string, number | string>,
+  answers: Record<string, number | string>
 ) {
   // Verify course ownership
   const { data: courseData, error: courseCheckError } = await auth.supabase
@@ -855,7 +884,9 @@ async function handleQuizSubmit(
     return { error: 'Lesson not found', status: 404 as const }
   }
 
-  const content = lesson.content as { practiceProblems?: Array<{ id: string; correctIndex?: number }> }
+  const content = lesson.content as {
+    practiceProblems?: Array<{ id: string; correctIndex?: number }>
+  }
   const problems = content.practiceProblems ?? []
 
   if (problems.length === 0) {
@@ -898,14 +929,15 @@ async function handleQuizSubmit(
   const quizScores = (progressData?.quiz_scores as Record<string, number>) ?? {}
   quizScores[lessonId] = score
 
-  await auth.supabase
-    .from('course_progress')
-    .upsert({
+  await auth.supabase.from('course_progress').upsert(
+    {
       course_id: courseId,
       user_id: auth.userId,
       quiz_scores: quizScores,
       last_accessed_at: new Date().toISOString(),
-    }, { onConflict: 'course_id,user_id' })
+    },
+    { onConflict: 'course_id,user_id' }
+  )
 
   return {
     data: { attemptId, score, passed, correct, total: problems.length },
@@ -919,7 +951,12 @@ async function handleQuizSubmit(
 course.post('/:courseId/quiz/:lessonId/submit', zValidator('json', QuizSubmitSchema), async (c) => {
   const auth = requireAuth(c)
   const { answers } = c.req.valid('json')
-  const result = await handleQuizSubmit(auth, c.req.param('courseId'), c.req.param('lessonId'), answers)
+  const result = await handleQuizSubmit(
+    auth,
+    c.req.param('courseId'),
+    c.req.param('lessonId'),
+    answers
+  )
 
   if ('error' in result) {
     return c.json({ error: result.error }, result.status)
@@ -931,16 +968,25 @@ course.post('/:courseId/quiz/:lessonId/submit', zValidator('json', QuizSubmitSch
  * POST /api/course/:courseId/lessons/:lessonId/quiz
  * Submit quiz attempt (frontend alias — uses `lessons` plural + `/quiz` suffix)
  */
-course.post('/:courseId/lessons/:lessonId/quiz', zValidator('json', QuizSubmitSchema), async (c) => {
-  const auth = requireAuth(c)
-  const { answers } = c.req.valid('json')
-  const result = await handleQuizSubmit(auth, c.req.param('courseId'), c.req.param('lessonId'), answers)
+course.post(
+  '/:courseId/lessons/:lessonId/quiz',
+  zValidator('json', QuizSubmitSchema),
+  async (c) => {
+    const auth = requireAuth(c)
+    const { answers } = c.req.valid('json')
+    const result = await handleQuizSubmit(
+      auth,
+      c.req.param('courseId'),
+      c.req.param('lessonId'),
+      answers
+    )
 
-  if ('error' in result) {
-    return c.json({ error: result.error }, result.status)
+    if ('error' in result) {
+      return c.json({ error: result.error }, result.status)
+    }
+    return c.json(result.data)
   }
-  return c.json(result.data)
-})
+)
 
 // ============================================================================
 // Delete Course
@@ -976,41 +1022,23 @@ course.delete('/:id', async (c) => {
 
   // Delete lessons
   if (moduleIds.length > 0) {
-    await auth.supabase
-      .from('course_lessons')
-      .delete()
-      .in('module_id', moduleIds)
+    await auth.supabase.from('course_lessons').delete().in('module_id', moduleIds)
   }
 
   // Delete modules
-  await auth.supabase
-    .from('course_modules')
-    .delete()
-    .eq('course_id', courseId)
+  await auth.supabase.from('course_modules').delete().eq('course_id', courseId)
 
   // Delete progress records
-  await auth.supabase
-    .from('course_progress')
-    .delete()
-    .eq('course_id', courseId)
+  await auth.supabase.from('course_progress').delete().eq('course_id', courseId)
 
   // Delete quiz attempts
-  await auth.supabase
-    .from('quiz_attempts')
-    .delete()
-    .eq('course_id', courseId)
+  await auth.supabase.from('quiz_attempts').delete().eq('course_id', courseId)
 
   // Delete generation threads
-  await auth.supabase
-    .from('course_generation_threads')
-    .delete()
-    .eq('course_id', courseId)
+  await auth.supabase.from('course_generation_threads').delete().eq('course_id', courseId)
 
   // Delete the course
-  const { error: deleteError } = await auth.supabase
-    .from('courses')
-    .delete()
-    .eq('id', courseId)
+  const { error: deleteError } = await auth.supabase.from('courses').delete().eq('id', courseId)
 
   if (deleteError) {
     return c.json({ error: `Failed to delete course: ${deleteError.message}` }, 500)

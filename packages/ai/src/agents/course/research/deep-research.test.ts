@@ -20,17 +20,20 @@ describe('runDeepResearch', () => {
   })
 
   it('completes when provider returns "complete" terminal status', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'interaction-1', status: 'in_progress' }))
-      .mockResolvedValueOnce(jsonResponse({
-        status: 'complete',
-        outputs: [
-          {
-            content: [{ text: 'Deep research final report content.' }],
-            groundings: [{ url: 'https://example.com/source-1', title: 'Source 1' }],
-          },
-        ],
-      }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: 'complete',
+          outputs: [
+            {
+              content: [{ text: 'Deep research final report content.' }],
+              groundings: [{ url: 'https://example.com/source-1', title: 'Source 1' }],
+            },
+          ],
+        })
+      )
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -48,18 +51,21 @@ describe('runDeepResearch', () => {
     expect(result.success).toBe(true)
     expect(result.report).toContain('final report')
     expect(result.sources).toHaveLength(1)
-    expect(progressEvents.some(e => e.status === 'complete')).toBe(true)
+    expect(progressEvents.some((e) => e.status === 'complete')).toBe(true)
   })
 
   it('recovers from one timed-out poll and continues to completion', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'interaction-2', status: 'in_progress' }))
       .mockRejectedValueOnce(createAbortError())
       .mockResolvedValueOnce(jsonResponse({ status: 'in_progress', outputs: [] }))
-      .mockResolvedValueOnce(jsonResponse({
-        status: 'completed',
-        outputs: [{ text: 'Recovered final report.' }],
-      }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: 'completed',
+          outputs: [{ text: 'Recovered final report.' }],
+        })
+      )
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -77,11 +83,12 @@ describe('runDeepResearch', () => {
 
     expect(result.success).toBe(true)
     expect(result.report).toContain('Recovered final report')
-    expect(progressEvents.some(e => e.thinking.includes('Retrying'))).toBe(true)
+    expect(progressEvents.some((e) => e.thinking.includes('Retrying'))).toBe(true)
   })
 
   it('fails after repeated timed-out polls above the threshold', async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(jsonResponse({ id: 'interaction-3', status: 'in_progress' }))
       .mockRejectedValueOnce(createAbortError())
       .mockRejectedValueOnce(createAbortError())

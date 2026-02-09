@@ -92,12 +92,13 @@ function stopResize() {
 function handleDiffSync(markdown: string) {
   if (!previewDocument.value) return
   previewDocument.value.content = markdown
-  notesService.updateNote(previewDocument.value.id, { content: markdown })
-    .catch(err => console.warn('[NotePreviewPanel] Sync save failed:', err))
+  notesService
+    .updateNote(previewDocument.value.id, { content: markdown })
+    .catch((err) => console.warn('[NotePreviewPanel] Sync save failed:', err))
 }
 
 // Initialize diff blocks with preview-specific refs and custom sync
-const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
+const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs, isDiffInjecting } = useDiffBlocks(
   muyaInstance as unknown as Parameters<typeof useDiffBlocks>[0],
   previewNoteId as unknown as Parameters<typeof useDiffBlocks>[1],
   { onSync: handleDiffSync }
@@ -108,9 +109,9 @@ const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
  */
 function calculateWordCount(markdown: string) {
   const text = markdown.replace(/[#*`~\[\]()>_-]/g, ' ').trim()
-  const words = text.split(/\s+/).filter(w => w.length > 0).length
+  const words = text.split(/\s+/).filter((w) => w.length > 0).length
   const characters = text.replace(/\s/g, '').length
-  const paragraphs = markdown.split(/\n\n+/).filter(p => p.trim().length > 0).length
+  const paragraphs = markdown.split(/\n\n+/).filter((p) => p.trim().length > 0).length
   return { words, characters, paragraphs }
 }
 
@@ -146,7 +147,7 @@ async function loadNote(noteId: string) {
 function initializeMuya() {
   if (!editorRef.value || !previewDocument.value) return
 
-  registerMuyaPlugins({ frontControls: false })
+  registerMuyaPlugins({ frontControls: true })
 
   const options = {
     markdown: previewDocument.value.content,
@@ -178,6 +179,7 @@ function initializeMuya() {
 
   // Handle content changes — save directly via notesService
   muyaInstance.value.on('json-change', () => {
+    if (isDiffInjecting.value) return
     // Mark as unsaved and update word count (Fix 2)
     isSaved.value = false
     const markdown = muyaInstance.value?.getMarkdown() || ''
@@ -234,11 +236,11 @@ async function saveTitle() {
     cancelEditTitle()
     return
   }
-  
+
   const noteId = previewDocument.value.id
   previewDocument.value.title = newTitle
   isEditingTitle.value = false
-  
+
   // Use editorStore.renameDocument for automatic sidebar sync
   await editorStore.renameDocument(noteId, newTitle)
 }
@@ -306,7 +308,11 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', onResize)
   document.removeEventListener('mouseup', stopResize)
   if (muyaInstance.value) {
-    try { muyaInstance.value.destroy() } catch { /* ignore */ }
+    try {
+      muyaInstance.value.destroy()
+    } catch {
+      /* ignore */
+    }
     muyaInstance.value = null
   }
 })
@@ -328,7 +334,10 @@ onUnmounted(() => {
     <!-- Header -->
     <div class="preview-header">
       <div class="header-left">
-        <FileText :size="14" class="header-icon" />
+        <FileText
+          :size="14"
+          class="header-icon"
+        />
         <!-- Editable title (Fix 3) -->
         <input
           v-if="isEditingTitle"
@@ -348,15 +357,25 @@ onUnmounted(() => {
           {{ previewDocument?.title || 'Loading...' }}
         </span>
       </div>
-      
+
       <!-- Status + Word Count (Fix 2) -->
       <div class="header-right">
-        <span class="status-badge" :class="{ saved: isSaved }">
-          <Check v-if="isSaved" :size="10" />
+        <span
+          class="status-badge"
+          :class="{ saved: isSaved }"
+        >
+          <Check
+            v-if="isSaved"
+            :size="10"
+          />
           {{ isSaved ? 'Saved' : 'Draft' }}
         </span>
         <span class="word-count">{{ wordCountDisplay }}</span>
-        <button class="close-btn" title="Close preview" @click="handleClose">
+        <button
+          class="close-btn"
+          title="Close preview"
+          @click="handleClose"
+        >
           <X :size="16" />
         </button>
       </div>
@@ -366,9 +385,12 @@ onUnmounted(() => {
     <div class="preview-body">
       <div
         ref="editorRef"
-        class="preview-editor muya-editor muya-editor--contained-diff"
+        class="preview-editor muya-editor muya-editor--contained-diff mu-front-controls-enabled"
       ></div>
-      <div v-if="isLoading" class="loading-state">
+      <div
+        v-if="isLoading"
+        class="loading-state"
+      >
         <div class="loading-spinner"></div>
         <p>Loading note...</p>
       </div>
@@ -421,9 +443,9 @@ onUnmounted(() => {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-color, #21262d);
   flex-shrink: 0;
-  /* Higher z-index to cover Muya floating icons */
+  /* Higher z-index to cover Muya floating icons (ParagraphFrontButton uses z-index: 1000 on body) */
   position: relative;
-  z-index: 100;
+  z-index: 1001;
   background: var(--editorBgColor, var(--card-bg, #0d1117));
 }
 

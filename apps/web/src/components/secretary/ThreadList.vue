@@ -7,9 +7,9 @@ import type { SecretaryThread } from '@inkdown/shared/types'
 const store = useSecretaryStore()
 
 const threads = computed<SecretaryThread[]>(() =>
-  [...store.threads].sort((a, b) =>
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  ),
+  [...store.threads].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
 )
 
 function formatDate(dateStr: string): string {
@@ -33,7 +33,11 @@ function handleDelete(e: Event, threadId: string) {
   <div class="thread-list">
     <div class="thread-header">
       <span class="thread-title">Conversations</span>
-      <button class="new-chat-btn" title="New conversation" @click="store.createNewThread()">
+      <button
+        class="new-chat-btn"
+        title="New conversation"
+        @click="store.createNewThread()"
+      >
         <Plus :size="14" />
         <span>New Chat</span>
       </button>
@@ -47,7 +51,10 @@ function handleDelete(e: Event, threadId: string) {
         :class="{ active: store.activeThreadId === thread.threadId }"
         @click="store.loadThread(thread.threadId)"
       >
-        <MessageSquare :size="14" class="thread-icon" />
+        <MessageSquare
+          :size="14"
+          class="thread-icon"
+        />
         <div class="thread-info">
           <span class="thread-name">{{ thread.title || 'Untitled conversation' }}</span>
           <span class="thread-meta">
@@ -55,12 +62,19 @@ function handleDelete(e: Event, threadId: string) {
             {{ formatDate(thread.updatedAt) }}
           </span>
         </div>
-        <button class="delete-btn" title="Delete conversation" @click="handleDelete($event, thread.threadId)">
+        <button
+          class="delete-btn"
+          title="Delete conversation"
+          @click="handleDelete($event, thread.threadId)"
+        >
           <Trash2 :size="12" />
         </button>
       </button>
 
-      <div v-if="store.threads.length === 0" class="empty-state">
+      <div
+        v-if="store.threads.length === 0"
+        class="empty-state"
+      >
         No conversations yet
       </div>
     </div>

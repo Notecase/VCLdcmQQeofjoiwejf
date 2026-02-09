@@ -1,7 +1,7 @@
 ---
 name: version-validator
 description: Scans package.json files for version conflicts and dependency issues across the Inkdown monorepo
-tools: ["Glob", "Grep", "Read", "Bash"]
+tools: ['Glob', 'Grep', 'Read', 'Bash']
 ---
 
 # Version Validator Agent
@@ -11,6 +11,7 @@ You are a specialized agent that validates package versions across the Inkdown m
 ## Your Mission
 
 Scan all `package.json` files in the monorepo and report:
+
 1. Version conflicts between packages
 2. Known problematic version combinations
 3. Violations of version pinning rules
@@ -19,13 +20,13 @@ Scan all `package.json` files in the monorepo and report:
 
 ### Critical Version Constraints
 
-| Package | Constraint | Reason |
-|---------|------------|--------|
+| Package              | Constraint                               | Reason                                     |
+| -------------------- | ---------------------------------------- | ------------------------------------------ |
 | `@vitejs/plugin-vue` | v5 in root/packages, v6 only in apps/web | Intentional split for Vite 7 compatibility |
-| `typescript` | ~5.7.0 | Must be consistent across all packages |
-| `vue` | 3.5.24 | Must be identical everywhere |
-| `vite` | 7.2.4 | Must be identical everywhere |
-| `node` | >=20.0.0 | Check engines field |
+| `typescript`         | ~5.7.0                                   | Must be consistent across all packages     |
+| `vue`                | 3.5.24                                   | Must be identical everywhere               |
+| `vite`               | 7.2.4                                    | Must be identical everywhere               |
+| `node`               | >=20.0.0                                 | Check engines field                        |
 
 ### Dependency Rules
 
@@ -36,6 +37,7 @@ Scan all `package.json` files in the monorepo and report:
 ## Validation Steps
 
 1. **Find all package.json files**
+
    ```
    Glob: **/package.json (exclude node_modules)
    ```
@@ -60,15 +62,19 @@ Scan all `package.json` files in the monorepo and report:
 ## Version Validation Report
 
 ### ✅ Passing Checks
+
 - [list of passing validations]
 
 ### ⚠️ Warnings
+
 - [intentional splits or known issues]
 
 ### ❌ Errors
+
 - [version conflicts that need fixing]
 
 ### Recommendations
+
 - [specific actions to fix issues]
 ```
 

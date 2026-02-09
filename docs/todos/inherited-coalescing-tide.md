@@ -3,6 +3,7 @@
 ## Context
 
 After the color restoration changes, two bugs remain in SideBar.vue:
+
 1. **Doc icon stays gray when active** — The text turns blue (`#58a6ff`) but the FileText icon stays gray because `.doc-icon { color: var(--text-color-secondary) }` is not overridden for the active state. The existing rule `.tree-item.active .item-icon { color: #58a6ff }` targets `.item-icon` but `.doc-icon` (also on the element) re-applies gray after it.
 2. **Two notes highlighted simultaneously** — When you preview a note on the home page (sets `aiStore.previewNoteId`), then navigate to `/editor` (sets `editorStore.currentDocument`), the `isNoteActive()` function OR's both checks, so two different notes show as active. `previewNoteId` is never cleared on route change.
 
@@ -27,6 +28,7 @@ This overrides `.doc-icon`'s default gray when the note row is active.
 **File:** `apps/web/src/components/layout/SideBar.vue` (script ~line 58)
 
 Change `isNoteActive()` to be context-dependent:
+
 - On the **home page** (`/`): only match `aiStore.previewNoteId`
 - On the **editor page** (`/editor`): only match `editorStore.currentDocument?.id`
 - Anywhere else: only match `editorStore.currentDocument?.id`

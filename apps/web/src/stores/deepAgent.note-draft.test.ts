@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyNoteDraftDelta,
   applyNoteDraftSnapshot,
+  getNoteDraftDiffScopeId,
   setNoteDraftHidden,
 } from './deepAgent.note-draft'
 
@@ -77,16 +78,27 @@ describe('deepAgent note draft helpers', () => {
   })
 
   it('toggles hidden visibility state', () => {
-    const hidden = setNoteDraftHidden({
-      draftId: 'draft-3',
-      title: 'Draft',
-      originalContent: '',
-      proposedContent: '# Draft',
-      currentContent: '# Draft',
-      updatedAt: '2026-02-08T00:00:00.000Z',
-    }, true)
+    const hidden = setNoteDraftHidden(
+      {
+        draftId: 'draft-3',
+        title: 'Draft',
+        originalContent: '',
+        proposedContent: '# Draft',
+        currentContent: '# Draft',
+        updatedAt: '2026-02-08T00:00:00.000Z',
+      },
+      true
+    )
 
     expect(hidden?.hidden).toBe(true)
     expect(setNoteDraftHidden(hidden, false)?.hidden).toBe(false)
+  })
+
+  it('keeps draft diff scope stable when thread id changes', () => {
+    const beforeThreadAssignment = getNoteDraftDiffScopeId('draft-9')
+    const afterThreadAssignment = getNoteDraftDiffScopeId('draft-9', 'thread-abc')
+
+    expect(beforeThreadAssignment).toBe('draft:draft-9')
+    expect(afterThreadAssignment).toBe(beforeThreadAssignment)
   })
 })

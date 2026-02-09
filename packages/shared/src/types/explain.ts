@@ -4,7 +4,7 @@ export interface ExplainLessonContext {
   lessonTitle: string
   lessonType: 'lecture' | 'video' | 'slides' | 'practice' | 'quiz'
   markdown: string
-  keyTerms?: { term: string, definition: string }[]
+  keyTerms?: { term: string; definition: string }[]
   keyPoints?: string[]
   transcript?: string
 }
@@ -13,11 +13,13 @@ export interface ExplainInput {
   message: string
   lessonContext: ExplainLessonContext
   highlightedText?: string
-  conversationHistory?: Array<{ role: 'user' | 'assistant', content: string }>
+  highlightSurroundingContext?: string
+  highlightSection?: string
+  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
 }
 
 export type ExplainStreamEvent =
-  | { event: 'text', data: string }
-  | { event: 'thinking', data: string }
-  | { event: 'done', data?: string }
-  | { event: 'error', data: string }
+  | { event: 'text'; data: string }
+  | { event: 'thinking'; data: string }
+  | { event: 'done'; data?: string }
+  | { event: 'error'; data: string }

@@ -16,21 +16,40 @@ defineProps<{
       :class="todo.status"
     >
       <div class="todo-check">
-        <CheckCircle2 v-if="todo.status === 'completed'" :size="16" />
-        <Loader2 v-else-if="todo.status === 'in_progress'" :size="16" class="spinning" />
-        <Circle v-else :size="16" />
+        <CheckCircle2
+          v-if="todo.status === 'completed'"
+          :size="16"
+        />
+        <Loader2
+          v-else-if="todo.status === 'in_progress'"
+          :size="16"
+          class="spinning"
+        />
+        <Circle
+          v-else
+          :size="16"
+        />
       </div>
 
-      <span class="todo-text" :class="{ completed: todo.status === 'completed' }">
+      <span
+        class="todo-text"
+        :class="{ completed: todo.status === 'completed' }"
+      >
         {{ todo.text }}
       </span>
 
-      <span v-if="todo.agentName" class="todo-agent-badge">
+      <span
+        v-if="todo.agentName"
+        class="todo-agent-badge"
+      >
         {{ todo.agentName }}
       </span>
     </div>
 
-    <div v-if="todos.length === 0" class="todo-empty">
+    <div
+      v-if="todos.length === 0"
+      class="todo-empty"
+    >
       No tasks yet
     </div>
   </div>
@@ -113,8 +132,12 @@ defineProps<{
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

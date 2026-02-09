@@ -19,7 +19,9 @@
   overflow: visible !important;
   line-height: 1.7 !important;
   text-decoration: none !important;
-  transition: background-color 0.2s ease, opacity 0.3s ease;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.3s ease;
 }
 
 /* Contained mode (AI start + preview): keep controls inside the block/card bounds */
@@ -37,15 +39,15 @@
 
 /* Deletion block - coral/pink background */
 .muya-editor .mu-diff-deletion {
-  background: #F8D7D5 !important;
-  color: #5C4444 !important;
+  background: #f8d7d5 !important;
+  color: #5c4444 !important;
   text-decoration: none !important;
 }
 
 /* Addition block - mint green background */
 .muya-editor .mu-diff-addition {
-  background: #D4EDDA !important;
-  color: #3D5C45 !important;
+  background: #d4edda !important;
+  color: #3d5c45 !important;
   text-decoration: none !important;
 }
 
@@ -65,7 +67,9 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
   opacity: 0.85;
   padding: 0 !important;
   z-index: 10;
@@ -82,13 +86,13 @@
 
 /* Plus button (accept) - forest green, positioned at top */
 .muya-editor .mu-diff-action-accept {
-  color: #5A9E6F !important;
+  color: #5a9e6f !important;
   top: 8px !important;
 }
 
 /* Minus button (reject) - coral red, positioned below accept button */
 .muya-editor .mu-diff-action-reject {
-  color: #C9726A !important;
+  color: #c9726a !important;
   top: 36px !important;
 }
 

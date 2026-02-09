@@ -17,6 +17,7 @@ The user's logs show all 18 lessons, 5 quizzes, 4 slides generated, then `save_t
 ### Issue 2: `onError` fires before `onDone`, corrupting recovery
 
 When the stream ends without a terminal event (`course.service.ts:221-225`):
+
 1. `onError({ message: 'Connection lost...', stage: 'research' })` fires — sets `generationError`, `isGenerating = false`
 2. `onDone()` fires — polls thread status for recovery
 
@@ -77,7 +78,7 @@ await saveCourseToSupabase(
       type: 'thinking',
       data: `Saving module ${modulesCompleted}/${totalModules} to database...`,
     })
-  },
+  }
 )
 ```
 
@@ -114,6 +115,7 @@ if (!receivedTerminalEvent) {
 **File:** `apps/web/src/stores/course.ts` (lines 265-307)
 
 Replace the single-poll `onDone` with retry logic:
+
 - Initial 2-second delay (gives backend time to commit)
 - Up to 3 poll attempts, 3 seconds apart
 - Clear `generationError` on successful recovery
@@ -148,14 +150,14 @@ Add `let lastKnownStage = 'research'` before the `for await` loop. Update it fro
 
 ## Files to Modify
 
-| # | File | Change |
-|---|------|--------|
-| 1 | `packages/shared/src/types/course.ts` | Add `'saving'` and `'assembly'` to `GenerationStageType` |
-| 2 | `packages/ai/src/agents/course/tools.ts` | Add `onProgress` callback to `saveCourseToSupabase` |
-| 3 | `packages/ai/src/agents/course/course-tools.ts` | Wire `onProgress` to emit thinking events during save |
-| 4 | `apps/api/src/routes/course.ts` | Track `lastKnownStage`, send explicit `done`, fix stage in catch |
-| 5 | `apps/web/src/services/course.service.ts` | Remove `onError` from connection-loss, call only `onDone` |
-| 6 | `apps/web/src/stores/course.ts` | Retry polling in `onDone`, clear error on recovery |
+| #   | File                                            | Change                                                           |
+| --- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | `packages/shared/src/types/course.ts`           | Add `'saving'` and `'assembly'` to `GenerationStageType`         |
+| 2   | `packages/ai/src/agents/course/tools.ts`        | Add `onProgress` callback to `saveCourseToSupabase`              |
+| 3   | `packages/ai/src/agents/course/course-tools.ts` | Wire `onProgress` to emit thinking events during save            |
+| 4   | `apps/api/src/routes/course.ts`                 | Track `lastKnownStage`, send explicit `done`, fix stage in catch |
+| 5   | `apps/web/src/services/course.service.ts`       | Remove `onError` from connection-loss, call only `onDone`        |
+| 6   | `apps/web/src/stores/course.ts`                 | Retry polling in `onDone`, clear error on recovery               |
 
 ## Verification
 

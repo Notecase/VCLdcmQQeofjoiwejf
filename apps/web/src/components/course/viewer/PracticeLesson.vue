@@ -25,7 +25,7 @@ function updateShortAnswer(problemId: string, value: string) {
 
 function isCorrect(problemId: string): boolean | null {
   if (!store.practiceSubmitted) return null
-  const problem = problems.value.find(p => p.id === problemId)
+  const problem = problems.value.find((p) => p.id === problemId)
   if (!problem) return null
   const answer = store.practiceAnswers[problemId]
   if (problem.type === 'multiple-choice' && problem.correctIndex !== undefined) {
@@ -36,7 +36,9 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 const allAnswered = computed(() => {
-  return problems.value.every(p => store.practiceAnswers[p.id] !== undefined && store.practiceAnswers[p.id] !== '')
+  return problems.value.every(
+    (p) => store.practiceAnswers[p.id] !== undefined && store.practiceAnswers[p.id] !== ''
+  )
 })
 </script>
 
@@ -48,7 +50,10 @@ const allAnswered = computed(() => {
     </h2>
 
     <!-- Markdown intro -->
-    <MuyaRenderer v-if="lesson.content.markdown" :markdown="lesson.content.markdown" />
+    <MuyaRenderer
+      v-if="lesson.content.markdown"
+      :markdown="lesson.content.markdown"
+    />
 
     <!-- Problems -->
     <div class="problems-list">
@@ -63,10 +68,16 @@ const allAnswered = computed(() => {
       >
         <div class="problem-header">
           <span class="problem-num">Problem {{ idx + 1 }}</span>
-          <span v-if="store.practiceSubmitted && isCorrect(problem.id) === true" class="result-badge correct">
+          <span
+            v-if="store.practiceSubmitted && isCorrect(problem.id) === true"
+            class="result-badge correct"
+          >
             <CheckCircle2 :size="13" /> Correct
           </span>
-          <span v-else-if="store.practiceSubmitted && isCorrect(problem.id) === false" class="result-badge incorrect">
+          <span
+            v-else-if="store.practiceSubmitted && isCorrect(problem.id) === false"
+            class="result-badge incorrect"
+          >
             <XCircle :size="13" /> Incorrect
           </span>
         </div>
@@ -74,7 +85,10 @@ const allAnswered = computed(() => {
         <p class="problem-question">{{ problem.question }}</p>
 
         <!-- Multiple Choice -->
-        <div v-if="problem.type === 'multiple-choice' && problem.options" class="options-list">
+        <div
+          v-if="problem.type === 'multiple-choice' && problem.options"
+          class="options-list"
+        >
           <button
             v-for="(option, optIdx) in problem.options"
             :key="optIdx"
@@ -82,7 +96,10 @@ const allAnswered = computed(() => {
             :class="{
               selected: store.practiceAnswers[problem.id] === optIdx,
               'correct-answer': store.practiceSubmitted && problem.correctIndex === optIdx,
-              'wrong-answer': store.practiceSubmitted && store.practiceAnswers[problem.id] === optIdx && problem.correctIndex !== optIdx,
+              'wrong-answer':
+                store.practiceSubmitted &&
+                store.practiceAnswers[problem.id] === optIdx &&
+                problem.correctIndex !== optIdx,
             }"
             :disabled="store.practiceSubmitted"
             @click="selectOption(problem.id, optIdx)"
@@ -93,7 +110,10 @@ const allAnswered = computed(() => {
         </div>
 
         <!-- Short Answer -->
-        <div v-else-if="problem.type === 'short-answer'" class="short-answer">
+        <div
+          v-else-if="problem.type === 'short-answer'"
+          class="short-answer"
+        >
           <textarea
             :value="(store.practiceAnswers[problem.id] as string) ?? ''"
             class="answer-textarea"
@@ -105,13 +125,19 @@ const allAnswered = computed(() => {
         </div>
 
         <!-- Explanation (shown after submit) -->
-        <div v-if="store.practiceSubmitted" class="explanation">
+        <div
+          v-if="store.practiceSubmitted"
+          class="explanation"
+        >
           <span class="explanation-label">Explanation:</span>
           {{ problem.explanation }}
         </div>
 
         <!-- Sample Answer for short answer -->
-        <div v-if="store.practiceSubmitted && problem.sampleAnswer" class="sample-answer">
+        <div
+          v-if="store.practiceSubmitted && problem.sampleAnswer"
+          class="sample-answer"
+        >
           <span class="sample-label">Sample Answer:</span>
           {{ problem.sampleAnswer }}
         </div>
@@ -119,7 +145,10 @@ const allAnswered = computed(() => {
     </div>
 
     <!-- Submit Button -->
-    <div v-if="!store.practiceSubmitted" class="submit-area">
+    <div
+      v-if="!store.practiceSubmitted"
+      class="submit-area"
+    >
       <button
         class="submit-btn"
         :disabled="!allAnswered"
@@ -127,13 +156,22 @@ const allAnswered = computed(() => {
       >
         Check Answers
       </button>
-      <span v-if="!allAnswered" class="submit-hint">
+      <span
+        v-if="!allAnswered"
+        class="submit-hint"
+      >
         Answer all problems to check your work
       </span>
     </div>
 
-    <div v-else class="reset-area">
-      <button class="reset-btn" @click="store.resetPractice()">
+    <div
+      v-else
+      class="reset-area"
+    >
+      <button
+        class="reset-btn"
+        @click="store.resetPractice()"
+      >
         Try Again
       </button>
     </div>

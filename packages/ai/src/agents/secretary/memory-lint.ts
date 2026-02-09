@@ -12,7 +12,7 @@ export interface SecretaryMemoryLintResult {
  * This is intentionally lightweight and safe for debug endpoints.
  */
 export function lintSecretaryMemoryFiles(files: MemoryFile[]): SecretaryMemoryLintResult {
-  const byName = new Map(files.map(f => [f.filename, f]))
+  const byName = new Map(files.map((f) => [f.filename, f]))
   const planContent = byName.get('Plan.md')?.content || ''
   const todayContent = byName.get('Today.md')?.content || ''
   const todayDate = getTodayDate()

@@ -9,14 +9,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLayoutStore } from '@/stores'
-import {
-  FileText,
-  Calendar,
-  GraduationCap,
-  PanelLeft,
-  PanelRight,
-  Home,
-} from 'lucide-vue-next'
+import { FileText, Calendar, GraduationCap, PanelLeft, PanelRight, Home } from 'lucide-vue-next'
 
 // Props for pill mode
 defineProps<{
@@ -33,8 +26,12 @@ function navigate(path: string) {
 }
 
 // Check if route is active
-const isCalendarActive = computed(() => route.path === '/calendar' || route.path.startsWith('/calendar/'))
-const isCoursesActive = computed(() => route.path === '/courses' || route.path.startsWith('/courses/'))
+const isCalendarActive = computed(
+  () => route.path === '/calendar' || route.path.startsWith('/calendar/')
+)
+const isCoursesActive = computed(
+  () => route.path === '/courses' || route.path.startsWith('/courses/')
+)
 
 const isNoteActive = computed(() => {
   return route.path === '/editor' || route.name === 'editor'
@@ -46,7 +43,10 @@ const isHomeActive = computed(() => {
 </script>
 
 <template>
-  <nav class="nav-dock" :class="{ 'pill-mode': pillMode }">
+  <nav
+    class="nav-dock"
+    :class="{ 'pill-mode': pillMode }"
+  >
     <!-- Left Sidebar Toggle -->
     <button
       class="dock-item toggle-btn"
@@ -159,19 +159,39 @@ const isHomeActive = computed(() => {
   border-color: transparent;
 }
 
-.nav-notes.active { color: #58a6ff; background: rgba(88, 166, 255, 0.12); }
-.nav-calendar.active { color: #f0c36d; background: rgba(240, 195, 109, 0.12); }
-.nav-courses.active { color: #a78bfa; background: rgba(167, 139, 250, 0.12); }
-.nav-home.active { color: #3fb950; background: rgba(63, 185, 80, 0.12); }
+.nav-notes.active {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.12);
+}
+.nav-calendar.active {
+  color: #f0c36d;
+  background: rgba(240, 195, 109, 0.12);
+}
+.nav-courses.active {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+}
+.nav-home.active {
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.12);
+}
 
 .dock-item.active:hover {
   background: transparent;
 }
 
-.nav-notes.active:hover { background: rgba(88, 166, 255, 0.16); }
-.nav-calendar.active:hover { background: rgba(240, 195, 109, 0.16); }
-.nav-courses.active:hover { background: rgba(167, 139, 250, 0.16); }
-.nav-home.active:hover { background: rgba(63, 185, 80, 0.16); }
+.nav-notes.active:hover {
+  background: rgba(88, 166, 255, 0.16);
+}
+.nav-calendar.active:hover {
+  background: rgba(240, 195, 109, 0.16);
+}
+.nav-courses.active:hover {
+  background: rgba(167, 139, 250, 0.16);
+}
+.nav-home.active:hover {
+  background: rgba(63, 185, 80, 0.16);
+}
 
 /* Toggle buttons styling */
 .toggle-btn {
@@ -208,7 +228,7 @@ const isHomeActive = computed(() => {
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 5px 10px;
+  padding: 8px 12px; /* Match non-pill padding exactly */
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.2),
     0 0 0 1px rgba(255, 255, 255, 0.05) inset;
@@ -231,8 +251,8 @@ const isHomeActive = computed(() => {
 }
 
 .nav-dock.pill-mode .dock-divider {
-  height: 12px;
-  margin: 0 3px;
+  height: 14px; /* Match non-pill height */
+  margin: 0 4px; /* Match non-pill margin */
   background-color: rgba(255, 255, 255, 0.1);
 }
 </style>

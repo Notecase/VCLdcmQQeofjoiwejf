@@ -107,7 +107,7 @@ class ArtifactPreview extends Parent {
     // Persist to artifact block state for auto-save
     const artifactBlock = this.parent
     if (artifactBlock && 'updateState' in artifactBlock) {
-      (artifactBlock as any).updateState({
+      ;(artifactBlock as any).updateState({
         title: data.title,
         code: data.code,
         customHeight: data.height,
@@ -142,7 +142,7 @@ class ArtifactPreview extends Parent {
       // Persist height to artifact block state for auto-save
       const artifactBlock = this.parent
       if (artifactBlock && 'updateState' in artifactBlock) {
-        (artifactBlock as any).updateState({ customHeight: this.customHeight })
+        ;(artifactBlock as any).updateState({ customHeight: this.customHeight })
       }
     }
 
@@ -154,7 +154,10 @@ class ArtifactPreview extends Parent {
     const target = event.target as HTMLElement
 
     // Allow clicks on control elements
-    if (target.closest('.mu-artifact-control-pill') || target.closest('.mu-artifact-resize-handle')) {
+    if (
+      target.closest('.mu-artifact-control-pill') ||
+      target.closest('.mu-artifact-resize-handle')
+    ) {
       return
     }
 

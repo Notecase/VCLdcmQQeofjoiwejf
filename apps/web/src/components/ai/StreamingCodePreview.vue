@@ -40,21 +40,36 @@ const displayPreview = computed(() => {
 </script>
 
 <template>
-  <div class="code-preview" :class="phase">
+  <div
+    class="code-preview"
+    :class="phase"
+  >
     <!-- Scanline effect -->
     <div class="scanline" />
 
     <!-- Header: 24px -->
     <div class="preview-header">
       <div class="phase-indicator">
-        <Zap :size="10" class="phase-icon" />
+        <Zap
+          :size="10"
+          class="phase-icon"
+        />
         <span class="phase-label">{{ phaseLabel }}</span>
         <span class="char-count">{{ totalChars }} chars</span>
       </div>
       <div class="progress-dots">
-        <span class="dot" :class="{ active: phase === 'html', complete: phase !== 'html' }" />
-        <span class="dot" :class="{ active: phase === 'css', complete: phase === 'javascript' }" />
-        <span class="dot" :class="{ active: phase === 'javascript' }" />
+        <span
+          class="dot"
+          :class="{ active: phase === 'html', complete: phase !== 'html' }"
+        />
+        <span
+          class="dot"
+          :class="{ active: phase === 'css', complete: phase === 'javascript' }"
+        />
+        <span
+          class="dot"
+          :class="{ active: phase === 'javascript' }"
+        />
       </div>
     </div>
 

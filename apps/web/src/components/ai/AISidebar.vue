@@ -170,8 +170,8 @@ async function handleClarificationSelect(blockIds: string[]) {
   // Extract line numbers from the selected options for stable matching
   // Line numbers remain consistent even when the document is re-parsed
   const selectedLineNumbers = options
-    .filter(opt => blockIds.includes(opt.id))
-    .map(opt => opt.line)
+    .filter((opt) => blockIds.includes(opt.id))
+    .map((opt) => opt.line)
 
   store.resolveClarification(blockIds)
 

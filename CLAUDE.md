@@ -19,6 +19,7 @@ This document defines conventions, constraints, and guardrails for Claude Code w
 ### When to Ask (ALWAYS unless trivial)
 
 Ask clarifying questions for ANY task that involves:
+
 - Writing or modifying more than a few lines of code
 - Architectural decisions or design choices
 - Multiple valid approaches or trade-offs
@@ -30,16 +31,16 @@ Ask clarifying questions for ANY task that involves:
 
 ### What to Ask About
 
-| Category | Example Questions |
-|----------|-------------------|
-| **Scope** | "Should this only affect X, or also Y and Z?" |
-| **Approach** | "I see two ways to do this: A (simpler but less flexible) or B (more complex but extensible). Which do you prefer?" |
-| **Requirements** | "What should happen when [edge case]?" |
-| **Constraints** | "Are there performance/compatibility/timeline constraints I should know about?" |
-| **Success criteria** | "How will we know this is working correctly? What does 'done' look like?" |
-| **Preferences** | "Do you have a preferred pattern/style for this kind of thing in the codebase?" |
-| **Dependencies** | "This might affect [related system]. Should I consider that, or keep this change isolated?" |
-| **Existing code** | "I found [existing pattern]. Should I follow this, or is this an opportunity to improve it?" |
+| Category             | Example Questions                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Scope**            | "Should this only affect X, or also Y and Z?"                                                                       |
+| **Approach**         | "I see two ways to do this: A (simpler but less flexible) or B (more complex but extensible). Which do you prefer?" |
+| **Requirements**     | "What should happen when [edge case]?"                                                                              |
+| **Constraints**      | "Are there performance/compatibility/timeline constraints I should know about?"                                     |
+| **Success criteria** | "How will we know this is working correctly? What does 'done' look like?"                                           |
+| **Preferences**      | "Do you have a preferred pattern/style for this kind of thing in the codebase?"                                     |
+| **Dependencies**     | "This might affect [related system]. Should I consider that, or keep this change isolated?"                         |
+| **Existing code**    | "I found [existing pattern]. Should I follow this, or is this an opportunity to improve it?"                        |
 
 ### How to Ask
 
@@ -48,7 +49,9 @@ Ask clarifying questions for ANY task that involves:
 2. **Batch questions together**: Don't ask one question at a time. Gather all your uncertainties and ask them in one message.
 
 3. **Show your thinking**: Explain what you've understood so far, then ask about the gaps. Example:
+
    > "I understand you want X. I've looked at the codebase and see we currently do Y. My plan would be to do Z. Before I start:
+   >
    > - Should I also handle [edge case]?
    > - Do you prefer approach A or B for [specific decision]?
    > - What's the expected behavior when [scenario]?"
@@ -69,11 +72,11 @@ Documentation files are living documents that MUST stay synchronized with code. 
 
 ### Documentation Files
 
-| File | Scope | Update Trigger |
-|------|-------|----------------|
-| `docs/ARCHITECTURE.md` | System-wide architecture | Package/route/store/schema/dependency changes |
-| `docs/todos/*.md` | Plan-mode archives | Every plan-mode session |
-| `packages/muya/MUYA.md` | Muya editor patterns | New Muya discoveries, integration patterns, anti-patterns |
+| File                    | Scope                    | Update Trigger                                            |
+| ----------------------- | ------------------------ | --------------------------------------------------------- |
+| `docs/ARCHITECTURE.md`  | System-wide architecture | Package/route/store/schema/dependency changes             |
+| `docs/todos/*.md`       | Plan-mode archives       | Every plan-mode session                                   |
+| `packages/muya/MUYA.md` | Muya editor patterns     | New Muya discoveries, integration patterns, anti-patterns |
 
 ### Verification Requirements (MANDATORY before any doc update)
 
@@ -110,6 +113,7 @@ Documentation files are living documents that MUST stay synchronized with code. 
 When working in Plan mode, the final plan MUST be saved to `docs/todos/` before exiting plan mode.
 
 ### Rules
+
 1. **Save every plan**: Before calling `ExitPlanMode`, copy the plan content to `docs/todos/YYYY-MM-DD-<topic>.md`
 2. **Naming convention**: `YYYY-MM-DD-<short-kebab-case-topic>.md` (e.g., `2026-02-06-add-plan-archive.md`)
 3. **Topic**: Derive from the plan's main subject — keep it to 3-5 words in kebab-case
@@ -117,23 +121,25 @@ When working in Plan mode, the final plan MUST be saved to `docs/todos/` before 
 
 ## Tech Stack Versions
 
-| Package | Version | Notes |
-|---------|---------|-------|
-| Node.js | >=20.0.0 | Pinned in `.nvmrc` |
-| pnpm | 9.15.0 | Workspace manager |
-| Vue | 3.5.24 | UI framework |
-| Vite | 7.2.4 | Build tool |
-| TypeScript | ~5.7.0 | Strict mode enabled |
+| Package    | Version  | Notes               |
+| ---------- | -------- | ------------------- |
+| Node.js    | >=20.0.0 | Pinned in `.nvmrc`  |
+| pnpm       | 9.15.0   | Workspace manager   |
+| Vue        | 3.5.24   | UI framework        |
+| Vite       | 7.2.4    | Build tool          |
+| TypeScript | ~5.7.0   | Strict mode enabled |
 
 ## Known Version Conflicts - CRITICAL
 
 ### @vitejs/plugin-vue Split
+
 - **Root/packages**: Use `@vitejs/plugin-vue@^5.0.0`
 - **apps/web**: Uses `@vitejs/plugin-vue@^6.0.0`
 - **Reason**: apps/web has specific Vite 7 requirements
 - **Rule**: Do NOT unify these versions - the split is intentional
 
 ### TypeScript Target
+
 - **Always use**: `"target": "ES2022"`
 - **Never use**: `ES2023` (causes compatibility issues with some dependencies)
 - **Check**: All `tsconfig.json` files must use ES2022
@@ -181,17 +187,13 @@ When working with the Muya editor engine (`packages/muya/` or integrating with i
 All error handling MUST use the centralized system from `@inkdown/shared/errors`.
 
 ### Required Import
+
 ```typescript
-import {
-  AppError,
-  ErrorCode,
-  handleError,
-  tryCatch,
-  isAppError
-} from '@inkdown/shared/errors'
+import { AppError, ErrorCode, handleError, tryCatch, isAppError } from '@inkdown/shared/errors'
 ```
 
 ### Creating Errors
+
 ```typescript
 // ✅ CORRECT
 throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid input', { field: 'email' })
@@ -203,6 +205,7 @@ throw new TypeError('Invalid type')
 ```
 
 ### Handling Errors
+
 ```typescript
 // ✅ CORRECT
 try {
@@ -222,12 +225,14 @@ if (error) {
 try {
   await riskyOperation()
 } catch (error) {
-  console.error(error)  // Missing handleError wrapper
+  console.error(error) // Missing handleError wrapper
 }
 ```
 
 ### Error Codes
+
 Always use predefined `ErrorCode` enum values:
+
 - `ErrorCode.VALIDATION_ERROR` - Input validation failures
 - `ErrorCode.AI_PROVIDER_ERROR` - AI API issues
 - `ErrorCode.FILE_SYSTEM_ERROR` - File operations
@@ -239,6 +244,7 @@ Always use predefined `ErrorCode` enum values:
 ## Type Consistency - Single Source of Truth
 
 ### Core Types Location
+
 All shared types MUST be defined in `@inkdown/shared/types/`:
 
 ```
@@ -251,23 +257,26 @@ packages/shared/src/types/
 ```
 
 ### Known Type Duplication Issues (TO FIX)
+
 The following types are defined in multiple locations and need consolidation:
 
-| Type | Locations | Canonical Location |
-|------|-----------|-------------------|
+| Type        | Locations   | Canonical Location              |
+| ----------- | ----------- | ------------------------------- |
 | ChatMessage | 4 locations | `@inkdown/shared/types/chat.ts` |
-| AIProvider | 3 locations | `@inkdown/shared/types/ai.ts` |
+| AIProvider  | 3 locations | `@inkdown/shared/types/ai.ts`   |
 
 **Rule**: When you encounter duplicate type definitions, consolidate to `@inkdown/shared/types/`.
 
 ### Importing Types
+
 ```typescript
 // ✅ CORRECT - Import from shared
 import type { ChatMessage, ChatSession } from '@inkdown/shared/types'
 import type { AIProvider, AIModel } from '@inkdown/shared/types'
 
 // ❌ BANNED - Local type definitions that duplicate shared types
-interface ChatMessage {  // Don't define locally
+interface ChatMessage {
+  // Don't define locally
   id: string
   content: string
 }
@@ -276,7 +285,9 @@ interface ChatMessage {  // Don't define locally
 ## Build Requirements
 
 ### Before Any Commit
+
 Run the full validation suite:
+
 ```bash
 pnpm build        # Build all packages
 pnpm typecheck    # TypeScript validation
@@ -285,7 +296,9 @@ pnpm test         # Run tests (if available)
 ```
 
 ### Build Order
+
 Packages must build in dependency order:
+
 1. `@inkdown/shared` (first, no deps)
 2. `@inkdown/ai` (depends on shared)
 3. `@inkdown/editor` (depends on shared)
@@ -293,7 +306,9 @@ Packages must build in dependency order:
 5. Apps (depend on all packages)
 
 ### TypeScript Configuration
+
 All packages must extend the root tsconfig:
+
 ```json
 {
   "extends": "../../tsconfig.base.json",
@@ -307,12 +322,14 @@ All packages must extend the root tsconfig:
 ## Lint Rules
 
 ### ESLint Configuration
+
 - Extends: `@antfu/eslint-config`
 - Vue-specific rules enabled for .vue files
 - No unused variables allowed
 - Prefer `const` over `let`
 
 ### Import Order
+
 ```typescript
 // 1. Node built-ins
 import { readFile } from 'node:fs/promises'
@@ -330,15 +347,17 @@ import { useStore } from '../stores'
 ## Known Issues Tracker
 
 ### Active Issues
-| Issue | Severity | Status | Notes |
-|-------|----------|--------|-------|
-| ChatMessage type duplication | High | Open | 4 locations need consolidation |
-| @vitejs/plugin-vue version split | Medium | Intentional | Document in code comments |
+
+| Issue                            | Severity | Status      | Notes                          |
+| -------------------------------- | -------- | ----------- | ------------------------------ |
+| ChatMessage type duplication     | High     | Open        | 4 locations need consolidation |
+| @vitejs/plugin-vue version split | Medium   | Intentional | Document in code comments      |
 
 ### Resolved Issues
+
 | Issue | Resolution Date | Solution |
-|-------|----------------|----------|
-| - | - | - |
+| ----- | --------------- | -------- |
+| -     | -               | -        |
 
 ## Pre-Implementation Checklist
 
@@ -354,19 +373,19 @@ Before making changes, verify:
 
 Use these specialized agents via the Task tool:
 
-| Agent | When to Use |
-|-------|-------------|
-| `version-validator` | After modifying package.json or adding dependencies |
-| `type-sync-checker` | After adding/modifying type definitions |
-| `error-pattern-auditor` | After adding error handling code |
-| `build-validator` | Before commits, after significant changes |
-| `pre-implementation-checker` | Before starting any implementation |
+| Agent                        | When to Use                                         |
+| ---------------------------- | --------------------------------------------------- |
+| `version-validator`          | After modifying package.json or adding dependencies |
+| `type-sync-checker`          | After adding/modifying type definitions             |
+| `error-pattern-auditor`      | After adding error handling code                    |
+| `build-validator`            | Before commits, after significant changes           |
+| `pre-implementation-checker` | Before starting any implementation                  |
 
 ## Skills (Slash Commands)
 
-| Command | Purpose |
-|---------|---------|
-| `/sync-versions` | Interactive version conflict resolution |
-| `/debug-mismatch` | Systematic debugging for logic/system mismatches |
-| `/validate-package` | Deep validation of a specific package |
-| `/pre-commit-check` | Full validation suite before commits |
+| Command             | Purpose                                          |
+| ------------------- | ------------------------------------------------ |
+| `/sync-versions`    | Interactive version conflict resolution          |
+| `/debug-mismatch`   | Systematic debugging for logic/system mismatches |
+| `/validate-package` | Deep validation of a specific package            |
+| `/pre-commit-check` | Full validation suite before commits             |

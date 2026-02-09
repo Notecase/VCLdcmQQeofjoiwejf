@@ -70,6 +70,7 @@ apps/api       apps/web         apps/web
 ```
 
 **Rules:**
+
 - `@inkdown/shared` has ZERO `@inkdown/*` dependencies
 - `@inkdown/ai` only depends on `@inkdown/shared` (peer dependency)
 - `@inkdown/editor` and `@inkdown/muya` have no `@inkdown/*` dependencies
@@ -83,6 +84,7 @@ apps/api       apps/web         apps/web
 **Orchestrator:** Turborepo (`turbo.json`)
 
 **Build order** (dependency-first):
+
 1. `@inkdown/shared` (tsc)
 2. `@inkdown/ai` (tsc)
 3. `@inkdown/editor` (tsc, noEmit)
@@ -116,11 +118,11 @@ apps/api       apps/web         apps/web
 
 ### Exports
 
-| Path | Content |
-|------|---------|
-| `.` | Everything (types + utils + errors) |
-| `./types` | Type definitions only |
-| `./utils` | Utility functions only |
+| Path      | Content                             |
+| --------- | ----------------------------------- |
+| `.`       | Everything (types + utils + errors) |
+| `./types` | Type definitions only               |
+| `./utils` | Utility functions only              |
 
 ### Error System (`errors.ts`)
 
@@ -134,21 +136,21 @@ Central error handling with `AppError` class:
 
 ### Type Definitions (`types/`)
 
-| File | Key Types |
-|------|-----------|
-| `document.ts` | `Project`, `Note`, `Attachment`, `NoteEmbedding`, `SearchResult`, `ProjectTreeNode`, `NoteTreeNode` + DTOs |
-| `user.ts` | `User`, `UserProfile`, `Session`, `AuthResult`, `UserPlan` (free/pro/team/enterprise) |
-| `preferences.ts` | `UserPreferences` (theme, editor behavior, markdown settings, AI settings), `ThemeName` (7 themes), `DEFAULT_PREFERENCES` |
-| `ai.ts` | `AIUsageRecord`, `ChatSession`, `ChatMessage`, `AgentType` (chat/note/planner/course), `ChatModelConfig`, `EmbeddingModelConfig`, `CHAT_MODELS`, `EMBEDDING_MODELS` |
+| File             | Key Types                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `document.ts`    | `Project`, `Note`, `Attachment`, `NoteEmbedding`, `SearchResult`, `ProjectTreeNode`, `NoteTreeNode` + DTOs                                                          |
+| `user.ts`        | `User`, `UserProfile`, `Session`, `AuthResult`, `UserPlan` (free/pro/team/enterprise)                                                                               |
+| `preferences.ts` | `UserPreferences` (theme, editor behavior, markdown settings, AI settings), `ThemeName` (7 themes), `DEFAULT_PREFERENCES`                                           |
+| `ai.ts`          | `AIUsageRecord`, `ChatSession`, `ChatMessage`, `AgentType` (chat/note/planner/course), `ChatModelConfig`, `EmbeddingModelConfig`, `CHAT_MODELS`, `EMBEDDING_MODELS` |
 
 ### Utilities (`utils/`)
 
-| Module | Functions |
-|--------|-----------|
-| `validation.ts` | `isValidEmail`, `isValidPassword`, `isValidDocumentTitle`, `sanitizeFilename`, `slugify`, `truncate` |
-| `date.ts` | `formatDate`, `formatDateTime`, `formatRelativeTime`, `isToday`, `isYesterday` |
-| `platform.ts` | `clipboard` (read/write), `path` (join/dirname/basename), `platform` (isMac/isWindows/isLinux), `openExternal`, image/file dialog helpers, `downloadFile`, `exportMarkdown` |
-| `tree.ts` | `buildProjectTree`, `buildNoteTree`, `flattenProjectTree`, `findProjectNode`, `getProjectPath`, `wouldCreateCircular` (11 functions total) |
+| Module          | Functions                                                                                                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validation.ts` | `isValidEmail`, `isValidPassword`, `isValidDocumentTitle`, `sanitizeFilename`, `slugify`, `truncate`                                                                        |
+| `date.ts`       | `formatDate`, `formatDateTime`, `formatRelativeTime`, `isToday`, `isYesterday`                                                                                              |
+| `platform.ts`   | `clipboard` (read/write), `path` (join/dirname/basename), `platform` (isMac/isWindows/isLinux), `openExternal`, image/file dialog helpers, `downloadFile`, `exportMarkdown` |
+| `tree.ts`       | `buildProjectTree`, `buildNoteTree`, `flattenProjectTree`, `findProjectNode`, `getProjectPath`, `wouldCreateCircular` (11 functions total)                                  |
 
 ---
 
@@ -160,11 +162,11 @@ Central error handling with `AppError` class:
 
 ### Provider System (3 providers, task-based routing)
 
-| Provider | Models | Routed Tasks |
-|----------|--------|-------------|
-| **OpenAI** | GPT-5.2 (chat), text-embedding-3-large | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
-| **Gemini** | gemini-2.0-flash-exp, gemini-3-pro-preview | slides, research, course, deep-research |
-| **Ollama Cloud** | kimi-k2.5:cloud | artifact, code, html, css, javascript |
+| Provider         | Models                                     | Routed Tasks                                                                    |
+| ---------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
+| **OpenAI**       | GPT-5.2 (chat), text-embedding-3-large     | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
+| **Gemini**       | gemini-2.0-flash-exp, gemini-3-pro-preview | slides, research, course, deep-research                                         |
+| **Ollama Cloud** | kimi-k2.5:cloud                            | artifact, code, html, css, javascript                                           |
 
 `createProvider(taskType)` returns the optimal provider. Providers are cached as singletons.
 
@@ -172,14 +174,14 @@ All providers support streaming via `AsyncGenerator`.
 
 ### Agent System (6 LangGraph-based agents)
 
-| Agent | Purpose | Key Capability |
-|-------|---------|----------------|
+| Agent              | Purpose                           | Key Capability                                                                                                          |
+| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **SecretaryAgent** | Intent classification and routing | Routes to 8 intents: chat, edit_note, follow_up, open_note, create_artifact, database_action, read_memory, write_memory |
-| **ChatAgent** | Conversational AI with RAG | Document context, citations, session management |
-| **NoteAgent** | Note manipulation | create, update, organize, summarize, expand |
-| **PlannerAgent** | Goal decomposition | Step-by-step plan generation |
-| **AgenticAgent** | Autonomous task execution | Research, extraction, creation, validation, reflection (max 20 steps) |
-| **DeepAgent** | Compound request orchestration | Task decomposition, subagent delegation, multi-output requests |
+| **ChatAgent**      | Conversational AI with RAG        | Document context, citations, session management                                                                         |
+| **NoteAgent**      | Note manipulation                 | create, update, organize, summarize, expand                                                                             |
+| **PlannerAgent**   | Goal decomposition                | Step-by-step plan generation                                                                                            |
+| **AgenticAgent**   | Autonomous task execution         | Research, extraction, creation, validation, reflection (max 20 steps)                                                   |
+| **DeepAgent**      | Compound request orchestration    | Task decomposition, subagent delegation, multi-output requests                                                          |
 
 ### DeepAgent Architecture (Compound Requests)
 
@@ -203,42 +205,46 @@ User Request → isCompoundRequest() check
 ```
 
 **Subagents** (`packages/ai/src/agents/subagents/`):
+
 - `NoteSubagent` - Wraps NoteAgent for note creation/editing
 - `ArtifactSubagent` - Creates interactive HTML/CSS/JS widgets
 - `TableSubagent` - Creates and populates database tables
 
 **Streaming Events** (new types for DeepAgent):
+
 - `decomposition` - Task breakdown from orchestrator
 - `subtask-start` - Subagent beginning work
 - `subtask-progress` - Progress updates (0-100%)
 - `subtask-complete` - Subagent finished
 
 **Frontend Integration** (`apps/web/src/stores/ai.ts`):
+
 - `subTasks` state tracks all decomposed tasks
 - `setSubTasks()`, `updateSubTask()`, `updateSubTaskProgress()` actions
 - `activeSubTasks`, `completedSubTaskCount`, `allSubTasksCompleted` computed
 
 ### Tool System (26 tools across 4 categories)
 
-| Category | Count | Examples |
-|----------|-------|---------|
-| **Core Editing** | 8 | read_block, read_note, edit_block, search_web, create_artifact, read/write_memory |
-| **Database** | 10 | db_add_row, db_query_rows, db_aggregate, db_group_by, db_create_chart_data |
-| **Artifact** | 10 | artifact_modify_html/css/js, artifact_parse_structure, artifact_validate, artifact_optimize |
-| **Secretary** | 7 | create_roadmap, save_roadmap, get_current_week_tasks, list_memory_files |
+| Category         | Count | Examples                                                                                    |
+| ---------------- | ----- | ------------------------------------------------------------------------------------------- |
+| **Core Editing** | 8     | read_block, read_note, edit_block, search_web, create_artifact, read/write_memory           |
+| **Database**     | 10    | db_add_row, db_query_rows, db_aggregate, db_group_by, db_create_chart_data                  |
+| **Artifact**     | 10    | artifact_modify_html/css/js, artifact_parse_structure, artifact_validate, artifact_optimize |
+| **Secretary**    | 7     | create_roadmap, save_roadmap, get_current_week_tasks, list_memory_files                     |
 
 ### Section-Aware Editing Pipeline (utils/)
 
 Precision editing utilities for targeted section editing:
 
-| Utility | Purpose |
-|---------|---------|
-| **structureParser.ts** | Parses markdown into BlockNode tree with positions (sections, paragraphs, lists, code, tables, blockquotes) |
+| Utility                 | Purpose                                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **structureParser.ts**  | Parses markdown into BlockNode tree with positions (sections, paragraphs, lists, code, tables, blockquotes)       |
 | **targetIdentifier.ts** | Analyzes user instruction to identify target blocks via heading/position/content matching with confidence scoring |
-| **contextExtractor.ts** | Extracts target blocks with surrounding context and [EDIT_START]/[EDIT_END] markers for AI |
-| **surgicalMerger.ts** | Merges edited section back into document, preserving non-targeted content exactly |
+| **contextExtractor.ts** | Extracts target blocks with surrounding context and [EDIT_START]/[EDIT_END] markers for AI                        |
+| **surgicalMerger.ts**   | Merges edited section back into document, preserving non-targeted content exactly                                 |
 
 **Flow:**
+
 1. `parseMarkdownStructure()` → BlockNode[] tree with line positions
 2. `identifyTargets()` → confidence-scored matches or clarification request
 3. `extractContext()` → focused content with boundary markers
@@ -247,11 +253,11 @@ Precision editing utilities for targeted section editing:
 
 ### Services
 
-| Service | Purpose |
-|---------|---------|
+| Service                   | Purpose                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
 | **RecommendationService** | 6 generators (mindmap, flashcards, concepts, exercises, resources, slides) with 5-min cache |
-| **OrchestrationService** | Workflow templates (course creation, study plan, research project, knowledge base) |
-| **SourceProcessor** | PDF/link/text processing pipeline with chunking and embedding |
+| **OrchestrationService**  | Workflow templates (course creation, study plan, research project, knowledge base)          |
+| **SourceProcessor**       | PDF/link/text processing pipeline with chunking and embedding                               |
 
 ### Workflows (8 quick actions)
 
@@ -264,6 +270,7 @@ generate_study_note, create_summary, extract_key_terms, compare_sources, generat
 **Purpose:** Editor type definitions, UI assets, and abstraction layer over Muya.
 
 **Status:** Transitional. The actual editor implementation lives in `@inkdown/muya`. This package provides:
+
 - `EditorOptions` interface (markdown settings, themes, diagram configs)
 - `EditorEventMap` type (change, selection-change, stateChange, toc-change)
 - Icon assets (50+ SVG icons for editor toolbar)
@@ -323,15 +330,15 @@ Blocks are registered dynamically via `ScrollPage.register()`. 40+ block types t
 
 ### Key Subsystems
 
-| System | Purpose |
-|--------|---------|
-| **Selection** | Cursor tracking, range management, DOM selection mapping |
-| **History** | Undo/redo via OT operation stack |
-| **EventCenter** | Custom pub/sub + DOM event management |
-| **Clipboard** | Copy/paste with markdown/HTML conversion |
-| **Search** | Find/replace within document |
-| **I18n** | Internationalization (en, zh, ja) |
-| **UI** | 13 floating panels (format toolbar, quick insert, link tools, image tools, table tools, etc.) |
+| System          | Purpose                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| **Selection**   | Cursor tracking, range management, DOM selection mapping                                      |
+| **History**     | Undo/redo via OT operation stack                                                              |
+| **EventCenter** | Custom pub/sub + DOM event management                                                         |
+| **Clipboard**   | Copy/paste with markdown/HTML conversion                                                      |
+| **Search**      | Find/replace within document                                                                  |
+| **I18n**        | Internationalization (en, zh, ja)                                                             |
+| **UI**          | 13 floating panels (format toolbar, quick insert, link tools, image tools, table tools, etc.) |
 
 ### Supported Syntax
 
@@ -344,6 +351,7 @@ Blocks are registered dynamically via `ScrollPage.register()`. 40+ block types t
 Interactive HTML/CSS/JS artifacts rendered in sandboxed iframes. Created via AI `create_artifact` tool or manually via fenced code block with `artifact` language.
 
 **Structure:**
+
 ```
 ArtifactBlock (figure.mu-artifact-block)
 ├── ArtifactPreview (sandboxed iframe with CDN support)
@@ -355,6 +363,7 @@ ArtifactBlock (figure.mu-artifact-block)
 **CDN Support:** Tailwind CSS, React 18, ReactDOM, Babel for JSX transformation.
 
 **JSON Format:**
+
 ```json
 {
   "title": "Artifact Title",
@@ -365,13 +374,14 @@ ArtifactBlock (figure.mu-artifact-block)
 ```
 
 **Components (apps/web):**
+
 - `ArtifactToolbar.vue` - Glassmorphic floating toolbar (edit, fullscreen, delete)
 - `ArtifactCodeModal.vue` - Tabbed code editor modal (HTML/CSS/JS tabs)
 
 ### Plugin System
 
 ```typescript
-Muya.use(Plugin, options)  // Register before instantiation
+Muya.use(Plugin, options) // Register before instantiation
 ```
 
 Plugins receive the Muya instance and can hook into events and extend UI.
@@ -400,35 +410,35 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 
 ### API Routes
 
-| Route | Auth | Purpose |
-|-------|------|---------|
-| `GET /health/*` | No | Health, readiness, liveness checks |
-| `POST /api/agent/secretary` | Yes | Secretary agent (intent routing) - SSE |
-| `POST /api/agent/chat` | Yes | Chat agent with RAG - SSE |
-| `POST /api/agent/note/action` | Yes | Note manipulation - SSE |
-| `POST /api/agent/planner/*` | Yes | Goal planning - SSE |
-| `POST /api/agent/agentic/*` | Yes | Autonomous tasks - SSE |
-| `GET /api/agent/capabilities` | Yes | Available agents metadata |
-| `POST /api/chat/sessions` | Yes | Chat session CRUD |
-| `POST /api/search/semantic` | Yes | Vector search (embedding-based) |
-| `POST /api/search/hybrid` | Yes | Full-text + semantic search |
-| `POST /api/embed/note` | Yes | Queue note for embedding |
-| `POST /api/recommend/*` | Yes | Generate recommendations (mindmap, flashcards, etc.) - SSE |
-| `POST /api/orchestration/execute` | Yes | Execute workflow - SSE |
-| `POST /api/slides/generate` | Yes | Slide generation via Gemini - SSE |
-| `POST /api/sources/upload` | Yes | Upload file source - SSE |
-| `POST /api/sources/link` | Yes | Add link source - SSE |
-| `POST /api/sources/action` | Yes | Execute workflow on sources - SSE |
-| `POST /api/learning-resources/save` | Yes | Save learning resource |
-| `GET /api/learning-resources/note/:id` | Yes | Get resources for note |
+| Route                                  | Auth | Purpose                                                    |
+| -------------------------------------- | ---- | ---------------------------------------------------------- |
+| `GET /health/*`                        | No   | Health, readiness, liveness checks                         |
+| `POST /api/agent/secretary`            | Yes  | Secretary agent (intent routing) - SSE                     |
+| `POST /api/agent/chat`                 | Yes  | Chat agent with RAG - SSE                                  |
+| `POST /api/agent/note/action`          | Yes  | Note manipulation - SSE                                    |
+| `POST /api/agent/planner/*`            | Yes  | Goal planning - SSE                                        |
+| `POST /api/agent/agentic/*`            | Yes  | Autonomous tasks - SSE                                     |
+| `GET /api/agent/capabilities`          | Yes  | Available agents metadata                                  |
+| `POST /api/chat/sessions`              | Yes  | Chat session CRUD                                          |
+| `POST /api/search/semantic`            | Yes  | Vector search (embedding-based)                            |
+| `POST /api/search/hybrid`              | Yes  | Full-text + semantic search                                |
+| `POST /api/embed/note`                 | Yes  | Queue note for embedding                                   |
+| `POST /api/recommend/*`                | Yes  | Generate recommendations (mindmap, flashcards, etc.) - SSE |
+| `POST /api/orchestration/execute`      | Yes  | Execute workflow - SSE                                     |
+| `POST /api/slides/generate`            | Yes  | Slide generation via Gemini - SSE                          |
+| `POST /api/sources/upload`             | Yes  | Upload file source - SSE                                   |
+| `POST /api/sources/link`               | Yes  | Add link source - SSE                                      |
+| `POST /api/sources/action`             | Yes  | Execute workflow on sources - SSE                          |
+| `POST /api/learning-resources/save`    | Yes  | Save learning resource                                     |
+| `GET /api/learning-resources/note/:id` | Yes  | Get resources for note                                     |
 
 ### Services
 
-| Service | Purpose |
-|---------|---------|
-| **MemoryService** | AI memory persistence (preferences, plans, context) via Supabase RPC |
-| **RoadmapService** | Learning roadmap CRUD and week advancement |
-| **AgentSessionService** | LangGraph state persistence for multi-turn conversations |
+| Service                 | Purpose                                                              |
+| ----------------------- | -------------------------------------------------------------------- |
+| **MemoryService**       | AI memory persistence (preferences, plans, context) via Supabase RPC |
+| **RoadmapService**      | Learning roadmap CRUD and week advancement                           |
+| **AgentSessionService** | LangGraph state persistence for multi-turn conversations             |
 
 ### Streaming
 
@@ -451,57 +461,57 @@ Multiple endpoints support SSE (`text/event-stream`). Chunk types: `text-delta`,
 
 ### Routes
 
-| Path | View | Purpose |
-|------|------|---------|
-| `/` | EditorView | Main editor with tabs, sidebar, AI panel |
-| `/auth` | AuthView | Login/signup (email, OAuth, guest) |
-| `/ai` | AIChat | Full-page AI chat interface |
+| Path    | View       | Purpose                                  |
+| ------- | ---------- | ---------------------------------------- |
+| `/`     | EditorView | Main editor with tabs, sidebar, AI panel |
+| `/auth` | AuthView   | Login/signup (email, OAuth, guest)       |
+| `/ai`   | AIChat     | Full-page AI chat interface              |
 
 ### Pinia Stores
 
-| Store | Key State |
-|-------|-----------|
-| **auth** | `user`, `isAuthenticated`. Actions: signIn, signUp, signInWithOAuth, signOut |
-| **editor** | `currentDocument`, `tabs`, `documents`, `wordCount`, `toc`. Actions: loadDocuments, createDocument, openDocument, updateContent, saveDocument, close/switchTab |
-| **ai** | `sessions`, `status` (idle/streaming/tool-calling/thinking/clarifying/error), `thinkingSteps`, `citations`, `pendingEdits` (hunk-level), `pendingClarification` (target selection), `diffBlockPairs` (block-pair tracking), `diffBlocks` (per-block accept/reject), `pendingArtifacts` (AI-created artifacts awaiting insertion), `subTasks` (DeepAgent task decomposition). Actions: createSession, addMessage, appendToLastMessage, addPendingEdit, acceptHunk/rejectHunk, addDiffBlockPair, updateDiffBlockPair, getDiffBlockPairsForNote, clearDiffBlockPairs, addDiffBlock, updateDiffBlock, getDiffBlock, getDiffBlocksForNote, getDiffBlocksForHunk, areAllBlocksResolved, clearDiffBlocks, setClarificationRequest, resolveClarification, cancelClarification, addPendingArtifact, markArtifactInserted, getPendingArtifactsForNote, clearPendingArtifacts, setSubTasks, updateSubTask, updateSubTaskProgress, clearSubTasks |
-| **project** | `folders`, `expandedFolderIds`. Actions: loadFolders, create/rename/deleteFolder, moveProject |
-| **preferences** | All user preferences (theme, editor, markdown, AI). Syncs to Supabase or LocalForage |
-| **layout** | `sidebarVisible`, `editorMode` (wysiwyg/source), `isFullscreen`, `isFocusMode`, `isZenMode` |
-| **notifications** | Toast notification queue (info/success/warning/error) |
-| **sources** | Source management per note (PDF, link, text). Upload with SSE progress. Workflow action execution |
-| **recommendations** | AI-generated content per note (mindmap, flashcards, concepts, exercises, resources, slides) |
-| **learningResources** | Persistent storage of generated learning resources attached to notes |
+| Store                 | Key State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **auth**              | `user`, `isAuthenticated`. Actions: signIn, signUp, signInWithOAuth, signOut                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **editor**            | `currentDocument`, `tabs`, `documents`, `wordCount`, `toc`. Actions: loadDocuments, createDocument, openDocument, updateContent, saveDocument, close/switchTab                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **ai**                | `sessions`, `status` (idle/streaming/tool-calling/thinking/clarifying/error), `thinkingSteps`, `citations`, `pendingEdits` (hunk-level), `pendingClarification` (target selection), `diffBlockPairs` (block-pair tracking), `diffBlocks` (per-block accept/reject), `pendingArtifacts` (AI-created artifacts awaiting insertion), `subTasks` (DeepAgent task decomposition). Actions: createSession, addMessage, appendToLastMessage, addPendingEdit, acceptHunk/rejectHunk, addDiffBlockPair, updateDiffBlockPair, getDiffBlockPairsForNote, clearDiffBlockPairs, addDiffBlock, updateDiffBlock, getDiffBlock, getDiffBlocksForNote, getDiffBlocksForHunk, areAllBlocksResolved, clearDiffBlocks, setClarificationRequest, resolveClarification, cancelClarification, addPendingArtifact, markArtifactInserted, getPendingArtifactsForNote, clearPendingArtifacts, setSubTasks, updateSubTask, updateSubTaskProgress, clearSubTasks |
+| **project**           | `folders`, `expandedFolderIds`. Actions: loadFolders, create/rename/deleteFolder, moveProject                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **preferences**       | All user preferences (theme, editor, markdown, AI). Syncs to Supabase or LocalForage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **layout**            | `sidebarVisible`, `editorMode` (wysiwyg/source), `isFullscreen`, `isFocusMode`, `isZenMode`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **notifications**     | Toast notification queue (info/success/warning/error)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **sources**           | Source management per note (PDF, link, text). Upload with SSE progress. Workflow action execution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **recommendations**   | AI-generated content per note (mindmap, flashcards, concepts, exercises, resources, slides)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **learningResources** | Persistent storage of generated learning resources attached to notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ### Service Layer
 
-| Service | Purpose |
-|---------|---------|
-| **factory.ts** | Provider-agnostic initialization (Supabase or local adapters) |
-| **notes.service.ts** | Note CRUD via database provider |
-| **projects.service.ts** | Project/folder CRUD |
-| **ai.service.ts** | Agent communication with SSE streaming |
-| **learningResources.service.ts** | Learning resource persistence |
-| **attachments.service.ts** | File attachment management |
-| **subscriptions.service.ts** | Realtime database subscriptions |
-| **supabase.ts** | Supabase client + auth/database/storage adapters |
-| **local/** | Offline fallback adapters (LocalForage) |
+| Service                          | Purpose                                                       |
+| -------------------------------- | ------------------------------------------------------------- |
+| **factory.ts**                   | Provider-agnostic initialization (Supabase or local adapters) |
+| **notes.service.ts**             | Note CRUD via database provider                               |
+| **projects.service.ts**          | Project/folder CRUD                                           |
+| **ai.service.ts**                | Agent communication with SSE streaming                        |
+| **learningResources.service.ts** | Learning resource persistence                                 |
+| **attachments.service.ts**       | File attachment management                                    |
+| **subscriptions.service.ts**     | Realtime database subscriptions                               |
+| **supabase.ts**                  | Supabase client + auth/database/storage adapters              |
+| **local/**                       | Offline fallback adapters (LocalForage)                       |
 
 ### Composables
 
-| Composable | Purpose |
-|------------|---------|
+| Composable           | Purpose                                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | **useDiffBlocks.ts** | True inline diff system via DOM injection. Injects real blocks into Muya's DOM structure, handles per-block accept/reject, manages diff styling |
 
 ### Utilities (apps/web/src/utils/)
 
-| Utility | Purpose |
-|---------|---------|
-| **markdownBlockMap.ts** | Maps markdown line numbers to block indices using the AI structure parser (used for inline diff placement) |
-| **muyaMarkdownParser.ts** | Parses markdown to Muya block states using MarkdownToState class |
-| **muyaBlockMapper.ts** | Maps line numbers to Muya DOM blocks for positioning |
-| **api.ts** | API client utilities |
-| **platform.ts** | Platform detection utilities |
-| **mathRenderer.ts** | Math rendering utilities |
+| Utility                   | Purpose                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **markdownBlockMap.ts**   | Maps markdown line numbers to block indices using the AI structure parser (used for inline diff placement) |
+| **muyaMarkdownParser.ts** | Parses markdown to Muya block states using MarkdownToState class                                           |
+| **muyaBlockMapper.ts**    | Maps line numbers to Muya DOM blocks for positioning                                                       |
+| **api.ts**                | API client utilities                                                                                       |
+| **platform.ts**           | Platform detection utilities                                                                               |
+| **mathRenderer.ts**       | Math rendering utilities                                                                                   |
 
 ### Component Architecture
 
@@ -610,20 +620,20 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Key Supabase Tables
 
-| Table | Purpose |
-|-------|---------|
-| `notes` | User notes (id, user_id, title, content, project_id, tags, version, etc.) |
-| `projects` | Folder hierarchy (id, user_id, parent_id, name, path, depth, sort_order) |
-| `attachments` | File attachments (storage_path, content_type, processing_status, extracted_text) |
-| `chat_sessions` | AI chat sessions (title, context_note_ids, agent_type) |
-| `chat_messages` | Messages in sessions (role, content, tool_calls, retrieved_chunks) |
-| `note_embeddings` | Vector embeddings (chunk_text, embedding[], model, content_hash) |
-| `embedding_queue` | Async embedding jobs (status, priority, attempts) |
-| `note_learning_resources` | Saved learning materials (type, data, item_count) |
-| `learning_roadmaps` | Learning roadmaps (topic, status, current_week, content) |
-| `agent_sessions` | LangGraph state persistence (thread_id, state, checkpoint_id) |
-| `ai_memory` | AI memory storage (memory_type, content, metadata) - accessed via RPC |
-| `user_profiles` | User profile data (display_name, plan, storage_used) |
+| Table                     | Purpose                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `notes`                   | User notes (id, user_id, title, content, project_id, tags, version, etc.)        |
+| `projects`                | Folder hierarchy (id, user_id, parent_id, name, path, depth, sort_order)         |
+| `attachments`             | File attachments (storage_path, content_type, processing_status, extracted_text) |
+| `chat_sessions`           | AI chat sessions (title, context_note_ids, agent_type)                           |
+| `chat_messages`           | Messages in sessions (role, content, tool_calls, retrieved_chunks)               |
+| `note_embeddings`         | Vector embeddings (chunk_text, embedding[], model, content_hash)                 |
+| `embedding_queue`         | Async embedding jobs (status, priority, attempts)                                |
+| `note_learning_resources` | Saved learning materials (type, data, item_count)                                |
+| `learning_roadmaps`       | Learning roadmaps (topic, status, current_week, content)                         |
+| `agent_sessions`          | LangGraph state persistence (thread_id, state, checkpoint_id)                    |
+| `ai_memory`               | AI memory storage (memory_type, content, metadata) - accessed via RPC            |
+| `user_profiles`           | User profile data (display_name, plan, storage_used)                             |
 
 **Security:** Row-Level Security (RLS) enforced. User-scoped Supabase client created per request.
 
@@ -709,13 +719,13 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Editor Modes
 
-| Mode | Implementation |
-|------|---------------|
-| WYSIWYG | Muya engine (contenteditable) |
-| Source | CodeMirror 6 (textarea-based) |
-| Focus | Highlight active paragraph, dim others |
-| Typewriter | Keep cursor vertically centered |
-| Zen | Hide all UI except editor |
+| Mode       | Implementation                         |
+| ---------- | -------------------------------------- |
+| WYSIWYG    | Muya engine (contenteditable)          |
+| Source     | CodeMirror 6 (textarea-based)          |
+| Focus      | Highlight active paragraph, dim others |
+| Typewriter | Keep cursor vertically centered        |
+| Zen        | Hide all UI except editor              |
 
 ---
 
@@ -723,22 +733,22 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Required Variables
 
-| Variable | Package | Purpose |
-|----------|---------|---------|
-| `VITE_SUPABASE_URL` | web, api | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | web, api | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | api | Admin key (bypasses RLS) |
-| `OPENAI_API_KEY` | api | Required for embeddings |
+| Variable                    | Package  | Purpose                  |
+| --------------------------- | -------- | ------------------------ |
+| `VITE_SUPABASE_URL`         | web, api | Supabase project URL     |
+| `VITE_SUPABASE_ANON_KEY`    | web, api | Supabase anonymous key   |
+| `SUPABASE_SERVICE_ROLE_KEY` | api      | Admin key (bypasses RLS) |
+| `OPENAI_API_KEY`            | api      | Required for embeddings  |
 
 ### Optional Variables
 
-| Variable | Purpose |
-|----------|---------|
-| `ANTHROPIC_API_KEY` | Claude chat (default model) |
-| `GOOGLE_AI_API_KEY` | Gemini slides/research |
-| `API_PORT` | Backend port (default 3001) |
-| `CORS_ORIGIN` | Allowed frontend origin |
-| `VITE_PROVIDER` | Service provider: supabase or local |
+| Variable            | Purpose                             |
+| ------------------- | ----------------------------------- |
+| `ANTHROPIC_API_KEY` | Claude chat (default model)         |
+| `GOOGLE_AI_API_KEY` | Gemini slides/research              |
+| `API_PORT`          | Backend port (default 3001)         |
+| `CORS_ORIGIN`       | Allowed frontend origin             |
+| `VITE_PROVIDER`     | Service provider: supabase or local |
 
 ### Version Constraints
 
@@ -757,25 +767,25 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 ### Backend (`packages/ai/src/agents/secretary/`)
 
-| File | Purpose |
-|------|---------|
-| `agent.ts` | `SecretaryAgent` — deepagents-based agent with `createDeepAgent()`, streaming support |
-| `tools.ts` | 8 tools: `create_roadmap`, `save_roadmap`, `modify_roadmap`, `get_current_week_tasks`, `update_today_plan`, `list_memory_files`, `read_memory_file`, `write_memory_file` |
-| `memory.ts` | `MemoryService` — Supabase CRUD for `secretary_memory` table, plus lifecycle automation (day transition, weekly expansion) |
-| `prompts.ts` | System prompts for the secretary agent and subagents |
-| `subagents.ts` | Planner and Researcher subagents for complex tasks |
-| `index.ts` | Barrel exports |
+| File           | Purpose                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `agent.ts`     | `SecretaryAgent` — deepagents-based agent with `createDeepAgent()`, streaming support                                                                                    |
+| `tools.ts`     | 8 tools: `create_roadmap`, `save_roadmap`, `modify_roadmap`, `get_current_week_tasks`, `update_today_plan`, `list_memory_files`, `read_memory_file`, `write_memory_file` |
+| `memory.ts`    | `MemoryService` — Supabase CRUD for `secretary_memory` table, plus lifecycle automation (day transition, weekly expansion)                                               |
+| `prompts.ts`   | System prompts for the secretary agent and subagents                                                                                                                     |
+| `subagents.ts` | Planner and Researcher subagents for complex tasks                                                                                                                       |
+| `index.ts`     | Barrel exports                                                                                                                                                           |
 
 ### Memory Files
 
-| File | Purpose |
-|------|---------|
-| `Plan.md` | Active learning roadmaps, "This Week" schedule |
-| `AI.md` | User study preferences (focus time, break frequency, availability) |
-| `Today.md` | Today's time-blocked task schedule |
-| `Tomorrow.md` | Generated tomorrow plan (pending approval) |
-| `Plans/*.md` | Individual roadmap archives |
-| `History/*.md` | Archived daily plans (auto-archived by day transition) |
+| File           | Purpose                                                            |
+| -------------- | ------------------------------------------------------------------ |
+| `Plan.md`      | Active learning roadmaps, "This Week" schedule                     |
+| `AI.md`        | User study preferences (focus time, break frequency, availability) |
+| `Today.md`     | Today's time-blocked task schedule                                 |
+| `Tomorrow.md`  | Generated tomorrow plan (pending approval)                         |
+| `Plans/*.md`   | Individual roadmap archives                                        |
+| `History/*.md` | Archived daily plans (auto-archived by day transition)             |
 
 ### Lifecycle Automation
 
@@ -784,17 +794,17 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 ### API Endpoints (`apps/api/src/routes/secretary.ts`)
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/secretary/chat` | Streaming chat via SSE |
-| GET | `/api/secretary/memory` | List all memory files |
-| GET | `/api/secretary/memory/:filename` | Get specific memory file |
-| PUT | `/api/secretary/memory/:filename` | Update memory file |
-| POST | `/api/secretary/initialize` | Create default memory files |
-| POST | `/api/secretary/prepare-tomorrow` | AI generates tomorrow's plan (SSE) |
-| POST | `/api/secretary/approve-tomorrow` | Move Tomorrow.md → Today.md |
-| POST | `/api/secretary/day-transition` | Trigger day transition manually |
-| GET | `/api/secretary/history` | List archived daily plans |
+| Method | Path                              | Purpose                            |
+| ------ | --------------------------------- | ---------------------------------- |
+| POST   | `/api/secretary/chat`             | Streaming chat via SSE             |
+| GET    | `/api/secretary/memory`           | List all memory files              |
+| GET    | `/api/secretary/memory/:filename` | Get specific memory file           |
+| PUT    | `/api/secretary/memory/:filename` | Update memory file                 |
+| POST   | `/api/secretary/initialize`       | Create default memory files        |
+| POST   | `/api/secretary/prepare-tomorrow` | AI generates tomorrow's plan (SSE) |
+| POST   | `/api/secretary/approve-tomorrow` | Move Tomorrow.md → Today.md        |
+| POST   | `/api/secretary/day-transition`   | Trigger day transition manually    |
+| GET    | `/api/secretary/history`          | List archived daily plans          |
 
 ### Frontend
 
@@ -802,22 +812,22 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 **Components** (`apps/web/src/components/secretary/`):
 
-| Component | Purpose |
-|-----------|---------|
-| `SecretaryChat.vue` | Chat interface with ChatComposer + SecretaryMessageCard |
-| `SecretaryMessageCard.vue` | Rich message rendering (markdown, tool calls, thinking steps) |
-| `TodayPlan.vue` | Today's task list with status toggles |
-| `TomorrowPlan.vue` | Tomorrow plan preview with Edit and Approve buttons |
-| `WeekCalendar.vue` | 7-day grid with plan dots parsed from "This Week" section |
-| `MemoryFileEditor.vue` | Edit/preview toggle for memory files (raw markdown + rendered preview) |
-| `ActivePlans.vue` | List of active learning roadmaps |
-| `PlanCard.vue` | Individual plan card with progress |
+| Component                  | Purpose                                                                |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `SecretaryChat.vue`        | Chat interface with ChatComposer + SecretaryMessageCard                |
+| `SecretaryMessageCard.vue` | Rich message rendering (markdown, tool calls, thinking steps)          |
+| `TodayPlan.vue`            | Today's task list with status toggles                                  |
+| `TomorrowPlan.vue`         | Tomorrow plan preview with Edit and Approve buttons                    |
+| `WeekCalendar.vue`         | 7-day grid with plan dots parsed from "This Week" section              |
+| `MemoryFileEditor.vue`     | Edit/preview toggle for memory files (raw markdown + rendered preview) |
+| `ActivePlans.vue`          | List of active learning roadmaps                                       |
+| `PlanCard.vue`             | Individual plan card with progress                                     |
 
 **Store:** `apps/web/src/stores/secretary.ts` — Pinia store managing memory files, daily plans, active roadmaps, and chat state. Handles full SSE event discrimination (`text`, `tool_call`, `tool_result`, `thinking`, `done`, `error`).
 
 ### Database
 
-| Table | Purpose |
-|-------|---------|
-| `secretary_memory` | Markdown memory files per user (unique on `user_id, filename`) |
-| `secretary_threads` | Chat thread persistence for conversation continuity |
+| Table               | Purpose                                                        |
+| ------------------- | -------------------------------------------------------------- |
+| `secretary_memory`  | Markdown memory files per user (unique on `user_id, filename`) |
+| `secretary_threads` | Chat thread persistence for conversation continuity            |

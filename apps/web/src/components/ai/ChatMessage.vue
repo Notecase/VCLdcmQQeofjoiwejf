@@ -15,13 +15,7 @@ import { computed, ref } from 'vue'
 import type { ChatMessage, CompletedArtifact } from '@/stores/ai'
 import { useAIStore } from '@/stores/ai'
 import { renderMathContent } from '@/utils/mathRenderer'
-import {
-  Copy,
-  Check,
-  RotateCcw,
-  ThumbsUp,
-  ThumbsDown,
-} from 'lucide-vue-next'
+import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
 import StreamingCursor from './shared/StreamingCursor.vue'
 import ToolCallCard from './ToolCallCard.vue'
 import ArtifactSummaryCard from './ArtifactSummaryCard.vue'
@@ -57,13 +51,11 @@ const isStreaming = computed(() => {
 const toolCalls = computed(() => props.message.toolCalls || [])
 
 // Completed artifacts linked to this message
-const completedArtifacts = computed(() =>
-  store.getCompletedArtifactsForMessage(props.message.id)
-)
+const completedArtifacts = computed(() => store.getCompletedArtifactsForMessage(props.message.id))
 
 // Check if there are thinking steps for this message
-const hasThinkingSteps = computed(() =>
-  store.getThinkingStepsForMessage(props.message.id).length > 0
+const hasThinkingSteps = computed(
+  () => store.getThinkingStepsForMessage(props.message.id).length > 0
 )
 
 // Format timestamp
@@ -133,10 +125,22 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
     <!-- Header row -->
     <div class="message-header">
       <div class="header-left">
-        <span class="role-label" :class="roleClass">{{ roleLabel }}</span>
-        <span v-if="message.model" class="model-chip">{{ message.model }}</span>
+        <span
+          class="role-label"
+          :class="roleClass"
+          >{{ roleLabel }}</span
+        >
+        <span
+          v-if="message.model"
+          class="model-chip"
+          >{{ message.model }}</span
+        >
       </div>
-      <span v-if="formattedTime" class="timestamp">{{ formattedTime }}</span>
+      <span
+        v-if="formattedTime"
+        class="timestamp"
+        >{{ formattedTime }}</span
+      >
     </div>
 
     <!-- Thinking steps for this message (assistant only) -->
@@ -156,7 +160,10 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
     <!-- Content -->
     <div class="message-body">
-      <div class="prose" v-html="renderedContent" />
+      <div
+        class="prose"
+        v-html="renderedContent"
+      />
       <StreamingCursor v-if="isStreaming" />
     </div>
 
@@ -173,22 +180,43 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
     <!-- Hover actions - positioned below all content -->
     <Transition name="slide-in">
-      <div v-if="showActions" class="message-actions">
+      <div
+        v-if="showActions"
+        class="message-actions"
+      >
         <button
           class="action-btn"
           :title="copied ? 'Copied!' : 'Copy'"
           @click="copyMessage"
         >
-          <Check v-if="copied" :size="12" />
-          <Copy v-else :size="12" />
+          <Check
+            v-if="copied"
+            :size="12"
+          />
+          <Copy
+            v-else
+            :size="12"
+          />
         </button>
-        <button class="action-btn" title="Retry" @click="handleRetry">
+        <button
+          class="action-btn"
+          title="Retry"
+          @click="handleRetry"
+        >
           <RotateCcw :size="12" />
         </button>
-        <button class="action-btn" title="Good response" @click="handleFeedback('up')">
+        <button
+          class="action-btn"
+          title="Good response"
+          @click="handleFeedback('up')"
+        >
           <ThumbsUp :size="12" />
         </button>
-        <button class="action-btn" title="Bad response" @click="handleFeedback('down')">
+        <button
+          class="action-btn"
+          title="Bad response"
+          @click="handleFeedback('down')"
+        >
           <ThumbsDown :size="12" />
         </button>
       </div>

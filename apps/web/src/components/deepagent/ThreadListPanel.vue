@@ -8,10 +8,7 @@
  */
 import { computed } from 'vue'
 import type { ResearchThread } from '@inkdown/shared/types'
-import {
-  SquarePen,
-  Trash2,
-} from 'lucide-vue-next'
+import { SquarePen, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   threads: ResearchThread[]
@@ -70,7 +67,7 @@ interface ThreadGroup {
 
 const groupedThreads = computed<ThreadGroup[]>(() => {
   const sorted = [...props.threads].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   )
 
   const interrupted: ResearchThread[] = []
@@ -82,17 +79,13 @@ const groupedThreads = computed<ThreadGroup[]>(() => {
   for (const thread of sorted) {
     if (thread.status === 'interrupted') {
       interrupted.push(thread)
-    }
-    else if (isToday(thread.updatedAt)) {
+    } else if (isToday(thread.updatedAt)) {
       today.push(thread)
-    }
-    else if (isYesterday(thread.updatedAt)) {
+    } else if (isYesterday(thread.updatedAt)) {
       yesterday.push(thread)
-    }
-    else if (isThisWeek(thread.updatedAt)) {
+    } else if (isThisWeek(thread.updatedAt)) {
       thisWeek.push(thread)
-    }
-    else {
+    } else {
       older.push(thread)
     }
   }
@@ -109,12 +102,18 @@ const groupedThreads = computed<ThreadGroup[]>(() => {
 
 function statusDotClass(status: ResearchThread['status']): string {
   switch (status) {
-    case 'idle': return 'dot-idle'
-    case 'busy': return 'dot-busy'
-    case 'interrupted': return 'dot-interrupted'
-    case 'error': return 'dot-error'
-    case 'completed': return 'dot-idle'
-    default: return ''
+    case 'idle':
+      return 'dot-idle'
+    case 'busy':
+      return 'dot-busy'
+    case 'interrupted':
+      return 'dot-interrupted'
+    case 'error':
+      return 'dot-error'
+    case 'completed':
+      return 'dot-idle'
+    default:
+      return ''
   }
 }
 
@@ -129,19 +128,34 @@ function handleDelete(e: Event, threadId: string) {
     <!-- Header -->
     <div class="panel-header">
       <span class="panel-title">Threads</span>
-      <button class="new-thread-btn" type="button" title="New Thread" @click="emit('create')">
+      <button
+        class="new-thread-btn"
+        type="button"
+        title="New Thread"
+        @click="emit('create')"
+      >
         <SquarePen :size="16" />
       </button>
     </div>
 
     <!-- Thread groups -->
     <div class="thread-scroll">
-      <div v-if="threads.length === 0" class="empty-state">
+      <div
+        v-if="threads.length === 0"
+        class="empty-state"
+      >
         No threads yet. Start one to begin.
       </div>
 
-      <div v-for="group in groupedThreads" :key="group.label" class="thread-group">
-        <span class="group-label" :class="{ attention: group.label === 'Requiring Attention' }">
+      <div
+        v-for="group in groupedThreads"
+        :key="group.label"
+        class="thread-group"
+      >
+        <span
+          class="group-label"
+          :class="{ attention: group.label === 'Requiring Attention' }"
+        >
           {{ group.label }}
         </span>
 
@@ -157,10 +171,18 @@ function handleDelete(e: Event, threadId: string) {
             <span class="thread-name">{{ thread.title || 'Untitled thread' }}</span>
             <div class="thread-meta">
               <span class="thread-time">{{ formatTime(thread.updatedAt) }}</span>
-              <span class="status-dot" :class="statusDotClass(thread.status)" />
+              <span
+                class="status-dot"
+                :class="statusDotClass(thread.status)"
+              />
             </div>
           </div>
-          <button class="delete-btn" type="button" title="Delete thread" @click="handleDelete($event, thread.id)">
+          <button
+            class="delete-btn"
+            type="button"
+            title="Delete thread"
+            @click="handleDelete($event, thread.id)"
+          >
             <Trash2 :size="12" />
           </button>
         </button>

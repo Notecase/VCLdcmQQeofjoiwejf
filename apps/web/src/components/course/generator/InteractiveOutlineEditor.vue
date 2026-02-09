@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  Check, X, Plus, Trash2, ChevronDown, ChevronRight,
-  GripVertical, Clock,
+  Check,
+  X,
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  Clock,
 } from 'lucide-vue-next'
-import type { CourseOutline, CourseOutlineModule, CourseOutlineLesson, LessonType } from '@inkdown/shared/types'
+import type {
+  CourseOutline,
+  CourseOutlineModule,
+  CourseOutlineLesson,
+  LessonType,
+} from '@inkdown/shared/types'
 import LessonTypeIcon from '../shared/LessonTypeIcon.vue'
 
 const props = defineProps<{
@@ -18,13 +29,17 @@ const emit = defineEmits<{
 
 // Deep clone for local editing
 const localOutline = ref<CourseOutline>(JSON.parse(JSON.stringify(props.outline)))
-const expandedModules = ref<Set<string>>(new Set(props.outline.modules.map(m => m.id)))
+const expandedModules = ref<Set<string>>(new Set(props.outline.modules.map((m) => m.id)))
 const isRejecting = ref(false)
 const feedback = ref('')
 
-watch(() => props.outline, (val) => {
-  localOutline.value = JSON.parse(JSON.stringify(val))
-}, { deep: true })
+watch(
+  () => props.outline,
+  (val) => {
+    localOutline.value = JSON.parse(JSON.stringify(val))
+  },
+  { deep: true }
+)
 
 function toggleModule(id: string) {
   if (expandedModules.value.has(id)) {
@@ -48,12 +63,16 @@ function updateLessonType(lesson: CourseOutlineLesson, type: LessonType) {
 
 function removeModule(idx: number) {
   localOutline.value.modules.splice(idx, 1)
-  localOutline.value.modules.forEach((m, i) => { m.order = i + 1 })
+  localOutline.value.modules.forEach((m, i) => {
+    m.order = i + 1
+  })
 }
 
 function removeLesson(mod: CourseOutlineModule, lessonIdx: number) {
   mod.lessons.splice(lessonIdx, 1)
-  mod.lessons.forEach((l, i) => { l.order = i + 1 })
+  mod.lessons.forEach((l, i) => {
+    l.order = i + 1
+  })
 }
 
 function addModule() {
@@ -88,7 +107,9 @@ function moveModule(fromIdx: number, direction: 'up' | 'down') {
   const temp = mods[fromIdx]
   mods[fromIdx] = mods[toIdx]
   mods[toIdx] = temp
-  mods.forEach((m, i) => { m.order = i + 1 })
+  mods.forEach((m, i) => {
+    m.order = i + 1
+  })
 }
 
 function handleApprove() {
@@ -106,9 +127,13 @@ function handleReject() {
 const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'quiz']
 
 const totalLessons = ref(0)
-watch(() => localOutline.value.modules, (mods) => {
-  totalLessons.value = mods.reduce((sum, m) => sum + m.lessons.length, 0)
-}, { deep: true, immediate: true })
+watch(
+  () => localOutline.value.modules,
+  (mods) => {
+    totalLessons.value = mods.reduce((sum, m) => sum + m.lessons.length, 0)
+  },
+  { deep: true, immediate: true }
+)
 </script>
 
 <template>
@@ -129,8 +154,11 @@ watch(() => localOutline.value.modules, (mods) => {
         v-model="localOutline.title"
         class="outline-title-input"
         placeholder="Course title..."
+      />
+      <span
+        class="difficulty-badge"
+        :class="localOutline.difficulty"
       >
-      <span class="difficulty-badge" :class="localOutline.difficulty">
         {{ localOutline.difficulty }}
       </span>
     </div>
@@ -152,53 +180,86 @@ watch(() => localOutline.value.modules, (mods) => {
           >
             <GripVertical :size="14" />
           </button>
-          <button class="expand-btn" @click="toggleModule(mod.id)">
-            <ChevronDown v-if="expandedModules.has(mod.id)" :size="14" />
-            <ChevronRight v-else :size="14" />
+          <button
+            class="expand-btn"
+            @click="toggleModule(mod.id)"
+          >
+            <ChevronDown
+              v-if="expandedModules.has(mod.id)"
+              :size="14"
+            />
+            <ChevronRight
+              v-else
+              :size="14"
+            />
           </button>
           <input
             :value="mod.title"
             class="inline-edit module-title-input"
             @input="updateModuleTitle(mod, ($event.target as HTMLInputElement).value)"
-          >
+          />
           <span class="lesson-count-badge">{{ mod.lessons.length }}</span>
-          <button class="icon-btn danger" title="Remove module" @click="removeModule(modIdx)">
+          <button
+            class="icon-btn danger"
+            title="Remove module"
+            @click="removeModule(modIdx)"
+          >
             <Trash2 :size="13" />
           </button>
         </div>
 
         <!-- Module body (lessons) -->
-        <div v-if="expandedModules.has(mod.id)" class="module-body">
+        <div
+          v-if="expandedModules.has(mod.id)"
+          class="module-body"
+        >
           <div class="lessons-list">
             <div
               v-for="(lesson, lessonIdx) in mod.lessons"
               :key="lesson.id"
               class="lesson-row"
             >
-              <LessonTypeIcon :type="lesson.type" :size="14" />
+              <LessonTypeIcon
+                :type="lesson.type"
+                :size="14"
+              />
               <input
                 :value="lesson.title"
                 class="inline-edit lesson-title-input"
                 @input="updateLessonTitle(lesson, ($event.target as HTMLInputElement).value)"
-              >
+              />
               <select
                 :value="lesson.type"
                 class="type-select"
-                @change="updateLessonType(lesson, ($event.target as HTMLSelectElement).value as LessonType)"
+                @change="
+                  updateLessonType(lesson, ($event.target as HTMLSelectElement).value as LessonType)
+                "
               >
-                <option v-for="t in lessonTypes" :key="t" :value="t">{{ t }}</option>
+                <option
+                  v-for="t in lessonTypes"
+                  :key="t"
+                  :value="t"
+                >
+                  {{ t }}
+                </option>
               </select>
               <span class="lesson-duration">
                 <Clock :size="11" />
                 {{ lesson.estimatedMinutes }}m
               </span>
-              <button class="icon-btn danger" @click="removeLesson(mod, lessonIdx)">
+              <button
+                class="icon-btn danger"
+                @click="removeLesson(mod, lessonIdx)"
+              >
                 <Trash2 :size="12" />
               </button>
             </div>
           </div>
 
-          <button class="add-btn-row" @click="addLesson(mod)">
+          <button
+            class="add-btn-row"
+            @click="addLesson(mod)"
+          >
             <Plus :size="14" />
             Add Lesson
           </button>
@@ -207,14 +268,20 @@ watch(() => localOutline.value.modules, (mods) => {
     </div>
 
     <!-- Add module -->
-    <button class="add-module-btn" @click="addModule">
+    <button
+      class="add-module-btn"
+      @click="addModule"
+    >
       <Plus :size="16" />
       Add Module
     </button>
 
     <!-- Actions -->
     <div class="action-bar">
-      <button class="approve-btn" @click="handleApprove">
+      <button
+        class="approve-btn"
+        @click="handleApprove"
+      >
         <Check :size="16" />
         Approve & Generate
       </button>
@@ -229,7 +296,10 @@ watch(() => localOutline.value.modules, (mods) => {
     </div>
 
     <!-- Rejection feedback -->
-    <div v-if="isRejecting" class="reject-form">
+    <div
+      v-if="isRejecting"
+      class="reject-form"
+    >
       <textarea
         v-model="feedback"
         class="reject-textarea"
@@ -371,7 +441,9 @@ watch(() => localOutline.value.modules, (mods) => {
   padding: 2px 6px;
   border-radius: var(--radius-xs, 4px);
   outline: none;
-  transition: border-color var(--transition-fast, 150ms ease), background var(--transition-fast, 150ms ease);
+  transition:
+    border-color var(--transition-fast, 150ms ease),
+    background var(--transition-fast, 150ms ease);
 }
 
 .inline-edit:hover,

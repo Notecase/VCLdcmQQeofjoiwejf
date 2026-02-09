@@ -27,16 +27,28 @@ function handleApprove() {
     <div class="plan-header">
       <div class="header-left">
         <h3>Tomorrow</h3>
-        <span v-if="store.isGeneratingTomorrow" class="generating-badge">
+        <span
+          v-if="store.isGeneratingTomorrow"
+          class="generating-badge"
+        >
           GENERATING...
         </span>
       </div>
-      <div v-if="store.tomorrowPlan" class="actions">
-        <button class="action-btn edit" @click="store.selectedFilename = 'Tomorrow.md'">
+      <div
+        v-if="store.tomorrowPlan"
+        class="actions"
+      >
+        <button
+          class="action-btn edit"
+          @click="store.selectedFilename = 'Tomorrow.md'"
+        >
           <Pencil :size="14" />
           Edit
         </button>
-        <button class="action-btn approve" @click="showConfirm = true">
+        <button
+          class="action-btn approve"
+          @click="showConfirm = true"
+        >
           <Check :size="14" />
           Approve
         </button>
@@ -44,13 +56,22 @@ function handleApprove() {
     </div>
 
     <!-- Generating state -->
-    <div v-if="store.isGeneratingTomorrow" class="generating">
-      <Loader2 :size="16" class="spin" />
+    <div
+      v-if="store.isGeneratingTomorrow"
+      class="generating"
+    >
+      <Loader2
+        :size="16"
+        class="spin"
+      />
       <span>Generating tomorrow's plan...</span>
     </div>
 
     <!-- Task list -->
-    <div v-else-if="store.tomorrowPlan && store.tomorrowPlan.tasks.length > 0" class="task-list">
+    <div
+      v-else-if="store.tomorrowPlan && store.tomorrowPlan.tasks.length > 0"
+      class="task-list"
+    >
       <div
         v-for="task in store.tomorrowPlan.tasks"
         :key="task.id"
@@ -58,11 +79,18 @@ function handleApprove() {
       >
         <div class="task-time">{{ task.scheduledTime }} – {{ endTime(task) }}</div>
         <div class="task-title">{{ task.title }}</div>
-        <span v-if="task.planId" class="task-plan-tag">{{ task.planId }}</span>
+        <span
+          v-if="task.planId"
+          class="task-plan-tag"
+          >{{ task.planId }}</span
+        >
       </div>
     </div>
 
-    <p v-else class="empty-state">
+    <p
+      v-else
+      class="empty-state"
+    >
       No plan generated yet.
     </p>
 
@@ -118,8 +146,13 @@ function handleApprove() {
 }
 
 @keyframes pulse-badge {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .actions {
@@ -173,7 +206,9 @@ function handleApprove() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .task-list {

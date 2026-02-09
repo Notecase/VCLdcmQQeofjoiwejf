@@ -25,13 +25,7 @@ describe('mapLineToBlockIndex', () => {
   })
 
   it('falls back to the nearest previous block for blank lines', () => {
-    const markdown = [
-      '## Overview',
-      '',
-      'Overview paragraph line 1.',
-      '',
-      '## Location',
-    ].join('\n')
+    const markdown = ['## Overview', '', 'Overview paragraph line 1.', '', '## Location'].join('\n')
 
     // Line 2 is blank; should map to the Overview heading block
     expect(mapLineToBlockIndex(markdown, 2)).toBe(0)

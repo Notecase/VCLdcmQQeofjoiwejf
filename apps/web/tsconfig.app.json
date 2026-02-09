@@ -3,31 +3,17 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": [
-      "vite/client",
-      "vue",
-      "vue-router"
-    ],
+    "types": ["vite/client", "vue", "vue-router"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "muya/*": [
-        "src/muya/*"
-      ],
-      "@inkdown/ai/*": [
-        "../../packages/ai/src/*"
-      ]
+      "@/*": ["src/*"],
+      "muya/*": ["src/muya/*"],
+      "@inkdown/ai/*": ["../../packages/ai/src/*"]
     },
     /* Linting */
     "strict": true,
@@ -37,13 +23,6 @@
     "noUncheckedSideEffectImports": true,
     "noImplicitAny": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue"
-  ],
-  "exclude": [
-    "node_modules",
-    "../../packages/muya/**/*"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["node_modules", "../../packages/muya/**/*"]
 }

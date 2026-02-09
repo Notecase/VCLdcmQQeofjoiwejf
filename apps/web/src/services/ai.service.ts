@@ -315,17 +315,19 @@ export function computeDiffHunks(original: string, proposed: string): DiffHunk[]
 
     // If no headings found (single section or no headings), fall back to single hunk
     if (sections.length <= 1) {
-      return [{
-        id: crypto.randomUUID(),
-        oldStart: 1,
-        oldLines: 0,
-        newStart: 1,
-        newLines: proposed.split('\n').length,
-        oldContent: '',
-        newContent: proposed,
-        type: 'add',
-        status: 'pending',
-      }]
+      return [
+        {
+          id: crypto.randomUUID(),
+          oldStart: 1,
+          oldLines: 0,
+          newStart: 1,
+          newLines: proposed.split('\n').length,
+          oldContent: '',
+          newContent: proposed,
+          type: 'add',
+          status: 'pending',
+        },
+      ]
     }
 
     // Create one hunk per section
@@ -351,9 +353,17 @@ export function computeDiffHunks(original: string, proposed: string): DiffHunk[]
   const hunks: DiffHunk[] = []
 
   // Use structuredPatch to get unified diff hunks (with normalized inputs)
-  const patch = Diff.structuredPatch('original', 'proposed', normalizedOriginal, normalizedProposed, '', '', {
-    context: 3, // Include 3 lines of context around changes
-  })
+  const patch = Diff.structuredPatch(
+    'original',
+    'proposed',
+    normalizedOriginal,
+    normalizedProposed,
+    '',
+    '',
+    {
+      context: 3, // Include 3 lines of context around changes
+    }
+  )
 
   for (const hunk of patch.hunks) {
     let oldLineNum = hunk.oldStart
@@ -507,7 +517,10 @@ async function processSSEResponse(
                 if (sessionId && store.sessions[sessionId]) {
                   store.appendToLastMessage(sessionId, chunk.data as string)
                 } else {
-                  console.warn('[AI Service] Received text-delta but no active session - chunk dropped:', chunk.data)
+                  console.warn(
+                    '[AI Service] Received text-delta but no active session - chunk dropped:',
+                    chunk.data
+                  )
                 }
                 break
               }
@@ -522,7 +535,10 @@ async function processSSEResponse(
 
               case 'thinking': {
                 // Add thinking step to store, linked to current assistant message
-                const thinkingData = chunk.data as { description: string; type?: ThinkingStep['type'] }
+                const thinkingData = chunk.data as {
+                  description: string
+                  type?: ThinkingStep['type']
+                }
                 const runningThoughts = store.thinkingSteps.filter(
                   (step) => step.status === 'running' && step.type !== 'tool'
                 )
@@ -653,21 +669,24 @@ async function processSSEResponse(
                 // Clear the streaming preview when artifact completes
                 store.clearCodePreview()
 
-                const noteId = artifactData.noteId ||
-                  store.activeSession?.contextNoteIds?.[0] || ''
+                const noteId = artifactData.noteId || store.activeSession?.contextNoteIds?.[0] || ''
 
                 if (noteId) {
                   // Pass userId for database persistence
                   // Note: Don't pass sessionId - chat sessions aren't persisted to DB yet,
                   // so the local UUID would cause FK constraint violation (409 Conflict)
-                  store.addPendingArtifact(noteId, {
-                    title: artifactData.title,
-                    html: artifactData.html,
-                    css: artifactData.css,
-                    javascript: artifactData.javascript,
-                  }, {
-                    userId: authStore.user?.id,
-                  })
+                  store.addPendingArtifact(
+                    noteId,
+                    {
+                      title: artifactData.title,
+                      html: artifactData.html,
+                      css: artifactData.css,
+                      javascript: artifactData.javascript,
+                    },
+                    {
+                      userId: authStore.user?.id,
+                    }
+                  )
 
                   // Track completed artifact linked to the current assistant message for UI rendering
                   const session = store.activeSession
@@ -729,7 +748,11 @@ async function processSSEResponse(
               case 'subtask-progress': {
                 // Progress update from subagent
                 const progressData = chunk.data as SubtaskProgressData
-                store.updateSubTaskProgress(progressData.taskId, progressData.progress, progressData.message)
+                store.updateSubTaskProgress(
+                  progressData.taskId,
+                  progressData.progress,
+                  progressData.message
+                )
                 break
               }
 
@@ -739,9 +762,7 @@ async function processSSEResponse(
                 store.updateSubTask(completeData.taskId, { status: 'completed' })
 
                 // Complete the thinking step
-                const runningSteps = store.thinkingSteps.filter(
-                  (step) => step.status === 'running'
-                )
+                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
                 const lastRunningStep = runningSteps[runningSteps.length - 1]
                 if (lastRunningStep) {
                   store.completeThinkingStep(lastRunningStep.id)
@@ -838,12 +859,13 @@ export function useAIChat() {
         const lastMessage = currentSession.messages[currentSession.messages.length - 1]
         if (lastMessage && lastMessage.role === 'assistant' && !lastMessage.content.trim()) {
           // Check if there's a pending edit or clarification - if so, empty response is expected
-          const hasPendingEdit = store.pendingEdits.some(e => e.noteId && e.status === 'pending')
+          const hasPendingEdit = store.pendingEdits.some((e) => e.noteId && e.status === 'pending')
           const hasPendingClarification = store.hasPendingClarification
 
           if (!hasPendingEdit && !hasPendingClarification) {
             // No edit/clarification pending, so show a fallback message
-            lastMessage.content = 'I processed your request but had no additional response to provide.'
+            lastMessage.content =
+              'I processed your request but had no additional response to provide.'
           }
         }
       }

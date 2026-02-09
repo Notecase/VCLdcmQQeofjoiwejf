@@ -7,6 +7,7 @@ The Secretary agent (11 tools) manages learning roadmaps and daily study plans e
 **Scope:** Tier 1 only — 4 new tools that address the highest-frequency, highest-frustration gaps. Added as separate tools (not consolidated into existing ones).
 
 **Decisions:**
+
 - Carry-over: Auto-save to `Carryover.md` during day transition + manual `carry_over_tasks` tool for user control
 - Recurring blocks: Stored in new `Recurring.md` file (separate from AI.md preferences)
 
@@ -17,6 +18,7 @@ The Secretary agent (11 tools) manages learning roadmaps and daily study plans e
 The single most requested capability. Handles 3 operations that currently require multiple tedious `modify_plan` calls.
 
 ### Schema
+
 ```typescript
 {
   action: 'shift_after' | 'insert_block' | 'swap',
@@ -37,6 +39,7 @@ The single most requested capability. Handles 3 operations that currently requir
 ### Implementation Logic
 
 **`shift_after`:**
+
 1. Parse all task lines in Schedule section
 2. For each task at/after `afterTime`, parse time as minutes-since-midnight
 3. Add `shiftMinutes`, convert back to HH:MM
@@ -44,18 +47,21 @@ The single most requested capability. Handles 3 operations that currently requir
 5. Return count of shifted tasks
 
 **`insert_block`:**
+
 1. Find all tasks that overlap with `[blockStart, blockStart + blockDuration]`
 2. Insert a blocked-time line: `- [=] HH:MM (XXmin) blockDescription`
 3. Shift all overlapping + subsequent tasks to after block ends
 4. Return what was inserted and how many tasks were shifted
 
 **`swap`:**
+
 1. Find task at `taskTimeA` and task at `taskTimeB`
 2. Extract their full line content (duration, description, plan ID)
 3. Replace task A's time with B's time and vice versa
 4. Return confirmation of the swap
 
 ### Example Triggers
+
 - "Push everything after 10am back 90 minutes" → `shift_after`
 - "I have a meeting 2-3pm, work around it" → `insert_block`
 - "Swap my 9am and 11am tasks" → `swap`
@@ -65,6 +71,7 @@ The single most requested capability. Handles 3 operations that currently requir
 ## Tool 2: `carry_over_tasks` — Rescue Incomplete Work
 
 ### Schema
+
 ```typescript
 {
   source: 'today' | 'yesterday',      // default: 'today'
@@ -74,6 +81,7 @@ The single most requested capability. Handles 3 operations that currently requir
 ```
 
 ### Implementation Logic
+
 1. Read source file (Today.md or yesterday's History file)
 2. Parse task lines, filter by status: `[ ]` (pending), `[>]` (in_progress), `[-]` (skipped — NOT carried over)
 3. Read destination file
@@ -83,7 +91,9 @@ The single most requested capability. Handles 3 operations that currently requir
 7. Return count and list of carried-over tasks
 
 ### Auto Carry-Over (in `performDayTransition()`)
+
 When Today.md is archived to History:
+
 1. Extract incomplete tasks (pending + in_progress)
 2. Write them to `Carryover.md` as a simple list
 3. Next `generate_daily_plan` reads `Carryover.md` and includes those tasks in the prompt context
@@ -96,6 +106,7 @@ This is passive — the LLM decides how to incorporate carried-over tasks (might
 ## Tool 3: `manage_recurring_blocks` — Persistent Life Constraints
 
 ### Schema
+
 ```typescript
 {
   action: 'add' | 'list' | 'remove',
@@ -108,6 +119,7 @@ This is passive — the LLM decides how to incorporate carried-over tasks (might
 ```
 
 ### Recurring.md Format
+
 ```markdown
 # Recurring Time Blocks
 
@@ -125,13 +137,16 @@ Simple pipe-delimited format — easy for regex parsing and LLM reading/writing.
 **`remove`:** Find line matching `name`, remove it
 
 ### Integration with Plan Generation
+
 In `generate_daily_plan` (tools.ts), after loading context:
+
 1. Read `Recurring.md`
 2. Filter blocks for the target day's day-of-week
 3. Include in the prompt to the planner subagent: "BLOCKED TIMES (do not schedule study during these): 09:30-10:00 Team Standup, 18:00-19:00 Gym"
 4. The subagent generates the schedule respecting these constraints
 
 ### Example Triggers
+
 - "I have team standup every weekday at 9:30 for 30 minutes" → `add`
 - "What recurring blocks do I have?" → `list`
 - "Remove the Thursday meeting" → `remove`
@@ -141,6 +156,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 ## Tool 4: `log_activity` — Track What Actually Happened
 
 ### Schema
+
 ```typescript
 {
   description: string,                 // "Watched async Rust tutorial"
@@ -152,6 +168,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 ```
 
 ### Implementation Logic
+
 1. Read target file (Today.md / Tomorrow.md)
 2. Build completed task line: `- [x] HH:MM (XXmin) description [PLAN_ID]`
 3. Find insertion point in Schedule section (chronological order by time)
@@ -160,6 +177,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 6. Return confirmation
 
 ### Example Triggers
+
 - "I just did 30 minutes of Rust practice on ownership" → log_activity with planId="RUST"
 - "Log 45 minutes of AWS video I watched during lunch" → log_activity
 
@@ -168,6 +186,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 ## Prompt Updates (`prompts.ts`)
 
 ### New Tool Listing (add to "YOUR TOOLS" section)
+
 ```
 12. **bulk_modify_plan** - Bulk schedule operations: shift tasks after a time, insert a blocked time period, or swap two tasks. For single-task edits, use modify_plan instead.
 13. **carry_over_tasks** - Move incomplete tasks from today/yesterday to today/tomorrow's plan.
@@ -176,6 +195,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 ```
 
 ### New Intent Handling (add to INTENT HANDLING section)
+
 ```
 - **schedule_disruption**: User reports a disruption ("something came up", "push everything back", "I have a meeting at X")
   -> Use `bulk_modify_plan` with appropriate action (shift_after, insert_block)
@@ -192,6 +212,7 @@ In `generate_daily_plan` (tools.ts), after loading context:
 ```
 
 ### Update generate_daily_plan guidance
+
 Add to the daily plan workflow: "Before generating, also read Recurring.md and Carryover.md to respect blocked times and include carried-over tasks."
 
 ---
@@ -199,19 +220,25 @@ Add to the daily plan workflow: "Before generating, also read Recurring.md and C
 ## Memory Service Changes (`memory.ts`)
 
 ### `performDayTransition()` Enhancement
+
 After archiving Today.md to History/, before clearing:
+
 1. Parse Today.md for incomplete tasks (status `[ ]` or `[>]`)
 2. If any found, write to `Carryover.md`:
+
 ```markdown
 # Carried Over Tasks (from YYYY-MM-DD)
 
 - (XXmin) description [PLAN_ID]
 - (XXmin) description [PLAN_ID]
 ```
+
 3. Log: "Saved N incomplete tasks to Carryover.md"
 
 ### `getFullContext()` Enhancement
+
 Add to returned context:
+
 - `recurringBlocks: string` — raw content of Recurring.md (if exists)
 - `carryoverTasks: string` — raw content of Carryover.md (if exists)
 
@@ -221,11 +248,11 @@ These are included in the system prompt context summary for the agent.
 
 ## Files to Modify
 
-| File | What Changes |
-|------|-------------|
-| `packages/ai/src/agents/secretary/tools.ts` | Add 4 new tools: bulk_modify_plan, carry_over_tasks, manage_recurring_blocks, log_activity. Return array includes them. |
+| File                                          | What Changes                                                                                                                                        |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/ai/src/agents/secretary/tools.ts`   | Add 4 new tools: bulk_modify_plan, carry_over_tasks, manage_recurring_blocks, log_activity. Return array includes them.                             |
 | `packages/ai/src/agents/secretary/prompts.ts` | Add 4 tools to listing. Add 4 new intent types. Update daily plan workflow to mention Recurring.md + Carryover.md. Update tool count from 11 to 15. |
-| `packages/ai/src/agents/secretary/memory.ts` | Add carry-over logic to `performDayTransition()`. Add `recurringBlocks` + `carryoverTasks` to `getFullContext()` return. |
+| `packages/ai/src/agents/secretary/memory.ts`  | Add carry-over logic to `performDayTransition()`. Add `recurringBlocks` + `carryoverTasks` to `getFullContext()` return.                            |
 
 No new types needed in shared — all tools use simple string/number params and return string results (same pattern as existing tools).
 

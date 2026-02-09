@@ -123,10 +123,7 @@ export function getAuth(c: Context): AuthContext | null {
  * Verify that the authenticated user owns the specified note
  * Returns the note ID if ownership is verified, null otherwise
  */
-export async function verifyNoteOwnership(
-  auth: AuthContext,
-  noteId: string
-): Promise<boolean> {
+export async function verifyNoteOwnership(auth: AuthContext, noteId: string): Promise<boolean> {
   const { data, error } = await auth.supabase
     .from('notes')
     .select('id')
@@ -140,10 +137,7 @@ export async function verifyNoteOwnership(
 /**
  * Require that the user owns the note, throwing HTTPException if not
  */
-export async function requireNoteOwnership(
-  auth: AuthContext,
-  noteId: string
-): Promise<void> {
+export async function requireNoteOwnership(auth: AuthContext, noteId: string): Promise<void> {
   const isOwner = await verifyNoteOwnership(auth, noteId)
   if (!isOwner) {
     throw new HTTPException(404, { message: 'Note not found' })

@@ -16,16 +16,19 @@ export interface NoteDraftDeltaPayload {
   noteId?: string
 }
 
+export function getNoteDraftDiffScopeId(draftId: string, _threadId?: string): string {
+  const normalizedDraftId = draftId.trim() || 'unknown'
+  return `draft:${normalizedDraftId}`
+}
+
 export function applyNoteDraftDelta(
   current: NoteDraftViewState | null,
-  payload: NoteDraftDeltaPayload,
+  payload: NoteDraftDeltaPayload
 ): NoteDraftViewState {
   const hasSnapshot = typeof payload.currentContent === 'string'
   const safeDelta = typeof payload.delta === 'string' ? payload.delta : ''
   const baseContent = current?.currentContent || ''
-  const resolvedContent = hasSnapshot
-    ? payload.currentContent!
-    : `${baseContent}${safeDelta}`
+  const resolvedContent = hasSnapshot ? payload.currentContent! : `${baseContent}${safeDelta}`
 
   return {
     draftId: payload.draftId,
@@ -43,7 +46,7 @@ export function applyNoteDraftDelta(
 
 export function applyNoteDraftSnapshot(
   current: NoteDraftViewState | null,
-  payload: ResearchNoteDraft,
+  payload: ResearchNoteDraft
 ): NoteDraftViewState {
   return {
     ...payload,
@@ -56,7 +59,7 @@ export function applyNoteDraftSnapshot(
 
 export function setNoteDraftHidden(
   draft: NoteDraftViewState | null,
-  hidden: boolean,
+  hidden: boolean
 ): NoteDraftViewState | null {
   if (!draft) return null
   return {

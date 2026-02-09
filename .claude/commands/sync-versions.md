@@ -22,13 +22,13 @@ Prompt: Scan all package.json files and report version conflicts
 
 Reference the version constraints from CLAUDE.md:
 
-| Package | Constraint | Notes |
-|---------|------------|-------|
-| `@vitejs/plugin-vue` | v5 root, v6 apps/web | Intentional split |
-| `typescript` | ~5.7.0 | Must match everywhere |
-| `vue` | 3.5.24 | Must match everywhere |
-| `vite` | 7.2.4 | Must match everywhere |
-| `node` | >=20.0.0 | Check .nvmrc |
+| Package              | Constraint           | Notes                 |
+| -------------------- | -------------------- | --------------------- |
+| `@vitejs/plugin-vue` | v5 root, v6 apps/web | Intentional split     |
+| `typescript`         | ~5.7.0               | Must match everywhere |
+| `vue`                | 3.5.24               | Must match everywhere |
+| `vite`               | 7.2.4                | Must match everywhere |
+| `node`               | >=20.0.0             | Check .nvmrc          |
 
 ### Step 3: Interactive Resolution
 
@@ -38,11 +38,13 @@ For each conflict found, present options:
 ## Conflict: [package-name]
 
 **Current state:**
+
 - root: ^1.2.3
 - apps/web: ^2.0.0
 - packages/shared: ^1.5.0
 
 **Options:**
+
 1. Unify to highest version (^2.0.0)
 2. Unify to lowest version (^1.2.3)
 3. Keep intentional split (document reason)
@@ -63,6 +65,7 @@ After user selects resolution:
 ### Step 5: Verify
 
 Run the `build-validator` agent to confirm:
+
 - Build passes
 - TypeScript passes
 - No new errors introduced
@@ -86,6 +89,7 @@ pnpm build && pnpm typecheck
 ## Known Safe Operations
 
 These version unifications are always safe:
+
 - `typescript` - should be identical everywhere
 - `vue` - should be identical everywhere
 - `@types/*` packages - should be identical everywhere
@@ -93,11 +97,13 @@ These version unifications are always safe:
 ## Known Dangerous Operations
 
 These require extra care:
+
 - `@vitejs/plugin-vue` - intentional split, do not unify
 
 ## Output
 
 After completion, provide:
+
 1. Summary of changes made
 2. Verification results
 3. Any remaining warnings

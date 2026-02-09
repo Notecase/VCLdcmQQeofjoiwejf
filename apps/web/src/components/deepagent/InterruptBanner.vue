@@ -48,8 +48,7 @@ function submitEdit() {
   if (editArgsText.value.trim()) {
     try {
       editedArgs = JSON.parse(editArgsText.value)
-    }
-    catch {
+    } catch {
       argsParseError.value = 'Invalid JSON. Please fix and try again.'
       return
     }
@@ -70,9 +69,15 @@ function cancelEdit() {
 
 <template>
   <Transition name="slide-down">
-    <div class="interrupt-banner" :class="{ compact: props.compact }">
+    <div
+      class="interrupt-banner"
+      :class="{ compact: props.compact }"
+    >
       <div class="banner-header">
-        <ShieldAlert :size="18" class="banner-icon" />
+        <ShieldAlert
+          :size="18"
+          class="banner-icon"
+        />
         <div class="banner-text">
           <span class="banner-title">Action requires approval</span>
           <span class="banner-tool">{{ interrupt.toolName }}</span>
@@ -81,16 +86,30 @@ function cancelEdit() {
 
       <p class="banner-description">{{ interrupt.description }}</p>
 
-      <div v-if="interrupt.options.length > 0" class="banner-options">
-        <div v-for="opt in interrupt.options" :key="opt.value" class="option-item">
+      <div
+        v-if="interrupt.options.length > 0"
+        class="banner-options"
+      >
+        <div
+          v-for="opt in interrupt.options"
+          :key="opt.value"
+          class="option-item"
+        >
           <span class="option-label">{{ opt.label }}</span>
-          <span v-if="opt.description" class="option-desc">{{ opt.description }}</span>
+          <span
+            v-if="opt.description"
+            class="option-desc"
+            >{{ opt.description }}</span
+          >
         </div>
       </div>
 
       <!-- Edit mode -->
       <Transition name="collapse">
-        <div v-if="editMode" class="edit-section">
+        <div
+          v-if="editMode"
+          class="edit-section"
+        >
           <div class="edit-field">
             <label class="edit-label">Message (optional)</label>
             <textarea
@@ -107,11 +126,25 @@ function cancelEdit() {
               class="edit-textarea mono"
               rows="6"
             />
-            <span v-if="argsParseError" class="parse-error">{{ argsParseError }}</span>
+            <span
+              v-if="argsParseError"
+              class="parse-error"
+              >{{ argsParseError }}</span
+            >
           </div>
           <div class="edit-actions">
-            <button class="btn btn-ghost" type="button" @click="cancelEdit">Cancel</button>
-            <button class="btn btn-primary" type="button" @click="submitEdit">
+            <button
+              class="btn btn-ghost"
+              type="button"
+              @click="cancelEdit"
+            >
+              Cancel
+            </button>
+            <button
+              class="btn btn-primary"
+              type="button"
+              @click="submitEdit"
+            >
               <Send :size="12" />
               Submit
             </button>
@@ -120,20 +153,42 @@ function cancelEdit() {
       </Transition>
 
       <!-- Action buttons -->
-      <div v-if="!editMode" class="banner-actions">
-        <button v-if="canApprove" class="btn btn-green" type="button" @click="handleApprove">
+      <div
+        v-if="!editMode"
+        class="banner-actions"
+      >
+        <button
+          v-if="canApprove"
+          class="btn btn-green"
+          type="button"
+          @click="handleApprove"
+        >
           <Check :size="14" />
           Approve
         </button>
-        <button v-if="canReject" class="btn btn-red" type="button" @click="handleReject">
+        <button
+          v-if="canReject"
+          class="btn btn-red"
+          type="button"
+          @click="handleReject"
+        >
           <X :size="14" />
           Reject
         </button>
-        <button v-if="canEdit" class="btn btn-accent" type="button" @click="enterEditMode">
+        <button
+          v-if="canEdit"
+          class="btn btn-accent"
+          type="button"
+          @click="enterEditMode"
+        >
           <Pencil :size="14" />
           Edit
         </button>
-        <button class="btn btn-ghost" type="button" @click="emit('dismiss')">
+        <button
+          class="btn btn-ghost"
+          type="button"
+          @click="emit('dismiss')"
+        >
           Dismiss
         </button>
       </div>

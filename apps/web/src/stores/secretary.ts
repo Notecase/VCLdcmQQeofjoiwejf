@@ -31,7 +31,9 @@ import type {
 const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
 const SECRETARY_API = `${API_BASE}/api/secretary`
 const SECRETARY_HARDENING_ENABLED = !['0', 'false', 'off', 'no'].includes(
-  String(import.meta.env.VITE_SECRETARY_PHASE5_HARDENING ?? 'true').trim().toLowerCase(),
+  String(import.meta.env.VITE_SECRETARY_PHASE5_HARDENING ?? 'true')
+    .trim()
+    .toLowerCase()
 )
 
 /** Detect browser timezone (e.g. "America/New_York") */
@@ -60,6 +62,8 @@ export interface SecretaryChatMessage {
   toolCalls?: SecretaryToolCall[]
   thinkingSteps?: string[]
   model?: string
+  /** Internal flag: true while this message is still being streamed */
+  _streaming?: boolean
 }
 
 // ============================================================================
@@ -97,6 +101,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
   const lastReceivedThreadId = ref<string | null>(null)
   const lastStreamSeq = ref<number>(0)
 
+  // Live assistant message being streamed — updated in-place to avoid DOM swap
+  let liveAssistantMsg: SecretaryChatMessage | null = null
+
   let memoryRefreshTimer: ReturnType<typeof setTimeout> | null = null
   const pendingMemoryRefresh = new Set<string>()
 
@@ -109,7 +116,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
   const todayProgress = computed(() => {
     if (!todayPlan.value) return { completed: 0, total: 0, percent: 0 }
     const tasks = todayPlan.value.tasks
-    const completed = tasks.filter(t => t.status === 'completed').length
+    const completed = tasks.filter((t) => t.status === 'completed').length
     return {
       completed,
       total: tasks.length,
@@ -129,7 +136,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   const selectedFile = computed(() => {
     if (!selectedFilename.value) return null
-    return memoryFiles.value.find(f => f.filename === selectedFilename.value) || null
+    return memoryFiles.value.find((f) => f.filename === selectedFilename.value) || null
   })
 
   // ---- Actions ----
@@ -142,7 +149,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
     try {
       // Run day transition on mount
       try {
-        await authFetch(`${SECRETARY_API}/day-transition`, { method: 'POST', headers: TIMEZONE_HEADERS })
+        await authFetch(`${SECRETARY_API}/day-transition`, {
+          method: 'POST',
+          headers: TIMEZONE_HEADERS,
+        })
       } catch {
         // Non-critical — don't block initialization
       }
@@ -194,13 +204,13 @@ export const useSecretaryStore = defineStore('secretary', () => {
       for (const filename of filenames) {
         const res = await authFetch(`${SECRETARY_API}/memory/${encodeURI(filename)}`)
         if (res.status === 404) {
-          memoryFiles.value = memoryFiles.value.filter(f => f.filename !== filename)
+          memoryFiles.value = memoryFiles.value.filter((f) => f.filename !== filename)
           continue
         }
         if (!res.ok) continue
         const data = await res.json()
         if (!data.file) continue
-        const idx = memoryFiles.value.findIndex(f => f.filename === filename)
+        const idx = memoryFiles.value.findIndex((f) => f.filename === filename)
         if (idx >= 0) {
           memoryFiles.value[idx] = data.file
         } else {
@@ -242,7 +252,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       })
       const data = await res.json()
 
-      const idx = memoryFiles.value.findIndex(f => f.filename === filename)
+      const idx = memoryFiles.value.findIndex((f) => f.filename === filename)
       if (idx >= 0 && data.file) {
         memoryFiles.value[idx] = data.file
       }
@@ -258,19 +268,21 @@ export const useSecretaryStore = defineStore('secretary', () => {
   async function updateTaskStatus(taskId: string, status: ScheduledTask['status']) {
     if (!todayPlan.value) return
 
-    const task = todayPlan.value.tasks.find(t => t.id === taskId)
+    const task = todayPlan.value.tasks.find((t) => t.id === taskId)
     if (!task) return
 
     task.status = status
 
     todayPlan.value.completedMinutes = todayPlan.value.tasks
-      .filter(t => t.status === 'completed')
+      .filter((t) => t.status === 'completed')
       .reduce((sum, t) => sum + t.durationMinutes, 0)
 
     // Check milestones after completing a task (E2)
     if (status === 'completed') {
-      const nonBreakTasks = todayPlan.value.tasks.filter(t => !t.title.toLowerCase().includes('break'))
-      const completedNonBreak = nonBreakTasks.filter(t => t.status === 'completed').length
+      const nonBreakTasks = todayPlan.value.tasks.filter(
+        (t) => !t.title.toLowerCase().includes('break')
+      )
+      const completedNonBreak = nonBreakTasks.filter((t) => t.status === 'completed').length
       const totalNonBreak = nonBreakTasks.length
 
       if (totalNonBreak > 0 && completedNonBreak === totalNonBreak) {
@@ -338,7 +350,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   async function approveTomorrow() {
     try {
-      const res = await authFetch(`${SECRETARY_API}/approve-tomorrow`, { method: 'POST', headers: TIMEZONE_HEADERS })
+      const res = await authFetch(`${SECRETARY_API}/approve-tomorrow`, {
+        method: 'POST',
+        headers: TIMEZONE_HEADERS,
+      })
       const data = await res.json()
       if (data.error) {
         notifications.error(data.error)
@@ -364,7 +379,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   async function loadThread(threadId: string) {
     const resolvedThreadId =
-      threads.value.find(t => t.threadId === threadId || t.id === threadId)?.threadId || threadId
+      threads.value.find((t) => t.threadId === threadId || t.id === threadId)?.threadId || threadId
     activeThreadId.value = resolvedThreadId
     chatMessages.value = []
     try {
@@ -392,9 +407,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
   async function deleteThread(threadId: string) {
     try {
       const resolvedThreadId =
-        threads.value.find(t => t.threadId === threadId || t.id === threadId)?.threadId || threadId
+        threads.value.find((t) => t.threadId === threadId || t.id === threadId)?.threadId ||
+        threadId
       await authFetch(`${SECRETARY_API}/threads/${resolvedThreadId}`, { method: 'DELETE' })
-      threads.value = threads.value.filter(t => t.threadId !== resolvedThreadId)
+      threads.value = threads.value.filter((t) => t.threadId !== resolvedThreadId)
       if (activeThreadId.value === resolvedThreadId) {
         activeThreadId.value = null
         chatMessages.value = []
@@ -412,6 +428,20 @@ export const useSecretaryStore = defineStore('secretary', () => {
       createdAt: new Date(),
     }
     chatMessages.value.push(userMsg)
+
+    // Push an empty assistant message now and update it in-place during streaming.
+    // This prevents a DOM swap (unmount streaming card + mount finalized card) that causes visual jumps.
+    const assistantMsgId = crypto.randomUUID()
+    const assistantMsg: SecretaryChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date(),
+      _streaming: true,
+    }
+    chatMessages.value.push(assistantMsg)
+    liveAssistantMsg = assistantMsg
+
     isChatStreaming.value = true
     streamingContent.value = ''
     streamingToolCalls.value = []
@@ -427,13 +457,19 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         if (attempt > 0) {
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise((r) => setTimeout(r, 1000))
           // Reset streaming state for retry
           streamingContent.value = ''
           streamingToolCalls.value = []
           streamingThinkingSteps.value = []
           seenStreamingToolCallSignatures.value.clear()
           lastStreamSeq.value = 0
+          // Reset the live message too
+          if (liveAssistantMsg) {
+            liveAssistantMsg.content = ''
+            liveAssistantMsg.toolCalls = undefined
+            liveAssistantMsg.thinkingSteps = undefined
+          }
         }
 
         try {
@@ -481,16 +517,20 @@ export const useSecretaryStore = defineStore('secretary', () => {
         }
       }
 
-      // Finalize: push assembled assistant message
-      if (streamingContent.value || streamingToolCalls.value.length > 0) {
-        chatMessages.value.push({
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: streamingContent.value,
-          createdAt: new Date(),
-          toolCalls: streamingToolCalls.value.length > 0 ? [...streamingToolCalls.value] : undefined,
-          thinkingSteps: streamingThinkingSteps.value.length > 0 ? [...streamingThinkingSteps.value] : undefined,
-        })
+      // Finalize: update the live assistant message in-place (no DOM swap)
+      if (liveAssistantMsg) {
+        if (streamingContent.value || streamingToolCalls.value.length > 0) {
+          liveAssistantMsg.content = streamingContent.value
+          liveAssistantMsg.toolCalls =
+            streamingToolCalls.value.length > 0 ? [...streamingToolCalls.value] : undefined
+          liveAssistantMsg.thinkingSteps =
+            streamingThinkingSteps.value.length > 0 ? [...streamingThinkingSteps.value] : undefined
+          delete liveAssistantMsg._streaming
+        } else {
+          // No content generated — remove the empty assistant message
+          const idx = chatMessages.value.indexOf(liveAssistantMsg)
+          if (idx >= 0) chatMessages.value.splice(idx, 1)
+        }
       }
 
       // Handle thread tracking
@@ -501,7 +541,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
       // Auto-title new threads
       if (activeThreadId.value) {
-        const thread = threads.value.find(t => t.threadId === activeThreadId.value)
+        const thread = threads.value.find((t) => t.threadId === activeThreadId.value)
         if (thread && !thread.title) {
           const title = extractTitle(message)
           try {
@@ -524,12 +564,13 @@ export const useSecretaryStore = defineStore('secretary', () => {
       streamingContent.value = ''
       streamingToolCalls.value = []
       streamingThinkingSteps.value = []
+      liveAssistantMsg = null
     }
   }
 
   function stableStringify(value: unknown): string {
     if (value === null || typeof value !== 'object') return JSON.stringify(value)
-    if (Array.isArray(value)) return `[${value.map(item => stableStringify(item)).join(',')}]`
+    if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(',')}]`
     const entries = Object.entries(value as Record<string, unknown>)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`)
@@ -537,11 +578,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   function handleStreamEvent(event: SecretaryStreamEvent) {
-    if (
-      SECRETARY_HARDENING_ENABLED
-      && typeof event.seq === 'number'
-      && event.seq > 0
-    ) {
+    if (SECRETARY_HARDENING_ENABLED && typeof event.seq === 'number' && event.seq > 0) {
       if (event.seq <= lastStreamSeq.value) return
       lastStreamSeq.value = event.seq
     }
@@ -557,19 +594,27 @@ export const useSecretaryStore = defineStore('secretary', () => {
         } else {
           streamingContent.value += event.data
         }
+        // Sync to live message for in-place rendering
+        if (liveAssistantMsg) liveAssistantMsg.content = streamingContent.value
         break
 
       case 'tool_call': {
         let toolData: Record<string, unknown>
         try {
-          toolData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          toolData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
-        const toolName = (toolData.toolName as string | undefined) || (toolData.name as string | undefined) || 'unknown'
-        const toolArgs = (toolData.arguments as Record<string, unknown> | undefined)
-          || (toolData.args as Record<string, unknown> | undefined)
-          || {}
+        const toolName =
+          (toolData.toolName as string | undefined) ||
+          (toolData.name as string | undefined) ||
+          'unknown'
+        const toolArgs =
+          (toolData.arguments as Record<string, unknown> | undefined) ||
+          (toolData.args as Record<string, unknown> | undefined) ||
+          {}
         const semanticSignature = `${toolName}:${stableStringify(toolArgs)}`
         if (seenStreamingToolCallSignatures.value.has(semanticSignature)) {
           break
@@ -577,12 +622,12 @@ export const useSecretaryStore = defineStore('secretary', () => {
         seenStreamingToolCallSignatures.value.add(semanticSignature)
 
         const toolId = (toolData.id as string | undefined) || crypto.randomUUID()
-        if (streamingToolCalls.value.some(tc => tc.id === toolId)) {
+        if (streamingToolCalls.value.some((tc) => tc.id === toolId)) {
           break
         }
         const existingByName = [...streamingToolCalls.value]
           .reverse()
-          .find(tc => tc.toolName === toolName)
+          .find((tc) => tc.toolName === toolName)
         if (existingByName) {
           existingByName.arguments = toolArgs
           existingByName.status = 'running'
@@ -594,40 +639,53 @@ export const useSecretaryStore = defineStore('secretary', () => {
           arguments: toolArgs,
           status: 'running',
         })
+        // Sync to live message
+        if (liveAssistantMsg) liveAssistantMsg.toolCalls = [...streamingToolCalls.value]
         break
       }
 
       case 'tool_result': {
         let resultData: Record<string, unknown>
         try {
-          resultData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          resultData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
         let toolCall = streamingToolCalls.value.find(
-          tc => tc.id === ((resultData.id as string | undefined) || (resultData.toolCallId as string | undefined)),
+          (tc) =>
+            tc.id ===
+            ((resultData.id as string | undefined) || (resultData.toolCallId as string | undefined))
         )
         // Fallback: match by toolName if ID matching fails
         if (!toolCall) {
-          toolCall = [...streamingToolCalls.value].reverse().find(
-            tc => tc.status === 'running'
-              && tc.toolName === (
-                (resultData.toolName as string | undefined)
-                || (resultData.name as string | undefined)
-              ),
-          )
+          toolCall = [...streamingToolCalls.value]
+            .reverse()
+            .find(
+              (tc) =>
+                tc.status === 'running' &&
+                tc.toolName ===
+                  ((resultData.toolName as string | undefined) ||
+                    (resultData.name as string | undefined))
+            )
         }
         if (toolCall) {
-          toolCall.result = (resultData.result as string | undefined)
-            || (resultData.output as string | undefined)
-            || ''
+          toolCall.result =
+            (resultData.result as string | undefined) ||
+            (resultData.output as string | undefined) ||
+            ''
           toolCall.status = resultData.error ? 'error' : 'complete'
+          // Sync to live message
+          if (liveAssistantMsg) liveAssistantMsg.toolCalls = [...streamingToolCalls.value]
         }
         break
       }
 
       case 'thinking':
         streamingThinkingSteps.value.push(event.data)
+        // Sync to live message
+        if (liveAssistantMsg) liveAssistantMsg.thinkingSteps = [...streamingThinkingSteps.value]
         break
 
       case 'memory_updated':
@@ -665,9 +723,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
   }
 
   function parsePlanData() {
-    const planFile = memoryFiles.value.find(f => f.filename === 'Plan.md')
-    const todayFile = memoryFiles.value.find(f => f.filename === 'Today.md')
-    const tomorrowFile = memoryFiles.value.find(f => f.filename === 'Tomorrow.md')
+    const planFile = memoryFiles.value.find((f) => f.filename === 'Plan.md')
+    const todayFile = memoryFiles.value.find((f) => f.filename === 'Today.md')
+    const tomorrowFile = memoryFiles.value.find((f) => f.filename === 'Tomorrow.md')
     const warnings: ParserWarning[] = []
 
     if (planFile) {
@@ -681,7 +739,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       const todayParsed = parseDailyPlanMarkdown(
         todayFile.content,
         getTodayDate(BROWSER_TIMEZONE),
-        'Today.md',
+        'Today.md'
       )
       todayPlan.value = todayParsed.plan
       warnings.push(...todayParsed.warnings)
@@ -692,7 +750,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       const tomorrowParsed = parseDailyPlanMarkdown(
         tomorrowFile.content,
         getTomorrowDate(BROWSER_TIMEZONE),
-        'Tomorrow.md',
+        'Tomorrow.md'
       )
       tomorrowPlan.value = tomorrowParsed.plan
       warnings.push(...tomorrowParsed.warnings)
@@ -717,7 +775,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
   // Moved inside the store so it can access memoryFiles for section preservation.
 
   function dailyPlanToMarkdown(plan: DailyPlan): string {
-    const todayFile = memoryFiles.value.find(f => f.filename === 'Today.md')
+    const todayFile = memoryFiles.value.find((f) => f.filename === 'Today.md')
     return renderDailyPlanMarkdown(plan, {
       existingContent: todayFile?.content || '',
       defaultHeader: "# Today's Plan",
@@ -759,7 +817,12 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   const shouldAutoPrepareTomorrow = computed(() => {
     const hour = new Date().getHours()
-    return (hour >= 21 || hour < 4) && !tomorrowPlan.value && !isGeneratingTomorrow.value && activePlans.value.length > 0
+    return (
+      (hour >= 21 || hour < 4) &&
+      !tomorrowPlan.value &&
+      !isGeneratingTomorrow.value &&
+      activePlans.value.length > 0
+    )
   })
 
   async function checkAndAutoPrepareTomorrow() {
@@ -767,7 +830,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
     const flag = `secretary_auto_tomorrow_${getTodayDate(BROWSER_TIMEZONE)}`
     if (sessionStorage.getItem(flag)) return
     sessionStorage.setItem(flag, '1')
-    notifications.info('Auto-generating tomorrow\'s plan...')
+    notifications.info("Auto-generating tomorrow's plan...")
     await prepareTomorrow()
   }
 

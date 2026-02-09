@@ -17,7 +17,7 @@ const props = defineProps<{
 const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const renderedContent = computed(() => renderMathContent(props.message.content || ''))
-const roleLabel = computed(() => isUser.value ? 'You' : 'Secretary')
+const roleLabel = computed(() => (isUser.value ? 'You' : 'Secretary'))
 
 const formattedTime = computed(() => {
   if (!props.message.createdAt) return ''
@@ -54,17 +54,29 @@ function toToolCallProp(tc: SecretaryToolCall) {
   >
     <!-- Header -->
     <div class="msg-header">
-      <span class="role-label" :class="{ user: isUser, assistant: isAssistant }">
+      <span
+        class="role-label"
+        :class="{ user: isUser, assistant: isAssistant }"
+      >
         {{ roleLabel }}
       </span>
-      <span v-if="formattedTime" class="timestamp">{{ formattedTime }}</span>
+      <span
+        v-if="formattedTime"
+        class="timestamp"
+        >{{ formattedTime }}</span
+      >
     </div>
 
     <!-- Thinking steps -->
-    <div v-if="thinkingSteps.length > 0" class="thinking-section">
+    <div
+      v-if="thinkingSteps.length > 0"
+      class="thinking-section"
+    >
       <div class="thinking-header">
         <Brain :size="12" />
-        <span>{{ thinkingSteps.length }} thinking step{{ thinkingSteps.length > 1 ? 's' : '' }}</span>
+        <span
+          >{{ thinkingSteps.length }} thinking step{{ thinkingSteps.length > 1 ? 's' : '' }}</span
+        >
       </div>
     </div>
 
@@ -78,13 +90,25 @@ function toToolCallProp(tc: SecretaryToolCall) {
 
     <!-- Content -->
     <div class="msg-body">
-      <div class="prose" v-html="renderedContent" />
-      <span v-if="isStreaming" class="streaming-cursor" />
+      <div
+        class="prose"
+        v-html="renderedContent"
+      />
+      <span
+        v-if="isStreaming"
+        class="streaming-cursor"
+      />
     </div>
 
     <!-- Streaming typing indicator (no content yet) -->
-    <div v-if="isStreaming && !message.content" class="typing-indicator">
-      <Loader2 :size="14" class="spin" />
+    <div
+      v-if="isStreaming && !message.content"
+      class="typing-indicator"
+    >
+      <Loader2
+        :size="14"
+        class="spin"
+      />
       <span>Thinking...</span>
     </div>
   </div>
@@ -166,7 +190,9 @@ function toToolCallProp(tc: SecretaryToolCall) {
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Prose styling */
@@ -238,6 +264,8 @@ function toToolCallProp(tc: SecretaryToolCall) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

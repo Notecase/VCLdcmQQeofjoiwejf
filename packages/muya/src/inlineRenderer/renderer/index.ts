@@ -120,7 +120,9 @@ class Renderer {
     )
   }
 
-  getHighlightClassName(highlight: { active?: boolean; diffType?: 'addition' | 'deletion' } | boolean) {
+  getHighlightClassName(
+    highlight: { active?: boolean; diffType?: 'addition' | 'deletion' } | boolean
+  ) {
     // Backward compatibility: if just boolean passed
     if (typeof highlight === 'boolean') {
       return highlight ? CLASS_NAMES.MU_HIGHLIGHT : CLASS_NAMES.MU_SELECTION

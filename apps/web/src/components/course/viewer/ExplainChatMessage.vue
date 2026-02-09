@@ -4,7 +4,7 @@
  * Matches AISidebar ChatMessage.vue design: role labels, prose styles, StreamingCursor.
  */
 import { computed } from 'vue'
-import { renderMathContent } from '@/utils/mathRenderer'
+import { renderMathMarkdown } from '@/utils/mathRenderer'
 import StreamingCursor from '@/components/ai/shared/StreamingCursor.vue'
 import type { ExplainMessage } from '@/stores/courseExplain'
 
@@ -15,31 +15,48 @@ const props = defineProps<{
 
 const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
-const roleLabel = computed(() => isUser.value ? 'YOU' : 'AI')
-const roleClass = computed(() => isUser.value ? 'user' : 'assistant')
+const roleLabel = computed(() => (isUser.value ? 'YOU' : 'AI'))
+const roleClass = computed(() => (isUser.value ? 'user' : 'assistant'))
 
 const renderedContent = computed(() => {
   if (!isAssistant.value || !props.message.content) return ''
-  return renderMathContent(props.message.content)
+  return renderMathMarkdown(props.message.content)
 })
 </script>
 
 <template>
-  <div class="message-card" :class="{ user: isUser, assistant: isAssistant, streaming: isStreaming }">
+  <div
+    class="message-card"
+    :class="{ user: isUser, assistant: isAssistant, streaming: isStreaming }"
+  >
     <!-- Header row -->
     <div class="message-header">
-      <span class="role-label" :class="roleClass">{{ roleLabel }}</span>
+      <span
+        class="role-label"
+        :class="roleClass"
+        >{{ roleLabel }}</span
+      >
     </div>
 
     <!-- Content -->
     <div class="message-body">
       <!-- Highlight context quote -->
-      <blockquote v-if="message.highlightContext" class="highlight-quote">
+      <blockquote
+        v-if="message.highlightContext"
+        class="highlight-quote"
+      >
         {{ message.highlightContext }}
       </blockquote>
 
-      <div v-if="isAssistant" class="prose" v-html="renderedContent" />
-      <div v-else class="user-text">
+      <div
+        v-if="isAssistant"
+        class="prose"
+        v-html="renderedContent"
+      />
+      <div
+        v-else
+        class="user-text"
+      >
         {{ message.content }}
       </div>
       <StreamingCursor v-if="isStreaming && isAssistant" />

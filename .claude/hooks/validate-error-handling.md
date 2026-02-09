@@ -3,6 +3,7 @@
 ⚠️ **Potential banned pattern detected in content**
 
 The code being written contains one of these patterns:
+
 - `throw new Error` - Raw error throwing
 - `console.error` - Direct console error logging
 
@@ -22,6 +23,7 @@ throw new AppError(ErrorCode.INTERNAL_ERROR, 'Something went wrong')
 ```
 
 Choose the appropriate ErrorCode:
+
 - `ErrorCode.VALIDATION_ERROR` - Input validation failures
 - `ErrorCode.AI_PROVIDER_ERROR` - AI API issues
 - `ErrorCode.FILE_SYSTEM_ERROR` - File operations
@@ -62,7 +64,8 @@ if (error) {
 ## Exceptions
 
 These patterns are OK:
-- In test files (*.test.ts, *.spec.ts)
+
+- In test files (_.test.ts, _.spec.ts)
 - In @inkdown/shared/errors.ts (the canonical location)
 - When console.error is used WITH handleError for additional context
 

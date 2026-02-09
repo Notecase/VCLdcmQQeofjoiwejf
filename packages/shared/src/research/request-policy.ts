@@ -38,12 +38,12 @@ const DETAILED_LONG_FORM_PATTERNS: RegExp[] = [
 ]
 
 function hasPattern(input: string, patterns: RegExp[]): boolean {
-  return patterns.some(pattern => pattern.test(input))
+  return patterns.some((pattern) => pattern.test(input))
 }
 
 export function classifyRequestPolicyMode(
   message: string,
-  outputPreference?: RequestOutputPreference,
+  outputPreference?: RequestOutputPreference
 ): RequestPolicyMode {
   if (outputPreference === 'chat') return 'chat'
   if (outputPreference === 'note') return 'note'
@@ -64,7 +64,7 @@ export function classifyRequestPolicyMode(
 
 export function inferAutoOutputPreference(
   message: string,
-  outputPreference?: RequestOutputPreference,
+  outputPreference?: RequestOutputPreference
 ): RequestOutputPreference | undefined {
   if (outputPreference) return outputPreference
   return classifyRequestPolicyMode(message) === 'markdown' ? 'md_file' : undefined
@@ -72,7 +72,7 @@ export function inferAutoOutputPreference(
 
 export function shouldUseResearchFileTools(
   message: string,
-  outputPreference?: RequestOutputPreference,
+  outputPreference?: RequestOutputPreference
 ): boolean {
   if (outputPreference === 'md_file') return true
   if (outputPreference === 'chat' || outputPreference === 'note') return false

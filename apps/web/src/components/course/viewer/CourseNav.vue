@@ -27,7 +27,7 @@ function isCollapsed(idx: number) {
 
 function moduleProgress(mod: CourseModule): number {
   if (mod.lessons.length === 0) return 0
-  const completed = mod.lessons.filter(l => l.status === 'completed').length
+  const completed = mod.lessons.filter((l) => l.status === 'completed').length
   return Math.round((completed / mod.lessons.length) * 100)
 }
 </script>
@@ -46,9 +46,18 @@ function moduleProgress(mod: CourseModule): number {
         :class="{ active: mIdx === selectedModuleIndex }"
       >
         <!-- Module header -->
-        <button class="module-toggle" @click="toggleModule(mIdx)">
-          <ChevronDown v-if="!isCollapsed(mIdx)" :size="14" />
-          <ChevronRight v-else :size="14" />
+        <button
+          class="module-toggle"
+          @click="toggleModule(mIdx)"
+        >
+          <ChevronDown
+            v-if="!isCollapsed(mIdx)"
+            :size="14"
+          />
+          <ChevronRight
+            v-else
+            :size="14"
+          />
           <span class="module-name">{{ mod.title }}</span>
         </button>
 
@@ -62,7 +71,10 @@ function moduleProgress(mod: CourseModule): number {
         </div>
 
         <!-- Lessons -->
-        <div v-if="!isCollapsed(mIdx)" class="lessons-list">
+        <div
+          v-if="!isCollapsed(mIdx)"
+          class="lessons-list"
+        >
           <button
             v-for="(lesson, lIdx) in mod.lessons"
             :key="lesson.id"
@@ -74,8 +86,16 @@ function moduleProgress(mod: CourseModule): number {
             @click="emit('select', mIdx, lIdx)"
           >
             <span class="lesson-icon">
-              <CheckCircle2 v-if="lesson.status === 'completed'" :size="14" class="check-icon" />
-              <LessonTypeIcon v-else :type="lesson.type" :size="14" />
+              <CheckCircle2
+                v-if="lesson.status === 'completed'"
+                :size="14"
+                class="check-icon"
+              />
+              <LessonTypeIcon
+                v-else
+                :type="lesson.type"
+                :size="14"
+              />
             </span>
             <span class="lesson-name">{{ lesson.title }}</span>
           </button>

@@ -25,12 +25,12 @@ describe('secretary memory file grouping', () => {
       file('Plans/rei-roadmap.md'),
     ])
 
-    expect(groups.rootMemoryFiles.map(f => f.filename)).toEqual(['AI.md', 'Plan.md', 'Today.md'])
-    expect(groups.historyEntries.map(f => f.filename)).toEqual([
+    expect(groups.rootMemoryFiles.map((f) => f.filename)).toEqual(['AI.md', 'Plan.md', 'Today.md'])
+    expect(groups.historyEntries.map((f) => f.filename)).toEqual([
       'History/2026-02-07.md',
       'History/2026-02-06.md',
     ])
-    expect(groups.planArchiveEntries.map(f => f.filename)).toEqual(['Plans/rei-roadmap.md'])
+    expect(groups.planArchiveEntries.map((f) => f.filename)).toEqual(['Plans/rei-roadmap.md'])
   })
 
   it('provides history analytics source without lazy history loading', () => {
@@ -38,11 +38,11 @@ describe('secretary memory file grouping', () => {
       file('AI.md'),
       file(
         'History/2026-02-06.md',
-        `# Day\n- [x] 09:00 (45min) Task A\n- [ ] 10:00 (45min) Task B`,
+        `# Day\n- [x] 09:00 (45min) Task A\n- [ ] 10:00 (45min) Task B`
       ),
       file(
         'History/2026-02-07.md',
-        `# Day\n- [x] 09:00 (45min) Task C\n- [x] 10:00 (45min) Task D`,
+        `# Day\n- [x] 09:00 (45min) Task C\n- [x] 10:00 (45min) Task D`
       ),
     ])
 

@@ -12,7 +12,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
 import { useNotificationsStore } from '@/stores/notifications'
-import { getAutoOutputDestinationForMessage, getRequestModeForMessage } from './deepAgent.output-policy'
+import {
+  getAutoOutputDestinationForMessage,
+  getRequestModeForMessage,
+} from './deepAgent.output-policy'
 import { saveResearchDraft } from '@/services/deepAgent.service'
 import {
   applyNoteDraftDelta,
@@ -110,11 +113,11 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
 
   const activeThread = computed(() => {
     if (!activeThreadId.value) return null
-    return threads.value.find(t => t.id === activeThreadId.value) || null
+    return threads.value.find((t) => t.id === activeThreadId.value) || null
   })
 
-  const completedTodos = computed(() => todos.value.filter(t => t.status === 'completed'))
-  const pendingTodos = computed(() => todos.value.filter(t => t.status !== 'completed'))
+  const completedTodos = computed(() => todos.value.filter((t) => t.status === 'completed'))
+  const pendingTodos = computed(() => todos.value.filter((t) => t.status !== 'completed'))
   const hasActiveInterrupt = computed(() => pendingInterrupt.value !== null)
   const hasPendingOutputClarification = computed(() => pendingOutputClarification.value !== null)
   const hasActiveNoteDraft = computed(() => activeNoteDraft.value !== null)
@@ -157,7 +160,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   function syncDraftToMessage() {
     const draft = activeNoteDraft.value
     if (!draft?.messageId) return
-    const message = chatMessages.value.find(m => m.id === draft.messageId)
+    const message = chatMessages.value.find((m) => m.id === draft.messageId)
     if (message && message.role === 'assistant') {
       message.noteDraft = { ...draft }
     }
@@ -166,7 +169,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   function attachDraftToLatestAssistant() {
     const draft = activeNoteDraft.value
     if (!draft) return
-    const lastAssistant = [...chatMessages.value].reverse().find(m => m.role === 'assistant')
+    const lastAssistant = [...chatMessages.value].reverse().find((m) => m.role === 'assistant')
     if (!lastAssistant) return
     draft.messageId = lastAssistant.id
     lastAssistant.noteDraft = { ...draft }
@@ -186,7 +189,10 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   function ingestNoteDraft(payload: ResearchNoteDraft) {
-    activeNoteDraft.value = applyNoteDraftSnapshot(activeNoteDraft.value, payload) as DeepAgentNoteDraft
+    activeNoteDraft.value = applyNoteDraftSnapshot(
+      activeNoteDraft.value,
+      payload
+    ) as DeepAgentNoteDraft
     streamingNoteDraft.value = { ...activeNoteDraft.value }
     syncDraftToMessage()
   }
@@ -288,7 +294,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   function resolveOutputClarification(
-    destination: OutputDestination,
+    destination: OutputDestination
   ): { message: string; outputDestination: OutputDestination } | null {
     const request = pendingOutputClarification.value
     if (!request) return null
@@ -306,7 +312,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   async function deleteThread(threadId: string) {
     try {
       await authFetch(`${RESEARCH_API}/threads/${threadId}`, { method: 'DELETE' })
-      threads.value = threads.value.filter(t => t.id !== threadId)
+      threads.value = threads.value.filter((t) => t.id !== threadId)
       if (activeThreadId.value === threadId) {
         createNewThread()
       }
@@ -348,7 +354,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         if (attempt > 0) {
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise((r) => setTimeout(r, 1000))
           // Reset streaming state for retry
           streamingContent.value = ''
           streamingToolCalls.value = []
@@ -412,14 +418,20 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       }
 
       // Finalize: push assembled assistant message
-      if (streamingContent.value || streamingToolCalls.value.length > 0 || streamingNoteDraft.value) {
+      if (
+        streamingContent.value ||
+        streamingToolCalls.value.length > 0 ||
+        streamingNoteDraft.value
+      ) {
         const assistantMessage: DeepAgentChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: streamingContent.value,
           createdAt: new Date(),
-          toolCalls: streamingToolCalls.value.length > 0 ? [...streamingToolCalls.value] : undefined,
-          subagents: streamingSubagents.value.length > 0 ? [...streamingSubagents.value] : undefined,
+          toolCalls:
+            streamingToolCalls.value.length > 0 ? [...streamingToolCalls.value] : undefined,
+          subagents:
+            streamingSubagents.value.length > 0 ? [...streamingSubagents.value] : undefined,
           noteDraft: streamingNoteDraft.value ? { ...streamingNoteDraft.value } : undefined,
         }
         chatMessages.value.push(assistantMessage)
@@ -440,7 +452,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
 
       // Auto-title new threads
       if (activeThreadId.value) {
-        const thread = threads.value.find(t => t.id === activeThreadId.value)
+        const thread = threads.value.find((t) => t.id === activeThreadId.value)
         if (thread && !thread.title) {
           const title = extractTitle(message)
           try {
@@ -477,10 +489,13 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
     pendingInterrupt.value = null
 
     try {
-      const res = await authFetch(`${RESEARCH_API}/threads/${activeThreadId.value}/interrupt-response`, {
-        method: 'POST',
-        body: JSON.stringify(response),
-      })
+      const res = await authFetch(
+        `${RESEARCH_API}/threads/${activeThreadId.value}/interrupt-response`,
+        {
+          method: 'POST',
+          body: JSON.stringify(response),
+        }
+      )
 
       if (!res.ok) {
         const errorText = await res.text()
@@ -497,7 +512,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   async function saveFileAsNote(filename: string) {
-    const file = files.value.find(f => f.name === filename)
+    const file = files.value.find((f) => f.name === filename)
     if (!file) return
 
     const { createNote } = await import('@/services/notes.service')
@@ -530,7 +545,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   function editFile(filename: string, content: string) {
-    const existing = files.value.find(f => f.name === filename)
+    const existing = files.value.find((f) => f.name === filename)
     if (existing) {
       existing.content = content
       existing.updatedAt = new Date().toISOString()
@@ -557,12 +572,18 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   function hideNoteDraft() {
-    activeNoteDraft.value = setNoteDraftHidden(activeNoteDraft.value, true) as DeepAgentNoteDraft | null
+    activeNoteDraft.value = setNoteDraftHidden(
+      activeNoteDraft.value,
+      true
+    ) as DeepAgentNoteDraft | null
     syncDraftToMessage()
   }
 
   function reopenNoteDraft() {
-    activeNoteDraft.value = setNoteDraftHidden(activeNoteDraft.value, false) as DeepAgentNoteDraft | null
+    activeNoteDraft.value = setNoteDraftHidden(
+      activeNoteDraft.value,
+      false
+    ) as DeepAgentNoteDraft | null
     syncDraftToMessage()
   }
 
@@ -618,7 +639,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
 
   function stableStringify(value: unknown): string {
     if (value === null || typeof value !== 'object') return JSON.stringify(value)
-    if (Array.isArray(value)) return `[${value.map(item => stableStringify(item)).join(',')}]`
+    if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(',')}]`
     const entries = Object.entries(value as Record<string, unknown>)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`)
@@ -654,14 +675,20 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'tool_call': {
         let toolData: Record<string, unknown>
         try {
-          toolData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          toolData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
-        const toolName = (toolData.toolName as string | undefined) || (toolData.name as string | undefined) || 'unknown'
-        const toolArgs = (toolData.arguments as Record<string, unknown> | undefined)
-          || (toolData.args as Record<string, unknown> | undefined)
-          || {}
+        const toolName =
+          (toolData.toolName as string | undefined) ||
+          (toolData.name as string | undefined) ||
+          'unknown'
+        const toolArgs =
+          (toolData.arguments as Record<string, unknown> | undefined) ||
+          (toolData.args as Record<string, unknown> | undefined) ||
+          {}
         const semanticSignature = `${toolName}:${stableStringify(toolArgs)}`
         if (seenStreamingToolCallSignatures.value.has(semanticSignature)) {
           break
@@ -669,12 +696,12 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
         seenStreamingToolCallSignatures.value.add(semanticSignature)
 
         const toolId = (toolData.id as string | undefined) || crypto.randomUUID()
-        if (streamingToolCalls.value.some(tc => tc.id === toolId)) {
+        if (streamingToolCalls.value.some((tc) => tc.id === toolId)) {
           break
         }
         const existingByName = [...streamingToolCalls.value]
           .reverse()
-          .find(tc => tc.toolName === toolName)
+          .find((tc) => tc.toolName === toolName)
         if (existingByName) {
           existingByName.arguments = toolArgs
           existingByName.status = 'running'
@@ -692,27 +719,34 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'tool_result': {
         let resultData: Record<string, unknown>
         try {
-          resultData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          resultData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
         let toolCall = streamingToolCalls.value.find(
-          tc => tc.id === ((resultData.id as string | undefined) || (resultData.toolCallId as string | undefined)),
+          (tc) =>
+            tc.id ===
+            ((resultData.id as string | undefined) || (resultData.toolCallId as string | undefined))
         )
         // Fallback: match by toolName if ID matching fails
         if (!toolCall) {
-          toolCall = [...streamingToolCalls.value].reverse().find(
-            tc => tc.status === 'running'
-              && tc.toolName === (
-                (resultData.toolName as string | undefined)
-                || (resultData.name as string | undefined)
-              ),
-          )
+          toolCall = [...streamingToolCalls.value]
+            .reverse()
+            .find(
+              (tc) =>
+                tc.status === 'running' &&
+                tc.toolName ===
+                  ((resultData.toolName as string | undefined) ||
+                    (resultData.name as string | undefined))
+            )
         }
         if (toolCall) {
-          toolCall.result = (resultData.result as string | undefined)
-            || (resultData.output as string | undefined)
-            || ''
+          toolCall.result =
+            (resultData.result as string | undefined) ||
+            (resultData.output as string | undefined) ||
+            ''
           toolCall.status = resultData.error ? 'error' : 'complete'
         }
         break
@@ -721,17 +755,18 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'note-draft-delta': {
         let draftDeltaData: Record<string, unknown>
         try {
-          draftDeltaData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          draftDeltaData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
         const draftId = draftDeltaData.draftId as string | undefined
-        const currentContent = typeof draftDeltaData.currentContent === 'string'
-          ? draftDeltaData.currentContent
-          : undefined
-        const delta = typeof draftDeltaData.delta === 'string'
-          ? draftDeltaData.delta
-          : undefined
+        const currentContent =
+          typeof draftDeltaData.currentContent === 'string'
+            ? draftDeltaData.currentContent
+            : undefined
+        const delta = typeof draftDeltaData.delta === 'string' ? draftDeltaData.delta : undefined
         if (!draftId || (currentContent === undefined && delta === undefined)) break
         ingestNoteDraftDelta({
           draftId,
@@ -747,7 +782,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'note-draft': {
         let draftData: ResearchNoteDraft
         try {
-          draftData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as ResearchNoteDraft
+          draftData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as ResearchNoteDraft
         } catch {
           break
         }
@@ -758,7 +795,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'todo-update': {
         let todoData: Record<string, unknown>
         try {
-          todoData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          todoData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
@@ -773,7 +812,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'file-write': {
         let fileData: Record<string, unknown>
         try {
-          fileData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          fileData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
@@ -781,7 +822,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
         const content = fileData.content as string | undefined
         if (!filename || content === undefined) break
 
-        const existing = files.value.find(f => f.name === filename)
+        const existing = files.value.find((f) => f.name === filename)
         if (existing) {
           existing.content = content
           existing.updatedAt = new Date().toISOString()
@@ -799,13 +840,16 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'file-delete': {
         let deleteData: Record<string, unknown>
         try {
-          deleteData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          deleteData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
-        const deleteName = (deleteData.name as string | undefined) || (deleteData.filename as string | undefined)
+        const deleteName =
+          (deleteData.name as string | undefined) || (deleteData.filename as string | undefined)
         if (deleteName) {
-          files.value = files.value.filter(f => f.name !== deleteName)
+          files.value = files.value.filter((f) => f.name !== deleteName)
         }
         break
       }
@@ -813,7 +857,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'interrupt': {
         let interruptData: InterruptData
         try {
-          interruptData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as InterruptData
+          interruptData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as InterruptData
         } catch {
           break
         }
@@ -824,18 +870,22 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'subagent-start': {
         let subagentData: SubagentInfo
         try {
-          subagentData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as SubagentInfo
+          subagentData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as SubagentInfo
         } catch {
           break
         }
         // Add to both active list and streaming list
-        const existingActive = activeSubagents.value.findIndex(s => s.id === subagentData.id)
+        const existingActive = activeSubagents.value.findIndex((s) => s.id === subagentData.id)
         if (existingActive >= 0) {
           activeSubagents.value[existingActive] = subagentData
         } else {
           activeSubagents.value.push(subagentData)
         }
-        const existingStreaming = streamingSubagents.value.findIndex(s => s.id === subagentData.id)
+        const existingStreaming = streamingSubagents.value.findIndex(
+          (s) => s.id === subagentData.id
+        )
         if (existingStreaming >= 0) {
           streamingSubagents.value[existingStreaming] = subagentData
         } else {
@@ -847,7 +897,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'subagent-result': {
         let resultData: Record<string, unknown>
         try {
-          resultData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          resultData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
@@ -855,7 +907,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
         if (!subagentId) break
 
         // Update in active subagents
-        const activeIdx = activeSubagents.value.findIndex(s => s.id === subagentId)
+        const activeIdx = activeSubagents.value.findIndex((s) => s.id === subagentId)
         if (activeIdx >= 0) {
           activeSubagents.value[activeIdx] = {
             ...activeSubagents.value[activeIdx],
@@ -865,7 +917,7 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
           }
         }
         // Update in streaming subagents
-        const streamIdx = streamingSubagents.value.findIndex(s => s.id === subagentId)
+        const streamIdx = streamingSubagents.value.findIndex((s) => s.id === subagentId)
         if (streamIdx >= 0) {
           streamingSubagents.value[streamIdx] = {
             ...streamingSubagents.value[streamIdx],
@@ -880,7 +932,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'thread-status': {
         let statusData: Record<string, unknown>
         try {
-          statusData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          statusData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
@@ -893,7 +947,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'thread-id': {
         let threadData: Record<string, unknown>
         try {
-          threadData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          threadData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }
@@ -908,7 +964,9 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
       case 'note-navigate': {
         let navData: Record<string, unknown>
         try {
-          navData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<string, unknown>
+          navData = (
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          ) as Record<string, unknown>
         } catch {
           break
         }

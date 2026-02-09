@@ -204,31 +204,34 @@ function initializeMuya() {
   })
 
   // Handle artifact code editor open event
-  muyaInstance.value.on('artifact-open-code-editor', (data: { blockId: string; code: string; title: string; height: number }) => {
-    // Parse code JSON to extract html/css/javascript
-    let html = ''
-    let css = ''
-    let javascript = ''
-    try {
-      const parsed = JSON.parse(data.code)
-      html = parsed.html || ''
-      css = parsed.css || ''
-      javascript = parsed.javascript || ''
-    } catch {
-      // If code is not JSON, treat as raw HTML
-      html = data.code
-    }
+  muyaInstance.value.on(
+    'artifact-open-code-editor',
+    (data: { blockId: string; code: string; title: string; height: number }) => {
+      // Parse code JSON to extract html/css/javascript
+      let html = ''
+      let css = ''
+      let javascript = ''
+      try {
+        const parsed = JSON.parse(data.code)
+        html = parsed.html || ''
+        css = parsed.css || ''
+        javascript = parsed.javascript || ''
+      } catch {
+        // If code is not JSON, treat as raw HTML
+        html = data.code
+      }
 
-    artifactEditData.value = {
-      blockId: data.blockId,
-      title: data.title,
-      html,
-      css,
-      javascript,
-      height: data.height,
+      artifactEditData.value = {
+        blockId: data.blockId,
+        title: data.title,
+        html,
+        css,
+        javascript,
+        height: data.height,
+      }
+      artifactModalOpen.value = true
     }
-    artifactModalOpen.value = true
-  })
+  )
 
   isEditorReady.value = true
 
@@ -496,7 +499,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
     <!-- Diff blocks are injected directly into .mu-container by useDiffBlocks composable -->
     <div
       ref="editorRef"
-      class="muya-editor"
+      class="muya-editor mu-front-controls-enabled"
       :dir="preferencesStore.textDirection"
     ></div>
 

@@ -31,6 +31,7 @@ After writing/editing this TypeScript file, verify:
 ## Recommendations
 
 If issues are found:
+
 1. Note them in the response
 2. Suggest specific fixes
 3. Offer to apply corrections

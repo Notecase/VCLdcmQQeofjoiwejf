@@ -53,7 +53,7 @@ const agentSteps: AgentStep[] = [
 ]
 
 const currentStepIndex = computed(() =>
-  agentSteps.findIndex(s => s.key === courseStore.generationStage),
+  agentSteps.findIndex((s) => s.key === courseStore.generationStage)
 )
 
 function stepStatus(idx: number): 'done' | 'active' | 'pending' {
@@ -68,7 +68,12 @@ function handleSubmit(payload: {
   settings: Partial<CourseSettings>
   focusAreas: string[]
 }) {
-  courseStore.startGeneration(payload.topic, payload.difficulty, payload.settings, payload.focusAreas)
+  courseStore.startGeneration(
+    payload.topic,
+    payload.difficulty,
+    payload.settings,
+    payload.focusAreas
+  )
 }
 
 function handleApprove(modifiedOutline?: CourseOutline) {
@@ -96,12 +101,18 @@ function goBack() {
 <template>
   <div class="generator-view">
     <!-- Header -->
-    <header class="generator-header" :style="sidebarWidthStyle">
+    <header
+      class="generator-header"
+      :style="sidebarWidthStyle"
+    >
       <div class="dock-area">
         <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
       </div>
       <div class="header-content">
-        <button class="back-btn" @click="goBack">
+        <button
+          class="back-btn"
+          @click="goBack"
+        >
           <ArrowLeft :size="16" />
           Courses
         </button>
@@ -128,14 +139,20 @@ function goBack() {
     </header>
 
     <!-- Pre-generation: Centered Topic Input -->
-    <main v-if="viewMode === 'input'" class="generator-body">
+    <main
+      v-if="viewMode === 'input'"
+      class="generator-body"
+    >
       <div class="generator-content">
         <CourseTopicInput @submit="handleSubmit" />
       </div>
     </main>
 
     <!-- During generation: Two-column layout -->
-    <div v-else class="generator-active">
+    <div
+      v-else
+      class="generator-active"
+    >
       <!-- Left: Agent Step Timeline -->
       <div class="generator-timeline">
         <div class="timeline-header">
@@ -150,7 +167,10 @@ function goBack() {
           >
             <div class="step-indicator">
               <div class="step-dot" />
-              <div v-if="idx < agentSteps.length - 1" class="step-line" />
+              <div
+                v-if="idx < agentSteps.length - 1"
+                class="step-line"
+              />
             </div>
             <div class="step-content">
               <span class="step-label">{{ step.label }}</span>
@@ -174,7 +194,10 @@ function goBack() {
       <!-- Right: Details Panel -->
       <div class="generator-details">
         <!-- Outline approval -->
-        <div v-if="courseStore.isAwaitingApproval && courseStore.pendingOutline" class="details-section">
+        <div
+          v-if="courseStore.isAwaitingApproval && courseStore.pendingOutline"
+          class="details-section"
+        >
           <OutlineReview
             :outline="courseStore.pendingOutline"
             :submitting="courseStore.isApprovingOutline"
@@ -184,7 +207,10 @@ function goBack() {
         </div>
 
         <!-- Generation progress details -->
-        <div v-else class="details-section">
+        <div
+          v-else
+          class="details-section"
+        >
           <GenerationProgress
             :stage="courseStore.generationStage"
             :progress="courseStore.generationProgress"
@@ -200,7 +226,10 @@ function goBack() {
           />
 
           <!-- Agent Todos (wired to store, uses optional chaining for Agent 3 properties) -->
-          <div v-if="(courseStore as any).agentTodos?.length" class="todos-section glass-card">
+          <div
+            v-if="(courseStore as any).agentTodos?.length"
+            class="todos-section glass-card"
+          >
             <h4>Tasks</h4>
             <div class="todo-list">
               <div
@@ -219,9 +248,17 @@ function goBack() {
     </div>
 
     <!-- Error state (shown on input page only, e.g. after dismissing an error) -->
-    <div v-if="courseStore.generationError && viewMode === 'input'" class="generator-error glass-card">
+    <div
+      v-if="courseStore.generationError && viewMode === 'input'"
+      class="generator-error glass-card"
+    >
       <p>{{ courseStore.generationError }}</p>
-      <button class="retry-btn" @click="courseStore.generationError = null">Try Again</button>
+      <button
+        class="retry-btn"
+        @click="courseStore.generationError = null"
+      >
+        Try Again
+      </button>
     </div>
   </div>
 </template>
@@ -245,7 +282,7 @@ function goBack() {
   align-items: center;
   height: 56px;
   flex-shrink: 0;
-  padding: 8px 24px 8px 0;
+  padding: 8px 16px 8px 0;
   gap: 16px;
 }
 

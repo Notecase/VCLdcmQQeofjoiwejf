@@ -70,7 +70,7 @@ function parseSelector(str = '') {
 const LANG_HASH: Record<string, string> = {
   'html-block': 'html',
   'math-block': 'latex',
-  'artifact': 'json',
+  artifact: 'json',
 }
 
 function hasStateMeta(

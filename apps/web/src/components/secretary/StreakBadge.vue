@@ -12,7 +12,10 @@ defineProps<{
 <template>
   <div class="streak-badge">
     <div class="streak-item primary">
-      <Flame :size="18" class="streak-icon fire" />
+      <Flame
+        :size="18"
+        class="streak-icon fire"
+      />
       <div class="streak-info">
         <span class="streak-value">{{ currentStreak }}</span>
         <span class="streak-label">day streak</span>
@@ -22,7 +25,10 @@ defineProps<{
     <div class="streak-divider" />
 
     <div class="streak-item">
-      <Trophy :size="14" class="streak-icon trophy" />
+      <Trophy
+        :size="14"
+        class="streak-icon trophy"
+      />
       <div class="streak-info">
         <span class="streak-value sm">{{ longestStreak }}</span>
         <span class="streak-label">best</span>
@@ -32,7 +38,10 @@ defineProps<{
     <div class="streak-divider" />
 
     <div class="streak-item">
-      <Target :size="14" class="streak-icon target" />
+      <Target
+        :size="14"
+        class="streak-icon target"
+      />
       <div class="streak-info">
         <span class="streak-value sm">{{ weeklyCompleted }}/{{ weeklyTotal }}</span>
         <span class="streak-label">this week</span>

@@ -1,165 +1,207 @@
-# Fix AI Tutor Sidebar — Design, White Line Bug, Context Wiring
+# Fix AI Tutor — Rendering, Context Intelligence, System Flow
 
 ## Context
 
-The AI Tutor sidebar was implemented but has 3 issues:
-1. **Design mismatch**: Current sidebar uses a custom design (icon-based messages, GraduationCap header). User wants it to match the note editor's AI sidebar (`AISidebar.vue`) — specifically the Agent tab's look and feel.
-2. **White line bug**: A horizontal line cuts through user messages between the highlight-context blockquote and the message text.
-3. **AI can't answer about the lesson**: When asking "what's this note about", the AI says it doesn't know which note — the lesson markdown IS being sent via the system prompt, but the system prompt doesn't explicitly tell the AI "this is the note the student is referring to". The prompt says "lesson content" but the user says "note" — need to add aliasing + a stronger instruction.
+The AI Tutor sidebar has been restyled to match the AISidebar design (completed). Now there are deeper issues:
+
+1. **Broken rendering**: AI responses contain full markdown (headings, lists, blockquotes, tables, horizontal rules) and LaTeX with `\(...\)` / `\[...\]` delimiters. The current `renderMathContent()` only handles `$...$`/`$$...$$` math and basic bold/italic/code — everything else renders as raw text.
+2. **No surrounding context for highlights**: When users highlight text, only the exact selection is sent. The AI has no idea WHERE in the lesson it appears or what paragraphs surround it.
+3. **Conversation history loses highlight context**: Previous highlight references are stripped when building conversation history, so multi-turn follow-ups lose context.
 
 ---
 
-## Fix 1: Restyle Sidebar to Match AISidebar Agent Tab
+## Fix 1: Hybrid Math+Markdown Renderer
 
-### Goal
-Replace the current `CourseExplainSidebar.vue` + `ExplainChatMessage.vue` design with the exact visual language of `AISidebar.vue` + `ChatMessage.vue`.
+### Problem
 
-### What to copy from AISidebar
+`renderMathContent()` in `mathRenderer.ts` only supports:
 
-**Sidebar container** (`AISidebar.vue:475-500`):
-- Use `var(--ai-sidebar-bg)` background instead of `var(--sidebar-bg)`
-- Shadow elevation: `box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12)` instead of `border-left`
-- Gradient overlay via `::before` pseudo-element
-- Width: `320px` (not `380px`)
-- Font family: `-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
+- Math: `$...$` and `$$...$$`
+- Markdown: bold, italic, inline code, code blocks, line breaks
 
-**Header** (`AISidebar.vue:522-576`):
-- Height `44px`, glassmorphism background `var(--ai-header-bg)` with `backdrop-filter: blur(12px)`
-- Border-bottom: `var(--ai-divider)` instead of `var(--border-color)`
-- Title centered with close button on right (keep current layout but restyle)
-- Close button: use `.expand-btn` style (no background, `#6e7681` color, hover → `#58a6ff`)
+Missing: `\(...\)`, `\[...\]` math delimiters, headings, lists, blockquotes, tables, horizontal rules, links.
 
-**Input area** — Replace `ChatComposer` with the `AISidebar` input box style:
-- Glass morphism: `rgba(22, 27, 34, 0.65)` + `blur(12px) saturate(180%)`
-- Border radius `12px`, padding `12px`
-- Context pill moves inside the input box (like `.input-context` in AISidebar)
-- Footer with Attach/Search/Mention placeholder buttons + circular send button
-- Send button: circular `28px`, uses `var(--primary-gradient)` when active
+### Solution
 
-**Message rendering** — Replace `ExplainChatMessage.vue` with `ChatMessage.vue`-style layout:
-- **No icons** (Bot/User) — use text role labels instead: "YOU" / "AI" (`11px uppercase, #8b949e`)
-- Transparent background, `padding: 16px 0`
-- Border-bottom separator: `var(--chat-separator)` (not `rgba(255, 255, 255, 0.04)`)
-- Last message: no border-bottom
-- Hover: `var(--chat-message-hover)` background
-- Streaming: `var(--chat-message-streaming)` background
-- Body: `14px`, `line-height: 1.65`, `.prose` deep styles matching ChatMessage
-- Use `renderMathContent()` utility from `@/utils/mathRenderer` instead of raw `marked`
-- Use `StreamingCursor` component from `@/components/ai/shared/StreamingCursor.vue`
+Add a new `renderMathMarkdown()` function that combines `marked` (full markdown) + KaTeX (all math delimiters). All dependencies already installed: `marked@^17.0.1`, `dompurify@^3.3.1`, `katex@^0.16.27`.
 
-### Files to modify
+### Algorithm
 
-| File | Change |
-|------|--------|
-| `apps/web/src/components/course/viewer/CourseExplainSidebar.vue` | Full restyle: sidebar container, header, input area, replace ChatComposer with inline input matching AISidebar |
-| `apps/web/src/components/course/viewer/ExplainChatMessage.vue` | Full restyle: replace icon layout with role-label layout, use `renderMathContent`, use theme vars, use `StreamingCursor` |
+1. Protect code blocks with placeholders (prevent math parsing inside code)
+2. Protect all 4 math delimiter types with placeholders, render each via KaTeX:
+   - `\[...\]` → display math
+   - `\(...\)` → inline math
+   - `$$...$$` → display math
+   - `$...$` → inline math
+3. Run `marked.parse()` for full markdown rendering
+4. Sanitize with `DOMPurify.sanitize()` (allow KaTeX attributes)
+5. Restore math placeholders with rendered KaTeX HTML
 
-### Key reusable utilities
+### File
 
-| Utility | Path | Usage |
-|---------|------|-------|
-| `renderMathContent()` | `apps/web/src/utils/mathRenderer.ts` | Render markdown + KaTeX math in assistant messages |
-| `StreamingCursor` | `apps/web/src/components/ai/shared/StreamingCursor.vue` | Animated cursor for streaming |
-| Theme variables | `apps/web/src/assets/themes/variables.css` | `--ai-sidebar-bg`, `--ai-header-bg`, `--ai-divider`, `--chat-separator`, etc. |
+| File                                 | Change                            |
+| ------------------------------------ | --------------------------------- |
+| `apps/web/src/utils/mathRenderer.ts` | Add `renderMathMarkdown()` export |
+
+### Reference
+
+`MarkdownContent.vue` (`apps/web/src/components/deepagent/MarkdownContent.vue`) already uses `marked` + `DOMPurify` — follow its pattern but add math support.
 
 ---
 
-## Fix 2: White Line Bug
+## Fix 2: Use New Renderer in ExplainChatMessage
 
-### Root cause
+### File
 
-In `ExplainChatMessage.vue:50-52`:
-```css
-.explain-message + .explain-message {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+| File                                                           | Change                                                     |
+| -------------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/web/src/components/course/viewer/ExplainChatMessage.vue` | Import `renderMathMarkdown` instead of `renderMathContent` |
+
+One-line change in the computed property. The `.prose :deep()` styles already support full markdown elements (headings, lists, blockquotes, etc.) from the restyle done earlier.
+
+---
+
+## Fix 3: Extract Surrounding Context from Text Selection
+
+### Problem
+
+`useTextSelection.ts` captures only `selection.toString().trim()` — no positional info.
+
+### Solution
+
+Enhance the composable to also extract:
+
+- **Surrounding context**: the full text of the parent block element(s) containing the selection
+- **Section heading**: the nearest `<h1>`–`<h6>` above the selection
+
+### Algorithm
+
+After getting selected text:
+
+1. Get `range.commonAncestorContainer`
+2. Walk up to find nearest block element (`p`, `div`, `li`, `blockquote`, `section`)
+3. Get its `textContent` as `surroundingContext` (cap at 500 chars)
+4. Continue walking up/backward to find nearest heading element
+5. Get its `textContent` as `sectionHeading`
+
+### Return type change
+
+```typescript
+// Before: { selectedText: Ref<string | null>, clearSelection }
+// After:  { selection: Ref<TextSelection | null>, clearSelection }
+interface TextSelection {
+  text: string
+  surroundingContext?: string
+  sectionHeading?: string
 }
 ```
 
-This rule is correct in isolation (only applies between adjacent messages). **But** the highlight-context `<blockquote>` inside a user message has `margin: 0 0 8px` with no explicit border — the visible "white line" is actually the `border-top` of the NEXT `.explain-message` (the AI response) bleeding visually close to the user message's blockquote, making it look like the line cuts through the user message.
+### File
 
-### Fix
-
-This is resolved by Fix 1 (restyle) — the new design uses `border-bottom: 1px solid var(--chat-separator)` on the message card itself with `.message-card:last-child { border-bottom: none }`, which is the AISidebar pattern. The highlight-context blockquote will sit inside the user message card with proper padding/margin, visually separated from the next message's border.
-
-Specifically in the restyled ExplainChatMessage:
-- Each message gets `padding: 16px 0; border-bottom: 1px solid var(--chat-separator);`
-- The highlight-context blockquote gets `margin: 0 0 10px` (above the message text, inside the card)
-- No adjacent-sibling `border-top` rule
+| File                                           | Change                                     |
+| ---------------------------------------------- | ------------------------------------------ |
+| `apps/web/src/composables/useTextSelection.ts` | Return `TextSelection` object with context |
 
 ---
 
-## Fix 3: AI Can't Answer "What's This Note About"
+## Fix 4: Wire Context Through Store → API → Agent
 
-### Root cause analysis
+### 4a. Update shared types
 
-The AI receives the full lesson markdown via the system prompt. But when the user says "what's this note about", the AI responds as if it doesn't know which note — this happens because:
+| File                                   | Change                                                                                       |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `packages/shared/src/types/explain.ts` | Add `highlightSurroundingContext?: string` and `highlightSection?: string` to `ExplainInput` |
 
-1. The system prompt says "Lesson Content" but the user says "note" — the AI doesn't connect these
-2. The system prompt doesn't explicitly instruct the AI: "When the student refers to 'this', 'the note', 'this lesson', etc., they mean the lesson content provided above"
-3. The system prompt injects lesson markdown as a big block but doesn't frame it as "THIS is the content you should answer about"
+### 4b. Update store
 
-### Fix — Update system prompt in ExplainAgent
+| File                                   | Change                                                                                                                                                                            |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/stores/courseExplain.ts` | 1) Add `highlightSurroundingContext` + `highlightSection` to state. 2) Update `setHighlightedText()` to accept context params. 3) Include new fields in `sendMessage()` API body. |
 
-**File**: `packages/ai/src/agents/explain/index.ts` — `buildSystemPrompt()`
+### 4c. Update CourseView watcher
 
-Add explicit aliasing instructions:
+| File                                | Change                                                                                         |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `apps/web/src/views/CourseView.vue` | Update the `watch(selectedText, ...)` to pass surrounding context and section heading to store |
+
+### 4d. Update API schema
+
+| File                             | Change                                                                                                               |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/routes/explain.ts` | Add `highlightSurroundingContext: z.string().optional()` and `highlightSection: z.string().optional()` to Zod schema |
+
+### 4e. Update system prompt
+
+| File                                      | Change                                                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `packages/ai/src/agents/explain/index.ts` | In `buildSystemPrompt()`, add surrounding context and section heading to the `## Highlighted Text` section |
+
+New prompt structure:
 
 ```
-## Rules
-- EXPLAIN mode only. Help the student understand this lesson content.
-- When the student says "this", "this note", "the note", "this lesson", "the content", or similar — they are referring to the lesson content above. Always answer based on that content.
-- You have FULL access to the lesson content. Never say you don't know what the student is referring to — the lesson content above IS the material they're studying.
-- Never produce code edits, artifacts, or action proposals.
-- Use clear examples and relate concepts to other parts of the course when possible.
-- Format responses with markdown for readability.
-- Keep explanations concise but thorough.
+## Highlighted Text
+The student has highlighted the following passage:
+> {highlightedText}
+
+This passage appears in the following context:
+> {surroundingContext}
+
+Under section: "{sectionHeading}"
 ```
 
-Also strengthen the lesson content framing:
-```
-## Lesson Content (THIS is what the student is studying — always refer to this when they ask questions)
-{markdown}
+---
+
+## Fix 5: Preserve Highlight Context in Conversation History
+
+### Problem
+
+In `courseExplain.ts` line 70-71:
+
+```typescript
+.map(m => ({ role: m.role, content: m.content }))  // highlightContext LOST
 ```
 
-### Files to modify
+### Fix
 
-| File | Change |
-|------|--------|
-| `packages/ai/src/agents/explain/index.ts` | Update `buildSystemPrompt()` — add aliasing rules, reframe lesson content header |
+For user messages with highlight context, prepend it to content when building history:
+
+```typescript
+.map(m => ({
+  role: m.role,
+  content: m.highlightContext
+    ? `[Regarding: "${m.highlightContext}"]\n${m.content}`
+    : m.content,
+}))
+```
+
+### File
+
+| File                                   | Change                                                        |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `apps/web/src/stores/courseExplain.ts` | Fix conversation history mapping to include highlight context |
 
 ---
 
 ## File Summary
 
-### Modified files (3)
-
-| # | File | Change |
-|---|------|--------|
-| 1 | `apps/web/src/components/course/viewer/CourseExplainSidebar.vue` | Full restyle to match AISidebar agent tab |
-| 2 | `apps/web/src/components/course/viewer/ExplainChatMessage.vue` | Full restyle to match ChatMessage.vue pattern |
-| 3 | `packages/ai/src/agents/explain/index.ts` | Fix system prompt aliasing so AI answers "what's this note about" |
-
-### No new files needed
-
-### Components reused from AISidebar
-
-| Component / Utility | Path |
-|---------------------|------|
-| `renderMathContent()` | `apps/web/src/utils/mathRenderer.ts` |
-| `StreamingCursor` | `apps/web/src/components/ai/shared/StreamingCursor.vue` |
-| Theme CSS variables | `apps/web/src/assets/themes/variables.css` |
+| #   | File                                                           | Change                                             |
+| --- | -------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | `apps/web/src/utils/mathRenderer.ts`                           | Add `renderMathMarkdown()` — marked + KaTeX hybrid |
+| 2   | `apps/web/src/components/course/viewer/ExplainChatMessage.vue` | Use `renderMathMarkdown()`                         |
+| 3   | `apps/web/src/composables/useTextSelection.ts`                 | Extract surrounding context + section heading      |
+| 4   | `packages/shared/src/types/explain.ts`                         | Add context fields to `ExplainInput`               |
+| 5   | `apps/web/src/stores/courseExplain.ts`                         | Wire context fields + fix history                  |
+| 6   | `apps/web/src/views/CourseView.vue`                            | Update selection watcher                           |
+| 7   | `apps/api/src/routes/explain.ts`                               | Update Zod schema                                  |
+| 8   | `packages/ai/src/agents/explain/index.ts`                      | Enrich system prompt with context                  |
 
 ---
 
 ## Verification
 
-1. **Build**: `pnpm build` — verify all packages compile
-2. **Typecheck**: `pnpm typecheck` — no new type errors
-3. **Visual check**:
-   - Open course → AI Tutor sidebar → compare with note editor AI sidebar (Agent tab)
-   - Sidebar should use same colors, same message layout (role labels not icons), same input box style
-   - No white line between highlight-context quote and user message text
-4. **Context test**:
-   - Open a lecture lesson, open AI Tutor, ask "what's this note about" → AI should answer about the lesson content
-   - Ask "explain the first section" → AI should reference the actual content
-5. **Lint**: `pnpm lint`
+1. **Build**: `pnpm build && pnpm typecheck`
+2. **Math rendering**: Send a message that uses `\(x^2\)` and `\[E=mc^2\]` — should render as KaTeX
+3. **Markdown rendering**: AI response with `##` headings, `---` rules, `- lists`, `> blockquotes` — all should render properly
+4. **Context test**: Highlight text in a lesson → ask "explain this" → AI should reference surrounding context and section
+5. **Multi-turn test**: Ask about highlighted text → follow up without highlight → AI should still reference the original context
+6. **Lint**: `pnpm lint`

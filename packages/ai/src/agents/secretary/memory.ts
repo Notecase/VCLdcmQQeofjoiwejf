@@ -24,10 +24,7 @@ import type {
 } from '@inkdown/shared/types'
 import { AppError, ErrorCode } from '@inkdown/shared'
 import { lintSecretaryMemoryFiles } from './memory-lint'
-import {
-  parseRoadmapCandidatesFromFiles,
-  type ParsedRoadmapCandidate,
-} from './roadmap-candidates'
+import { parseRoadmapCandidatesFromFiles, type ParsedRoadmapCandidate } from './roadmap-candidates'
 
 // ============================================================================
 // Types
@@ -112,10 +109,10 @@ function withLegacySuffix(filename: string, suffix: number): string {
 }
 
 export function planLegacyPathMigrations(
-  files: Array<Pick<MemoryFile, 'filename' | 'content'>>,
+  files: Array<Pick<MemoryFile, 'filename' | 'content'>>
 ): LegacyPathMigrationOperation[] {
-  const byFilename = new Map(files.map(file => [file.filename, file]))
-  const reservedDestinations = new Set(files.map(file => file.filename))
+  const byFilename = new Map(files.map((file) => [file.filename, file]))
+  const reservedDestinations = new Set(files.map((file) => file.filename))
   const operations: LegacyPathMigrationOperation[] = []
 
   const sortedFiles = [...files].sort((a, b) => a.filename.localeCompare(b.filename))
@@ -171,7 +168,7 @@ export class MemoryService {
 
   constructor(
     private supabase: SupabaseClient,
-    private userId: string,
+    private userId: string
   ) {}
 
   /**
@@ -211,12 +208,18 @@ export class MemoryService {
           content,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'user_id,filename' },
+        { onConflict: 'user_id,filename' }
       )
       .select()
       .single()
 
-    if (error) throw new AppError(`Failed to write memory file: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { filename })
+    if (error)
+      throw new AppError(
+        `Failed to write memory file: ${error.message}`,
+        ErrorCode.DB_QUERY_FAILED,
+        undefined,
+        { filename }
+      )
 
     const row = data as MemoryRow
     return {
@@ -250,9 +253,15 @@ export class MemoryService {
 
     const { data, error } = await query
 
-    if (error) throw new AppError(`Failed to list memory files: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { prefix })
+    if (error)
+      throw new AppError(
+        `Failed to list memory files: ${error.message}`,
+        ErrorCode.DB_QUERY_FAILED,
+        undefined,
+        { prefix }
+      )
 
-    return ((data as MemoryRow[]) || []).map(row => ({
+    return ((data as MemoryRow[]) || []).map((row) => ({
       id: row.id,
       userId: row.user_id,
       filename: row.filename,
@@ -270,7 +279,7 @@ export class MemoryService {
     const operations = planLegacyPathMigrations(files)
     if (operations.length === 0) return
 
-    const fileMap = new Map(files.map(file => [file.filename, file]))
+    const fileMap = new Map(files.map((file) => [file.filename, file]))
 
     for (const operation of operations) {
       const source = fileMap.get(operation.source)
@@ -293,7 +302,13 @@ export class MemoryService {
       .eq('user_id', this.userId)
       .eq('filename', filename)
 
-    if (error) throw new AppError(`Failed to delete memory file: ${error.message}`, ErrorCode.DB_QUERY_FAILED, undefined, { filename })
+    if (error)
+      throw new AppError(
+        `Failed to delete memory file: ${error.message}`,
+        ErrorCode.DB_QUERY_FAILED,
+        undefined,
+        { filename }
+      )
     return true
   }
 
@@ -307,7 +322,7 @@ export class MemoryService {
     await this.checkAndExpandWeek()
 
     const files = await this.listFiles()
-    const fileMap = new Map(files.map(f => [f.filename, f.content]))
+    const fileMap = new Map(files.map((f) => [f.filename, f.content]))
 
     let planContent = fileMap.get('Plan.md') || ''
     const aiContent = fileMap.get('AI.md') || ''
@@ -316,7 +331,7 @@ export class MemoryService {
     let planParse = parsePlanMarkdown(planContent)
 
     const parsedRoadmapCandidates = parseRoadmapCandidatesFromFiles(files)
-    const roadmapCandidates: RoadmapCandidate[] = parsedRoadmapCandidates.map(candidate => ({
+    const roadmapCandidates: RoadmapCandidate[] = parsedRoadmapCandidates.map((candidate) => ({
       id: candidate.id,
       name: candidate.name,
       filename: candidate.filename,
@@ -371,9 +386,7 @@ export class MemoryService {
   async getHistoryAnalytics(): Promise<HistoryAnalytics> {
     const historyFiles = await this.listFiles('History/')
     // Sort by filename descending (filenames are YYYY-MM-DD.md) and take last 7
-    const recent = historyFiles
-      .sort((a, b) => b.filename.localeCompare(a.filename))
-      .slice(0, 7)
+    const recent = historyFiles.sort((a, b) => b.filename.localeCompare(a.filename)).slice(0, 7)
 
     if (recent.length === 0) {
       return {
@@ -553,8 +566,8 @@ export class MemoryService {
     const scheduleMatch = roadmapContent.match(/\*\*Schedule:\*\*\s*(.+)/i)
     const hoursMatch = roadmapContent.match(/\*\*Hours\/day:\*\*\s*(\d+(?:\.\d+)?)/i)
     const hours = hoursMatch ? parseFloat(hoursMatch[1]) : 2
-    const schedule = scheduleMatch?.[1]?.trim()
-      || `Daily ${Number.isFinite(hours) ? hours : 2}h/day`
+    const schedule =
+      scheduleMatch?.[1]?.trim() || `Daily ${Number.isFinite(hours) ? hours : 2}h/day`
 
     return renderPlanEntryMarkdown({
       planId: candidate.id,
@@ -595,14 +608,11 @@ export class MemoryService {
     const sectionStart = activeMatch.index + activeMatch[0].length
     const afterActive = planContent.slice(sectionStart)
     const nextSectionOffset = afterActive.search(/\n##\s/)
-    const sectionEnd = nextSectionOffset >= 0
-      ? sectionStart + nextSectionOffset
-      : planContent.length
+    const sectionEnd =
+      nextSectionOffset >= 0 ? sectionStart + nextSectionOffset : planContent.length
 
     const currentActiveBody = planContent.slice(sectionStart, sectionEnd).trim()
-    const updatedActiveBody = currentActiveBody
-      ? `${currentActiveBody}\n\n${planEntry}`
-      : planEntry
+    const updatedActiveBody = currentActiveBody ? `${currentActiveBody}\n\n${planEntry}` : planEntry
 
     return `${planContent.slice(0, sectionStart)}\n${updatedActiveBody}\n${planContent.slice(sectionEnd)}`
   }
@@ -694,11 +704,14 @@ export class MemoryService {
     for (const [planId, count] of completedPerPlan) {
       const progressPattern = new RegExp(
         `(###\\s*\\[${planId}\\][\\s\\S]*?-\\s*Progress:\\s*)(\\d+)(\\/\\d+)`,
-        'i',
+        'i'
       )
-      content = content.replace(progressPattern, (_: string, prefix: string, current: string, total: string) => {
-        return `${prefix}${parseInt(current, 10) + count}${total}`
-      })
+      content = content.replace(
+        progressPattern,
+        (_: string, prefix: string, current: string, total: string) => {
+          return `${prefix}${parseInt(current, 10) + count}${total}`
+        }
+      )
     }
 
     await this.writeFile('Plan.md', content)
@@ -709,7 +722,8 @@ export class MemoryService {
    * These are picked up by generate_daily_plan to include in the next schedule.
    */
   private async saveCarryoverTasks(archivedContent: string, fromDate: string): Promise<void> {
-    const taskPattern = /^- \[[ >]\] \d{1,2}:\d{2}\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+)$/gm
+    const taskPattern =
+      /^- \[[ >]\] \d{1,2}:\d{2}\s*\((\d+)\s*(?:m|min|mins|minute|minutes)\)\s*(.+)$/gm
     const incomplete: Array<{ duration: string; desc: string }> = []
     let match
     while ((match = taskPattern.exec(archivedContent)) !== null) {
@@ -722,7 +736,7 @@ export class MemoryService {
       return
     }
 
-    const lines = incomplete.map(t => `- (${t.duration}min) ${t.desc}`)
+    const lines = incomplete.map((t) => `- (${t.duration}min) ${t.desc}`)
     const content = `# Carried Over Tasks (from ${fromDate})\n\n${lines.join('\n')}\n`
     await this.writeFile('Carryover.md', content)
   }
@@ -782,8 +796,11 @@ export class MemoryService {
 
         // Check if this day matches the plan's schedule
         const schedDays = plan.schedule.studyDays
-        const isStudyDay = schedDays.includes('Daily')
-          || schedDays.some((d: string) => d.toLowerCase().startsWith(dayName.toLowerCase().slice(0, 2)))
+        const isStudyDay =
+          schedDays.includes('Daily') ||
+          schedDays.some((d: string) =>
+            d.toLowerCase().startsWith(dayName.toLowerCase().slice(0, 2))
+          )
 
         if (isStudyDay) {
           entries.push(`${plan.id} - ${plan.currentTopic || plan.name}`)
@@ -865,5 +882,4 @@ export class MemoryService {
       timezone: timezoneMatch || undefined,
     }
   }
-
 }

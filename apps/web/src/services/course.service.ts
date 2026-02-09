@@ -87,7 +87,7 @@ export async function startCourseGeneration(
   topic: string,
   difficulty: CourseDifficulty,
   settings: Partial<CourseSettings>,
-  focusAreas: string[],
+  focusAreas: string[]
 ): Promise<{ courseId: string; threadId: string }> {
   const response = await authFetch(`${API_BASE}/generate`, {
     method: 'POST',
@@ -133,19 +133,40 @@ export async function streamGenerationProgress(
     onProgress?: (progress: CourseGenerationProgress) => void
     onResearchProgress?: (progress: ResearchProgress) => void
     onOutlineReady?: (data: { outline: CourseOutline; thinking: string }) => void
-    onContentProgress?: (data: { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number }) => void
+    onContentProgress?: (data: {
+      moduleIndex: number
+      lessonIndex: number
+      totalModules: number
+      totalLessons: number
+    }) => void
     onComplete?: (data: { courseId: string }) => void
     onError?: (data: { message: string; stage: GenerationStageType }) => void
     // Orchestrator events (DeepAgentsJS)
     onAgentStep?: (step: CourseAgentStep) => void
     onTodoUpdate?: (data: { todos: CourseTodoItem[] }) => void
-    onSubAgentStart?: (data: { id: string; name: string; status: string; startedAt: string }) => void
-    onSubAgentResult?: (data: { id: string; name: string; status: string; completedAt: string; output?: string }) => void
+    onSubAgentStart?: (data: {
+      id: string
+      name: string
+      status: string
+      startedAt: string
+    }) => void
+    onSubAgentResult?: (data: {
+      id: string
+      name: string
+      status: string
+      completedAt: string
+      output?: string
+    }) => void
     onThinking?: (text: string) => void
     onText?: (text: string) => void
-    onInterrupt?: (data: { id: string; type: string; outline: CourseOutline; thinking: string }) => void
+    onInterrupt?: (data: {
+      id: string
+      type: string
+      outline: CourseOutline
+      thinking: string
+    }) => void
     onDone?: () => void
-  },
+  }
 ): Promise<void> {
   const response = await authFetchSSE(`${API_BASE}/generate/${threadId}/stream`)
 
@@ -213,15 +234,27 @@ export async function streamGenerationProgress(
 
             case 'interrupt':
               // Orchestrator emits interrupts for outline approval
-              callbacks.onInterrupt?.(eventData as { id: string; type: string; outline: CourseOutline; thinking: string })
+              callbacks.onInterrupt?.(
+                eventData as { id: string; type: string; outline: CourseOutline; thinking: string }
+              )
               // Backward compatibility: also trigger onOutlineReady for outline_approval interrupts
               if (eventData.type === 'outline_approval') {
-                callbacks.onOutlineReady?.({ outline: eventData.outline, thinking: eventData.thinking })
+                callbacks.onOutlineReady?.({
+                  outline: eventData.outline,
+                  thinking: eventData.thinking,
+                })
               }
               break
 
             case 'content_progress':
-              callbacks.onContentProgress?.(eventData as { moduleIndex: number; lessonIndex: number; totalModules: number; totalLessons: number })
+              callbacks.onContentProgress?.(
+                eventData as {
+                  moduleIndex: number
+                  lessonIndex: number
+                  totalModules: number
+                  totalLessons: number
+                }
+              )
               break
 
             case 'agent-step':
@@ -233,11 +266,21 @@ export async function streamGenerationProgress(
               break
 
             case 'subagent-start':
-              callbacks.onSubAgentStart?.(eventData as { id: string; name: string; status: string; startedAt: string })
+              callbacks.onSubAgentStart?.(
+                eventData as { id: string; name: string; status: string; startedAt: string }
+              )
               break
 
             case 'subagent-result':
-              callbacks.onSubAgentResult?.(eventData as { id: string; name: string; status: string; completedAt: string; output?: string })
+              callbacks.onSubAgentResult?.(
+                eventData as {
+                  id: string
+                  name: string
+                  status: string
+                  completedAt: string
+                  output?: string
+                }
+              )
               break
 
             case 'text':
@@ -276,7 +319,9 @@ export async function streamGenerationProgress(
     // Delegate recovery to onDone (do NOT call onError — it would set error state
     // that onDone's recovery logic can't clear).
     if (!receivedTerminalEvent) {
-      console.warn('[Course Service] SSE stream ended without terminal event — delegating to onDone')
+      console.warn(
+        '[Course Service] SSE stream ended without terminal event — delegating to onDone'
+      )
       callbacks.onDone?.()
     }
   } finally {
@@ -287,7 +332,10 @@ export async function streamGenerationProgress(
 /**
  * Approve an outline to continue generation
  */
-export async function approveOutline(threadId: string, modifiedOutline?: CourseOutline): Promise<void> {
+export async function approveOutline(
+  threadId: string,
+  modifiedOutline?: CourseOutline
+): Promise<void> {
   const response = await authFetch(`${API_BASE}/generate/${threadId}/approve`, {
     method: 'POST',
     body: JSON.stringify({ modifiedOutline }),
@@ -349,7 +397,9 @@ export async function fetchCourses(): Promise<Course[]> {
 /**
  * Fetch a single course with all modules and lessons
  */
-export async function fetchCourse(courseId: string): Promise<{ course: Course; modules: CourseModule[] }> {
+export async function fetchCourse(
+  courseId: string
+): Promise<{ course: Course; modules: CourseModule[] }> {
   const response = await authFetch(`${API_BASE}/${courseId}`)
 
   if (!response.ok) {
@@ -382,7 +432,7 @@ export async function completeLesson(courseId: string, lessonId: string): Promis
 export async function submitQuiz(
   courseId: string,
   lessonId: string,
-  answers: Record<string, number | string>,
+  answers: Record<string, number | string>
 ): Promise<{ score: number; passed: boolean }> {
   const response = await authFetch(`${API_BASE}/${courseId}/lessons/${lessonId}/quiz`, {
     method: 'POST',

@@ -17,13 +17,24 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <BaseModal :title="title" size="sm" @close="emit('cancel')">
+  <BaseModal
+    :title="title"
+    size="sm"
+    @close="emit('cancel')"
+  >
     <template #icon>
-      <AlertTriangle v-if="variant === 'danger'" :size="20" class="danger-icon" />
+      <AlertTriangle
+        v-if="variant === 'danger'"
+        :size="20"
+        class="danger-icon"
+      />
     </template>
     <p class="confirm-message">{{ message }}</p>
     <template #footer>
-      <button class="btn btn-cancel" @click="emit('cancel')">
+      <button
+        class="btn btn-cancel"
+        @click="emit('cancel')"
+      >
         {{ cancelLabel || 'Cancel' }}
       </button>
       <button

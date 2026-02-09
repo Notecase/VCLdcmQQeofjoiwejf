@@ -65,10 +65,7 @@ function findSectionByHeading(
   // Build a pattern that matches the heading (case-insensitive)
   // The heading can have varying whitespace around it
   const escapedHeading = escapeRegex(headingText.trim())
-  const headingPattern = new RegExp(
-    `^#{${headingLevel}}\\s+${escapedHeading}\\s*$`,
-    'i'
-  )
+  const headingPattern = new RegExp(`^#{${headingLevel}}\\s+${escapedHeading}\\s*$`, 'i')
 
   // Find the heading line
   let startIndex = -1
@@ -257,7 +254,11 @@ function mergeByHeading(
     const firstAfter = after[0]
 
     // Preserve original spacing - if there was a blank line after, it's in 'after'
-    if (lastEdited?.trim() !== '' && firstAfter?.trim() !== '' && firstAfter?.trim().startsWith('#')) {
+    if (
+      lastEdited?.trim() !== '' &&
+      firstAfter?.trim() !== '' &&
+      firstAfter?.trim().startsWith('#')
+    ) {
       // Add blank line before next section heading if there isn't one
       // But only if the original had one (which would be in 'after')
     }
@@ -322,7 +323,11 @@ function mergeByLineNumbers(
     const firstEditedLine = editedSection.split('\n')[0]
 
     // Add blank line if transitioning between content and new content
-    if (lastLine.trim() !== '' && firstEditedLine.trim() !== '' && !lastLine.trim().startsWith('#')) {
+    if (
+      lastLine.trim() !== '' &&
+      firstEditedLine.trim() !== '' &&
+      !lastLine.trim().startsWith('#')
+    ) {
       // Check if there wasn't already a blank line
       if (resultLines.length > 0 && resultLines[resultLines.length - 1].trim() !== '') {
         // Only add if the original didn't have one
@@ -491,12 +496,7 @@ export function applyMultipleEdits(
   for (const edit of sortedEdits) {
     // Re-parse to get accurate line numbers after previous edits
     // Note: In a real implementation, we'd update line numbers instead of re-parsing
-    const result = mergeEditedSection(
-      currentContent,
-      edit.editedContent,
-      edit.context,
-      parsed
-    )
+    const result = mergeEditedSection(currentContent, edit.editedContent, edit.context, parsed)
 
     if (result.success) {
       currentContent = result.content
@@ -537,7 +537,9 @@ export function validateMerge(
   // Check content before target is identical
   for (let i = 0; i < targetStartLine - 1; i++) {
     if (originalLines[i] !== mergedLines[i]) {
-      issues.push(`Line ${i + 1} differs (before target): expected "${originalLines[i]}", got "${mergedLines[i]}"`)
+      issues.push(
+        `Line ${i + 1} differs (before target): expected "${originalLines[i]}", got "${mergedLines[i]}"`
+      )
     }
   }
 
@@ -553,7 +555,9 @@ export function validateMerge(
 
   for (let i = 0; i < originalAfterLines.length; i++) {
     if (originalAfterLines[i] !== mergedAfterLines[i]) {
-      issues.push(`Line after target differs: expected "${originalAfterLines[i]}", got "${mergedAfterLines[i]}"`)
+      issues.push(
+        `Line after target differs: expected "${originalAfterLines[i]}", got "${mergedAfterLines[i]}"`
+      )
     }
   }
 

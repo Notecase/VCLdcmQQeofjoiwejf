@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
-  value: number
-  max?: number
-  height?: number
-  color?: string
-  showLabel?: boolean
-}>(), {
-  max: 100,
-  height: 6,
-  color: '#f59e0b',
-  showLabel: false,
-})
+const props = withDefaults(
+  defineProps<{
+    value: number
+    max?: number
+    height?: number
+    color?: string
+    showLabel?: boolean
+  }>(),
+  {
+    max: 100,
+    height: 6,
+    color: '#f59e0b',
+    showLabel: false,
+  }
+)
 
 const percentage = computed(() => {
   if (props.max === 0) return 0
@@ -22,13 +25,20 @@ const percentage = computed(() => {
 
 <template>
   <div class="progress-bar-wrapper">
-    <div class="progress-track" :style="{ height: `${height}px` }">
+    <div
+      class="progress-track"
+      :style="{ height: `${height}px` }"
+    >
       <div
         class="progress-fill"
         :style="{ width: `${percentage}%`, background: color }"
       />
     </div>
-    <span v-if="showLabel" class="progress-label">{{ percentage }}%</span>
+    <span
+      v-if="showLabel"
+      class="progress-label"
+      >{{ percentage }}%</span
+    >
   </div>
 </template>
 

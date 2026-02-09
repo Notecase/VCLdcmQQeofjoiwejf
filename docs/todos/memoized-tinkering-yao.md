@@ -26,6 +26,7 @@ The CourseView currently has the modules panel on the **right** sidebar. The use
 ```
 
 Key details from EditorView:
+
 - Uses `layoutStore.sidebarVisible` (not a local ref)
 - `dock-area` width matches sidebar via CSS variable `--sidebar-width`
 - `NavigationDock` gets `:pill-mode="!layoutStore.sidebarVisible"`
@@ -39,6 +40,7 @@ Key details from EditorView:
 **File:** `apps/web/src/views/CourseView.vue`
 
 **Script changes:**
+
 - Import `useLayoutStore` from `@/stores`
 - Add `const layoutStore = useLayoutStore()`
 - Add `sidebarWidthStyle` computed (same as EditorView): `{ '--sidebar-width': layoutStore.sidebarWidth + 'px' }`
@@ -78,6 +80,7 @@ Key details from EditorView:
 ```
 
 **CSS changes:**
+
 - `.course-top-bar` — keep as-is but remove fixed dock-area width
 - `.dock-area` — `width: var(--sidebar-width, 260px)`, `transition: width 0.25s ease` (matches EditorView)
 - `.course-body` — replaces `.course-layout`, same as `.editor-body` (flex row)
@@ -100,11 +103,11 @@ Key details from EditorView:
 
 ## Files Modified
 
-| File | Summary |
-|------|---------|
-| `apps/web/src/views/CourseView.vue` | Restructure: modules to left sidebar, use layoutStore, pill-mode dock, remove right sidebar |
-| `apps/web/src/components/course/viewer/CourseNav.vue` | Use `--sidebar-bg` for background consistency |
-| `apps/web/src/stores/course.ts` | Remove dead `sidebarOpen` ref |
+| File                                                  | Summary                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `apps/web/src/views/CourseView.vue`                   | Restructure: modules to left sidebar, use layoutStore, pill-mode dock, remove right sidebar |
+| `apps/web/src/components/course/viewer/CourseNav.vue` | Use `--sidebar-bg` for background consistency                                               |
+| `apps/web/src/stores/course.ts`                       | Remove dead `sidebarOpen` ref                                                               |
 
 ## Verification
 

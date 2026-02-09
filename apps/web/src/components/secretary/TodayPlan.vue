@@ -47,7 +47,7 @@ function taskTypeColor(task: ScheduledTask): string {
 
 function toggleTask(taskId: string) {
   if (!store.todayPlan) return
-  const task = store.todayPlan.tasks.find(t => t.id === taskId)
+  const task = store.todayPlan.tasks.find((t) => t.id === taskId)
   if (!task) return
 
   const nextStatus = task.status === 'completed' ? 'pending' : 'completed'
@@ -74,13 +74,19 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
         <span class="today-label">TODAY</span>
         <span class="today-date">{{ todayDateStr }}</span>
       </div>
-      <span v-if="store.todayPlan" class="progress-badge">
+      <span
+        v-if="store.todayPlan"
+        class="progress-badge"
+      >
         {{ store.todayProgress.completed }}/{{ store.todayProgress.total }} completed
       </span>
     </div>
 
     <!-- Progress bar -->
-    <div v-if="store.todayPlan" class="progress-track">
+    <div
+      v-if="store.todayPlan"
+      class="progress-track"
+    >
       <div
         class="progress-fill"
         :style="{ width: `${store.todayProgress.percent}%` }"
@@ -88,7 +94,10 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
     </div>
 
     <!-- Task timeline -->
-    <div v-if="store.todayPlan && store.todayPlan.tasks.length > 0" class="task-list">
+    <div
+      v-if="store.todayPlan && store.todayPlan.tasks.length > 0"
+      class="task-list"
+    >
       <div
         v-for="task in store.todayPlan.tasks"
         :key="task.id"
@@ -97,17 +106,40 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
         @click="toggleTask(task.id)"
       >
         <div class="task-icon">
-          <CheckCircle v-if="task.status === 'completed'" :size="16" />
-          <PlayCircle v-else-if="task.status === 'in_progress'" :size="16" />
-          <MinusCircle v-else-if="task.status === 'skipped'" :size="16" />
-          <Circle v-else :size="16" />
+          <CheckCircle
+            v-if="task.status === 'completed'"
+            :size="16"
+          />
+          <PlayCircle
+            v-else-if="task.status === 'in_progress'"
+            :size="16"
+          />
+          <MinusCircle
+            v-else-if="task.status === 'skipped'"
+            :size="16"
+          />
+          <Circle
+            v-else
+            :size="16"
+          />
         </div>
         <div class="task-time">{{ task.scheduledTime }} – {{ endTime(task) }}</div>
-        <span class="type-dot" :style="{ background: taskTypeColor(task) }" />
+        <span
+          class="type-dot"
+          :style="{ background: taskTypeColor(task) }"
+        />
         <div class="task-title">{{ task.title }}</div>
-        <span v-if="task.planId" class="task-plan-tag">{{ task.planId }}</span>
+        <span
+          v-if="task.planId"
+          class="task-plan-tag"
+          >{{ task.planId }}</span
+        >
         <button
-          v-if="task.status !== 'completed' && task.status !== 'skipped' && !task.title.toLowerCase().includes('break')"
+          v-if="
+            task.status !== 'completed' &&
+            task.status !== 'skipped' &&
+            !task.title.toLowerCase().includes('break')
+          "
           class="start-btn"
           @click="handleStudyNow($event, task)"
         >
@@ -117,8 +149,14 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
       </div>
     </div>
 
-    <div v-else class="empty-state">
-      <CalendarOff :size="32" class="empty-icon" />
+    <div
+      v-else
+      class="empty-state"
+    >
+      <CalendarOff
+        :size="32"
+        class="empty-icon"
+      />
       <p class="empty-text">No tasks scheduled for today</p>
       <p class="empty-hint">Use "Prepare Tomorrow" to generate a plan, then approve it.</p>
     </div>
@@ -178,7 +216,11 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
 .progress-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--sec-primary, #10b981), var(--sec-primary-light, #34d399));
+  background: linear-gradient(
+    90deg,
+    var(--sec-primary, #10b981),
+    var(--sec-primary-light, #34d399)
+  );
   transition: width 0.4s ease;
 }
 
@@ -209,10 +251,19 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
   color: var(--text-color-secondary, #94a3b8);
 }
 
-.task-item.completed .task-icon { color: var(--sec-primary, #10b981); }
-.task-item.in_progress .task-icon { color: var(--sec-accent, #f59e0b); }
-.task-item.skipped .task-icon { color: var(--text-color-secondary, #94a3b8); }
-.task-item.completed .task-title { text-decoration: line-through; opacity: 0.5; }
+.task-item.completed .task-icon {
+  color: var(--sec-primary, #10b981);
+}
+.task-item.in_progress .task-icon {
+  color: var(--sec-accent, #f59e0b);
+}
+.task-item.skipped .task-icon {
+  color: var(--text-color-secondary, #94a3b8);
+}
+.task-item.completed .task-title {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
 
 .task-time {
   font-family: 'SF Mono', 'Fira Code', monospace;

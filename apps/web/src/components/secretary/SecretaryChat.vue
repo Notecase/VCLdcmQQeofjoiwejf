@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watch, computed } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { useSecretaryStore } from '@/stores/secretary'
 import ChatComposer from '@/components/ai/ChatComposer.vue'
 import SecretaryMessageCard from './SecretaryMessageCard.vue'
@@ -14,19 +14,6 @@ function handleSubmit(message: string) {
   store.sendChatMessage(message)
 }
 
-// Streaming message shown while streaming (not yet finalized)
-const streamingMessage = computed(() => {
-  if (!store.isChatStreaming) return null
-  return {
-    id: 'streaming',
-    role: 'assistant' as const,
-    content: store.streamingContent,
-    createdAt: new Date(),
-    toolCalls: store.streamingToolCalls.length > 0 ? [...store.streamingToolCalls] : undefined,
-    thinkingSteps: store.streamingThinkingSteps.length > 0 ? [...store.streamingThinkingSteps] : undefined,
-  }
-})
-
 // Auto-scroll on new messages
 watch(
   () => store.chatMessages.length,
@@ -36,7 +23,7 @@ watch(
         messagesRef.value.scrollTop = messagesRef.value.scrollHeight
       }
     })
-  },
+  }
 )
 
 // Also scroll during streaming
@@ -48,7 +35,7 @@ watch(
         messagesRef.value.scrollTop = messagesRef.value.scrollHeight
       }
     })
-  },
+  }
 )
 </script>
 
@@ -67,30 +54,37 @@ watch(
     </div>
 
     <!-- Thread panel -->
-    <div v-if="showThreads" class="thread-panel">
+    <div
+      v-if="showThreads"
+      class="thread-panel"
+    >
       <ThreadList />
     </div>
 
     <!-- Messages -->
-    <div ref="messagesRef" class="messages">
-      <div v-if="store.chatMessages.length === 0 && !streamingMessage" class="empty-state">
-        <MessageSquare :size="32" class="empty-icon" />
+    <div
+      ref="messagesRef"
+      class="messages"
+    >
+      <div
+        v-if="store.chatMessages.length === 0"
+        class="empty-state"
+      >
+        <MessageSquare
+          :size="32"
+          class="empty-icon"
+        />
         <p class="empty-text">Start a conversation</p>
-        <p class="empty-hint">Ask your secretary to plan your day, create roadmaps, or review progress.</p>
+        <p class="empty-hint">
+          Ask your secretary to plan your day, create roadmaps, or review progress.
+        </p>
       </div>
 
       <SecretaryMessageCard
         v-for="msg in store.chatMessages"
         :key="msg.id"
         :message="msg"
-        :is-streaming="false"
-      />
-
-      <!-- Streaming message -->
-      <SecretaryMessageCard
-        v-if="streamingMessage"
-        :message="streamingMessage"
-        :is-streaming="true"
+        :is-streaming="Boolean(msg._streaming)"
       />
     </div>
 

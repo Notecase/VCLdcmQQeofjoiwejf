@@ -48,20 +48,27 @@ function scheduleHighlight() {
 }
 
 watch(() => props.content, scheduleHighlight)
-watch(() => props.isStreaming, (isStreaming) => {
-  if (!isStreaming) {
-    scheduleHighlight()
-  } else if (highlightTimer) {
-    clearTimeout(highlightTimer)
-    highlightTimer = null
+watch(
+  () => props.isStreaming,
+  (isStreaming) => {
+    if (!isStreaming) {
+      scheduleHighlight()
+    } else if (highlightTimer) {
+      clearTimeout(highlightTimer)
+      highlightTimer = null
+    }
   }
-})
+)
 
 onMounted(scheduleHighlight)
 </script>
 
 <template>
-  <div ref="containerRef" class="markdown-body md-content" v-html="renderedHtml" />
+  <div
+    ref="containerRef"
+    class="markdown-body md-content"
+    v-html="renderedHtml"
+  />
 </template>
 
 <style scoped>

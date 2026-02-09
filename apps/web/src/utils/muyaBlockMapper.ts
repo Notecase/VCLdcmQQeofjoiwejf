@@ -58,7 +58,9 @@ export function getMuyaBlocks(container: HTMLElement): MuyaBlockInfo[] {
     const rect = element.getBoundingClientRect()
 
     // Try to get block info from Muya's internal property
-    const muyaBlock = (element as unknown as Record<string, { blockName?: string }>)[BLOCK_DOM_PROPERTY]
+    const muyaBlock = (element as unknown as Record<string, { blockName?: string }>)[
+      BLOCK_DOM_PROPERTY
+    ]
     const blockName = muyaBlock?.blockName || element.tagName.toLowerCase()
 
     // Estimate line count based on content
@@ -112,10 +114,7 @@ export function findBlockForLine(
  * Find block by index (0-based)
  * This is useful when the lineNumber represents a block index rather than actual line
  */
-export function findBlockByIndex(
-  blocks: MuyaBlockInfo[],
-  index: number
-): MuyaBlockInfo | null {
+export function findBlockByIndex(blocks: MuyaBlockInfo[], index: number): MuyaBlockInfo | null {
   if (index >= 0 && index < blocks.length) {
     return blocks[index]
   }
@@ -130,10 +129,7 @@ export function findBlockByIndex(
  * Wait for Muya to finish rendering content
  * Uses MutationObserver to detect when DOM settles
  */
-export function waitForMuyaRender(
-  container: HTMLElement,
-  timeout: number = 1000
-): Promise<void> {
+export function waitForMuyaRender(container: HTMLElement, timeout: number = 1000): Promise<void> {
   return new Promise((resolve) => {
     const muyaContainer = container.querySelector('.mu-container')
     if (!muyaContainer) {

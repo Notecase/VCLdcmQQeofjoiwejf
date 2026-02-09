@@ -458,7 +458,7 @@ export const useAIStore = defineStore('ai', () => {
    * Get thinking steps linked to a specific message
    */
   function getThinkingStepsForMessage(messageId: string): ThinkingStep[] {
-    return thinkingSteps.value.filter(s => s.messageId === messageId)
+    return thinkingSteps.value.filter((s) => s.messageId === messageId)
   }
 
   // ---------------------------------------------------------------------------
@@ -647,9 +647,7 @@ export const useAIStore = defineStore('ai', () => {
    * Add a diff block pair to track injected blocks
    * Accepts optional `id` to sync with DOM elements - if not provided, generates a new one
    */
-  function addDiffBlockPair(
-    pair: Omit<DiffBlockPair, 'status'> & { id?: string }
-  ): DiffBlockPair {
+  function addDiffBlockPair(pair: Omit<DiffBlockPair, 'status'> & { id?: string }): DiffBlockPair {
     const newPair: DiffBlockPair = {
       id: pair.id || crypto.randomUUID(),
       status: 'pending',
@@ -680,9 +678,7 @@ export const useAIStore = defineStore('ai', () => {
    * Get all diff block pairs for a specific note
    */
   function getDiffBlockPairsForNote(noteId: string): DiffBlockPair[] {
-    return diffBlockPairs.value.filter(
-      (p) => p.noteId === noteId && p.status === 'pending'
-    )
+    return diffBlockPairs.value.filter((p) => p.noteId === noteId && p.status === 'pending')
   }
 
   /**
@@ -703,9 +699,7 @@ export const useAIStore = defineStore('ai', () => {
   /**
    * Add an individual diff block to track
    */
-  function addDiffBlock(
-    block: Omit<DiffBlock, 'status'> & { id?: string }
-  ): DiffBlock {
+  function addDiffBlock(block: Omit<DiffBlock, 'status'> & { id?: string }): DiffBlock {
     const newBlock: DiffBlock = {
       id: block.id || crypto.randomUUID(),
       status: 'pending',
@@ -742,9 +736,7 @@ export const useAIStore = defineStore('ai', () => {
    * Get all diff blocks for a specific note
    */
   function getDiffBlocksForNote(noteId: string): DiffBlock[] {
-    return diffBlocks.value.filter(
-      (b) => b.noteId === noteId && b.status === 'pending'
-    )
+    return diffBlocks.value.filter((b) => b.noteId === noteId && b.status === 'pending')
   }
 
   /**
@@ -835,13 +827,15 @@ export const useAIStore = defineStore('ai', () => {
   /**
    * Set the list of subtasks from DeepAgent decomposition
    */
-  function setSubTasks(tasks: Array<{
-    id: string
-    type: 'edit_note' | 'create_artifact' | 'database_action' | 'chat'
-    description: string
-    dependsOn?: string[]
-  }>) {
-    subTasks.value = tasks.map(t => ({
+  function setSubTasks(
+    tasks: Array<{
+      id: string
+      type: 'edit_note' | 'create_artifact' | 'database_action' | 'chat'
+      description: string
+      dependsOn?: string[]
+    }>
+  ) {
+    subTasks.value = tasks.map((t) => ({
       id: t.id,
       type: t.type,
       description: t.description,
@@ -855,7 +849,7 @@ export const useAIStore = defineStore('ai', () => {
    * Update a subtask's status
    */
   function updateSubTask(taskId: string, updates: Partial<SubTask>) {
-    const task = subTasks.value.find(t => t.id === taskId)
+    const task = subTasks.value.find((t) => t.id === taskId)
     if (task) {
       Object.assign(task, updates)
       if (updates.status === 'in_progress') {
@@ -870,7 +864,7 @@ export const useAIStore = defineStore('ai', () => {
    * Update a subtask's progress
    */
   function updateSubTaskProgress(taskId: string, progress: number, message?: string) {
-    const task = subTasks.value.find(t => t.id === taskId)
+    const task = subTasks.value.find((t) => t.id === taskId)
     if (task) {
       task.progress = progress
       task.progressMessage = message
@@ -880,22 +874,22 @@ export const useAIStore = defineStore('ai', () => {
   /**
    * Get subtasks in progress
    */
-  const activeSubTasks = computed(() =>
-    subTasks.value.filter(t => t.status === 'in_progress')
-  )
+  const activeSubTasks = computed(() => subTasks.value.filter((t) => t.status === 'in_progress'))
 
   /**
    * Get completed subtask count
    */
-  const completedSubTaskCount = computed(() =>
-    subTasks.value.filter(t => t.status === 'completed').length
+  const completedSubTaskCount = computed(
+    () => subTasks.value.filter((t) => t.status === 'completed').length
   )
 
   /**
    * Check if all subtasks are completed
    */
-  const allSubTasksCompleted = computed(() =>
-    subTasks.value.length > 0 && subTasks.value.every(t => t.status === 'completed' || t.status === 'failed')
+  const allSubTasksCompleted = computed(
+    () =>
+      subTasks.value.length > 0 &&
+      subTasks.value.every((t) => t.status === 'completed' || t.status === 'failed')
   )
 
   /**
@@ -1034,9 +1028,7 @@ export const useAIStore = defineStore('ai', () => {
 
         // Merge with existing artifacts, avoiding duplicates by artifactId
         const existingArtifactIds = new Set(
-          pendingArtifacts.value
-            .filter((a) => a.artifactId)
-            .map((a) => a.artifactId)
+          pendingArtifacts.value.filter((a) => a.artifactId).map((a) => a.artifactId)
         )
 
         const newArtifacts = loadedArtifacts.filter(
@@ -1078,9 +1070,7 @@ export const useAIStore = defineStore('ai', () => {
    * Get pending artifacts for a specific note
    */
   function getPendingArtifactsForNote(noteId: string): PendingArtifact[] {
-    return pendingArtifacts.value.filter(
-      (a) => a.noteId === noteId && a.status === 'pending'
-    )
+    return pendingArtifacts.value.filter((a) => a.noteId === noteId && a.status === 'pending')
   }
 
   /**

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * FileCard - Individual virtual file card with icon, name, size, and timestamp.
- * 
+ *
  */
 import { computed } from 'vue'
 import type { VirtualFile } from '@inkdown/shared/types'
@@ -42,16 +42,37 @@ const extension = computed(() => {
 </script>
 
 <template>
-  <button class="file-card" :class="{ markdown: isMarkdown }" type="button" @click="emit('click')">
+  <button
+    class="file-card"
+    :class="{ markdown: isMarkdown }"
+    type="button"
+    @click="emit('click')"
+  >
     <div class="file-icon-wrapper">
-      <FileType v-if="isMarkdown" :size="24" class="file-icon markdown-icon" />
-      <FileText v-else :size="24" class="file-icon" />
+      <FileType
+        v-if="isMarkdown"
+        :size="24"
+        class="file-icon markdown-icon"
+      />
+      <FileText
+        v-else
+        :size="24"
+        class="file-icon"
+      />
     </div>
     <div class="file-info">
-      <span class="file-name" :title="file.name">{{ file.name }}</span>
+      <span
+        class="file-name"
+        :title="file.name"
+        >{{ file.name }}</span
+      >
       <div class="file-meta">
         <span class="file-size">{{ fileSize }}</span>
-        <span v-if="extension" class="file-ext">{{ extension }}</span>
+        <span
+          v-if="extension"
+          class="file-ext"
+          >{{ extension }}</span
+        >
       </div>
       <span class="file-updated">{{ lastUpdated }}</span>
     </div>

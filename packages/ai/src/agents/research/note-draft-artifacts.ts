@@ -1,8 +1,4 @@
-const STUDY_TIMER_PATTERNS: RegExp[] = [
-  /\bstudy timer\b/i,
-  /\bpomodoro\b/i,
-  /\btimer\b/i,
-]
+const STUDY_TIMER_PATTERNS: RegExp[] = [/\bstudy timer\b/i, /\bpomodoro\b/i, /\btimer\b/i]
 
 const STUDY_TIMER_VERBOSE_SECTION_PATTERNS: RegExp[] = [
   /^#{1,6}\s*study timer artifact\b/i,
@@ -29,7 +25,7 @@ function slugToTitle(input: string): string {
   const trimmed = input.trim().replace(/[^\w\s-]/g, '')
   if (!trimmed) return 'Untitled Draft'
   const words = trimmed.split(/\s+/).slice(0, 8)
-  return words.map(word => word[0].toUpperCase() + word.slice(1)).join(' ')
+  return words.map((word) => word[0].toUpperCase() + word.slice(1)).join(' ')
 }
 
 export function extractDraftTitle(markdown: string, fallbackMessage: string): string {
@@ -49,7 +45,7 @@ export function ensureHeading(markdown: string, title: string): string {
 }
 
 export function hasStudyTimerIntent(message: string): boolean {
-  return STUDY_TIMER_PATTERNS.some(pattern => pattern.test(message))
+  return STUDY_TIMER_PATTERNS.some((pattern) => pattern.test(message))
 }
 
 export function hasArtifactBlock(markdown: string): boolean {
@@ -66,18 +62,23 @@ export function condenseStudyTimerNarrative(markdown: string): string {
     const isHeading = /^#{1,6}\s+/.test(trimmed)
 
     if (isHeading) {
-      skippingVerboseSection = STUDY_TIMER_VERBOSE_SECTION_PATTERNS.some(pattern => pattern.test(trimmed))
+      skippingVerboseSection = STUDY_TIMER_VERBOSE_SECTION_PATTERNS.some((pattern) =>
+        pattern.test(trimmed)
+      )
       if (skippingVerboseSection) continue
       output.push(line)
       continue
     }
 
     if (skippingVerboseSection) continue
-    if (STUDY_TIMER_VERBOSE_LINE_PATTERNS.some(pattern => pattern.test(trimmed))) continue
+    if (STUDY_TIMER_VERBOSE_LINE_PATTERNS.some((pattern) => pattern.test(trimmed))) continue
     output.push(line)
   }
 
-  return output.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  return output
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 export function buildStudyTimerIntroLines(): string[] {
@@ -89,11 +90,10 @@ export function buildStudyTimerIntroLines(): string[] {
 
 export function normalizeArtifactPayload(
   payload: Partial<DraftArtifactPayload>,
-  fallbackTitle = 'Study Timer',
+  fallbackTitle = 'Study Timer'
 ): DraftArtifactPayload | null {
-  const title = typeof payload.title === 'string' && payload.title.trim()
-    ? payload.title.trim()
-    : fallbackTitle
+  const title =
+    typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : fallbackTitle
   const html = typeof payload.html === 'string' ? payload.html : ''
   const css = typeof payload.css === 'string' ? payload.css : ''
   const javascript = typeof payload.javascript === 'string' ? payload.javascript : ''
@@ -110,7 +110,7 @@ export function normalizeArtifactPayload(
 
 export function parseArtifactPayload(
   rawContent: string,
-  fallbackTitle = 'Study Timer',
+  fallbackTitle = 'Study Timer'
 ): DraftArtifactPayload | null {
   const cleaned = rawContent
     .replace(/^\s*```(?:json)?\s*\n?/i, '')
@@ -140,7 +140,10 @@ export function parseArtifactPayload(
 
     const jsMatch = rawContent.match(/"javascript"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/s)
     if (jsMatch) {
-      partial.javascript = jsMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
+      partial.javascript = jsMatch[1]
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
     }
 
     return normalizeArtifactPayload(partial, fallbackTitle)
@@ -154,11 +157,11 @@ export function buildArtifactBlock(payload: DraftArtifactPayload): string {
 export function appendArtifactToDraft(
   markdown: string,
   payload: DraftArtifactPayload,
-  introLines: string[] = [],
+  introLines: string[] = []
 ): string {
   const base = markdown.trim()
   const intro = introLines
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 2)
     .join('\n')

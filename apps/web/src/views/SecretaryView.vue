@@ -43,9 +43,12 @@ onUnmounted(() => {
 <template>
   <div class="secretary-view">
     <!-- Header with NavigationDock -->
-    <header class="secretary-header" :style="sidebarWidthStyle">
+    <header
+      class="secretary-header"
+      :style="sidebarWidthStyle"
+    >
       <div class="dock-area">
-        <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
+        <NavigationDock />
       </div>
       <div class="header-title">
         <h1>Secretary</h1>
@@ -54,7 +57,10 @@ onUnmounted(() => {
     </header>
 
     <!-- Main Layout: 3 columns -->
-    <div v-if="isReady" class="secretary-body">
+    <div
+      v-if="isReady"
+      class="secretary-body"
+    >
       <!-- Left: Memory File List -->
       <aside class="file-sidebar">
         <MemoryFileList />
@@ -75,7 +81,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-else class="loading-state">
+    <div
+      v-else
+      class="loading-state"
+    >
       <div class="skeleton-grid">
         <div class="skeleton-left">
           <SkeletonLoader variant="file-list" />
@@ -92,7 +101,10 @@ onUnmounted(() => {
 
     <!-- Floating Chat -->
     <FloatingChatFab v-model="isChatOpen" />
-    <ChatDrawer :open="isChatOpen" @close="isChatOpen = false" />
+    <ChatDrawer
+      :open="isChatOpen"
+      @close="isChatOpen = false"
+    />
   </div>
 </template>
 
@@ -103,7 +115,12 @@ onUnmounted(() => {
   height: 100vh;
   width: 100vw;
   background: var(--app-bg, #010409);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   overflow: hidden;
 }
 

@@ -136,7 +136,9 @@ function handleOverlayClick(e: MouseEvent) {
   -webkit-backdrop-filter: blur(var(--modal-backdrop-blur)) saturate(180%);
   border: 1px solid var(--modal-border);
   border-radius: var(--modal-radius);
-  box-shadow: var(--modal-shadow), inset 0 1px 0 var(--modal-inset-highlight);
+  box-shadow:
+    var(--modal-shadow),
+    inset 0 1px 0 var(--modal-inset-highlight);
   position: relative;
   display: flex;
   flex-direction: column;

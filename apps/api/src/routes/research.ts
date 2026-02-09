@@ -91,9 +91,10 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
     agent.hydrateState({
       files: Array.isArray(persistedState.files) ? persistedState.files : [],
       todos: Array.isArray(persistedState.todos) ? persistedState.todos : [],
-      noteDraft: persistedState.note_draft && typeof persistedState.note_draft === 'object'
-        ? persistedState.note_draft
-        : null,
+      noteDraft:
+        persistedState.note_draft && typeof persistedState.note_draft === 'object'
+          ? persistedState.note_draft
+          : null,
     })
   }
 
@@ -108,18 +109,16 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
 
     try {
       // Upsert thread before streaming
-      const { error: threadUpsertError } = await auth.supabase
-        .from('research_threads')
-        .upsert(
-          {
-            id: threadId,
-            user_id: auth.userId,
-            title: body.message.slice(0, 100),
-            status: 'busy',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' },
-        )
+      const { error: threadUpsertError } = await auth.supabase.from('research_threads').upsert(
+        {
+          id: threadId,
+          user_id: auth.userId,
+          title: body.message.slice(0, 100),
+          status: 'busy',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
       if (threadUpsertError) {
         throw threadUpsertError
       }
@@ -141,11 +140,11 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
           assistantContent += event.data
         } else if (event.event === 'tool_call') {
           collectedToolCalls.push(
-            typeof event.data === 'string' ? JSON.parse(event.data) : event.data,
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
           )
         } else if (event.event === 'subagent-start' || event.event === 'subagent-result') {
           collectedSubagents.push(
-            typeof event.data === 'string' ? JSON.parse(event.data) : event.data,
+            typeof event.data === 'string' ? JSON.parse(event.data) : event.data
           )
         }
 
@@ -183,7 +182,7 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
           note_draft: agentState.noteDraft,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'thread_id' },
+        { onConflict: 'thread_id' }
       )
 
       // Update thread status back to idle
@@ -227,7 +226,7 @@ const InterruptResponseWithThreadSchema = InterruptResponseSchema.extend({
 
 function resolveInterruptForThread(
   threadId: string,
-  body: z.infer<typeof InterruptResponseSchema>,
+  body: z.infer<typeof InterruptResponseSchema>
 ) {
   // Clean up expired entries before lookup
   cleanupRegistry()
@@ -273,7 +272,7 @@ research.post(
     const body = c.req.valid('json')
     const result = resolveInterruptForThread(threadId, body)
     return c.json(result.payload, result.status)
-  },
+  }
 )
 
 /**
@@ -288,7 +287,7 @@ research.post(
     const body = c.req.valid('json')
     const result = resolveInterruptForThread(body.threadId, body)
     return c.json(result.payload, result.status)
-  },
+  }
 )
 
 // =============================================================================
@@ -388,109 +387,105 @@ const SaveDraftSchema = z.object({
  * POST /api/research/threads/:threadId/save-draft
  * Save current note draft into real notes table.
  */
-research.post(
-  '/threads/:threadId/save-draft',
-  zValidator('json', SaveDraftSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const threadId = c.req.param('threadId')
-    const body = c.req.valid('json')
-    const now = new Date().toISOString()
+research.post('/threads/:threadId/save-draft', zValidator('json', SaveDraftSchema), async (c) => {
+  const auth = requireAuth(c)
+  const threadId = c.req.param('threadId')
+  const body = c.req.valid('json')
+  const now = new Date().toISOString()
 
-    const { data: thread, error: threadError } = await auth.supabase
-      .from('research_threads')
-      .select('id')
-      .eq('id', threadId)
-      .eq('user_id', auth.userId)
-      .single()
+  const { data: thread, error: threadError } = await auth.supabase
+    .from('research_threads')
+    .select('id')
+    .eq('id', threadId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (threadError || !thread) {
-      return c.json({ error: 'Thread not found' }, 404)
-    }
+  if (threadError || !thread) {
+    return c.json({ error: 'Thread not found' }, 404)
+  }
 
-    const { data: stateRow } = await auth.supabase
-      .from('research_thread_state')
-      .select('note_draft')
-      .eq('thread_id', threadId)
-      .maybeSingle()
+  const { data: stateRow } = await auth.supabase
+    .from('research_thread_state')
+    .select('note_draft')
+    .eq('thread_id', threadId)
+    .maybeSingle()
 
-    const existingDraft = stateRow?.note_draft && typeof stateRow.note_draft === 'object'
-      ? stateRow.note_draft as Record<string, unknown>
+  const existingDraft =
+    stateRow?.note_draft && typeof stateRow.note_draft === 'object'
+      ? (stateRow.note_draft as Record<string, unknown>)
       : null
 
-    let noteId = typeof existingDraft?.noteId === 'string' ? existingDraft.noteId : ''
-    const wordCount = body.content.split(/\s+/).filter(Boolean).length
-    const characterCount = body.content.replace(/\s/g, '').length
+  let noteId = typeof existingDraft?.noteId === 'string' ? existingDraft.noteId : ''
+  const wordCount = body.content.split(/\s+/).filter(Boolean).length
+  const characterCount = body.content.replace(/\s/g, '').length
 
-    if (noteId) {
-      const { error: updateError } = await auth.supabase
-        .from('notes')
-        .update({
-          title: body.title,
-          content: body.content,
-          word_count: wordCount,
-          character_count: characterCount,
-          updated_at: now,
-        })
-        .eq('id', noteId)
-        .eq('user_id', auth.userId)
+  if (noteId) {
+    const { error: updateError } = await auth.supabase
+      .from('notes')
+      .update({
+        title: body.title,
+        content: body.content,
+        word_count: wordCount,
+        character_count: characterCount,
+        updated_at: now,
+      })
+      .eq('id', noteId)
+      .eq('user_id', auth.userId)
 
-      if (updateError) {
-        throw handleError(updateError, ErrorCode.INTERNAL)
-      }
-    } else {
-      const { data: createdNote, error: createError } = await auth.supabase
-        .from('notes')
-        .insert({
-          user_id: auth.userId,
-          title: body.title,
-          content: body.content,
-          word_count: wordCount,
-          character_count: characterCount,
-        })
-        .select('id')
-        .single()
-
-      if (createError || !createdNote) {
-        throw handleError(createError, ErrorCode.INTERNAL)
-      }
-      noteId = (createdNote as { id: string }).id
+    if (updateError) {
+      throw handleError(updateError, ErrorCode.INTERNAL)
     }
+  } else {
+    const { data: createdNote, error: createError } = await auth.supabase
+      .from('notes')
+      .insert({
+        user_id: auth.userId,
+        title: body.title,
+        content: body.content,
+        word_count: wordCount,
+        character_count: characterCount,
+      })
+      .select('id')
+      .single()
 
-    const nextDraft = {
-      draftId: typeof existingDraft?.draftId === 'string' ? existingDraft.draftId : `draft-${threadId}`,
-      title: body.title,
-      originalContent: body.content,
-      proposedContent: body.content,
-      currentContent: body.content,
-      noteId,
-      savedAt: now,
-      updatedAt: now,
+    if (createError || !createdNote) {
+      throw handleError(createError, ErrorCode.INTERNAL)
     }
+    noteId = (createdNote as { id: string }).id
+  }
 
-    const { error: upsertError } = await auth.supabase
-      .from('research_thread_state')
-      .upsert(
-        {
-          thread_id: threadId,
-          note_draft: nextDraft,
-          updated_at: now,
-        },
-        { onConflict: 'thread_id' },
-      )
+  const nextDraft = {
+    draftId:
+      typeof existingDraft?.draftId === 'string' ? existingDraft.draftId : `draft-${threadId}`,
+    title: body.title,
+    originalContent: body.content,
+    proposedContent: body.content,
+    currentContent: body.content,
+    noteId,
+    savedAt: now,
+    updatedAt: now,
+  }
 
-    if (upsertError) {
-      throw handleError(upsertError, ErrorCode.INTERNAL)
-    }
+  const { error: upsertError } = await auth.supabase.from('research_thread_state').upsert(
+    {
+      thread_id: threadId,
+      note_draft: nextDraft,
+      updated_at: now,
+    },
+    { onConflict: 'thread_id' }
+  )
 
-    return c.json({ noteId, title: body.title, savedAt: now })
-  },
-)
+  if (upsertError) {
+    throw handleError(upsertError, ErrorCode.INTERNAL)
+  }
+
+  return c.json({ noteId, title: body.title, savedAt: now })
+})
 
 /**
  * DELETE /api/research/threads/:threadId
  * Delete a thread and its messages (cascade)
-*/
+ */
 research.delete('/threads/:threadId', async (c) => {
   const auth = requireAuth(c)
   const threadId = c.req.param('threadId')
@@ -507,10 +502,7 @@ research.delete('/threads/:threadId', async (c) => {
     return c.json({ error: 'Thread not found' }, 404)
   }
 
-  const { error } = await auth.supabase
-    .from('research_threads')
-    .delete()
-    .eq('id', threadId)
+  const { error } = await auth.supabase.from('research_threads').delete().eq('id', threadId)
 
   if (error) {
     throw handleError(error, ErrorCode.INTERNAL)
@@ -530,40 +522,36 @@ const UpdateThreadSchema = z.object({
   title: z.string().min(1).max(200),
 })
 
-research.patch(
-  '/threads/:threadId',
-  zValidator('json', UpdateThreadSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const threadId = c.req.param('threadId')
-    const body = c.req.valid('json')
+research.patch('/threads/:threadId', zValidator('json', UpdateThreadSchema), async (c) => {
+  const auth = requireAuth(c)
+  const threadId = c.req.param('threadId')
+  const body = c.req.valid('json')
 
-    // Verify ownership
-    const { data: thread, error: checkError } = await auth.supabase
-      .from('research_threads')
-      .select('id')
-      .eq('id', threadId)
-      .eq('user_id', auth.userId)
-      .single()
+  // Verify ownership
+  const { data: thread, error: checkError } = await auth.supabase
+    .from('research_threads')
+    .select('id')
+    .eq('id', threadId)
+    .eq('user_id', auth.userId)
+    .single()
 
-    if (checkError || !thread) {
-      return c.json({ error: 'Thread not found' }, 404)
-    }
+  if (checkError || !thread) {
+    return c.json({ error: 'Thread not found' }, 404)
+  }
 
-    const { error } = await auth.supabase
-      .from('research_threads')
-      .update({
-        title: body.title,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', threadId)
+  const { error } = await auth.supabase
+    .from('research_threads')
+    .update({
+      title: body.title,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', threadId)
 
-    if (error) {
-      throw handleError(error, ErrorCode.INTERNAL)
-    }
+  if (error) {
+    throw handleError(error, ErrorCode.INTERNAL)
+  }
 
-    return c.json({ success: true })
-  },
-)
+  return c.json({ success: true })
+})
 
 export default research

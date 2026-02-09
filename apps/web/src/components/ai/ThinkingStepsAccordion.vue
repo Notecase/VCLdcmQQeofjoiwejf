@@ -129,14 +129,28 @@ function clearSteps() {
     :class="{ collapsed: !expanded, complete: allComplete }"
   >
     <!-- Header -->
-    <button class="timeline-header" type="button" @click="toggleExpanded">
+    <button
+      class="timeline-header"
+      type="button"
+      @click="toggleExpanded"
+    >
       <div class="header-left">
         <div class="header-indicator">
-          <div v-if="hasRunningStep" class="pulse-ring" />
-          <div class="indicator-dot" :class="{ active: hasRunningStep, complete: allComplete }" />
+          <div
+            v-if="hasRunningStep"
+            class="pulse-ring"
+          />
+          <div
+            class="indicator-dot"
+            :class="{ active: hasRunningStep, complete: allComplete }"
+          />
         </div>
         <span class="header-text">
-          {{ hasRunningStep ? 'Thinking...' : `${steps.length} step${steps.length !== 1 ? 's' : ''} completed` }}
+          {{
+            hasRunningStep
+              ? 'Thinking...'
+              : `${steps.length} step${steps.length !== 1 ? 's' : ''} completed`
+          }}
         </span>
       </div>
       <div class="header-right">
@@ -149,13 +163,20 @@ function clearSteps() {
         >
           <X :size="12" />
         </button>
-        <ChevronDown :size="14" class="chevron" :class="{ rotated: !expanded }" />
+        <ChevronDown
+          :size="14"
+          class="chevron"
+          :class="{ rotated: !expanded }"
+        />
       </div>
     </button>
 
     <!-- Timeline steps -->
     <Transition name="expand">
-      <div v-if="expanded" class="timeline-body">
+      <div
+        v-if="expanded"
+        class="timeline-body"
+      >
         <div
           v-for="(step, index) in steps"
           :key="step.id"
@@ -172,9 +193,16 @@ function clearSteps() {
               class="connector-dot"
               :style="{ backgroundColor: getStepColor(step.type) }"
             >
-              <Loader2 v-if="step.status === 'running'" :size="6" class="dot-spinner" />
+              <Loader2
+                v-if="step.status === 'running'"
+                :size="6"
+                class="dot-spinner"
+              />
             </div>
-            <div v-if="index < steps.length - 1 || codePreview.active" class="connector-line" />
+            <div
+              v-if="index < steps.length - 1 || codePreview.active"
+              class="connector-line"
+            />
           </div>
 
           <!-- Step content -->
@@ -189,10 +217,17 @@ function clearSteps() {
               <span class="step-description">{{ step.description }}</span>
             </div>
             <div class="step-meta">
-              <span v-if="step.durationMs" class="step-duration">
+              <span
+                v-if="step.durationMs"
+                class="step-duration"
+              >
                 {{ formatDuration(step.durationMs) }}
               </span>
-              <XCircle v-if="step.status === 'error'" :size="12" class="error-icon" />
+              <XCircle
+                v-if="step.status === 'error'"
+                :size="12"
+                class="error-icon"
+              />
               <CheckCircle2
                 v-else-if="step.status === 'complete'"
                 :size="12"

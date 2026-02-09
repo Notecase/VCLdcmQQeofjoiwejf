@@ -44,8 +44,10 @@ function handleReject() {
     <div class="review-header">
       <h3>Review Course Outline</h3>
       <p class="review-subtitle">
-        {{ outline.title }} &mdash; {{ outline.difficulty }} &mdash;
-        ~{{ outline.estimatedHours }} hours
+        {{ outline.title }} &mdash; {{ outline.difficulty }} &mdash; ~{{
+          outline.estimatedHours
+        }}
+        hours
       </p>
     </div>
 
@@ -55,18 +57,34 @@ function handleReject() {
     </div>
 
     <!-- Learning Objectives -->
-    <div v-if="outline.learningObjectives.length > 0" class="objectives-section">
+    <div
+      v-if="outline.learningObjectives.length > 0"
+      class="objectives-section"
+    >
       <div class="section-label">Learning Objectives</div>
       <ul class="objectives-list">
-        <li v-for="(obj, idx) in outline.learningObjectives" :key="idx">{{ obj }}</li>
+        <li
+          v-for="(obj, idx) in outline.learningObjectives"
+          :key="idx"
+        >
+          {{ obj }}
+        </li>
       </ul>
     </div>
 
     <!-- Prerequisites -->
-    <div v-if="outline.prerequisites.length > 0" class="prereq-section">
+    <div
+      v-if="outline.prerequisites.length > 0"
+      class="prereq-section"
+    >
       <div class="section-label">Prerequisites</div>
       <div class="prereq-tags">
-        <span v-for="(p, idx) in outline.prerequisites" :key="idx" class="prereq-tag">{{ p }}</span>
+        <span
+          v-for="(p, idx) in outline.prerequisites"
+          :key="idx"
+          class="prereq-tag"
+          >{{ p }}</span
+        >
       </div>
     </div>
 
@@ -77,14 +95,26 @@ function handleReject() {
         :key="mod.id"
         class="module-block"
       >
-        <button class="module-header" @click="toggleModule(mod.id)">
-          <ChevronDown v-if="isExpanded(mod.id)" :size="16" />
-          <ChevronRight v-else :size="16" />
+        <button
+          class="module-header"
+          @click="toggleModule(mod.id)"
+        >
+          <ChevronDown
+            v-if="isExpanded(mod.id)"
+            :size="16"
+          />
+          <ChevronRight
+            v-else
+            :size="16"
+          />
           <span class="module-title">{{ mod.order + 1 }}. {{ mod.title }}</span>
           <span class="module-lesson-count">{{ mod.lessons.length }} lessons</span>
         </button>
 
-        <div v-if="isExpanded(mod.id)" class="module-body">
+        <div
+          v-if="isExpanded(mod.id)"
+          class="module-body"
+        >
           <p class="module-desc">{{ mod.description }}</p>
           <div class="lesson-list">
             <div
@@ -92,7 +122,10 @@ function handleReject() {
               :key="lesson.id"
               class="lesson-item"
             >
-              <LessonTypeIcon :type="lesson.type" :size="14" />
+              <LessonTypeIcon
+                :type="lesson.type"
+                :size="14"
+              />
               <span class="lesson-title">{{ lesson.title }}</span>
               <span class="lesson-meta">
                 <Clock :size="11" />
@@ -106,7 +139,11 @@ function handleReject() {
 
     <!-- Actions -->
     <div class="review-actions">
-      <button class="approve-btn" :disabled="submitting" @click="handleApprove">
+      <button
+        class="approve-btn"
+        :disabled="submitting"
+        @click="handleApprove"
+      >
         <Check :size="16" />
         {{ submitting ? 'Approving...' : 'Approve Outline' }}
       </button>
@@ -122,7 +159,10 @@ function handleReject() {
     </div>
 
     <!-- Rejection feedback -->
-    <div v-if="isRejecting" class="reject-form">
+    <div
+      v-if="isRejecting"
+      class="reject-form"
+    >
       <textarea
         v-model="feedback"
         class="reject-textarea"

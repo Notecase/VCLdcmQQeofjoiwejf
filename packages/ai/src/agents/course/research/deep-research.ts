@@ -52,9 +52,8 @@ interface InteractionResponse {
 }
 
 function buildResearchPrompt(topic: string, focusAreas: string[]): string {
-  const focusSection = focusAreas.length > 0
-    ? `\n\nFocus Areas:\n${focusAreas.map(a => `- ${a}`).join('\n')}`
-    : ''
+  const focusSection =
+    focusAreas.length > 0 ? `\n\nFocus Areas:\n${focusAreas.map((a) => `- ${a}`).join('\n')}` : ''
 
   return `Conduct comprehensive deep research on the following topic for educational course creation.
 
@@ -124,13 +123,11 @@ function extractOutputText(output: InteractionOutput): string[] {
   }
   if (typeof output.content === 'string' && output.content.trim()) {
     textParts.push(output.content)
-  }
-  else if (Array.isArray(output.content)) {
+  } else if (Array.isArray(output.content)) {
     for (const part of output.content) {
       if (typeof part === 'string') {
         if (part.trim()) textParts.push(part)
-      }
-      else if (part && typeof part.text === 'string' && part.text.trim()) {
+      } else if (part && typeof part.text === 'string' && part.text.trim()) {
         textParts.push(part.text)
       }
     }
@@ -172,13 +169,20 @@ function getInteractionError(interaction: InteractionResponse): string | null {
 }
 
 function isAbortError(error: unknown): boolean {
-  return typeof error === 'object'
-    && error !== null
-    && 'name' in error
-    && (error as { name?: string }).name === 'AbortError'
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: string }).name === 'AbortError'
+  )
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, context: Record<string, unknown>): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  context: Record<string, unknown>
+): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -189,7 +193,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
         `Request timed out after ${timeoutMs}ms`,
         ErrorCode.TIMEOUT,
         'Deep research request timed out. Retrying...',
-        context,
+        context
       )
     }
     throw error
@@ -198,17 +202,26 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-async function startInteraction(prompt: string, apiKey: string, requestTimeoutMs: number): Promise<string> {
+async function startInteraction(
+  prompt: string,
+  apiKey: string,
+  requestTimeoutMs: number
+): Promise<string> {
   const url = `${INTERACTIONS_BASE}?key=${apiKey}`
-  const response = await fetchWithTimeout(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      input: prompt,
-      agent: 'deep-research-pro-preview-12-2025',
-      background: true,
-    }),
-  }, requestTimeoutMs, { phase: 'startInteraction' })
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: prompt,
+        agent: 'deep-research-pro-preview-12-2025',
+        background: true,
+      }),
+    },
+    requestTimeoutMs,
+    { phase: 'startInteraction' }
+  )
 
   if (!response.ok) {
     const errorBody = await response.text()
@@ -216,25 +229,32 @@ async function startInteraction(prompt: string, apiKey: string, requestTimeoutMs
       `Failed to start deep research interaction: ${response.status} ${errorBody}`,
       ErrorCode.AI_PROVIDER_ERROR,
       'Failed to start research. Please check your Gemini API key.',
-      { status: response.status, body: errorBody },
+      { status: response.status, body: errorBody }
     )
   }
 
-  const data = await response.json() as InteractionResponse
+  const data = (await response.json()) as InteractionResponse
   if (!data.id) {
     throw new AppError(
       'Deep research interaction response missing id',
       ErrorCode.AI_PROVIDER_ERROR,
-      'Received invalid response from research service.',
+      'Received invalid response from research service.'
     )
   }
 
   return data.id
 }
 
-async function pollInteraction(interactionId: string, apiKey: string, requestTimeoutMs: number): Promise<InteractionResponse> {
+async function pollInteraction(
+  interactionId: string,
+  apiKey: string,
+  requestTimeoutMs: number
+): Promise<InteractionResponse> {
   const url = `${INTERACTIONS_BASE}/${interactionId}?key=${apiKey}`
-  const response = await fetchWithTimeout(url, {}, requestTimeoutMs, { phase: 'pollInteraction', interactionId })
+  const response = await fetchWithTimeout(url, {}, requestTimeoutMs, {
+    phase: 'pollInteraction',
+    interactionId,
+  })
 
   if (!response.ok) {
     const errorBody = await response.text()
@@ -242,21 +262,21 @@ async function pollInteraction(interactionId: string, apiKey: string, requestTim
       `Failed to poll deep research interaction: ${response.status} ${errorBody}`,
       ErrorCode.AI_PROVIDER_ERROR,
       'Failed to check research status.',
-      { interactionId, status: response.status },
+      { interactionId, status: response.status }
     )
   }
 
-  return await response.json() as InteractionResponse
+  return (await response.json()) as InteractionResponse
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export async function runDeepResearch(
   topic: string,
   focusAreas: string[],
-  config: DeepResearchConfig,
+  config: DeepResearchConfig
 ): Promise<DeepResearchResult> {
   const {
     geminiApiKey,
@@ -280,8 +300,7 @@ export async function runDeepResearch(
   try {
     const prompt = buildResearchPrompt(topic, focusAreas)
     interactionId = await startInteraction(prompt, geminiApiKey, requestTimeoutMs)
-  }
-  catch (error: unknown) {
+  } catch (error: unknown) {
     const message = error instanceof AppError ? error.message : String(error)
     onProgress?.({
       status: 'failed',
@@ -316,8 +335,7 @@ export async function runDeepResearch(
     try {
       interaction = await pollInteraction(interactionId, geminiApiKey, requestTimeoutMs)
       consecutivePollErrors = 0
-    }
-    catch (error: unknown) {
+    } catch (error: unknown) {
       const message = error instanceof AppError ? error.message : String(error)
       consecutivePollErrors++
       const timeStr = formatElapsedTime(startTime)
@@ -394,11 +412,9 @@ export async function runDeepResearch(
     let thinking: string
     if (isWriting) {
       thinking = `Synthesizing findings from ${latestSources.length} sources... (${timeStr} elapsed)`
-    }
-    else if (latestSources.length > 0) {
+    } else if (latestSources.length > 0) {
       thinking = `Researching... ${latestSources.length} sources found (${timeStr} elapsed)`
-    }
-    else {
+    } else {
       thinking = `Deep research agent is analyzing sources... (${timeStr} elapsed, typically takes 5-10 minutes)`
     }
 

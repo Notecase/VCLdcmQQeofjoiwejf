@@ -14,14 +14,12 @@ function titleCase(value: string): string {
   return value
     .split(/\s+/)
     .filter(Boolean)
-    .map(word => word[0]?.toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word[0]?.toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
 }
 
 function deriveIdFromTokens(tokens: string[]): string {
-  const clean = tokens
-    .map(t => t.replace(/[^a-z0-9]/gi, ''))
-    .filter(Boolean)
+  const clean = tokens.map((t) => t.replace(/[^a-z0-9]/gi, '')).filter(Boolean)
 
   if (clean.length === 0) return 'PLAN'
 
@@ -31,7 +29,10 @@ function deriveIdFromTokens(tokens: string[]): string {
     return token.slice(0, 8)
   }
 
-  const acronym = clean.map(t => t[0]).join('').toUpperCase()
+  const acronym = clean
+    .map((t) => t[0])
+    .join('')
+    .toUpperCase()
   if (acronym.length >= 2) return acronym.slice(0, 8)
   return clean[0].toUpperCase().slice(0, 8)
 }
@@ -55,15 +56,20 @@ function deriveFromHeading(heading: string): { id: string; name: string } {
   const explicit = normalized.match(/^\[([^\]]{2,12})\]\s*(.+)$/)
   if (explicit) {
     return {
-      id: explicit[1].replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 8) || 'PLAN',
+      id:
+        explicit[1]
+          .replace(/[^a-z0-9]/gi, '')
+          .toUpperCase()
+          .slice(0, 8) || 'PLAN',
       name: explicit[2].trim(),
     }
   }
 
-  const name = normalized
-    .replace(/\broadmap\b/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim() || normalized
+  const name =
+    normalized
+      .replace(/\broadmap\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim() || normalized
   const tokens = name.split(/[^a-z0-9]+/i).filter(Boolean)
   const id = deriveIdFromTokens(tokens)
   return { id, name }
@@ -79,9 +85,13 @@ function findPrimaryHeading(content: string): string | null {
   return null
 }
 
-export function parseRoadmapCandidatesFromFiles(files: RoadmapFileLike[]): ParsedRoadmapCandidate[] {
+export function parseRoadmapCandidatesFromFiles(
+  files: RoadmapFileLike[]
+): ParsedRoadmapCandidate[] {
   const rawCandidates = files
-    .filter(file => file.filename.startsWith('Plans/') && file.filename.toLowerCase().endsWith('.md'))
+    .filter(
+      (file) => file.filename.startsWith('Plans/') && file.filename.toLowerCase().endsWith('.md')
+    )
     .map((file) => {
       const heading = findPrimaryHeading(file.content)
       const byHeading = heading ? deriveFromHeading(heading) : null

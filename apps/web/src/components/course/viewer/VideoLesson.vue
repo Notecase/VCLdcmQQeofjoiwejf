@@ -36,40 +36,71 @@ const transcript = computed(() => props.lesson.content.transcript ?? '')
     </h2>
 
     <!-- Video Player -->
-    <div v-if="videoUrl" class="video-container">
+    <div
+      v-if="videoUrl"
+      class="video-container"
+    >
       <iframe
         :src="videoUrl"
         class="video-iframe"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="
+          accelerometer;
+          autoplay;
+          clipboard-write;
+          encrypted-media;
+          gyroscope;
+          picture-in-picture;
+        "
         allowfullscreen
       />
     </div>
-    <div v-else class="video-placeholder">
+    <div
+      v-else
+      class="video-placeholder"
+    >
       <Play :size="48" />
       <p>No video available for this lesson</p>
     </div>
 
     <!-- Channel info -->
-    <div v-if="lesson.content.videoChannel" class="channel-info">
+    <div
+      v-if="lesson.content.videoChannel"
+      class="channel-info"
+    >
       Source: {{ lesson.content.videoChannel }}
     </div>
 
     <!-- Key Points -->
-    <div v-if="keyPoints.length > 0" class="key-points">
+    <div
+      v-if="keyPoints.length > 0"
+      class="key-points"
+    >
       <h3 class="section-heading">
         <List :size="16" />
         Key Points
       </h3>
       <ul class="points-list">
-        <li v-for="(point, idx) in keyPoints" :key="idx">{{ point }}</li>
+        <li
+          v-for="(point, idx) in keyPoints"
+          :key="idx"
+        >
+          {{ point }}
+        </li>
       </ul>
     </div>
 
     <!-- Timestamps -->
-    <div v-if="timestamps.length > 0" class="timestamps">
+    <div
+      v-if="timestamps.length > 0"
+      class="timestamps"
+    >
       <h3 class="section-heading">Timestamps</h3>
       <div class="timestamp-list">
-        <div v-for="(ts, idx) in timestamps" :key="idx" class="timestamp-item">
+        <div
+          v-for="(ts, idx) in timestamps"
+          :key="idx"
+          class="timestamp-item"
+        >
           <span class="timestamp-time">{{ ts.time }}</span>
           <span class="timestamp-label">{{ ts.label }}</span>
         </div>
@@ -77,19 +108,37 @@ const transcript = computed(() => props.lesson.content.transcript ?? '')
     </div>
 
     <!-- Transcript -->
-    <div v-if="transcript" class="transcript-section">
-      <button class="transcript-toggle" @click="showTranscript = !showTranscript">
+    <div
+      v-if="transcript"
+      class="transcript-section"
+    >
+      <button
+        class="transcript-toggle"
+        @click="showTranscript = !showTranscript"
+      >
         <span>Transcript</span>
-        <ChevronUp v-if="showTranscript" :size="14" />
-        <ChevronDown v-else :size="14" />
+        <ChevronUp
+          v-if="showTranscript"
+          :size="14"
+        />
+        <ChevronDown
+          v-else
+          :size="14"
+        />
       </button>
-      <div v-if="showTranscript" class="transcript-text">
+      <div
+        v-if="showTranscript"
+        class="transcript-text"
+      >
         {{ transcript }}
       </div>
     </div>
 
     <!-- Markdown content (supplementary) -->
-    <MuyaRenderer v-if="lesson.content.markdown" :markdown="lesson.content.markdown" />
+    <MuyaRenderer
+      v-if="lesson.content.markdown"
+      :markdown="lesson.content.markdown"
+    />
   </div>
 </template>
 
@@ -257,5 +306,4 @@ const transcript = computed(() => props.lesson.content.transcript ?? '')
   background: var(--border-color, #333338);
   border-radius: 2px;
 }
-
 </style>

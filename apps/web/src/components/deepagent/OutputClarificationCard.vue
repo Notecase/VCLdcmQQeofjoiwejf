@@ -22,13 +22,21 @@ function iconFor(destination: OutputDestination) {
   <div class="output-clarify-card">
     <div class="card-header">
       <div class="header-left">
-        <HelpCircle :size="16" class="header-icon" />
+        <HelpCircle
+          :size="16"
+          class="header-icon"
+        />
         <div class="header-copy">
           <p class="header-title">Clarify Output Destination</p>
           <p class="header-reason">{{ request.reason }}</p>
         </div>
       </div>
-      <button class="close-btn" type="button" aria-label="Dismiss clarification" @click="emit('cancel')">
+      <button
+        class="close-btn"
+        type="button"
+        aria-label="Dismiss clarification"
+        @click="emit('cancel')"
+      >
         <X :size="14" />
       </button>
     </div>
@@ -41,7 +49,11 @@ function iconFor(destination: OutputDestination) {
         type="button"
         @click="emit('select', option.id)"
       >
-        <component :is="iconFor(option.id)" :size="14" class="option-icon" />
+        <component
+          :is="iconFor(option.id)"
+          :size="14"
+          class="option-icon"
+        />
         <span class="option-label">{{ option.label }}</span>
         <span class="option-desc">{{ option.description }}</span>
       </button>

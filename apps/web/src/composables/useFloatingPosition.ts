@@ -28,7 +28,9 @@ export function useFloatingPosition(size = 56) {
         position.value = clampPosition(parsed)
         return
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // Default: bottom-right corner
     position.value = {
       x: window.innerWidth - size - SNAP_MARGIN,
@@ -39,7 +41,9 @@ export function useFloatingPosition(size = 56) {
   function savePosition() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(position.value))
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   function clampPosition(pos: Position): Position {
@@ -63,8 +67,9 @@ export function useFloatingPosition(size = 56) {
       bottom: vh - cy,
     }
 
-    const nearest = (Object.keys(distances) as Array<keyof typeof distances>)
-      .reduce((a, b) => distances[a] < distances[b] ? a : b)
+    const nearest = (Object.keys(distances) as Array<keyof typeof distances>).reduce((a, b) =>
+      distances[a] < distances[b] ? a : b
+    )
 
     const snapped = { ...position.value }
     if (nearest === 'left') snapped.x = SNAP_MARGIN
@@ -141,7 +146,9 @@ export function useFloatingPosition(size = 56) {
     left: `${position.value.x}px`,
     top: `${position.value.y}px`,
     zIndex: 9999,
-    transition: isDragging.value ? 'none' : 'left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+    transition: isDragging.value
+      ? 'none'
+      : 'left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
   }))
 
   return {

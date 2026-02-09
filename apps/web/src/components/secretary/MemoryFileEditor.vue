@@ -20,7 +20,7 @@ watch(
     editContent.value = file?.content || ''
     viewMode.value = 'edit'
   },
-  { immediate: true },
+  { immediate: true }
 )
 
 const filename = computed(() => store.selectedFile?.filename || '')
@@ -74,7 +74,11 @@ onUnmounted(() => {
     <div class="editor-header">
       <div class="filename-area">
         <h3>{{ filename }}</h3>
-        <span v-if="isDirty" class="dirty-dot" title="Unsaved changes" />
+        <span
+          v-if="isDirty"
+          class="dirty-dot"
+          title="Unsaved changes"
+        />
       </div>
       <div class="header-actions">
         <div class="view-toggle">
@@ -95,14 +99,25 @@ onUnmounted(() => {
             <Eye :size="14" />
           </button>
         </div>
-        <button class="action-btn save" :disabled="isSaving" @click="save">
+        <button
+          class="action-btn save"
+          :disabled="isSaving"
+          @click="save"
+        >
           <Save :size="14" />
           {{ isSaving ? 'Saving...' : 'Save' }}
         </button>
-        <button class="action-btn delete" @click="showDeleteConfirm = true">
+        <button
+          class="action-btn delete"
+          @click="showDeleteConfirm = true"
+        >
           <Trash2 :size="14" />
         </button>
-        <button class="action-btn close" title="Close (Esc)" @click="requestClose">
+        <button
+          class="action-btn close"
+          title="Close (Esc)"
+          @click="requestClose"
+        >
           <X :size="14" />
         </button>
       </div>
@@ -135,7 +150,10 @@ onUnmounted(() => {
       message="You have unsaved changes. Close anyway?"
       confirm-label="Discard"
       variant="danger"
-      @confirm="showUnsavedConfirm = false; close()"
+      @confirm="
+        showUnsavedConfirm = false
+        close()
+      "
       @cancel="showUnsavedConfirm = false"
     />
   </div>

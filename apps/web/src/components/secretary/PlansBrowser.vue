@@ -40,32 +40,45 @@ function planLabel(filename: string): string {
   <div class="plans-browser">
     <div class="plans-header">
       <h3>Plans</h3>
-      <button class="back-btn" @click="backToDashboard">
+      <button
+        class="back-btn"
+        @click="backToDashboard"
+      >
         Back to Dashboard
       </button>
     </div>
 
-    <p class="plans-note">
-      Archived roadmap markdown files stored under <code>Plans/</code>.
-    </p>
+    <p class="plans-note">Archived roadmap markdown files stored under <code>Plans/</code>.</p>
 
-    <div v-if="store.planArchiveEntries.length === 0" class="empty-state">
+    <div
+      v-if="store.planArchiveEntries.length === 0"
+      class="empty-state"
+    >
       No roadmap archives yet.
     </div>
 
-    <div v-else class="plans-list">
+    <div
+      v-else
+      class="plans-list"
+    >
       <button
         v-for="entry in store.planArchiveEntries"
         :key="entry.filename"
         class="plans-entry"
         @click="openEntry(entry.filename)"
       >
-        <FileText :size="14" class="entry-icon" />
+        <FileText
+          :size="14"
+          class="entry-icon"
+        />
         <div class="entry-info">
           <span class="entry-date">{{ planLabel(entry.filename) }}</span>
           <span class="entry-filename">{{ entry.filename }}</span>
         </div>
-        <span v-if="entry.updatedAt" class="entry-meta">
+        <span
+          v-if="entry.updatedAt"
+          class="entry-meta"
+        >
           <Clock :size="10" />
           {{ formatDate(entry.updatedAt) }}
         </span>

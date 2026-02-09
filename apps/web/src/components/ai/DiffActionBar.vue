@@ -31,13 +31,22 @@ const escKey = '\u238B'
 
 <template>
   <Transition name="float">
-    <div v-if="isVisible" class="diff-action-bar">
-      <button class="action-btn accept-all" @click="emit('acceptAll')">
+    <div
+      v-if="isVisible"
+      class="diff-action-bar"
+    >
+      <button
+        class="action-btn accept-all"
+        @click="emit('acceptAll')"
+      >
         <span class="btn-text">Accept All</span>
         <span class="shortcut">{{ modKey }}{{ shiftKey }}{{ enterKey }}</span>
       </button>
 
-      <button class="action-btn deny-all" @click="emit('rejectAll')">
+      <button
+        class="action-btn deny-all"
+        @click="emit('rejectAll')"
+      >
         <span class="btn-text">Deny All</span>
         <span class="shortcut">{{ modKey }}{{ shiftKey }}{{ escKey }}</span>
       </button>

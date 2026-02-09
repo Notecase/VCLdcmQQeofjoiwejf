@@ -115,8 +115,13 @@ export const InsertMarkdownTableSchema = z.object({
   noteId: z.string().uuid().describe('The note ID to insert the table into'),
   title: z.string().optional().describe('Optional title/heading above the table'),
   headers: z.array(z.string()).min(1).describe('Column headers for the table'),
-  rows: z.array(z.array(z.string())).describe('Table data rows (array of arrays, each inner array is a row)'),
-  position: z.enum(['end', 'start']).default('end').describe('Where to insert the table in the note'),
+  rows: z
+    .array(z.array(z.string()))
+    .describe('Table data rows (array of arrays, each inner array is a row)'),
+  position: z
+    .enum(['end', 'start'])
+    .default('end')
+    .describe('Where to insert the table in the note'),
 })
 
 // ============================================================================

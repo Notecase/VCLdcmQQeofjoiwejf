@@ -175,7 +175,17 @@ export interface SecretaryChatResponse {
  * Server-Sent Event emitted during streaming secretary chat
  */
 export interface SecretaryStreamEvent {
-  event: 'text' | 'tool_call' | 'tool_result' | 'roadmap_preview' | 'daily_plan' | 'thinking' | 'memory_updated' | 'done' | 'error' | 'thread-id'
+  event:
+    | 'text'
+    | 'tool_call'
+    | 'tool_result'
+    | 'roadmap_preview'
+    | 'daily_plan'
+    | 'thinking'
+    | 'memory_updated'
+    | 'done'
+    | 'error'
+    | 'thread-id'
   data: string
   /**
    * Monotonic sequence number for stream de-duplication.

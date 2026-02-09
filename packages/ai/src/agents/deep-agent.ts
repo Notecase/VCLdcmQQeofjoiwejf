@@ -206,14 +206,23 @@ export class InkdownDeepAgent {
 
     // Pattern 1: Multiple action verbs
     const actionVerbs = ['create', 'make', 'build', 'write', 'add', 'generate']
-    const verbCount = actionVerbs.filter(verb => lower.includes(verb)).length
+    const verbCount = actionVerbs.filter((verb) => lower.includes(verb)).length
 
     // Pattern 2: Conjunctions indicating multiple tasks
     const hasConjunction = /\b(and\s+(also\s+)?|,\s*(and\s+)?|also|plus)\b/.test(lower)
 
     // Pattern 3: Multiple output types mentioned
-    const outputTypes = ['note', 'table', 'timer', 'chart', 'calculator', 'widget', 'visualization', 'artifact']
-    const outputCount = outputTypes.filter(type => lower.includes(type)).length
+    const outputTypes = [
+      'note',
+      'table',
+      'timer',
+      'chart',
+      'calculator',
+      'widget',
+      'visualization',
+      'artifact',
+    ]
+    const outputCount = outputTypes.filter((type) => lower.includes(type)).length
 
     // Compound if: multiple verbs + conjunction, OR multiple output types
     return (verbCount >= 2 && hasConjunction) || outputCount >= 2
@@ -267,8 +276,8 @@ export class InkdownDeepAgent {
 
     for (const task of decomposition.tasks) {
       // Check dependencies
-      const dependenciesComplete = (task.dependsOn || []).every(depId =>
-        results.some(r => r.taskId === depId)
+      const dependenciesComplete = (task.dependsOn || []).every((depId) =>
+        results.some((r) => r.taskId === depId)
       )
 
       if (!dependenciesComplete) {
@@ -320,10 +329,12 @@ export class InkdownDeepAgent {
         // Always emit — including for newly created notes — so the frontend
         // can show green diff blocks for review (the frontend resets the
         // pre-loaded editor content to allow diff injection).
-        if ((task.type === 'edit_note' || task.type === 'database_action')
-            && this.context.currentNoteId
-            && this.context.generatedContent
-            && this.context.generatedContent !== previousContent) {
+        if (
+          (task.type === 'edit_note' || task.type === 'database_action') &&
+          this.context.currentNoteId &&
+          this.context.generatedContent &&
+          this.context.generatedContent !== previousContent
+        ) {
           yield {
             type: 'edit-proposal',
             data: {
@@ -344,7 +355,7 @@ export class InkdownDeepAgent {
     }
 
     // Step 4: Generate summary
-    const completedCount = decomposition.tasks.filter(t => t.status === 'completed').length
+    const completedCount = decomposition.tasks.filter((t) => t.status === 'completed').length
 
     yield {
       type: 'text-delta',
@@ -382,25 +393,32 @@ export class InkdownDeepAgent {
       const parsed = JSON.parse(cleaned)
 
       return {
-        tasks: (parsed.tasks || []).map((t: { id?: string; type?: string; description?: string; dependsOn?: string[] }, idx: number) => ({
-          id: t.id || String(idx + 1),
-          type: t.type || 'chat',
-          description: t.description || '',
-          status: 'pending' as const,
-          dependsOn: t.dependsOn || [],
-        })),
+        tasks: (parsed.tasks || []).map(
+          (
+            t: { id?: string; type?: string; description?: string; dependsOn?: string[] },
+            idx: number
+          ) => ({
+            id: t.id || String(idx + 1),
+            type: t.type || 'chat',
+            description: t.description || '',
+            status: 'pending' as const,
+            dependsOn: t.dependsOn || [],
+          })
+        ),
         reasoning: parsed.reasoning || '',
       }
     } catch {
       // Fallback: single task
       return {
-        tasks: [{
-          id: '1',
-          type: 'edit_note',
-          description: message,
-          status: 'pending',
-          dependsOn: [],
-        }],
+        tasks: [
+          {
+            id: '1',
+            type: 'edit_note',
+            description: message,
+            status: 'pending',
+            dependsOn: [],
+          },
+        ],
         reasoning: 'Could not parse decomposition, treating as single task',
       }
     }
@@ -457,8 +475,9 @@ export class InkdownDeepAgent {
     // Determine if we're creating or updating
     // Use shared isCreateOperation() to detect "create a note" intent,
     // even when a note is currently open (e.g., "create a new note about X")
-    const isCreate = !this.context.currentNoteId
-      || isCreateOperation(task.description, !!this.context.currentNoteId)
+    const isCreate =
+      !this.context.currentNoteId ||
+      isCreateOperation(task.description, !!this.context.currentNoteId)
 
     const stream = noteAgent.stream({
       action: isCreate ? 'create' : 'update',
@@ -475,7 +494,11 @@ export class InkdownDeepAgent {
         fullContent += chunk.data as string
         yield {
           type: 'subtask-progress',
-          data: { taskId: task.id, progress: Math.min(90, fullContent.length / 20), message: 'Generating content...' },
+          data: {
+            taskId: task.id,
+            progress: Math.min(90, fullContent.length / 20),
+            message: 'Generating content...',
+          },
         }
       } else if (chunk.type === 'thinking') {
         yield { type: 'thinking', data: chunk.data as string }
@@ -494,7 +517,10 @@ export class InkdownDeepAgent {
    * Execute an artifact creation task
    * Uses Ollama Cloud with kimi-k2.5:cloud for artifact generation
    */
-  private async *executeArtifactTask(task: SubTask, originalMessage: string): AsyncGenerator<DeepAgentEvent> {
+  private async *executeArtifactTask(
+    task: SubTask,
+    originalMessage: string
+  ): AsyncGenerator<DeepAgentEvent> {
     yield { type: 'thinking', data: 'Creating interactive artifact with Ollama Cloud...' }
 
     // Enrich task description with original context for better understanding
@@ -569,7 +595,10 @@ export class InkdownDeepAgent {
           retryContent += chunk
         }
 
-        console.log('[DeepAgent] Ollama retry response (first 500 chars):', retryContent.slice(0, 500))
+        console.log(
+          '[DeepAgent] Ollama retry response (first 500 chars):',
+          retryContent.slice(0, 500)
+        )
         artifact = this.parseArtifactContent(retryContent, task.description)
       } catch (retryError) {
         console.error('[DeepAgent] Ollama retry failed:', retryError)
@@ -578,12 +607,16 @@ export class InkdownDeepAgent {
 
     // Validate the artifact has actual content after potential retry
     if (!artifact.html && !artifact.css && !artifact.javascript) {
-      console.error('[DeepAgent] Artifact has no code content after parsing and retry. Task:', task.description)
+      console.error(
+        '[DeepAgent] Artifact has no code content after parsing and retry. Task:',
+        task.description
+      )
       yield {
         type: 'error',
         data: {
           taskId: task.id,
-          error: 'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript. Please try again with a more specific description.',
+          error:
+            'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript. Please try again with a more specific description.',
         },
       }
       task.status = 'failed'
@@ -671,7 +704,10 @@ export class InkdownDeepAgent {
         }
       }
     } catch (error) {
-      yield { type: 'error', data: { taskId: task.id, error: `Failed to parse table data: ${error}` } }
+      yield {
+        type: 'error',
+        data: { taskId: task.id, error: `Failed to parse table data: ${error}` },
+      }
     }
   }
 
@@ -698,7 +734,7 @@ export class InkdownDeepAgent {
     const separator = `| ${headers.map(() => '---').join(' | ')} |`
 
     // Data rows
-    const dataRows = rows.map(row => {
+    const dataRows = rows.map((row) => {
       const cells = headers.map((_, idx) => {
         const value = row[idx]
         if (value == null) return ''
@@ -766,7 +802,7 @@ export class InkdownDeepAgent {
       // kimi-k2.5 returns: " ```json\n{...}\n```"
       const cleaned = content
         .replace(/^\s*```(?:json)?\s*\n?/i, '') // Remove opening code block with optional spaces
-        .replace(/\n?\s*```\s*$/i, '')           // Remove closing code block
+        .replace(/\n?\s*```\s*$/i, '') // Remove closing code block
         .trim()
       const parsed = JSON.parse(cleaned)
 
@@ -816,7 +852,10 @@ export class InkdownDeepAgent {
       // Try to extract javascript - this is often the longest field and most likely truncated
       const jsMatch = content.match(/"javascript"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/s)
       if (jsMatch) {
-        result.javascript = jsMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
+        result.javascript = jsMatch[1]
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, '\n')
+          .replace(/\\t/g, '\t')
       }
 
       console.log('[DeepAgent] Partial JSON recovery result:', {
@@ -842,7 +881,10 @@ export class InkdownDeepAgent {
       }
 
       if (!result.html && !result.css && !result.javascript) {
-        console.error('[DeepAgent] ARTIFACT PARSING FAILED - all code fields empty. Full content:', content)
+        console.error(
+          '[DeepAgent] ARTIFACT PARSING FAILED - all code fields empty. Full content:',
+          content
+        )
       }
 
       return result
@@ -856,14 +898,23 @@ export class InkdownDeepAgent {
     const lower = content.toLowerCase()
 
     // Check for JavaScript markers (typically comes last)
-    if (lower.includes('"javascript"') || lower.includes('javascript:') ||
-      lower.includes('function ') || lower.includes('const ') || lower.includes('let ')) {
+    if (
+      lower.includes('"javascript"') ||
+      lower.includes('javascript:') ||
+      lower.includes('function ') ||
+      lower.includes('const ') ||
+      lower.includes('let ')
+    ) {
       return 'javascript'
     }
 
     // Check for CSS markers
-    if (lower.includes('"css"') || lower.includes('css:') ||
-      lower.includes('{') && (lower.includes('color:') || lower.includes('background:') || lower.includes('padding:'))) {
+    if (
+      lower.includes('"css"') ||
+      lower.includes('css:') ||
+      (lower.includes('{') &&
+        (lower.includes('color:') || lower.includes('background:') || lower.includes('padding:')))
+    ) {
       return 'css'
     }
 
@@ -876,7 +927,9 @@ export class InkdownDeepAgent {
    */
   private extractArtifactTitle(description: string): string {
     // Try to extract the main noun phrase
-    const match = description.match(/(?:create|make|build)\s+(?:an?\s+)?(?:interactive\s+)?(.+?)(?:\s+for|\s+that|\s+with|$)/i)
+    const match = description.match(
+      /(?:create|make|build)\s+(?:an?\s+)?(?:interactive\s+)?(.+?)(?:\s+for|\s+that|\s+with|$)/i
+    )
     if (match) {
       return match[1].trim().slice(0, 50)
     }

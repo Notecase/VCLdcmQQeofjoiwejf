@@ -70,8 +70,13 @@ function handleClick() {
 }
 
 @keyframes fab-breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
 }
 
 /* FAB fade transition */

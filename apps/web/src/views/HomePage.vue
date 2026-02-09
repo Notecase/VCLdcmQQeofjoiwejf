@@ -7,7 +7,7 @@
  * The right panel slides in when AI creates/edits a note.
  * Deep agent features: task progress, interrupts, sub-agents, tool calls, virtual files.
  */
-import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useAIStore } from '@/stores/ai'
 import { useDeepAgentStore } from '@/stores/deepAgent'
 import { useEditorStore, useLayoutStore } from '@/stores'
@@ -39,14 +39,15 @@ const { clearChat, error, clearError } = useAIChat()
 const messagesEndRef = ref<HTMLDivElement | null>(null)
 const selectedFile = ref<VirtualFile | null>(null)
 const showFileViewer = ref(false)
-const AI_HOME_ROUTE_CLASS = 'ai-home-route'
 
 const hasMessages = computed(() => deepAgent.chatMessages.length > 0)
-const showInlinePanel = computed(() =>
-  !deepAgent.hasActiveNoteDraft && (deepAgent.files.length > 0 || deepAgent.todos.length > 0),
+const showInlinePanel = computed(
+  () => !deepAgent.hasActiveNoteDraft && (deepAgent.files.length > 0 || deepAgent.todos.length > 0)
 )
 const showComposerTop = computed(() =>
-  Boolean(deepAgent.pendingInterrupt || deepAgent.pendingOutputClarification || showInlinePanel.value),
+  Boolean(
+    deepAgent.pendingInterrupt || deepAgent.pendingOutputClarification || showInlinePanel.value
+  )
 )
 
 // CSS variable for sidebar width (matches EditorView)
@@ -139,13 +140,8 @@ watch(
 )
 
 onMounted(async () => {
-  document.body.classList.add(AI_HOME_ROUTE_CLASS)
   await editorStore.loadDocuments()
   await deepAgent.loadThreads()
-})
-
-onUnmounted(() => {
-  document.body.classList.remove(AI_HOME_ROUTE_CLASS)
 })
 </script>
 
@@ -154,7 +150,10 @@ onUnmounted(() => {
     <!-- Left Area: Header + Sidebar + Chat -->
     <div class="left-area">
       <!-- Header with dock + actions -->
-      <header class="home-header" :style="sidebarWidthStyle">
+      <header
+        class="home-header"
+        :style="sidebarWidthStyle"
+      >
         <div class="dock-area">
           <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
         </div>
@@ -170,13 +169,21 @@ onUnmounted(() => {
           >
             <span class="status-dot"></span>
             {{
-              deepAgent.hasActiveInterrupt ? 'Awaiting Input'
-              : deepAgent.isChatStreaming ? 'Researching'
-              : deepAgent.threadStatus === 'error' ? 'Error'
-              : 'Ready'
+              deepAgent.hasActiveInterrupt
+                ? 'Awaiting Input'
+                : deepAgent.isChatStreaming
+                  ? 'Researching'
+                  : deepAgent.threadStatus === 'error'
+                    ? 'Error'
+                    : 'Ready'
             }}
           </div>
-          <button class="ghost-action" @click="handleNewSession">New session</button>
+          <button
+            class="ghost-action"
+            @click="handleNewSession"
+          >
+            New session
+          </button>
         </div>
       </header>
 
@@ -196,22 +203,41 @@ onUnmounted(() => {
           <!-- Scrollable chat area -->
           <div class="chat-scroll">
             <div class="chat-content">
-              <ChatHero v-if="!hasMessages && !deepAgent.isChatStreaming" @select="handleRecommendation" />
+              <ChatHero
+                v-if="!hasMessages && !deepAgent.isChatStreaming"
+                @select="handleRecommendation"
+              />
 
-              <div class="chat-thread" :class="{ empty: !hasMessages }">
+              <div
+                class="chat-thread"
+                :class="{ empty: !hasMessages }"
+              >
                 <!-- Render messages -->
-                <template v-for="msg in deepAgent.chatMessages" :key="msg.id">
+                <template
+                  v-for="msg in deepAgent.chatMessages"
+                  :key="msg.id"
+                >
                   <!-- User message: right-aligned bubble -->
-                  <div v-if="msg.role === 'user'" class="message-row user">
+                  <div
+                    v-if="msg.role === 'user'"
+                    class="message-row user"
+                  >
                     <div class="user-bubble">
                       {{ msg.content }}
                     </div>
                   </div>
 
                   <!-- Assistant message: left-aligned, full width -->
-                  <div v-else class="message-row assistant">
+                  <div
+                    v-else
+                    class="message-row assistant"
+                  >
                     <div class="assistant-content">
-                      <MarkdownContent v-if="msg.content" :content="msg.content" :is-streaming="false" />
+                      <MarkdownContent
+                        v-if="msg.content"
+                        :content="msg.content"
+                        :is-streaming="false"
+                      />
 
                       <NoteDraftResponseCard
                         v-if="msg.noteDraft"
@@ -245,9 +271,15 @@ onUnmounted(() => {
                 </template>
 
                 <!-- Streaming content -->
-                <div v-if="deepAgent.isChatStreaming && deepAgent.streamingContent" class="message-row assistant">
+                <div
+                  v-if="deepAgent.isChatStreaming && deepAgent.streamingContent"
+                  class="message-row assistant"
+                >
                   <div class="assistant-content">
-                    <MarkdownContent :content="deepAgent.streamingContent" :is-streaming="true" />
+                    <MarkdownContent
+                      :content="deepAgent.streamingContent"
+                      :is-streaming="true"
+                    />
 
                     <NoteDraftResponseCard
                       v-if="deepAgent.streamingNoteDraft"
@@ -276,7 +308,10 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <div v-else-if="deepAgent.isChatStreaming && deepAgent.streamingNoteDraft" class="message-row assistant">
+                <div
+                  v-else-if="deepAgent.isChatStreaming && deepAgent.streamingNoteDraft"
+                  class="message-row assistant"
+                >
                   <div class="assistant-content">
                     <NoteDraftResponseCard
                       :note-draft="deepAgent.streamingNoteDraft"
@@ -290,8 +325,14 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <div v-if="deepAgent.isChatStreaming" class="stream-indicator">
-                  <Loader2 :size="14" class="spin" />
+                <div
+                  v-if="deepAgent.isChatStreaming"
+                  class="stream-indicator"
+                >
+                  <Loader2
+                    :size="14"
+                    class="spin"
+                  />
                   <span>Researching...</span>
                 </div>
 
@@ -305,7 +346,10 @@ onUnmounted(() => {
             :is-processing="deepAgent.isChatStreaming"
             @submit="handleSubmit"
           >
-            <template v-if="showComposerTop" #top>
+            <template
+              v-if="showComposerTop"
+              #top
+            >
               <OutputClarificationCard
                 v-if="deepAgent.pendingOutputClarification"
                 :request="deepAgent.pendingOutputClarification"
@@ -318,7 +362,9 @@ onUnmounted(() => {
                 :interrupt="deepAgent.pendingInterrupt"
                 compact
                 @respond="deepAgent.respondToInterrupt($event)"
-                @dismiss="deepAgent.respondToInterrupt({ decision: 'reject', message: 'Dismissed' })"
+                @dismiss="
+                  deepAgent.respondToInterrupt({ decision: 'reject', message: 'Dismissed' })
+                "
               />
 
               <InlineTasksFiles
@@ -340,7 +386,10 @@ onUnmounted(() => {
 
     <!-- Error banner -->
     <Transition name="slide-up">
-      <div v-if="error" class="error-banner">
+      <div
+        v-if="error"
+        class="error-banner"
+      >
         <span>{{ error }}</span>
         <button @click="clearError">x</button>
       </div>
@@ -374,7 +423,12 @@ onUnmounted(() => {
   height: 100vh;
   width: 100vw;
   background: var(--app-bg, #0d1117);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   overflow: hidden;
   color: var(--text-color, #e6edf3);
 }
@@ -628,14 +682,5 @@ onUnmounted(() => {
 .chat-scroll::-webkit-scrollbar-thumb {
   background: var(--border-color, #30363d);
   border-radius: 3px;
-}
-</style>
-
-<style>
-body.ai-home-route .mu-front-button-wrapper,
-body.ai-home-route .mu-front-menu,
-body.ai-home-route .mu-float-wrapper:has(.mu-front-menu) {
-  display: none !important;
-  pointer-events: none !important;
 }
 </style>

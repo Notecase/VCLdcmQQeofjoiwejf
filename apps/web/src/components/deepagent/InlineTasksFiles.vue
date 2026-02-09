@@ -7,14 +7,7 @@
  */
 import { ref, computed } from 'vue'
 import type { VirtualFile, TodoItem } from '@inkdown/shared/types'
-import {
-  CheckCircle,
-  Circle,
-  Loader2,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-vue-next'
+import { CheckCircle, Circle, Loader2, FileText, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import FileCard from './FileCard.vue'
 
 const props = defineProps<{
@@ -29,11 +22,11 @@ const emit = defineEmits<{
 const expanded = ref(false)
 const activeTab = ref<'tasks' | 'files'>('tasks')
 
-const completedCount = computed(() => props.todos.filter(t => t.status === 'completed').length)
+const completedCount = computed(() => props.todos.filter((t) => t.status === 'completed').length)
 const totalCount = computed(() => props.todos.length)
-const activeTask = computed(() => props.todos.find(t => t.status === 'in_progress'))
+const activeTask = computed(() => props.todos.find((t) => t.status === 'in_progress'))
 const activeIndex = computed(() => {
-  const idx = props.todos.findIndex(t => t.status === 'in_progress')
+  const idx = props.todos.findIndex((t) => t.status === 'in_progress')
   return idx >= 0 ? idx + 1 : null
 })
 
@@ -68,9 +61,9 @@ const statusIconClass = computed(() => {
 })
 
 // Group todos by status
-const pendingTodos = computed(() => props.todos.filter(t => t.status === 'pending'))
-const inProgressTodos = computed(() => props.todos.filter(t => t.status === 'in_progress'))
-const completedTodos = computed(() => props.todos.filter(t => t.status === 'completed'))
+const pendingTodos = computed(() => props.todos.filter((t) => t.status === 'pending'))
+const inProgressTodos = computed(() => props.todos.filter((t) => t.status === 'in_progress'))
+const completedTodos = computed(() => props.todos.filter((t) => t.status === 'completed'))
 
 function todoStatusIcon(status: TodoItem['status']) {
   if (status === 'completed') return CheckCircle
@@ -88,7 +81,11 @@ function todoStatusClass(status: TodoItem['status']) {
 <template>
   <div class="inline-tasks-files">
     <!-- Collapsed bar -->
-    <button class="collapsed-bar" type="button" @click="expanded = !expanded">
+    <button
+      class="collapsed-bar"
+      type="button"
+      @click="expanded = !expanded"
+    >
       <div class="bar-left">
         <component
           :is="statusIcon"
@@ -97,20 +94,34 @@ function todoStatusClass(status: TodoItem['status']) {
           :class="[statusIconClass, { spin: activeTask }]"
         />
         <span class="bar-label">{{ statusLabel }}</span>
-        <span v-if="activeTaskContent" class="bar-task-text">"{{ activeTaskContent }}"</span>
+        <span
+          v-if="activeTaskContent"
+          class="bar-task-text"
+          >"{{ activeTaskContent }}"</span
+        >
       </div>
       <div class="bar-right">
-        <span v-if="files.length > 0" class="bar-files">
+        <span
+          v-if="files.length > 0"
+          class="bar-files"
+        >
           <FileText :size="12" />
           Files ({{ files.length }})
         </span>
-        <component :is="expanded ? ChevronUp : ChevronDown" :size="14" class="bar-chevron" />
+        <component
+          :is="expanded ? ChevronUp : ChevronDown"
+          :size="14"
+          class="bar-chevron"
+        />
       </div>
     </button>
 
     <!-- Expanded panel -->
     <Transition name="expand">
-      <div v-if="expanded" class="expanded-panel">
+      <div
+        v-if="expanded"
+        class="expanded-panel"
+      >
         <!-- Tabs -->
         <div class="panel-tabs">
           <button
@@ -132,13 +143,28 @@ function todoStatusClass(status: TodoItem['status']) {
         </div>
 
         <!-- Tasks tab -->
-        <div v-if="activeTab === 'tasks'" class="panel-content">
-          <div v-if="todos.length === 0" class="empty-tab">No tasks yet</div>
+        <div
+          v-if="activeTab === 'tasks'"
+          class="panel-content"
+        >
+          <div
+            v-if="todos.length === 0"
+            class="empty-tab"
+          >
+            No tasks yet
+          </div>
 
           <!-- In Progress -->
-          <div v-if="inProgressTodos.length > 0" class="task-group">
+          <div
+            v-if="inProgressTodos.length > 0"
+            class="task-group"
+          >
             <span class="group-label active">In Progress</span>
-            <div v-for="todo in inProgressTodos" :key="todo.id" class="task-item">
+            <div
+              v-for="todo in inProgressTodos"
+              :key="todo.id"
+              class="task-item"
+            >
               <component
                 :is="todoStatusIcon(todo.status)"
                 :size="13"
@@ -150,9 +176,16 @@ function todoStatusClass(status: TodoItem['status']) {
           </div>
 
           <!-- Pending -->
-          <div v-if="pendingTodos.length > 0" class="task-group">
+          <div
+            v-if="pendingTodos.length > 0"
+            class="task-group"
+          >
             <span class="group-label">Pending</span>
-            <div v-for="todo in pendingTodos" :key="todo.id" class="task-item">
+            <div
+              v-for="todo in pendingTodos"
+              :key="todo.id"
+              class="task-item"
+            >
               <component
                 :is="todoStatusIcon(todo.status)"
                 :size="13"
@@ -164,9 +197,16 @@ function todoStatusClass(status: TodoItem['status']) {
           </div>
 
           <!-- Completed -->
-          <div v-if="completedTodos.length > 0" class="task-group">
+          <div
+            v-if="completedTodos.length > 0"
+            class="task-group"
+          >
             <span class="group-label completed">Completed</span>
-            <div v-for="todo in completedTodos" :key="todo.id" class="task-item">
+            <div
+              v-for="todo in completedTodos"
+              :key="todo.id"
+              class="task-item"
+            >
               <component
                 :is="todoStatusIcon(todo.status)"
                 :size="13"
@@ -179,9 +219,20 @@ function todoStatusClass(status: TodoItem['status']) {
         </div>
 
         <!-- Files tab -->
-        <div v-if="activeTab === 'files'" class="panel-content">
-          <div v-if="files.length === 0" class="empty-tab">No files generated yet</div>
-          <div v-else class="files-grid">
+        <div
+          v-if="activeTab === 'files'"
+          class="panel-content"
+        >
+          <div
+            v-if="files.length === 0"
+            class="empty-tab"
+          >
+            No files generated yet
+          </div>
+          <div
+            v-else
+            class="files-grid"
+          >
             <FileCard
               v-for="file in files"
               :key="file.name"
@@ -402,7 +453,9 @@ function todoStatusClass(status: TodoItem['status']) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .expand-enter-active,

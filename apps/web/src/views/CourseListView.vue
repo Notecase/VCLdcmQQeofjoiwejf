@@ -48,18 +48,27 @@ onMounted(() => {
 <template>
   <div class="course-list-view">
     <!-- Header -->
-    <header class="list-header" :style="sidebarWidthStyle">
+    <header
+      class="list-header"
+      :style="sidebarWidthStyle"
+    >
       <div class="dock-area">
         <NavigationDock :pill-mode="!layoutStore.sidebarVisible" />
       </div>
       <div class="header-content">
         <div class="header-title">
           <h1>Courses</h1>
-          <span v-if="courseStore.courses.length > 0" class="course-count">
+          <span
+            v-if="courseStore.courses.length > 0"
+            class="course-count"
+          >
             {{ courseStore.courses.length }} course{{ courseStore.courses.length !== 1 ? 's' : '' }}
           </span>
         </div>
-        <button class="create-btn" @click="goToGenerator">
+        <button
+          class="create-btn"
+          @click="goToGenerator"
+        >
           <Plus :size="16" />
           New Course
         </button>
@@ -76,32 +85,54 @@ onMounted(() => {
       />
 
       <!-- Loading -->
-      <div v-if="courseStore.isLoadingCourses" class="loading-state">
-        <Loader2 :size="24" class="spinning" />
+      <div
+        v-if="courseStore.isLoadingCourses"
+        class="loading-state"
+      >
+        <Loader2
+          :size="24"
+          class="spinning"
+        />
         <span>Loading courses...</span>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="courseStore.courses.length === 0" class="empty-state glass-card">
+      <div
+        v-else-if="courseStore.courses.length === 0"
+        class="empty-state glass-card"
+      >
         <div class="empty-icon">
           <GraduationCap :size="48" />
         </div>
         <h3>No courses yet</h3>
         <p>Create your first AI-generated course to get started learning.</p>
-        <button class="create-btn large" @click="goToGenerator">
+        <button
+          class="create-btn large"
+          @click="goToGenerator"
+        >
           <Plus :size="18" />
           Create Your First Course
         </button>
       </div>
 
       <!-- No Filter Results -->
-      <div v-else-if="filteredCourses.length === 0" class="empty-state">
+      <div
+        v-else-if="filteredCourses.length === 0"
+        class="empty-state"
+      >
         <p>No courses match the current filters.</p>
       </div>
 
       <!-- Course Grid -->
-      <div v-else class="course-grid">
-        <div v-for="course in filteredCourses" :key="course.id" class="glass-card-wrapper">
+      <div
+        v-else
+        class="course-grid"
+      >
+        <div
+          v-for="course in filteredCourses"
+          :key="course.id"
+          class="glass-card-wrapper"
+        >
           <CourseCard
             :course="course"
             @open="openCourse"
@@ -128,7 +159,7 @@ onMounted(() => {
   align-items: center;
   height: 56px;
   flex-shrink: 0;
-  padding: 8px 24px 8px 0;
+  padding: 8px 24px 8px 0; /* More right padding for button */
   gap: 16px;
 }
 
@@ -219,19 +250,16 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* Glass Card Wrapper for CourseCards */
+/* Glass Card Wrapper for CourseCards - transparent since CourseCard has its own styling */
 .glass-card-wrapper {
   border-radius: var(--radius-card, 12px);
-  background: var(--glass-bg, rgba(30, 30, 30, 0.6));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  backdrop-filter: blur(var(--glass-blur, 12px));
+  background: transparent;
+  border: none;
   transition: all 0.2s;
 }
 
 .glass-card-wrapper:hover {
-  border-color: rgba(245, 158, 11, 0.3);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  /* Hover effect handled by CourseCard component */
 }
 
 /* Empty State */
@@ -281,8 +309,12 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

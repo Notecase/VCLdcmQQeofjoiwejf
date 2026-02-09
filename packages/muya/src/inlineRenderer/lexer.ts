@@ -179,7 +179,12 @@ function tokenizerFac(
           end: pos + to[0].length,
         }
         const marker = to[1]
-        if (rule === 'inline_code' || rule === 'emoji' || rule === 'inline_math' || rule === 'display_math') {
+        if (
+          rule === 'inline_code' ||
+          rule === 'emoji' ||
+          rule === 'inline_math' ||
+          rule === 'display_math'
+        ) {
           tokens.push({
             type: rule === 'display_math' ? 'inline_math' : rule, // Treat display_math as inline_math for rendering
             raw: to[0],

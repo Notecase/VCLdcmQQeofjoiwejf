@@ -13,15 +13,15 @@ defineProps<{
 
 const todoGroups = computed(() => {
   return (items: TodoItem[]) => {
-    const inProgress = items.filter(t => t.status === 'in_progress')
-    const pending = items.filter(t => t.status === 'pending')
-    const completed = items.filter(t => t.status === 'completed')
+    const inProgress = items.filter((t) => t.status === 'in_progress')
+    const pending = items.filter((t) => t.status === 'pending')
+    const completed = items.filter((t) => t.status === 'completed')
     return { inProgress, pending, completed }
   }
 })
 
 function completedCount(todos: TodoItem[]): number {
-  return todos.filter(t => t.status === 'completed').length
+  return todos.filter((t) => t.status === 'completed').length
 }
 
 function progressPercent(todos: TodoItem[]): number {
@@ -35,53 +35,80 @@ function progressPercent(todos: TodoItem[]): number {
     <!-- Progress summary -->
     <div class="progress-summary">
       <div class="progress-track">
-        <div class="progress-fill" :style="{ width: `${progressPercent(todos)}%` }" />
+        <div
+          class="progress-fill"
+          :style="{ width: `${progressPercent(todos)}%` }"
+        />
       </div>
       <span class="progress-text">{{ completedCount(todos) }} of {{ todos.length }} completed</span>
     </div>
 
     <!-- Empty state -->
-    <div v-if="todos.length === 0" class="empty-state">
+    <div
+      v-if="todos.length === 0"
+      class="empty-state"
+    >
       No tasks yet
     </div>
 
     <!-- Todo groups -->
-    <div v-else class="todo-groups">
+    <div
+      v-else
+      class="todo-groups"
+    >
       <!-- In Progress -->
-      <div v-if="todoGroups(todos).inProgress.length > 0" class="todo-group">
+      <div
+        v-if="todoGroups(todos).inProgress.length > 0"
+        class="todo-group"
+      >
         <span class="group-label active">In Progress</span>
         <div
           v-for="todo in todoGroups(todos).inProgress"
           :key="todo.id"
           class="todo-item active"
         >
-          <Loader2 :size="14" class="todo-icon spin" />
+          <Loader2
+            :size="14"
+            class="todo-icon spin"
+          />
           <span class="todo-text">{{ todo.content }}</span>
         </div>
       </div>
 
       <!-- Pending -->
-      <div v-if="todoGroups(todos).pending.length > 0" class="todo-group">
+      <div
+        v-if="todoGroups(todos).pending.length > 0"
+        class="todo-group"
+      >
         <span class="group-label">Pending</span>
         <div
           v-for="todo in todoGroups(todos).pending"
           :key="todo.id"
           class="todo-item pending"
         >
-          <Circle :size="14" class="todo-icon" />
+          <Circle
+            :size="14"
+            class="todo-icon"
+          />
           <span class="todo-text">{{ todo.content }}</span>
         </div>
       </div>
 
       <!-- Completed -->
-      <div v-if="todoGroups(todos).completed.length > 0" class="todo-group">
+      <div
+        v-if="todoGroups(todos).completed.length > 0"
+        class="todo-group"
+      >
         <span class="group-label completed">Completed</span>
         <div
           v-for="todo in todoGroups(todos).completed"
           :key="todo.id"
           class="todo-item completed"
         >
-          <CheckCircle2 :size="14" class="todo-icon" />
+          <CheckCircle2
+            :size="14"
+            class="todo-icon"
+          />
           <span class="todo-text">{{ todo.content }}</span>
         </div>
       </div>

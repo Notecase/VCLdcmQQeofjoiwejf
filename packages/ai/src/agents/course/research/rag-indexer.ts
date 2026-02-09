@@ -35,7 +35,7 @@ async function embedText(text: string, openaiApiKey: string): Promise<number[]> 
       `Embedding request failed: ${error instanceof Error ? error.message : String(error)}`,
       ErrorCode.AI_PROVIDER_ERROR,
       'Failed to generate embeddings.',
-      { model: EMBEDDING_MODEL },
+      { model: EMBEDDING_MODEL }
     )
   }
 }
@@ -73,13 +73,13 @@ export async function queryRAG(
   index: RAGIndex,
   query: string,
   openaiApiKey: string,
-  topK: number = DEFAULT_TOP_K,
+  topK: number = DEFAULT_TOP_K
 ): Promise<string> {
   if (index.chunks.length === 0) return ''
 
   const queryEmbedding = await embedText(query, openaiApiKey)
 
-  const scored = index.chunks.map(chunk => ({
+  const scored = index.chunks.map((chunk) => ({
     text: chunk.text,
     score: cosineSimilarity(queryEmbedding, chunk.embedding),
   }))
@@ -88,6 +88,6 @@ export async function queryRAG(
 
   return scored
     .slice(0, topK)
-    .map(s => s.text)
+    .map((s) => s.text)
     .join('\n\n---\n\n')
 }

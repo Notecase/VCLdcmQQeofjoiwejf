@@ -14,13 +14,13 @@ const props = defineProps<{
 
 const expanded = ref(false)
 
-const completed = computed(() => props.todos.filter(t => t.status === 'completed').length)
+const completed = computed(() => props.todos.filter((t) => t.status === 'completed').length)
 const total = computed(() => props.todos.length)
 const progress = computed(() => (total.value === 0 ? 0 : (completed.value / total.value) * 100))
 
-const activeTask = computed(() => props.todos.find(t => t.status === 'in_progress'))
+const activeTask = computed(() => props.todos.find((t) => t.status === 'in_progress'))
 const activeIndex = computed(() => {
-  const idx = props.todos.findIndex(t => t.status === 'in_progress')
+  const idx = props.todos.findIndex((t) => t.status === 'in_progress')
   return idx >= 0 ? idx + 1 : null
 })
 
@@ -55,19 +55,36 @@ function statusClass(status: TodoItem['status']) {
 </script>
 
 <template>
-  <div v-if="todos.length > 0" class="task-progress">
-    <button class="progress-header" type="button" @click="expanded = !expanded">
+  <div
+    v-if="todos.length > 0"
+    class="task-progress"
+  >
+    <button
+      class="progress-header"
+      type="button"
+      @click="expanded = !expanded"
+    >
       <div class="progress-info">
         <div class="progress-track">
-          <div class="progress-fill" :style="{ width: `${progress}%` }" />
+          <div
+            class="progress-fill"
+            :style="{ width: `${progress}%` }"
+          />
         </div>
         <span class="progress-label">{{ label }}</span>
       </div>
-      <ChevronDown :size="14" class="chevron" :class="{ collapsed: !expanded }" />
+      <ChevronDown
+        :size="14"
+        class="chevron"
+        :class="{ collapsed: !expanded }"
+      />
     </button>
 
     <Transition name="collapse">
-      <div v-if="expanded" class="todo-list">
+      <div
+        v-if="expanded"
+        class="todo-list"
+      >
         <div
           v-for="todo in todos"
           :key="todo.id"

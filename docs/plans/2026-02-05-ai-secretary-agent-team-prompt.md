@@ -23,25 +23,29 @@ Spawn **4 teammates** using Sonnet for each:
 ### Task Execution Order
 
 **Phase 1** (types-agent only):
+
 - Define all shared types in `packages/shared/src/types/secretary.ts`
 
 **Phase 2** (backend-agent + api-agent, after Phase 1):
+
 - Backend: Build deepagentsjs secretary agent with tools and memory
 - API: Build Hono routes for secretary operations
 
 **Phase 3** (frontend-agent, after Phase 2):
+
 - Build the full dashboard UI with Vue components and Pinia store
 
 **Phase 4** (all agents):
+
 - Integration testing, wiring everything together
 
 ### File Ownership (NO CONFLICTS)
 
-| Agent | Owns These Files/Folders |
-|-------|--------------------------|
-| types-agent | `packages/shared/src/types/secretary.ts` |
-| backend-agent | `packages/ai/src/agents/secretary/` (new folder) |
-| api-agent | `apps/api/src/routes/secretary.ts` |
+| Agent          | Owns These Files/Folders                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| types-agent    | `packages/shared/src/types/secretary.ts`                                                                         |
+| backend-agent  | `packages/ai/src/agents/secretary/` (new folder)                                                                 |
+| api-agent      | `apps/api/src/routes/secretary.ts`                                                                               |
 | frontend-agent | `apps/web/src/views/SecretaryView.vue`, `apps/web/src/components/secretary/`, `apps/web/src/stores/secretary.ts` |
 
 ---
@@ -89,6 +93,7 @@ Note3 has an AI Secretary that manages learning roadmaps and daily schedules thr
 ### Note3's AI Agent Architecture
 
 Note3 uses a **LangGraph StateGraph** with 4 nodes:
+
 1. **loadMemory** — Load AI.md + Plan.md context
 2. **classifyIntent** — Route to correct handler (8 intents)
 3. **callModel** — Invoke LLM with tools
@@ -105,8 +110,15 @@ Note3 uses a **LangGraph StateGraph** with 4 nodes:
 Use the `deepagents` npm package (LangGraph-based) to build the secretary agent.
 
 **Key imports:**
+
 ```typescript
-import { createDeepAgent, type SubAgent, CompositeBackend, StateBackend, StoreBackend } from 'deepagents'
+import {
+  createDeepAgent,
+  type SubAgent,
+  CompositeBackend,
+  StateBackend,
+  StoreBackend,
+} from 'deepagents'
 import { ChatOpenAI } from '@langchain/openai'
 import { tool } from 'langchain'
 import { z } from 'zod'
@@ -115,6 +127,7 @@ import { HumanMessage } from '@langchain/core/messages'
 ```
 
 **Why deepagentsjs:**
+
 - Built-in planning tools (`write_todos`) for task decomposition
 - SubAgent orchestration for parallel research/generation
 - Memory system (AGENTS.md) for always-loaded preferences
@@ -153,26 +166,26 @@ New routes in `apps/api/src/routes/secretary.ts` for secretary operations.
 export interface MemoryFile {
   id: string
   userId: string
-  filename: string          // 'Plan.md' | 'AI.md' | 'Today.md' | 'Tomorrow.md' | 'Plans/*.md'
-  content: string           // Raw markdown content
-  updatedAt: string         // ISO timestamp
+  filename: string // 'Plan.md' | 'AI.md' | 'Today.md' | 'Tomorrow.md' | 'Plans/*.md'
+  content: string // Raw markdown content
+  updatedAt: string // ISO timestamp
   createdAt: string
 }
 
 // --- Roadmap Types ---
 
 export interface LearningRoadmap {
-  id: string                // Short ID like 'OPT', 'AWS', 'AI'
-  name: string              // "11-Day Optics Roadmap"
+  id: string // Short ID like 'OPT', 'AWS', 'AI'
+  name: string // "11-Day Optics Roadmap"
   status: 'active' | 'completed' | 'paused' | 'archived'
   dateRange: {
-    start: string           // YYYY-MM-DD
+    start: string // YYYY-MM-DD
     end: string
   }
   schedule: {
-    hoursPerDay: number     // e.g. 2
-    studyDays: string[]     // ['Mon', 'Wed', 'Fri'] or ['Daily']
-    dates?: string[]        // Computed exact dates
+    hoursPerDay: number // e.g. 2
+    studyDays: string[] // ['Mon', 'Wed', 'Fri'] or ['Daily']
+    dates?: string[] // Computed exact dates
   }
   progress: {
     currentWeek: number
@@ -181,8 +194,8 @@ export interface LearningRoadmap {
     totalDays: number
     percentComplete: number
   }
-  currentTopic: string      // "Day 4: Lens combinations + magnification"
-  archiveFilename: string   // "Plans/optics-roadmap.md"
+  currentTopic: string // "Day 4: Lens combinations + magnification"
+  archiveFilename: string // "Plans/optics-roadmap.md"
 }
 
 // --- Daily Plan Types ---
@@ -195,22 +208,22 @@ export interface ScheduledTask {
   title: string
   type: TaskType
   status: TaskStatus
-  scheduledTime: string     // "09:00" (HH:MM)
-  durationMinutes: number   // 45, 60, 15, etc.
-  planId?: string           // Links to LearningRoadmap.id
+  scheduledTime: string // "09:00" (HH:MM)
+  durationMinutes: number // 45, 60, 15, etc.
+  planId?: string // Links to LearningRoadmap.id
   aiGenerated: boolean
-  aiReason?: string         // Why AI scheduled this
+  aiReason?: string // Why AI scheduled this
 }
 
 export interface DailyPlan {
   id: string
-  date: string              // YYYY-MM-DD
+  date: string // YYYY-MM-DD
   tasks: ScheduledTask[]
   createdAt: string
   updatedAt: string
-  isApproved: boolean       // User confirmed the plan
+  isApproved: boolean // User confirmed the plan
   aiGeneratedAt?: string
-  userModified: boolean     // User edited after AI generation
+  userModified: boolean // User edited after AI generation
   totalMinutes: number
   completedMinutes: number
 }
@@ -219,16 +232,16 @@ export interface DailyPlan {
 
 export interface UserPreferences {
   focusTime: {
-    bestStart: string       // "09:00"
-    bestEnd: string         // "12:00"
+    bestStart: string // "09:00"
+    bestEnd: string // "12:00"
   }
-  breakFrequency: number    // minutes between breaks (e.g. 45)
-  breakDuration: number     // minutes per break (e.g. 15)
-  weekdayHours: number      // study hours on weekdays
-  weekendHours: number      // study hours on weekends
+  breakFrequency: number // minutes between breaks (e.g. 45)
+  breakDuration: number // minutes per break (e.g. 15)
+  weekdayHours: number // study hours on weekdays
+  weekendHours: number // study hours on weekends
   availability: {
-    weekday: { start: string, end: string }
-    weekend: { start: string, end: string }
+    weekday: { start: string; end: string }
+    weekend: { start: string; end: string }
   }
 }
 
@@ -259,7 +272,7 @@ export type SecretaryIntent =
 
 export interface SecretaryChatRequest {
   message: string
-  threadId?: string         // For conversation continuity
+  threadId?: string // For conversation continuity
 }
 
 export interface SecretaryChatResponse {
@@ -273,7 +286,15 @@ export interface SecretaryChatResponse {
 }
 
 export interface SecretaryStreamEvent {
-  event: 'text' | 'tool_call' | 'tool_result' | 'roadmap_preview' | 'daily_plan' | 'thinking' | 'done' | 'error'
+  event:
+    | 'text'
+    | 'tool_call'
+    | 'tool_result'
+    | 'roadmap_preview'
+    | 'daily_plan'
+    | 'thinking'
+    | 'done'
+    | 'error'
   data: string
   metadata?: Record<string, unknown>
 }
@@ -292,23 +313,24 @@ export interface SecretaryDashboardState {
 }
 
 export interface WeekSchedule {
-  weekStart: string         // YYYY-MM-DD (Monday)
-  weekEnd: string           // YYYY-MM-DD (Sunday)
+  weekStart: string // YYYY-MM-DD (Monday)
+  weekEnd: string // YYYY-MM-DD (Sunday)
   days: WeekDay[]
 }
 
 export interface WeekDay {
-  date: string              // YYYY-MM-DD
-  dayName: string           // 'Mon', 'Tue', etc.
+  date: string // YYYY-MM-DD
+  dayName: string // 'Mon', 'Tue', etc.
   isToday: boolean
   planEntries: {
-    planId: string          // Links to LearningRoadmap.id
+    planId: string // Links to LearningRoadmap.id
     topic: string
   }[]
 }
 ```
 
 **Also re-export from `packages/shared/src/types/index.ts`:**
+
 ```typescript
 export * from './secretary'
 ```
@@ -398,7 +420,7 @@ export interface SecretaryAgentConfig {
   openaiApiKey: string
   openaiModel?: string
   userId: string
-  supabaseClient: any        // SupabaseClient type
+  supabaseClient: any // SupabaseClient type
 }
 
 export function createSecretaryAgent(config: SecretaryAgentConfig) {
@@ -467,17 +489,22 @@ export function secretaryTools(userId: string, supabase: any) {
     },
     {
       name: 'create_roadmap',
-      description: 'Create a new learning roadmap. Returns a preview — user must confirm before saving.',
+      description:
+        'Create a new learning roadmap. Returns a preview — user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Roadmap title, e.g. "11-Day Optics Roadmap"'),
         duration: z.number().describe('Total days'),
         studyDays: z.array(z.string()).describe('Days of week, e.g. ["Mon", "Wed", "Fri"]'),
         hoursPerDay: z.number().describe('Study hours per day'),
-        topics: z.array(z.object({
-          week: z.number(),
-          theme: z.string(),
-          dailyTopics: z.array(z.string()),
-        })).describe('Week-by-week topic breakdown'),
+        topics: z
+          .array(
+            z.object({
+              week: z.number(),
+              theme: z.string(),
+              dailyTopics: z.array(z.string()),
+            })
+          )
+          .describe('Week-by-week topic breakdown'),
       }),
     }
   )
@@ -512,7 +539,8 @@ export function secretaryTools(userId: string, supabase: any) {
     },
     {
       name: 'read_memory_file',
-      description: 'Read a memory file. Available files: Plan.md, AI.md, Today.md, Tomorrow.md, or Plans/*.md',
+      description:
+        'Read a memory file. Available files: Plan.md, AI.md, Today.md, Tomorrow.md, or Plans/*.md',
       schema: z.object({
         filename: z.string().describe('Filename to read'),
       }),
@@ -522,14 +550,15 @@ export function secretaryTools(userId: string, supabase: any) {
   // Tool 4: write_memory_file
   const writeMemoryFile = tool(
     async ({ filename, content }) => {
-      await supabase
-        .from('secretary_memory')
-        .upsert({
+      await supabase.from('secretary_memory').upsert(
+        {
           user_id: userId,
           filename,
           content,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,filename' })
+        },
+        { onConflict: 'user_id,filename' }
+      )
       return `File "${filename}" saved successfully.`
     },
     {
@@ -597,15 +626,27 @@ export function secretaryTools(userId: string, supabase: any) {
     },
     {
       name: 'generate_daily_plan',
-      description: 'Generate a time-blocked daily study plan based on active roadmaps and user preferences.',
+      description:
+        'Generate a time-blocked daily study plan based on active roadmaps and user preferences.',
       schema: z.object({
         date: z.string().describe('Target date YYYY-MM-DD'),
-        planIds: z.array(z.string()).optional().describe('Specific plan IDs to include, or all active plans'),
+        planIds: z
+          .array(z.string())
+          .optional()
+          .describe('Specific plan IDs to include, or all active plans'),
       }),
     }
   )
 
-  return [createRoadmap, saveRoadmap, readMemoryFile, writeMemoryFile, listMemoryFiles, deleteMemoryFile, generateDailyPlan]
+  return [
+    createRoadmap,
+    saveRoadmap,
+    readMemoryFile,
+    writeMemoryFile,
+    listMemoryFiles,
+    deleteMemoryFile,
+    generateDailyPlan,
+  ]
 }
 ```
 
@@ -616,7 +657,8 @@ import type { SubAgent } from 'deepagents'
 
 export const plannerSubAgent: SubAgent = {
   name: 'planner',
-  description: 'Generates detailed learning roadmaps with week-by-week topic breakdowns. Give it a subject, duration, and schedule constraints.',
+  description:
+    'Generates detailed learning roadmaps with week-by-week topic breakdowns. Give it a subject, duration, and schedule constraints.',
   systemPrompt: `You are a learning plan specialist. When given a subject and constraints:
 1. Break the subject into logical phases (fundamentals → intermediate → advanced)
 2. Create a week-by-week breakdown with daily topics
@@ -630,7 +672,8 @@ Group into weeks with themes.`,
 
 export const researcherSubAgent: SubAgent = {
   name: 'researcher',
-  description: 'Researches a topic to create a curriculum outline. Use when the user wants a roadmap for a subject you need to understand first.',
+  description:
+    'Researches a topic to create a curriculum outline. Use when the user wants a roadmap for a subject you need to understand first.',
   systemPrompt: `You are a curriculum researcher. Research the given topic and create:
 1. A prerequisite list
 2. Core concepts (ordered by dependency)
@@ -764,8 +807,8 @@ const secretary = new Hono()
 // POST /api/secretary/chat — Streaming chat with secretary agent
 secretary.post('/chat', async (c) => {
   const { message, threadId } = await c.req.json()
-  const userId = c.get('userId')           // From auth middleware
-  const supabase = c.get('supabase')       // From Supabase middleware
+  const userId = c.get('userId') // From auth middleware
+  const supabase = c.get('supabase') // From Supabase middleware
 
   const agent = createSecretaryAgent({
     openaiApiKey: process.env.OPENAI_API_KEY!,
@@ -834,12 +877,15 @@ secretary.put('/memory/:filename', async (c) => {
 
   const { data } = await supabase
     .from('secretary_memory')
-    .upsert({
-      user_id: userId,
-      filename,
-      content,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,filename' })
+    .upsert(
+      {
+        user_id: userId,
+        filename,
+        content,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,filename' }
+    )
     .select()
     .single()
 
@@ -852,20 +898,29 @@ secretary.post('/initialize', async (c) => {
   const supabase = c.get('supabase')
 
   const defaults = [
-    { filename: 'Plan.md', content: '# Learning Plans\n\n## Active Plans\n\nNo active plans yet. Chat with the AI Secretary to create one!\n\n## This Week\n\nNo schedule yet.\n\n## Archived Plans\n' },
-    { filename: 'AI.md', content: '# Learning Preferences\n\n## Focus Time\nBest focus: 9am-12pm\n\n## Break Pattern\nBreak every: 45 minutes\nBreak duration: 15 minutes\n\n## Availability\nWeekdays: 2h/day\nWeekends: 4h/day\nWeekday window: 9am-12pm, 2pm-5pm\nWeekend window: 10am-2pm\n' },
+    {
+      filename: 'Plan.md',
+      content:
+        '# Learning Plans\n\n## Active Plans\n\nNo active plans yet. Chat with the AI Secretary to create one!\n\n## This Week\n\nNo schedule yet.\n\n## Archived Plans\n',
+    },
+    {
+      filename: 'AI.md',
+      content:
+        '# Learning Preferences\n\n## Focus Time\nBest focus: 9am-12pm\n\n## Break Pattern\nBreak every: 45 minutes\nBreak duration: 15 minutes\n\n## Availability\nWeekdays: 2h/day\nWeekends: 4h/day\nWeekday window: 9am-12pm, 2pm-5pm\nWeekend window: 10am-2pm\n',
+    },
     { filename: 'Today.md', content: '' },
     { filename: 'Tomorrow.md', content: '' },
   ]
 
   for (const file of defaults) {
-    await supabase
-      .from('secretary_memory')
-      .upsert({
+    await supabase.from('secretary_memory').upsert(
+      {
         user_id: userId,
         ...file,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,filename' })
+      },
+      { onConflict: 'user_id,filename' }
+    )
   }
 
   return c.json({ success: true })
@@ -884,7 +939,7 @@ secretary.post('/prepare-tomorrow', async (c) => {
 
   // Automatically generate tomorrow's plan
   const result = await agent.chat(
-    'Generate tomorrow\'s daily study plan based on my active roadmaps and preferences. Write it to Tomorrow.md.',
+    "Generate tomorrow's daily study plan based on my active roadmaps and preferences. Write it to Tomorrow.md.",
     `prepare-tomorrow-${Date.now()}`
   )
 
@@ -909,24 +964,26 @@ secretary.post('/approve-tomorrow', async (c) => {
   }
 
   // Move Tomorrow.md content to Today.md
-  await supabase
-    .from('secretary_memory')
-    .upsert({
+  await supabase.from('secretary_memory').upsert(
+    {
       user_id: userId,
       filename: 'Today.md',
       content: tomorrow.content,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,filename' })
+    },
+    { onConflict: 'user_id,filename' }
+  )
 
   // Clear Tomorrow.md
-  await supabase
-    .from('secretary_memory')
-    .upsert({
+  await supabase.from('secretary_memory').upsert(
+    {
       user_id: userId,
       filename: 'Tomorrow.md',
       content: '',
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,filename' })
+    },
+    { onConflict: 'user_id,filename' }
+  )
 
   return c.json({ success: true })
 })
@@ -935,6 +992,7 @@ export { secretary }
 ```
 
 **Also register routes in the main API app** — add to existing `apps/api/src/index.ts`:
+
 ```typescript
 import { secretary } from './routes/secretary'
 app.route('/api/secretary', secretary)
@@ -950,8 +1008,14 @@ app.route('/api/secretary', secretary)
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
-  LearningRoadmap, DailyPlan, ScheduledTask, MemoryFile,
-  WeekSchedule, DailyReflection, SecretaryDashboardState, TaskStatus
+  LearningRoadmap,
+  DailyPlan,
+  ScheduledTask,
+  MemoryFile,
+  WeekSchedule,
+  DailyReflection,
+  SecretaryDashboardState,
+  TaskStatus,
 } from '@inkdown/shared/types'
 
 export const useSecretaryStore = defineStore('secretary', () => {
@@ -965,7 +1029,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   const isLoading = ref(false)
   const isGeneratingTomorrow = ref(false)
-  const activeMemoryFile = ref<string | null>(null)  // Currently editing file
+  const activeMemoryFile = ref<string | null>(null) // Currently editing file
 
   // Chat state
   const chatMessages = ref<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -975,21 +1039,21 @@ export const useSecretaryStore = defineStore('secretary', () => {
   // --- Computed ---
   const todayProgress = computed(() => {
     if (!todayPlan.value) return { completed: 0, total: 0 }
-    const tasks = todayPlan.value.tasks.filter(t => t.type !== 'break')
+    const tasks = todayPlan.value.tasks.filter((t) => t.type !== 'break')
     return {
-      completed: tasks.filter(t => t.status === 'completed').length,
+      completed: tasks.filter((t) => t.status === 'completed').length,
       total: tasks.length,
     }
   })
 
   const showTomorrowSection = computed(() => {
     const hour = new Date().getHours()
-    return hour >= 21 || hour < 4  // Show 9pm-4am
+    return hour >= 21 || hour < 4 // Show 9pm-4am
   })
 
   const showReflectionSection = computed(() => {
     const hour = new Date().getHours()
-    return hour >= 20 || hour < 4  // Show 8pm-4am
+    return hour >= 20 || hour < 4 // Show 8pm-4am
   })
 
   // --- Actions ---
@@ -1011,20 +1075,20 @@ export const useSecretaryStore = defineStore('secretary', () => {
       }
 
       // 3. Parse Plan.md to extract active plans and this week
-      const planFile = memoryFiles.value.find(f => f.filename === 'Plan.md')
+      const planFile = memoryFiles.value.find((f) => f.filename === 'Plan.md')
       if (planFile) {
         activePlans.value = parsePlanMd(planFile.content)
         thisWeek.value = parseThisWeek(planFile.content)
       }
 
       // 4. Parse Today.md to extract daily plan
-      const todayFile = memoryFiles.value.find(f => f.filename === 'Today.md')
+      const todayFile = memoryFiles.value.find((f) => f.filename === 'Today.md')
       if (todayFile?.content) {
         todayPlan.value = parseDailyPlan(todayFile.content)
       }
 
       // 5. Parse Tomorrow.md
-      const tomorrowFile = memoryFiles.value.find(f => f.filename === 'Tomorrow.md')
+      const tomorrowFile = memoryFiles.value.find((f) => f.filename === 'Tomorrow.md')
       if (tomorrowFile?.content) {
         tomorrowPlan.value = parseDailyPlan(tomorrowFile.content)
       }
@@ -1035,7 +1099,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   async function updateTaskStatus(taskId: string, status: TaskStatus) {
     if (!todayPlan.value) return
-    const task = todayPlan.value.tasks.find(t => t.id === taskId)
+    const task = todayPlan.value.tasks.find((t) => t.id === taskId)
     if (task) {
       task.status = status
       todayPlan.value.userModified = true
@@ -1151,14 +1215,29 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   return {
     // State
-    activePlans, todayPlan, tomorrowPlan, todayReflection,
-    memoryFiles, thisWeek, isLoading, isGeneratingTomorrow,
-    activeMemoryFile, chatMessages, threadId, isChatStreaming,
+    activePlans,
+    todayPlan,
+    tomorrowPlan,
+    todayReflection,
+    memoryFiles,
+    thisWeek,
+    isLoading,
+    isGeneratingTomorrow,
+    activeMemoryFile,
+    chatMessages,
+    threadId,
+    isChatStreaming,
     // Computed
-    todayProgress, showTomorrowSection, showReflectionSection,
+    todayProgress,
+    showTomorrowSection,
+    showReflectionSection,
     // Actions
-    initialize, updateTaskStatus, prepareTomorrow, approveTomorrow,
-    sendChatMessage, syncTodayToFile,
+    initialize,
+    updateTaskStatus,
+    prepareTomorrow,
+    approveTomorrow,
+    sendChatMessage,
+    syncTodayToFile,
   }
 })
 ```
@@ -1172,6 +1251,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 #### Routing — Add to `apps/web/src/main.ts`
 
 Add this route:
+
 ```typescript
 { path: '/calendar', name: 'secretary', component: () => import('./views/SecretaryView.vue') },
 ```
@@ -1287,6 +1367,7 @@ apps/web/src/components/secretary/
 #### Visual Design Guidelines
 
 Follow Inkdown's existing dark theme (`apps/web/src/assets/themes/variables.css`):
+
 - Background: `var(--bg-primary)` / `var(--bg-secondary)`
 - Text: `var(--text-primary)` / `var(--text-secondary)`
 - Accent: `var(--accent-primary)` for active states
@@ -1303,21 +1384,25 @@ Follow Inkdown's existing dark theme (`apps/web/src/assets/themes/variables.css`
 After all agents finish their parts, verify these integration points:
 
 ### Backend → API
+
 - [ ] `createSecretaryAgent()` is importable from `@inkdown/ai/agents/secretary`
 - [ ] API routes correctly instantiate the agent with Supabase client
 - [ ] SSE streaming works end-to-end
 
 ### API → Frontend
+
 - [ ] All API endpoints return correct types
 - [ ] SSE stream parsing in secretary store works
 - [ ] Memory file CRUD operations work
 
 ### Frontend → Router
+
 - [ ] `/calendar` route loads SecretaryView.vue
 - [ ] NavigationDock calendar button navigates to `/calendar`
 - [ ] Back navigation works
 
 ### Data Flow
+
 - [ ] New user → initialize default memory files → show empty dashboard
 - [ ] Chat "create a roadmap for X" → agent generates → shows preview → user confirms → saved to Plan.md + Plans/
 - [ ] Dashboard shows active plans from Plan.md
@@ -1327,6 +1412,7 @@ After all agents finish their parts, verify these integration points:
 - [ ] Memory file edits → save to Supabase → reflect in dashboard
 
 ### Dependencies to Install
+
 ```bash
 # In packages/ai/
 pnpm add deepagents @langchain/openai @langchain/langgraph @langchain/core zod
@@ -1360,6 +1446,7 @@ You are coordinating 4 agents to build the AI Secretary feature:
 6. **Run `pnpm build && pnpm typecheck`** to verify everything compiles
 
 The total feature adds:
+
 - ~1 migration file
 - ~1 types file
 - ~6 backend files (agent, tools, subagents, prompts, memory, index)

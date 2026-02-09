@@ -20,11 +20,26 @@ interface DisplayStep {
 
 const defaultSteps: DisplayStep[] = [
   { id: '1', name: 'Deep Research', description: 'Researching topic with AI', status: 'pending' },
-  { id: '2', name: 'Knowledge Indexing', description: 'Building knowledge base', status: 'pending' },
+  {
+    id: '2',
+    name: 'Knowledge Indexing',
+    description: 'Building knowledge base',
+    status: 'pending',
+  },
   { id: '3', name: 'Topic Analysis', description: 'Analyzing key concepts', status: 'pending' },
-  { id: '4', name: 'Outline Generation', description: 'Creating course structure', status: 'pending' },
+  {
+    id: '4',
+    name: 'Outline Generation',
+    description: 'Creating course structure',
+    status: 'pending',
+  },
   { id: '5', name: 'Outline Review', description: 'Awaiting your approval', status: 'pending' },
-  { id: '6', name: 'Content Generation', description: 'Writing lessons & practice', status: 'pending' },
+  {
+    id: '6',
+    name: 'Content Generation',
+    description: 'Writing lessons & practice',
+    status: 'pending',
+  },
   { id: '7', name: 'Multimedia', description: 'Matching videos & slides', status: 'pending' },
   { id: '8', name: 'Final Assembly', description: 'Building final course', status: 'pending' },
 ]
@@ -43,7 +58,7 @@ const stageToStepMap: Record<GenerationStageType, number> = {
 
 const displaySteps = computed<DisplayStep[]>(() => {
   if (props.steps.length > 0) {
-    return props.steps.map(s => ({
+    return props.steps.map((s) => ({
       id: s.id,
       name: s.name,
       description: s.description,
@@ -55,9 +70,12 @@ const displaySteps = computed<DisplayStep[]>(() => {
   const activeIdx = stageToStepMap[props.currentStage] ?? 0
   return defaultSteps.map((step, idx) => ({
     ...step,
-    status: idx < activeIdx ? 'completed' as const
-      : idx === activeIdx ? 'running' as const
-        : 'pending' as const,
+    status:
+      idx < activeIdx
+        ? ('completed' as const)
+        : idx === activeIdx
+          ? ('running' as const)
+          : ('pending' as const),
   }))
 })
 
@@ -80,12 +98,29 @@ function toggleStep(id: string) {
     >
       <!-- Connector line -->
       <div class="timeline-rail">
-        <div class="timeline-dot" :class="step.status">
-          <CheckCircle2 v-if="step.status === 'completed'" :size="16" />
-          <Loader2 v-else-if="step.status === 'running'" :size="16" class="spinning" />
-          <Circle v-else :size="16" />
+        <div
+          class="timeline-dot"
+          :class="step.status"
+        >
+          <CheckCircle2
+            v-if="step.status === 'completed'"
+            :size="16"
+          />
+          <Loader2
+            v-else-if="step.status === 'running'"
+            :size="16"
+            class="spinning"
+          />
+          <Circle
+            v-else
+            :size="16"
+          />
         </div>
-        <div v-if="idx < displaySteps.length - 1" class="timeline-line" :class="step.status" />
+        <div
+          v-if="idx < displaySteps.length - 1"
+          class="timeline-line"
+          :class="step.status"
+        />
       </div>
 
       <!-- Step content -->
@@ -97,14 +132,25 @@ function toggleStep(id: string) {
         <div class="step-header">
           <span class="step-name">{{ step.name }}</span>
           <template v-if="step.thinkingText">
-            <ChevronDown v-if="expandedSteps.has(step.id)" :size="14" class="expand-icon" />
-            <ChevronRight v-else :size="14" class="expand-icon" />
+            <ChevronDown
+              v-if="expandedSteps.has(step.id)"
+              :size="14"
+              class="expand-icon"
+            />
+            <ChevronRight
+              v-else
+              :size="14"
+              class="expand-icon"
+            />
           </template>
         </div>
         <span class="step-desc">{{ step.description }}</span>
 
         <!-- Expanded thinking text -->
-        <div v-if="step.thinkingText && expandedSteps.has(step.id)" class="step-thinking">
+        <div
+          v-if="step.thinkingText && expandedSteps.has(step.id)"
+          class="step-thinking"
+        >
           {{ step.thinkingText }}
         </div>
       </div>
@@ -258,8 +304,12 @@ function toggleStep(id: string) {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning {

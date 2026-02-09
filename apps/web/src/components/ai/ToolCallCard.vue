@@ -150,30 +150,64 @@ function toggle() {
 </script>
 
 <template>
-  <div class="tool-card" :class="{ running: isRunning, expanded, [tool.status]: true }">
-    <button class="tool-header" type="button" @click="toggle">
+  <div
+    class="tool-card"
+    :class="{ running: isRunning, expanded, [tool.status]: true }"
+  >
+    <button
+      class="tool-header"
+      type="button"
+      @click="toggle"
+    >
       <div class="tool-info">
-        <component :is="toolIcon" :size="14" class="tool-icon" />
+        <component
+          :is="toolIcon"
+          :size="14"
+          class="tool-icon"
+        />
         <span class="tool-name">{{ displayName }}</span>
       </div>
       <div class="tool-status">
-        <Loader2 v-if="isRunning" :size="12" class="spin" />
-        <StatusBadge v-else :status="tool.status" />
-        <ChevronDown :size="14" class="chevron" :class="{ rotated: !expanded }" />
+        <Loader2
+          v-if="isRunning"
+          :size="12"
+          class="spin"
+        />
+        <StatusBadge
+          v-else
+          :status="tool.status"
+        />
+        <ChevronDown
+          :size="14"
+          class="chevron"
+          :class="{ rotated: !expanded }"
+        />
       </div>
     </button>
 
     <Transition name="collapse">
-      <div v-if="expanded" class="tool-body">
-        <div v-if="hasArgs" class="tool-section">
+      <div
+        v-if="expanded"
+        class="tool-body"
+      >
+        <div
+          v-if="hasArgs"
+          class="tool-section"
+        >
           <span class="section-label">Input</span>
           <pre class="tool-code">{{ formattedArgs }}</pre>
         </div>
-        <div v-if="tool.result" class="tool-section">
+        <div
+          v-if="tool.result"
+          class="tool-section"
+        >
           <span class="section-label">Output</span>
           <pre class="tool-code result">{{ formattedResult }}</pre>
         </div>
-        <div v-if="tool.status === 'error' && !tool.result" class="tool-section error">
+        <div
+          v-if="tool.status === 'error' && !tool.result"
+          class="tool-section error"
+        >
           <span class="section-label">Error</span>
           <span class="error-text">Tool execution failed</span>
         </div>

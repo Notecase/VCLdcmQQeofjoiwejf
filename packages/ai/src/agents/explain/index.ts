@@ -18,10 +18,14 @@ function buildSystemPrompt(input: ExplainInput): string {
   const parts: string[] = []
 
   parts.push(`You are an AI tutor for the course "${lessonContext.courseTitle}".`)
-  parts.push(`The student is studying lesson "${lessonContext.lessonTitle}" (module: "${lessonContext.moduleTitle}").`)
+  parts.push(
+    `The student is studying lesson "${lessonContext.lessonTitle}" (module: "${lessonContext.moduleTitle}").`
+  )
   parts.push('')
 
-  parts.push('## Lesson Content (THIS is what the student is studying — always refer to this when they ask questions)')
+  parts.push(
+    '## Lesson Content (THIS is what the student is studying — always refer to this when they ask questions)'
+  )
   parts.push(lessonContext.markdown || '(No content available)')
   parts.push('')
 
@@ -49,22 +53,39 @@ function buildSystemPrompt(input: ExplainInput): string {
 
   parts.push('## Rules')
   parts.push('- EXPLAIN mode only. Help the student understand this lesson content.')
-  parts.push('- When the student says "this", "this note", "the note", "this lesson", "the content", or similar — they are referring to the lesson content above. Always answer based on that content.')
-  parts.push('- You have FULL access to the lesson content. Never say you don\'t know what the student is referring to — the lesson content above IS the material they\'re studying.')
+  parts.push(
+    '- When the student says "this", "this note", "the note", "this lesson", "the content", or similar — they are referring to the lesson content above. Always answer based on that content.'
+  )
+  parts.push(
+    "- You have FULL access to the lesson content. Never say you don't know what the student is referring to — the lesson content above IS the material they're studying."
+  )
   parts.push('- Never produce code edits, artifacts, or action proposals.')
   parts.push('- Use clear examples and relate concepts to other parts of the course when possible.')
   parts.push('- Format responses with markdown for readability.')
   parts.push('- Keep explanations concise but thorough.')
 
   if (lessonContext.lessonType === 'quiz' || lessonContext.lessonType === 'practice') {
-    parts.push('- The student is working on a quiz/practice exercise. Guide them toward understanding without revealing answers directly. Use Socratic questioning to help them reason through problems.')
+    parts.push(
+      '- The student is working on a quiz/practice exercise. Guide them toward understanding without revealing answers directly. Use Socratic questioning to help them reason through problems.'
+    )
   }
 
   if (highlightedText) {
     parts.push('')
     parts.push('## Highlighted Text')
-    parts.push(`The student has highlighted the following passage and is asking about it:`)
+    parts.push(`The student has highlighted the following passage:`)
     parts.push(`> ${highlightedText}`)
+
+    if (input.highlightSurroundingContext) {
+      parts.push('')
+      parts.push('This passage appears in the following context:')
+      parts.push(`> ${input.highlightSurroundingContext}`)
+    }
+
+    if (input.highlightSection) {
+      parts.push('')
+      parts.push(`Under section: "${input.highlightSection}"`)
+    }
   }
 
   return parts.join('\n')
@@ -82,7 +103,7 @@ export class ExplainAgent {
   async *stream(input: ExplainInput): AsyncGenerator<ExplainStreamEvent> {
     const systemPrompt = buildSystemPrompt(input)
 
-    const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: systemPrompt },
     ]
 
@@ -118,8 +139,7 @@ export class ExplainAgent {
       }
 
       yield { event: 'done' }
-    }
-    catch (error) {
+    } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       yield { event: 'error', data: message }
     }

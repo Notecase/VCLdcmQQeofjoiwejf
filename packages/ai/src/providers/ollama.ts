@@ -61,7 +61,7 @@ interface OllamaChatStreamChunk {
   message: {
     role: 'assistant'
     content: string
-    thinking?: string  // kimi-k2.5 streams thinking tokens first
+    thinking?: string // kimi-k2.5 streams thinking tokens first
   }
   done: boolean
 }

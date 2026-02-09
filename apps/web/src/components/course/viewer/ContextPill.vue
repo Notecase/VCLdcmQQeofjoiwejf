@@ -21,9 +21,16 @@ const truncated = computed(() => {
 
 <template>
   <div class="context-pill">
-    <Highlighter :size="13" class="pill-icon" />
+    <Highlighter
+      :size="13"
+      class="pill-icon"
+    />
     <span class="pill-text">{{ truncated }}</span>
-    <button class="pill-dismiss" title="Remove context" @click="$emit('dismiss')">
+    <button
+      class="pill-dismiss"
+      title="Remove context"
+      @click="$emit('dismiss')"
+    >
       <X :size="12" />
     </button>
   </div>

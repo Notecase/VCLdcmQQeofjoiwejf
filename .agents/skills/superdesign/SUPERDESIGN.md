@@ -27,6 +27,7 @@ These files are pre-analyzed context and MUST be read every time before any desi
 SuperDesign needs ALL UI code for accurate reproduction. Include every piece of visual code — JSX/template, className, inline styles, props interfaces, CSS. Only strip pure business logic that has zero visual impact.
 
 **Strip logic code, keep happy-path UI.** That's it.
+
 - Remove: data fetching, event handlers, API calls, auth checks, loading/error/empty guard returns
 - Keep: all JSX, styles, className, props, CSS, config — the complete happy-path UI as-is
 
@@ -60,6 +61,7 @@ If `.superdesign/init/pages.md` exists, use it as the starting point — it pre-
 
 **⚠️ 1000+ LINE FILE RULE (MANDATORY):**
 Any file exceeding ~1000 lines MUST use line ranges — no exceptions. Extract only the sections relevant to the target page:
+
 - **Large CSS files (1000+ lines)**: extract ONLY the selectors/variables actually used by the target page's components. Trace each className → find its CSS definition lines → include only those sections.
 - **Large component files with many variants**: extract ONLY the variant/branch being used on the target page, skip unused variants.
 - **Large config files**: extract only the relevant config sections.
@@ -195,6 +197,7 @@ Step 3 — Design in SuperDesign:
 ## DESIGN SYSTEM SETUP
 
 Design system should provides full context across:
+
 - Product context, key pages & architecture, key features, JTBD
 - Branding & styling: color, font, spacing, shadow, layout structure, etc.
 - motion/animation patterns

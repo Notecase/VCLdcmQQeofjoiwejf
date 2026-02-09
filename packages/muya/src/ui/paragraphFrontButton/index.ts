@@ -15,6 +15,7 @@ import { getIcon } from './config'
 import './index.css'
 
 const LEFT_OFFSET = 100
+const FRONT_CONTROLS_CLASS = 'mu-front-controls-enabled'
 
 function defaultOptions() {
   return {
@@ -98,19 +99,43 @@ export class ParagraphFrontButton {
     resizeObserver.observe(container)
   }
 
+  private isFrontControlsEnabled() {
+    return this.muya.domNode.classList.contains(FRONT_CONTROLS_CLASS)
+  }
+
+  private isBlockFromCurrentEditor(block: Parent | null) {
+    return Boolean(block?.domNode && this.muya.domNode.contains(block.domNode))
+  }
+
+  private isPointerWithinEditor(x: number, y: number) {
+    const rect = this.muya.domNode.getBoundingClientRect()
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+  }
+
   listen() {
     const { _container: container } = this
     const { eventCenter } = this.muya
 
     const mousemoveHandler = throttle((event: MouseEvent) => {
+      if (!this.isFrontControlsEnabled()) {
+        this.hide()
+        return
+      }
+
       const { x, y } = event
+      if (!this.isPointerWithinEditor(x, y)) {
+        this.hide()
+        return
+      }
+
       const els = [
         ...document.elementsFromPoint(x, y),
         ...document.elementsFromPoint(x + LEFT_OFFSET, y),
       ]
-      const outMostElement = els.find(
-        (ele) => ele[BLOCK_DOM_PROPERTY] && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock
-      )
+      const outMostElement = els.find((ele) => {
+        const block = ele[BLOCK_DOM_PROPERTY] as Parent | undefined
+        return Boolean(block?.isOutMostBlock && this.isBlockFromCurrentEditor(block))
+      })
       if (outMostElement) {
         const block = outMostElement[BLOCK_DOM_PROPERTY] as Parent
         // Only show/render if block changed to avoid unnecessary work
@@ -124,6 +149,8 @@ export class ParagraphFrontButton {
     }, 300)
 
     const clickHandler = () => {
+      if (!this.isFrontControlsEnabled()) return
+      if (!this.isBlockFromCurrentEditor(this._block)) return
       eventCenter.emit('muya-front-menu', {
         reference: {
           getBoundingClientRect: () => container.getBoundingClientRect(),
@@ -183,6 +210,11 @@ export class ParagraphFrontButton {
   }
 
   show(block: Parent) {
+    if (!this.isFrontControlsEnabled() || !this.isBlockFromCurrentEditor(block)) {
+      this.hide()
+      return
+    }
+
     if (this._block && this._block === block) return
 
     this._block = block

@@ -60,7 +60,16 @@ export const useCourseStore = defineStore('course', () => {
 
   const agentSteps = ref<CourseAgentStep[]>([])
   const agentTodos = ref<CourseTodoItem[]>([])
-  const activeSubAgents = ref<Array<{ id: string; name: string; status: string; startedAt?: string; completedAt?: string; output?: string }>>([])
+  const activeSubAgents = ref<
+    Array<{
+      id: string
+      name: string
+      status: string
+      startedAt?: string
+      completedAt?: string
+      output?: string
+    }>
+  >([])
 
   // ---------------------------------------------------------------------------
   // State: Quiz / Practice
@@ -137,7 +146,7 @@ export const useCourseStore = defineStore('course', () => {
     topic: string,
     difficulty: CourseDifficulty,
     settings: Partial<CourseSettings>,
-    focusAreas: string[],
+    focusAreas: string[]
   ) {
     isGenerating.value = true
     generationError.value = null
@@ -157,7 +166,7 @@ export const useCourseStore = defineStore('course', () => {
         topic,
         difficulty,
         settings,
-        focusAreas,
+        focusAreas
       )
       generationCourseId.value = courseId
       generationThreadId.value = threadId
@@ -188,7 +197,10 @@ export const useCourseStore = defineStore('course', () => {
         onContentProgress: (data) => {
           generationStage.value = 'content'
           if (data.totalLessons > 0) {
-            const progress = Math.min(65 + Math.round(((data.lessonIndex + 1) / data.totalLessons) * 25), 90)
+            const progress = Math.min(
+              65 + Math.round(((data.lessonIndex + 1) / data.totalLessons) * 25),
+              90
+            )
             if (progress >= generationProgress.value) {
               generationProgress.value = progress
             }
@@ -216,7 +228,7 @@ export const useCourseStore = defineStore('course', () => {
 
         // Orchestrator events
         onAgentStep: (step) => {
-          const existingIdx = agentSteps.value.findIndex(s => s.id === step.id)
+          const existingIdx = agentSteps.value.findIndex((s) => s.id === step.id)
           if (existingIdx >= 0) {
             agentSteps.value[existingIdx] = step
           } else {
@@ -229,7 +241,7 @@ export const useCourseStore = defineStore('course', () => {
         },
 
         onSubAgentStart: (data) => {
-          const existing = activeSubAgents.value.findIndex(s => s.id === data.id)
+          const existing = activeSubAgents.value.findIndex((s) => s.id === data.id)
           if (existing >= 0) {
             activeSubAgents.value[existing] = { ...activeSubAgents.value[existing], ...data }
           } else {
@@ -238,7 +250,7 @@ export const useCourseStore = defineStore('course', () => {
         },
 
         onSubAgentResult: (data) => {
-          const existing = activeSubAgents.value.findIndex(s => s.id === data.id)
+          const existing = activeSubAgents.value.findIndex((s) => s.id === data.id)
           if (existing >= 0) {
             activeSubAgents.value[existing] = { ...activeSubAgents.value[existing], ...data }
           }
@@ -268,7 +280,13 @@ export const useCourseStore = defineStore('course', () => {
           // Fallback: if the agent finished but 'complete' event was lost,
           // poll thread status with retries to recover
           if (generationStage.value !== 'complete') {
-            console.warn('[Course Store] onDone fallback: generation stage is', generationStage.value, 'at', generationProgress.value, '%. Polling thread status with retries...')
+            console.warn(
+              '[Course Store] onDone fallback: generation stage is',
+              generationStage.value,
+              'at',
+              generationProgress.value,
+              '%. Polling thread status with retries...'
+            )
             const threadId = generationThreadId.value
             if (!threadId) return
 
@@ -277,7 +295,7 @@ export const useCourseStore = defineStore('course', () => {
             const RETRY_INTERVAL = 5000
 
             // Wait before first poll to give backend time to commit
-            await new Promise(r => setTimeout(r, INITIAL_DELAY))
+            await new Promise((r) => setTimeout(r, INITIAL_DELAY))
 
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
               try {
@@ -315,19 +333,22 @@ export const useCourseStore = defineStore('course', () => {
 
                 // Still running/saving/assembling — retry after interval
                 if (attempt < MAX_RETRIES) {
-                  console.log(`[Course Store] Poll attempt ${attempt}/${MAX_RETRIES}: status="${status.status}", progress=${status.progress}. Retrying in ${RETRY_INTERVAL}ms...`)
-                  await new Promise(r => setTimeout(r, RETRY_INTERVAL))
+                  console.log(
+                    `[Course Store] Poll attempt ${attempt}/${MAX_RETRIES}: status="${status.status}", progress=${status.progress}. Retrying in ${RETRY_INTERVAL}ms...`
+                  )
+                  await new Promise((r) => setTimeout(r, RETRY_INTERVAL))
                 }
               } catch (err) {
                 console.error(`[Course Store] Poll attempt ${attempt}/${MAX_RETRIES} failed:`, err)
                 if (attempt < MAX_RETRIES) {
-                  await new Promise(r => setTimeout(r, RETRY_INTERVAL))
+                  await new Promise((r) => setTimeout(r, RETRY_INTERVAL))
                 }
               }
             }
 
             // All retries exhausted — backend is still running or in unknown state
-            generationError.value = 'Connection lost. Generation may still be running. Check your courses list.'
+            generationError.value =
+              'Connection lost. Generation may still be running. Check your courses list.'
             isGenerating.value = false
           }
         },
@@ -402,7 +423,7 @@ export const useCourseStore = defineStore('course', () => {
 
       // Update local state
       for (const mod of activeModules.value) {
-        const lesson = mod.lessons.find(l => l.id === lessonId)
+        const lesson = mod.lessons.find((l) => l.id === lessonId)
         if (lesson) {
           lesson.status = 'completed'
           lesson.completedAt = new Date().toISOString()
@@ -423,7 +444,10 @@ export const useCourseStore = defineStore('course', () => {
   // Actions: Quiz / Practice
   // ---------------------------------------------------------------------------
 
-  async function submitQuiz(lessonId: string, answers: Record<string, number | string>): Promise<{ score: number; passed: boolean } | null> {
+  async function submitQuiz(
+    lessonId: string,
+    answers: Record<string, number | string>
+  ): Promise<{ score: number; passed: boolean } | null> {
     if (!activeCourse.value) return null
 
     try {
@@ -455,7 +479,7 @@ export const useCourseStore = defineStore('course', () => {
   async function deleteCourse(courseId: string) {
     try {
       await courseService.deleteCourse(courseId)
-      courses.value = courses.value.filter(c => c.id !== courseId)
+      courses.value = courses.value.filter((c) => c.id !== courseId)
       if (activeCourse.value?.id === courseId) {
         activeCourse.value = null
         activeModules.value = []

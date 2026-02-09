@@ -1,11 +1,8 @@
-const NON_TERMINAL_STREAM_END_STATUSES = new Set([
-  'running',
-  'generating_content',
-])
+const NON_TERMINAL_STREAM_END_STATUSES = new Set(['running', 'generating_content'])
 
 export function shouldMarkThreadAsErrorAfterStreamEnd(
   status: string | null | undefined,
-  observedTerminalEvent: boolean,
+  observedTerminalEvent: boolean
 ): boolean {
   if (observedTerminalEvent) return false
   return !!status && NON_TERMINAL_STREAM_END_STATUSES.has(status)

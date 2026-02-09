@@ -10,7 +10,11 @@ import type { SecretaryStreamEvent, RoadmapCandidate } from '@inkdown/shared/typ
 import { getTodayDate, getTomorrowDate, getDayOfWeek } from '@inkdown/shared/secretary'
 import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
-import { getSecretarySystemPrompt, PLANNER_SUBAGENT_PROMPT, RESEARCHER_SUBAGENT_PROMPT } from './prompts'
+import {
+  getSecretarySystemPrompt,
+  PLANNER_SUBAGENT_PROMPT,
+  RESEARCHER_SUBAGENT_PROMPT,
+} from './prompts'
 import { SecretaryStreamNormalizer } from './stream-normalizer'
 
 // ============================================================================
@@ -100,7 +104,8 @@ export class SecretaryAgent {
         },
         {
           name: 'researcher',
-          description: 'Researches a subject to create a curriculum outline with prerequisites and progression',
+          description:
+            'Researches a subject to create a curriculum outline with prerequisites and progression',
           systemPrompt: RESEARCHER_SUBAGENT_PROMPT,
         },
       ],
@@ -110,10 +115,10 @@ export class SecretaryAgent {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deepagents generic types are too deep for TS
-      const streamResult = await (agent as any).stream(
+      const streamResult = (await (agent as any).stream(
         { messages: [{ role: 'user', content: input.message }] },
-        { configurable: { thread_id: threadId } },
-      ) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+        { configurable: { thread_id: threadId } }
+      )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
 
       const normalizer = new SecretaryStreamNormalizer()
 
@@ -193,7 +198,9 @@ export class SecretaryAgent {
     if (context.activePlans.length > 0) {
       parts.push('\n### Active Plans')
       for (const plan of context.activePlans) {
-        parts.push(`- [${plan.id}] ${plan.name} — Progress: ${plan.progress.currentDay}/${plan.progress.totalDays} days (${plan.progress.percentComplete}%)`)
+        parts.push(
+          `- [${plan.id}] ${plan.name} — Progress: ${plan.progress.currentDay}/${plan.progress.totalDays} days (${plan.progress.percentComplete}%)`
+        )
         if (plan.currentTopic) {
           parts.push(`  Current: ${plan.currentTopic}`)
         }
@@ -204,9 +211,15 @@ export class SecretaryAgent {
 
     if (context.preferences) {
       parts.push('\n### User Preferences')
-      parts.push(`- Focus time: ${context.preferences.focusTime.bestStart} - ${context.preferences.focusTime.bestEnd}`)
-      parts.push(`- Break: ${context.preferences.breakFrequency}min study / ${context.preferences.breakDuration}min break`)
-      parts.push(`- Weekday hours: ${context.preferences.weekdayHours}h | Weekend: ${context.preferences.weekendHours}h`)
+      parts.push(
+        `- Focus time: ${context.preferences.focusTime.bestStart} - ${context.preferences.focusTime.bestEnd}`
+      )
+      parts.push(
+        `- Break: ${context.preferences.breakFrequency}min study / ${context.preferences.breakDuration}min break`
+      )
+      parts.push(
+        `- Weekday hours: ${context.preferences.weekdayHours}h | Weekend: ${context.preferences.weekendHours}h`
+      )
     }
 
     if (context.thisWeekSection) {
@@ -228,7 +241,9 @@ export class SecretaryAgent {
       parts.push('\n### Activation Suggestion')
       parts.push(`- ${context.activationSuggestion.reason}`)
       if (context.activationSuggestion.candidates.length > 0) {
-        parts.push(`- Candidates: ${context.activationSuggestion.candidates.map((c: RoadmapCandidate) => `[${c.id}] ${c.name}`).join(', ')}`)
+        parts.push(
+          `- Candidates: ${context.activationSuggestion.candidates.map((c: RoadmapCandidate) => `[${c.id}] ${c.name}`).join(', ')}`
+        )
       }
     }
 

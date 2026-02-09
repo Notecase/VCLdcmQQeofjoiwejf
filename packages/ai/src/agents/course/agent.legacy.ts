@@ -87,7 +87,7 @@ function createNodes(config: CourseAgentConfig) {
     state: CourseStateType,
     stage: GenerationStageType,
     stageProgress: number,
-    currentNode: string,
+    currentNode: string
   ) {
     config.onProgress?.({
       courseId: state.courseId,
@@ -122,7 +122,9 @@ function createNodes(config: CourseAgentConfig) {
     return {
       currentStage: 'indexing',
       researchReport: result.report,
-      researchSources: result.sources.filter(s => s.status === 'done').map(s => ({ url: s.url, title: s.title })),
+      researchSources: result.sources
+        .filter((s) => s.status === 'done')
+        .map((s) => ({ url: s.url, title: s.title })),
       thinkingOutput: `${state.thinkingOutput}\n[Research] Complete: ${result.sources.length} sources analyzed`,
     }
   }
@@ -152,19 +154,24 @@ function createNodes(config: CourseAgentConfig) {
     emitProgress(state, 'analysis', 0, 'analyzeTopic')
 
     const researchContext = state.ragIndex
-      ? await queryRAG(state.ragIndex, `Overview of ${state.topic}: key concepts, prerequisites, learning path`, config.geminiApiKey, 5)
-      : state.researchReport ?? ''
+      ? await queryRAG(
+          state.ragIndex,
+          `Overview of ${state.topic}: key concepts, prerequisites, learning path`,
+          config.geminiApiKey,
+          5
+        )
+      : (state.researchReport ?? '')
 
-    const prompt = PROMPTS.ANALYSIS
-      .replace(/{TOPIC}/g, state.topic)
+    const prompt = PROMPTS.ANALYSIS.replace(/{TOPIC}/g, state.topic)
       .replace(/{DIFFICULTY}/g, state.difficulty)
       .replace(/{FOCUS_AREAS}/g, state.focusAreas.join(', '))
       .replace(/{RESEARCH_CONTEXT}/g, researchContext)
 
     const response = await anthropic.invoke(prompt)
-    const analysisResult = typeof response.content === 'string'
-      ? response.content
-      : response.content.map(c => ('text' in c ? c.text : '')).join('')
+    const analysisResult =
+      typeof response.content === 'string'
+        ? response.content
+        : response.content.map((c) => ('text' in c ? c.text : '')).join('')
 
     return {
       currentStage: 'planning',
@@ -178,8 +185,13 @@ function createNodes(config: CourseAgentConfig) {
     emitProgress(state, 'planning', 0, 'generateOutline')
 
     const researchContext = state.ragIndex
-      ? await queryRAG(state.ragIndex, `Course structure for ${state.topic}: modules, lessons, learning sequence`, config.geminiApiKey, 5)
-      : state.researchReport ?? ''
+      ? await queryRAG(
+          state.ragIndex,
+          `Course structure for ${state.topic}: modules, lessons, learning sequence`,
+          config.geminiApiKey,
+          5
+        )
+      : (state.researchReport ?? '')
 
     const feedbackSection = state.outlineFeedback
       ? `## Previous Feedback\nThe previous outline was rejected with this feedback:\n${state.outlineFeedback}\n\nPlease incorporate this feedback into the revised outline.`
@@ -187,8 +199,7 @@ function createNodes(config: CourseAgentConfig) {
 
     const courseContext = `Topic: ${state.topic}\nDifficulty: ${state.difficulty}\nFocus Areas: ${state.focusAreas.join(', ')}\nSettings: Videos=${state.settings.includeVideos}, Slides=${state.settings.includeSlides}, Practice=${state.settings.includePractice}, Quizzes=${state.settings.includeQuizzes}\nEstimated Weeks: ${state.settings.estimatedWeeks}, Hours/Week: ${state.settings.hoursPerWeek}`
 
-    const prompt = PROMPTS.OUTLINE
-      .replace(/{TOPIC}/g, state.topic)
+    const prompt = PROMPTS.OUTLINE.replace(/{TOPIC}/g, state.topic)
       .replace(/{DIFFICULTY}/g, state.difficulty)
       .replace(/{FOCUS_AREAS}/g, state.focusAreas.join(', '))
       .replace(/{RESEARCH_CONTEXT}/g, researchContext)
@@ -196,9 +207,10 @@ function createNodes(config: CourseAgentConfig) {
       .replace(/{FEEDBACK_SECTION}/g, feedbackSection)
 
     const response = await anthropic.invoke(prompt)
-    const content = typeof response.content === 'string'
-      ? response.content
-      : response.content.map(c => ('text' in c ? c.text : '')).join('')
+    const content =
+      typeof response.content === 'string'
+        ? response.content
+        : response.content.map((c) => ('text' in c ? c.text : '')).join('')
 
     const outline = parseOutlineJSON(content)
 
@@ -239,15 +251,28 @@ function createNodes(config: CourseAgentConfig) {
       for (const outlineLesson of outlineMod.lessons) {
         completedLessons++
         const progress = Math.round((completedLessons / totalLessons) * 100)
-        emitProgress(state, 'content', progress, `generateContent:${outlineMod.title}/${outlineLesson.title}`)
+        emitProgress(
+          state,
+          'content',
+          progress,
+          `generateContent:${outlineMod.title}/${outlineLesson.title}`
+        )
 
         // Query RAG for per-lesson context
         const lessonResearchContext = state.ragIndex
-          ? await queryRAG(state.ragIndex, `${outlineLesson.title}: ${outlineLesson.keyTopics.join(', ')}`, config.geminiApiKey, 3)
-          : state.researchReport ?? ''
+          ? await queryRAG(
+              state.ragIndex,
+              `${outlineLesson.title}: ${outlineLesson.keyTopics.join(', ')}`,
+              config.geminiApiKey,
+              3
+            )
+          : (state.researchReport ?? '')
 
         // Build previous lessons context (last 5 summaries)
-        const previousLessons = summaries.slice(-5).map((s, i) => `${i + 1}. ${s}`).join('\n')
+        const previousLessons = summaries
+          .slice(-5)
+          .map((s, i) => `${i + 1}. ${s}`)
+          .join('\n')
 
         // Select prompt based on lesson type
         const promptKey = outlineLesson.type.toUpperCase() as keyof typeof PROMPTS
@@ -263,9 +288,10 @@ function createNodes(config: CourseAgentConfig) {
           .replace(/{PREVIOUS_LESSONS}/g, previousLessons || 'This is the first lesson.')
 
         const response = await anthropic.invoke(prompt)
-        const responseText = typeof response.content === 'string'
-          ? response.content
-          : response.content.map(c => ('text' in c ? c.text : '')).join('')
+        const responseText =
+          typeof response.content === 'string'
+            ? response.content
+            : response.content.map((c) => ('text' in c ? c.text : '')).join('')
 
         let content = parseLessonContent(responseText, outlineLesson)
 
@@ -276,7 +302,7 @@ function createNodes(config: CourseAgentConfig) {
             outlineLesson.keyTopics,
             lessonResearchContext,
             config.geminiApiKey,
-            state.settings.maxSlidesPerLesson,
+            state.settings.maxSlidesPerLesson
           )
           content = { ...content, slides }
         }
@@ -295,7 +321,9 @@ function createNodes(config: CourseAgentConfig) {
         lessons.push(lesson)
 
         // Track summary for coherence
-        summaries.push(`${outlineLesson.title} (${outlineLesson.type}): ${outlineLesson.keyTopics.join(', ')}`)
+        summaries.push(
+          `${outlineLesson.title} (${outlineLesson.type}): ${outlineLesson.keyTopics.join(', ')}`
+        )
       }
 
       modules.push({
@@ -336,7 +364,9 @@ function createNodes(config: CourseAgentConfig) {
     for (const match of matches) {
       if (!match.selectedVideoId || match.videos.length === 0) continue
 
-      const selectedVideo = match.videos.find((v: YouTubeVideo) => v.videoId === match.selectedVideoId)
+      const selectedVideo = match.videos.find(
+        (v: YouTubeVideo) => v.videoId === match.selectedVideoId
+      )
       if (!selectedVideo) continue
 
       for (const mod of state.generatedModules) {
@@ -389,7 +419,15 @@ function createNodes(config: CourseAgentConfig) {
     }
   }
 
-  return { deepResearch, indexKnowledge, analyzeTopic, generateOutline, generateContent, matchVideos, finalize }
+  return {
+    deepResearch,
+    indexKnowledge,
+    analyzeTopic,
+    generateOutline,
+    generateContent,
+    matchVideos,
+    finalize,
+  }
 }
 
 // --- Graph Construction ---

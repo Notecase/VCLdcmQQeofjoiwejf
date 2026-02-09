@@ -57,9 +57,11 @@ interface ScrollPage {
 
 // Static methods on ScrollPage class
 interface ScrollPageClass {
-  loadBlock: (blockName: string) => {
-    create: (muya: MuyaInstance, state: TState) => MuyaBlock
-  } | undefined
+  loadBlock: (blockName: string) =>
+    | {
+        create: (muya: MuyaInstance, state: TState) => MuyaBlock
+      }
+    | undefined
 }
 
 interface MuyaInstance {
@@ -97,6 +99,11 @@ export function useDiffBlocks(
   // Track which edits have been applied to avoid re-injection
   const appliedEditIds = ref<Set<string>>(new Set())
 
+  // True while applyDiffToEditor is injecting DOM blocks — used by consumers
+  // to suppress content-change watchers that would otherwise see the injection
+  // as an "external update" and re-trigger diff application.
+  const isDiffInjecting = ref(false)
+
   // Cleanup functions for button event listeners
   const cleanupFunctions = ref<Map<string, () => void>>(new Map())
 
@@ -124,6 +131,15 @@ export function useDiffBlocks(
       return false
     }
 
+    isDiffInjecting.value = true
+    try {
+      return _applyDiffToEditorInner(muya, edit)
+    } finally {
+      isDiffInjecting.value = false
+    }
+  }
+
+  function _applyDiffToEditorInner(muya: MuyaInstance, edit: PendingEdit): boolean {
     const noteId = noteIdRef.value
     if (!noteId || edit.noteId !== noteId) {
       return false
@@ -171,7 +187,9 @@ export function useDiffBlocks(
     if (!isEmptyNote && appliedEditIds.value.size === 0) {
       const editorMarkdown = muya.getMarkdown().trim()
       if (!editorMarkdown) {
-        console.warn('[useDiffBlocks] Content mismatch - editor empty but edit references non-empty original. Deferring.')
+        console.warn(
+          '[useDiffBlocks] Content mismatch - editor empty but edit references non-empty original. Deferring.'
+        )
         return false
       }
     }
@@ -214,7 +232,9 @@ export function useDiffBlocks(
 
         const BlockClass = ScrollPageClass.loadBlock(state.name)
         if (!BlockClass) {
-          console.warn(`[useDiffBlocks] Block type '${state.name}' not registered, falling back to paragraph`)
+          console.warn(
+            `[useDiffBlocks] Block type '${state.name}' not registered, falling back to paragraph`
+          )
           // Fallback to paragraph
           const ParagraphBlock = ScrollPageClass.loadBlock('paragraph')
           if (!ParagraphBlock) continue
@@ -228,7 +248,10 @@ export function useDiffBlocks(
           const block = BlockClass.create(muya, state)
           createdBlocks.push({ block, blockId, state })
         } catch (err) {
-          console.warn(`[useDiffBlocks] Failed to create '${state.name}' block, using paragraph fallback:`, err)
+          console.warn(
+            `[useDiffBlocks] Failed to create '${state.name}' block, using paragraph fallback:`,
+            err
+          )
           const ParagraphBlock = ScrollPageClass.loadBlock('paragraph')
           if (ParagraphBlock) {
             const fallbackText = state.text || state.name
@@ -276,7 +299,9 @@ export function useDiffBlocks(
           })
         }
 
-        console.debug(`[useDiffBlocks] Applied empty-note diff with ${createdBlocks.length} individual block(s)`)
+        console.debug(
+          `[useDiffBlocks] Applied empty-note diff with ${createdBlocks.length} individual block(s)`
+        )
       } else {
         // Non-empty note: determine if this is a pure addition, removal, or modification
         const isPureAddition = hunk.type === 'add' && !hunk.oldContent.trim()
@@ -322,7 +347,9 @@ export function useDiffBlocks(
             })
           }
 
-          console.debug(`[useDiffBlocks] Applied addition-only diff with ${createdBlocks.length} block(s)`)
+          console.debug(
+            `[useDiffBlocks] Applied addition-only diff with ${createdBlocks.length} block(s)`
+          )
         } else {
           // MODIFICATION or REMOVAL: style original block as deletion + insert new blocks
           const blockIndex = mapLineToBlockIndex(edit.originalContent, hunk.oldStart)
@@ -377,7 +404,9 @@ export function useDiffBlocks(
             })
           }
 
-          console.debug(`[useDiffBlocks] Applied diff at block ${blockIndex} with ${createdBlocks.length} new block(s)`)
+          console.debug(
+            `[useDiffBlocks] Applied diff at block ${blockIndex} with ${createdBlocks.length} new block(s)`
+          )
         }
       }
 
@@ -388,17 +417,13 @@ export function useDiffBlocks(
     // Mark this edit as applied
     appliedEditIds.value.add(edit.id)
     return true
-  }
+  } // end _applyDiffToEditorInner
 
   /**
    * Add an action button (+/-) as a CHILD inside the block
    * The button is styled with CSS to appear outside on the right edge
    */
-  function addActionButton(
-    block: MuyaBlock,
-    type: 'reject' | 'accept',
-    blockId: string
-  ) {
+  function addActionButton(block: MuyaBlock, type: 'reject' | 'accept', blockId: string) {
     const domNode = block.domNode
     if (!domNode) return
 
@@ -503,7 +528,7 @@ export function useDiffBlocks(
       domNode.classList.remove(DIFF_CLASSES.BLOCK, DIFF_CLASSES.ADDITION, DIFF_CLASSES.DELETION)
       domNode.removeAttribute(DIFF_BLOCK_ATTR)
       // Remove all buttons from this block
-      domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach(btn => btn.remove())
+      domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach((btn) => btn.remove())
     }
 
     // Clear browser selection to prevent cursor positioning bug
@@ -571,7 +596,7 @@ export function useDiffBlocks(
         // Just clear the styling, don't remove the block
         domNode.classList.remove(DIFF_CLASSES.BLOCK, DIFF_CLASSES.DELETION)
         domNode.removeAttribute(DIFF_BLOCK_ATTR)
-        domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach(btn => btn.remove())
+        domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach((btn) => btn.remove())
       } else {
         // For addition blocks, rejecting means REMOVE the block
         const muyaBlock = (domNode as unknown as Record<string, MuyaBlock>)[BLOCK_DOM_PROPERTY]
@@ -672,42 +697,46 @@ export function useDiffBlocks(
   }
 
   /**
-   * Clear all diffs for the current note
+   * Clear all diffs for a note.
+   * Defaults to the current note when noteIdOverride is not provided.
    */
-  function clearAllDiffs() {
-    const noteId = noteIdRef.value
+  function clearAllDiffs(noteIdOverride?: string) {
+    const noteId = noteIdOverride ?? noteIdRef.value
     if (!noteId) return
 
     const muya = muyaRef.value
-    if (!muya?.domNode) return
+    if (muya?.domNode) {
+      // Find and clean up all diff blocks (using new DIFF_BLOCK_ATTR)
+      const diffBlockElements = muya.domNode.querySelectorAll(`.${DIFF_CLASSES.BLOCK}`)
+      diffBlockElements.forEach((domNode) => {
+        const blockId = domNode.getAttribute(DIFF_BLOCK_ATTR)
 
-    // Find and clean up all diff blocks (using new DIFF_BLOCK_ATTR)
-    const diffBlockElements = muya.domNode.querySelectorAll(`.${DIFF_CLASSES.BLOCK}`)
-    diffBlockElements.forEach((domNode) => {
-      const blockId = domNode.getAttribute(DIFF_BLOCK_ATTR)
+        // Remove action buttons inside the block
+        domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach((btn) => btn.remove())
 
-      // Remove action buttons inside the block
-      domNode.querySelectorAll(`.${DIFF_CLASSES.ACTION_BTN}`).forEach(btn => btn.remove())
+        // Clear styling
+        domNode.classList.remove(DIFF_CLASSES.BLOCK, DIFF_CLASSES.DELETION, DIFF_CLASSES.ADDITION)
+        if (blockId) {
+          domNode.removeAttribute(DIFF_BLOCK_ATTR)
+        }
+        // Also clear legacy pairId attribute if present
+        if (domNode.hasAttribute(DIFF_PAIR_ATTR)) {
+          domNode.removeAttribute(DIFF_PAIR_ATTR)
+        }
+      })
+    }
 
-      // Clear styling
-      domNode.classList.remove(DIFF_CLASSES.BLOCK, DIFF_CLASSES.DELETION, DIFF_CLASSES.ADDITION)
-      if (blockId) {
-        domNode.removeAttribute(DIFF_BLOCK_ATTR)
-      }
-      // Also clear legacy pairId attribute if present
-      if (domNode.hasAttribute(DIFF_PAIR_ATTR)) {
-        domNode.removeAttribute(DIFF_PAIR_ATTR)
-      }
-    })
+    // Remove stale per-button listeners even if Muya is unavailable.
+    cleanupFunctions.value.forEach((cleanup) => cleanup())
+    cleanupFunctions.value.clear()
 
     // Clear store state (both legacy pairs and new individual blocks)
     aiStore.clearDiffBlockPairs(noteId)
     aiStore.clearDiffBlocks(noteId)
-    appliedEditIds.value.clear()
 
-    // Clear all cleanup functions
-    cleanupFunctions.value.forEach((cleanup) => cleanup())
-    cleanupFunctions.value.clear()
+    if (noteId === noteIdRef.value || noteIdOverride) {
+      appliedEditIds.value.clear()
+    }
 
     console.debug(`[useDiffBlocks] Cleared all diffs for note ${noteId}`)
   }
@@ -749,9 +778,7 @@ export function useDiffBlocks(
     if (!muya || !noteId) return
 
     // Find ALL active edits for this note (not just the first)
-    const edits = aiStore.pendingEdits.filter(
-      (e) => e.noteId === noteId && e.status === 'pending'
-    )
+    const edits = aiStore.pendingEdits.filter((e) => e.noteId === noteId && e.status === 'pending')
     if (edits.length === 0) return
 
     // Build final content from ALL edits
@@ -770,8 +797,10 @@ export function useDiffBlocks(
 
       for (let i = 0; i < edits.length - 1; i++) {
         const edit = edits[i]
-        if (!finalContent.includes(edit.proposedContent)
-            && edit.proposedContent !== edit.originalContent) {
+        if (
+          !finalContent.includes(edit.proposedContent) &&
+          edit.proposedContent !== edit.originalContent
+        ) {
           // Compute the delta: what did this edit add beyond its original?
           const delta = edit.proposedContent.replace(edit.originalContent, '').trim()
           if (delta && !finalContent.includes(delta)) {
@@ -802,12 +831,16 @@ export function useDiffBlocks(
       // IMPORTANT: Use nullish coalescing (??) to ensure keys are never undefined
       // JSON.stringify silently OMITS keys with undefined values, causing content loss
       const artifactBlock = `\n\n\`\`\`artifact
-${JSON.stringify({
-  title: artifact.data.title || 'Untitled Artifact',
-  html: artifact.data.html ?? '',
-  css: artifact.data.css ?? '',
-  javascript: artifact.data.javascript ?? '',
-}, null, 2)}
+${JSON.stringify(
+  {
+    title: artifact.data.title || 'Untitled Artifact',
+    html: artifact.data.html ?? '',
+    css: artifact.data.css ?? '',
+    javascript: artifact.data.javascript ?? '',
+  },
+  null,
+  2
+)}
 \`\`\``
 
       finalContent += artifactBlock
@@ -857,7 +890,9 @@ ${JSON.stringify({
       // This avoids cursor positioning issues after setMarkdown() rebuilds the DOM
     })
 
-    console.debug(`[useDiffBlocks] Accepted all ${edits.length} edit(s) via setMarkdown (with ${pendingArtifacts.length} artifacts)`)
+    console.debug(
+      `[useDiffBlocks] Accepted all ${edits.length} edit(s) via setMarkdown (with ${pendingArtifacts.length} artifacts)`
+    )
   }
 
   /**
@@ -873,9 +908,7 @@ ${JSON.stringify({
     if (!muya || !noteId) return
 
     // Find ALL active edits for this note
-    const edits = aiStore.pendingEdits.filter(
-      (e) => e.noteId === noteId && e.status === 'pending'
-    )
+    const edits = aiStore.pendingEdits.filter((e) => e.noteId === noteId && e.status === 'pending')
     if (edits.length === 0) return
 
     // Restore first edit's original content (state before any AI changes)
@@ -934,27 +967,24 @@ ${JSON.stringify({
 
   // Watch for document/note changes - clear diffs when switching notes
   // and check for pending edits targeting the new note (e.g., after DeepAgent note-navigate)
-  watch(
-    noteIdRef,
-    (newNoteId, oldNoteId) => {
-      if (oldNoteId && newNoteId !== oldNoteId) {
-        // Clear diffs for the old note (both legacy pairs and individual blocks)
-        aiStore.clearDiffBlockPairs(oldNoteId)
-        aiStore.clearDiffBlocks(oldNoteId)
-        appliedEditIds.value.clear()
-        cleanupFunctions.value.forEach((cleanup) => cleanup())
-        cleanupFunctions.value.clear()
-      }
-      // After loading a new note, check for any pending edits targeting it
-      // This handles the case where DeepAgent emits note-navigate + edit-proposal
-      // and the edit arrives before the editor finishes loading the note
-      if (newNoteId) {
-        nextTick(() => {
-          setTimeout(() => checkAndApplyPendingEdits(), 300)
-        })
-      }
+  watch(noteIdRef, (newNoteId, oldNoteId) => {
+    if (oldNoteId && newNoteId !== oldNoteId) {
+      // Clear stale diff UI/listeners for the previous note id before loading new ones.
+      clearAllDiffs(oldNoteId)
     }
-  )
+    // After loading a new note, check for any pending edits targeting it
+    // This handles the case where DeepAgent emits note-navigate + edit-proposal
+    // and the edit arrives before the editor finishes loading the note
+    if (newNoteId) {
+      nextTick(() => {
+        setTimeout(() => {
+          if (noteIdRef.value === newNoteId) {
+            checkAndApplyPendingEdits()
+          }
+        }, 300)
+      })
+    }
+  })
 
   return {
     applyDiffToEditor,
@@ -966,5 +996,6 @@ ${JSON.stringify({
     checkAndApplyPendingEdits,
     acceptAllDiffs,
     rejectAllDiffs,
+    isDiffInjecting,
   }
 }

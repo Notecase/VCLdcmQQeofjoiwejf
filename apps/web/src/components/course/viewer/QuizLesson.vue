@@ -31,7 +31,9 @@ function updateShortAnswer(problemId: string, value: string) {
 }
 
 const allAnswered = computed(() => {
-  return problems.value.every(p => localAnswers.value[p.id] !== undefined && localAnswers.value[p.id] !== '')
+  return problems.value.every(
+    (p) => localAnswers.value[p.id] !== undefined && localAnswers.value[p.id] !== ''
+  )
 })
 
 async function handleSubmit() {
@@ -50,7 +52,7 @@ async function handleSubmit() {
         if (localAnswers.value[p.id] === p.correctIndex) correct++
       }
     }
-    const mcCount = problems.value.filter(p => p.type === 'multiple-choice').length
+    const mcCount = problems.value.filter((p) => p.type === 'multiple-choice').length
     quizScore.value = mcCount > 0 ? Math.round((correct / mcCount) * 100) : 0
     quizPassed.value = quizScore.value >= 70
   }
@@ -68,8 +70,9 @@ function resetQuiz() {
 
 function isCorrect(problemId: string): boolean | null {
   if (!quizSubmitted.value) return null
-  const problem = problems.value.find(p => p.id === problemId)
-  if (!problem || problem.type !== 'multiple-choice' || problem.correctIndex === undefined) return null
+  const problem = problems.value.find((p) => p.id === problemId)
+  if (!problem || problem.type !== 'multiple-choice' || problem.correctIndex === undefined)
+    return null
   return localAnswers.value[problemId] === problem.correctIndex
 }
 </script>
@@ -82,10 +85,17 @@ function isCorrect(problemId: string): boolean | null {
     </h2>
 
     <!-- Intro -->
-    <MuyaRenderer v-if="lesson.content.markdown && !quizSubmitted" :markdown="lesson.content.markdown" />
+    <MuyaRenderer
+      v-if="lesson.content.markdown && !quizSubmitted"
+      :markdown="lesson.content.markdown"
+    />
 
     <!-- Score Banner -->
-    <div v-if="quizSubmitted && quizScore !== null" class="score-banner" :class="{ passed: quizPassed, failed: !quizPassed }">
+    <div
+      v-if="quizSubmitted && quizScore !== null"
+      class="score-banner"
+      :class="{ passed: quizPassed, failed: !quizPassed }"
+    >
       <div class="score-content">
         <div class="score-value">{{ quizScore }}%</div>
         <div class="score-label">
@@ -99,7 +109,10 @@ function isCorrect(problemId: string): boolean | null {
           </template>
         </div>
       </div>
-      <button class="retry-btn" @click="resetQuiz">
+      <button
+        class="retry-btn"
+        @click="resetQuiz"
+      >
         <RotateCcw :size="14" />
         Retake
       </button>
@@ -118,10 +131,16 @@ function isCorrect(problemId: string): boolean | null {
       >
         <div class="question-header">
           <span class="question-num">Question {{ idx + 1 }} of {{ problems.length }}</span>
-          <span v-if="quizSubmitted && isCorrect(problem.id) === true" class="result-icon correct">
+          <span
+            v-if="quizSubmitted && isCorrect(problem.id) === true"
+            class="result-icon correct"
+          >
             <CheckCircle2 :size="16" />
           </span>
-          <span v-else-if="quizSubmitted && isCorrect(problem.id) === false" class="result-icon incorrect">
+          <span
+            v-else-if="quizSubmitted && isCorrect(problem.id) === false"
+            class="result-icon incorrect"
+          >
             <XCircle :size="16" />
           </span>
         </div>
@@ -129,7 +148,10 @@ function isCorrect(problemId: string): boolean | null {
         <p class="question-text">{{ problem.question }}</p>
 
         <!-- Multiple Choice -->
-        <div v-if="problem.type === 'multiple-choice' && problem.options" class="options-list">
+        <div
+          v-if="problem.type === 'multiple-choice' && problem.options"
+          class="options-list"
+        >
           <button
             v-for="(option, optIdx) in problem.options"
             :key="optIdx"
@@ -137,7 +159,10 @@ function isCorrect(problemId: string): boolean | null {
             :class="{
               selected: localAnswers[problem.id] === optIdx,
               'correct-answer': quizSubmitted && problem.correctIndex === optIdx,
-              'wrong-answer': quizSubmitted && localAnswers[problem.id] === optIdx && problem.correctIndex !== optIdx,
+              'wrong-answer':
+                quizSubmitted &&
+                localAnswers[problem.id] === optIdx &&
+                problem.correctIndex !== optIdx,
             }"
             :disabled="quizSubmitted"
             @click="selectOption(problem.id, optIdx)"
@@ -148,7 +173,10 @@ function isCorrect(problemId: string): boolean | null {
         </div>
 
         <!-- Short Answer -->
-        <div v-else-if="problem.type === 'short-answer'" class="short-answer">
+        <div
+          v-else-if="problem.type === 'short-answer'"
+          class="short-answer"
+        >
           <textarea
             :value="(localAnswers[problem.id] as string) ?? ''"
             class="answer-textarea"
@@ -160,7 +188,10 @@ function isCorrect(problemId: string): boolean | null {
         </div>
 
         <!-- Explanation -->
-        <div v-if="quizSubmitted" class="explanation">
+        <div
+          v-if="quizSubmitted"
+          class="explanation"
+        >
           <span class="explanation-label">Explanation:</span>
           {{ problem.explanation }}
         </div>
@@ -168,7 +199,10 @@ function isCorrect(problemId: string): boolean | null {
     </div>
 
     <!-- Submit -->
-    <div v-if="!quizSubmitted" class="submit-area">
+    <div
+      v-if="!quizSubmitted"
+      class="submit-area"
+    >
       <button
         class="submit-btn"
         :disabled="!allAnswered || isSubmitting"
@@ -176,7 +210,10 @@ function isCorrect(problemId: string): boolean | null {
       >
         {{ isSubmitting ? 'Submitting...' : 'Submit Quiz' }}
       </button>
-      <span v-if="!allAnswered" class="submit-hint">
+      <span
+        v-if="!allAnswered"
+        class="submit-hint"
+      >
         Answer all questions to submit
       </span>
     </div>
@@ -312,8 +349,12 @@ function isCorrect(problemId: string): boolean | null {
   color: var(--text-color-secondary, #64748b);
 }
 
-.result-icon.correct { color: #10b981; }
-.result-icon.incorrect { color: #f85149; }
+.result-icon.correct {
+  color: #10b981;
+}
+.result-icon.incorrect {
+  color: #f85149;
+}
 
 .question-text {
   font-size: 15px;

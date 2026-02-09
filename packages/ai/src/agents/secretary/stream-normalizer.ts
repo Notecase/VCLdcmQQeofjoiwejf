@@ -21,7 +21,7 @@ export class SecretaryStreamNormalizer {
       return JSON.stringify(value)
     }
     if (Array.isArray(value)) {
-      return `[${value.map(item => this.stableStringify(item)).join(',')}]`
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`
     }
     const entries = Object.entries(value as Record<string, unknown>)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -84,14 +84,16 @@ export class SecretaryStreamNormalizer {
     this.textSnapshots.set(sourceKey, content)
     if (!delta) return []
 
-    return [{
-      event: 'text',
-      data: delta,
-      seq: this.nextSeq(),
-      messageId: sourceKey,
-      sourceNode: nodeKey,
-      isDelta,
-    }]
+    return [
+      {
+        event: 'text',
+        data: delta,
+        seq: this.nextSeq(),
+        messageId: sourceKey,
+        sourceNode: nodeKey,
+        isDelta,
+      },
+    ]
   }
 
   normalizeToolCalls(nodeKey: string, message: StreamMessage): SecretaryStreamEvent[] {
@@ -105,8 +107,8 @@ export class SecretaryStreamNormalizer {
       const idSignature = callId ? `${nodeKey}:id:${callId}` : ''
 
       if (
-        this.emittedToolCallSignatures.has(semanticSignature)
-        || (idSignature && this.emittedToolCallSignatures.has(idSignature))
+        this.emittedToolCallSignatures.has(semanticSignature) ||
+        (idSignature && this.emittedToolCallSignatures.has(idSignature))
       ) {
         continue
       }
@@ -148,19 +150,21 @@ export class SecretaryStreamNormalizer {
     const toolCallId = queue.shift() || crypto.randomUUID()
     this.pendingToolCallIdsByName.set(toolName, queue)
 
-    return [{
-      event: 'tool_result',
-      data: JSON.stringify({
-        id: toolCallId,
-        toolName,
-        result: content,
-      }),
-      metadata: { toolName },
-      seq: this.nextSeq(),
-      messageId: `tool-result:${toolCallId}`,
-      sourceNode: nodeKey,
-      isDelta: false,
-    }]
+    return [
+      {
+        event: 'tool_result',
+        data: JSON.stringify({
+          id: toolCallId,
+          toolName,
+          result: content,
+        }),
+        metadata: { toolName },
+        seq: this.nextSeq(),
+        messageId: `tool-result:${toolCallId}`,
+        sourceNode: nodeKey,
+        isDelta: false,
+      },
+    ]
   }
 
   done(): SecretaryStreamEvent {

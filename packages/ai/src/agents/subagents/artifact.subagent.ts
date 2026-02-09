@@ -120,7 +120,10 @@ export class ArtifactSubagent {
 
           yield {
             type: 'progress',
-            data: { progress: Math.min(90, fullContent.length / 50), message: 'Generating artifact code...' },
+            data: {
+              progress: Math.min(90, fullContent.length / 50),
+              message: 'Generating artifact code...',
+            },
           }
         }
       }
@@ -131,7 +134,9 @@ export class ArtifactSubagent {
 
     // If parsing failed (all fields empty), retry with more explicit instructions
     if (!artifact.html && !artifact.css && !artifact.javascript) {
-      console.warn('[ArtifactSubagent] First attempt returned empty content. Retrying with explicit JSON request...')
+      console.warn(
+        '[ArtifactSubagent] First attempt returned empty content. Retrying with explicit JSON request...'
+      )
 
       try {
         const retryResponse = await client.chat.completions.create({
@@ -140,7 +145,11 @@ export class ArtifactSubagent {
             { role: 'system', content: ARTIFACT_SUBAGENT_PROMPT },
             { role: 'user', content: taskDescription },
             { role: 'assistant', content: fullContent },
-            { role: 'user', content: 'That response was not valid JSON with code content. Please output ONLY a JSON object with title, html, css, and javascript fields. The html field MUST contain the component markup. Start with { and end with }' },
+            {
+              role: 'user',
+              content:
+                'That response was not valid JSON with code content. Please output ONLY a JSON object with title, html, css, and javascript fields. The html field MUST contain the component markup. Start with { and end with }',
+            },
           ],
           temperature: 0.2, // Lower temperature for retry
           max_completion_tokens: 8000,
@@ -148,7 +157,10 @@ export class ArtifactSubagent {
         })
 
         const retryContent = retryResponse.choices[0]?.message?.content || ''
-        console.log('[ArtifactSubagent] Retry response (first 500 chars):', retryContent.slice(0, 500))
+        console.log(
+          '[ArtifactSubagent] Retry response (first 500 chars):',
+          retryContent.slice(0, 500)
+        )
         artifact = this.parseArtifactContent(retryContent, taskDescription)
       } catch (retryError) {
         console.error('[ArtifactSubagent] Retry failed:', retryError)
@@ -159,13 +171,17 @@ export class ArtifactSubagent {
     const hasContent = Boolean(artifact.html || artifact.css || artifact.javascript)
 
     if (!hasContent) {
-      console.error('[ArtifactSubagent] Artifact has no code content after parsing and retry. Task:', taskDescription)
+      console.error(
+        '[ArtifactSubagent] Artifact has no code content after parsing and retry. Task:',
+        taskDescription
+      )
       yield {
         type: 'complete',
         data: {
           success: false,
           artifact,
-          error: 'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
+          error:
+            'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
         },
       }
       return
@@ -224,7 +240,10 @@ export class ArtifactSubagent {
       return result
     } catch (error) {
       console.warn('[ArtifactSubagent] JSON parse failed, trying regex fallback. Error:', error)
-      console.log('[ArtifactSubagent] Raw content for regex (first 300 chars):', content.slice(0, 300))
+      console.log(
+        '[ArtifactSubagent] Raw content for regex (first 300 chars):',
+        content.slice(0, 300)
+      )
 
       // Fallback: extract from markdown code blocks
       const htmlMatch = content.match(/```html\s*([\s\S]*?)```/i)
@@ -245,7 +264,10 @@ export class ArtifactSubagent {
       })
 
       if (!result.html && !result.css && !result.javascript) {
-        console.error('[ArtifactSubagent] PARSING FAILED - all code fields empty. Full content:', content)
+        console.error(
+          '[ArtifactSubagent] PARSING FAILED - all code fields empty. Full content:',
+          content
+        )
       }
 
       return result
@@ -256,7 +278,10 @@ export class ArtifactSubagent {
    * Detect the current phase of generation based on content markers
    */
   private detectPhase(content: string): 'html' | 'css' | 'javascript' {
-    const hasJs = content.includes('"javascript"') || content.includes('```javascript') || content.includes('```js')
+    const hasJs =
+      content.includes('"javascript"') ||
+      content.includes('```javascript') ||
+      content.includes('```js')
     const hasCss = content.includes('"css"') || content.includes('```css')
 
     if (hasJs) {
@@ -275,10 +300,7 @@ export class ArtifactSubagent {
     }
 
     if (hasCss) {
-      const cssStart = Math.max(
-        content.lastIndexOf('"css"'),
-        content.lastIndexOf('```css')
-      )
+      const cssStart = Math.max(content.lastIndexOf('"css"'), content.lastIndexOf('```css'))
       if (cssStart >= 0) {
         const afterCss = content.slice(cssStart + 5)
         if (!afterCss.includes('```') && !afterCss.match(/",?\s*}/)) {
@@ -302,7 +324,9 @@ export class ArtifactSubagent {
    * Extract title from task description
    */
   private extractTitle(description: string): string {
-    const match = description.match(/(?:create|make|build)\s+(?:an?\s+)?(?:interactive\s+)?(.+?)(?:\s+for|\s+that|\s+with|$)/i)
+    const match = description.match(
+      /(?:create|make|build)\s+(?:an?\s+)?(?:interactive\s+)?(.+?)(?:\s+for|\s+that|\s+with|$)/i
+    )
     if (match) {
       return match[1].trim().slice(0, 50)
     }

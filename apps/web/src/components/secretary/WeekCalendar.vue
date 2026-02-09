@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useSecretaryStore } from '@/stores/secretary'
-import { getCurrentWeekMonday, addDays, getTodayDate, parseDateString } from '@inkdown/shared/secretary'
+import {
+  getCurrentWeekMonday,
+  addDays,
+  getTodayDate,
+  parseDateString,
+} from '@inkdown/shared/secretary'
 
 const store = useSecretaryStore()
 
@@ -9,11 +14,15 @@ const store = useSecretaryStore()
  * Parse "## This Week" section from Plan.md to extract per-day entries.
  * Lines like: **Mon:** QM - Topic | DL - Topic
  */
-function parseThisWeekEntries(planContent: string): Map<string, Array<{ planId: string; topic: string }>> {
+function parseThisWeekEntries(
+  planContent: string
+): Map<string, Array<{ planId: string; topic: string }>> {
   const result = new Map<string, Array<{ planId: string; topic: string }>>()
 
   // Extract the This Week section
-  const weekMatch = planContent.match(/##\s*(?:This Week|THIS WEEK)[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i)
+  const weekMatch = planContent.match(
+    /##\s*(?:This Week|THIS WEEK)[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i
+  )
   if (!weekMatch) return result
 
   const weekContent = weekMatch[1]
@@ -53,7 +62,7 @@ const weekDays = computed(() => {
   const todayStr = getTodayDate()
 
   // Parse Plan.md for per-day entries
-  const planFile = store.memoryFiles.find(f => f.filename === 'Plan.md')
+  const planFile = store.memoryFiles.find((f) => f.filename === 'Plan.md')
   const parsedEntries = planFile ? parseThisWeekEntries(planFile.content) : new Map()
 
   const days: Array<{
@@ -72,11 +81,13 @@ const weekDays = computed(() => {
     const dayName = dayNames[i]
 
     // Use parsed entries if available, otherwise fallback to active plans for today
-    const entries = parsedEntries.get(dayName) || (isToday
-      ? store.activePlans
-        .filter(p => p.status === 'active')
-        .map(p => ({ planId: p.id, topic: p.currentTopic || p.name }))
-      : [])
+    const entries =
+      parsedEntries.get(dayName) ||
+      (isToday
+        ? store.activePlans
+            .filter((p) => p.status === 'active')
+            .map((p) => ({ planId: p.id, topic: p.currentTopic || p.name }))
+        : [])
 
     days.push({
       date: dateStr,
@@ -103,7 +114,10 @@ const weekDays = computed(() => {
       >
         <span class="day-name">{{ day.dayName }}</span>
         <span class="day-num">{{ day.dayNum }}</span>
-        <div v-if="day.planEntries.length > 0" class="day-dots">
+        <div
+          v-if="day.planEntries.length > 0"
+          class="day-dots"
+        >
           <span
             v-for="(entry, idx) in day.planEntries"
             :key="idx"

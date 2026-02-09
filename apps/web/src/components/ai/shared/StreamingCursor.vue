@@ -6,7 +6,10 @@
 </script>
 
 <template>
-  <span class="streaming-cursor" aria-hidden="true" />
+  <span
+    class="streaming-cursor"
+    aria-hidden="true"
+  />
 </template>
 
 <style scoped>

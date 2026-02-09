@@ -8,15 +8,15 @@ export interface MemoryFileGroups {
 
 export function partitionMemoryFiles(files: MemoryFile[]): MemoryFileGroups {
   const rootMemoryFiles = files
-    .filter(file => !file.filename.includes('/'))
+    .filter((file) => !file.filename.includes('/'))
     .sort((a, b) => a.filename.localeCompare(b.filename))
 
   const historyEntries = files
-    .filter(file => file.filename.startsWith('History/'))
+    .filter((file) => file.filename.startsWith('History/'))
     .sort((a, b) => b.filename.localeCompare(a.filename))
 
   const planArchiveEntries = files
-    .filter(file => file.filename.startsWith('Plans/'))
+    .filter((file) => file.filename.startsWith('Plans/'))
     .sort((a, b) => b.filename.localeCompare(a.filename))
 
   return {

@@ -82,20 +82,34 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
     <!-- Header -->
     <header class="sidebar-header">
       <div class="header-left">
-        <GraduationCap :size="14" class="header-icon" />
+        <GraduationCap
+          :size="14"
+          class="header-icon"
+        />
         <span class="header-title">AI Tutor</span>
       </div>
-      <button class="close-btn" title="Close" @click="$emit('close')">
+      <button
+        class="close-btn"
+        title="Close"
+        @click="$emit('close')"
+      >
         <Minimize2 :size="14" />
       </button>
     </header>
 
     <!-- Messages -->
-    <div ref="messagesAreaRef" class="messages-area">
+    <div
+      ref="messagesAreaRef"
+      class="messages-area"
+    >
       <!-- Welcome state -->
-      <div v-if="explainStore.messages.length === 0" class="welcome-state">
+      <div
+        v-if="explainStore.messages.length === 0"
+        class="welcome-state"
+      >
         <p class="welcome-text">
-          Ask me anything about this lesson. I can help you understand, summarize, or explain concepts.
+          Ask me anything about this lesson. I can help you understand, summarize, or explain
+          concepts.
         </p>
       </div>
 
@@ -104,11 +118,17 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
         v-for="msg in explainStore.messages"
         :key="msg.id"
         :message="msg"
-        :is-streaming="explainStore.isStreaming && msg === explainStore.messages[explainStore.messages.length - 1]"
+        :is-streaming="
+          explainStore.isStreaming &&
+          msg === explainStore.messages[explainStore.messages.length - 1]
+        "
       />
 
       <!-- Error -->
-      <div v-if="explainStore.error" class="error-banner">
+      <div
+        v-if="explainStore.error"
+        class="error-banner"
+      >
         {{ explainStore.error }}
       </div>
     </div>
@@ -117,10 +137,19 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
     <div class="ai-input-wrapper">
       <div class="ai-input-box">
         <!-- Highlight context inside input -->
-        <div v-if="explainStore.highlightedText" class="input-context">
-          <Highlighter :size="12" class="context-icon" />
+        <div
+          v-if="explainStore.highlightedText"
+          class="input-context"
+        >
+          <Highlighter
+            :size="12"
+            class="context-icon"
+          />
           <span class="context-title">{{ truncatedHighlight }}</span>
-          <button class="context-dismiss" @click="clearHighlight">
+          <button
+            class="context-dismiss"
+            @click="clearHighlight"
+          >
             <X :size="11" />
           </button>
         </div>
@@ -143,8 +172,15 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
             :disabled="!canSend"
             @click="handleSubmit"
           >
-            <ArrowUp v-if="!explainStore.isStreaming" :size="16" />
-            <Loader2 v-else :size="16" class="spin" />
+            <ArrowUp
+              v-if="!explainStore.isStreaming"
+              :size="16"
+            />
+            <Loader2
+              v-else
+              :size="16"
+              class="spin"
+            />
           </button>
         </div>
       </div>
@@ -175,7 +211,10 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
   left: 0;
   right: 0;
   height: 50%;
-  background: var(--ai-gradient-overlay, linear-gradient(180deg, rgba(88, 166, 255, 0.02) 0%, transparent 100%));
+  background: var(
+    --ai-gradient-overlay,
+    linear-gradient(180deg, rgba(88, 166, 255, 0.02) 0%, transparent 100%)
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -401,8 +440,12 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin {

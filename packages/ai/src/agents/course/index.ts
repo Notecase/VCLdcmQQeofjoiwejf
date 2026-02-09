@@ -3,7 +3,12 @@ export { CourseOrchestrator, createCourseOrchestrator } from './orchestrator'
 export type { CourseOrchestratorConfig } from './orchestrator'
 
 // Tool factories
-export { createOrchestratorTools, createLessonWriterTools, createQuizWriterTools, createSlidesWriterTools } from './course-tools'
+export {
+  createOrchestratorTools,
+  createLessonWriterTools,
+  createQuizWriterTools,
+  createSlidesWriterTools,
+} from './course-tools'
 
 // Keep existing utility exports
 export { PROMPTS } from './prompts'

@@ -167,16 +167,19 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
             const parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
             ;(assistantToolCalls as unknown[]).push(parsed)
             if (
-              hardeningEnabled
-              && parsed
-              && typeof parsed === 'object'
-              && typeof (parsed as { id?: unknown }).id === 'string'
-              && typeof (parsed as { toolName?: unknown }).toolName === 'string'
+              hardeningEnabled &&
+              parsed &&
+              typeof parsed === 'object' &&
+              typeof (parsed as { id?: unknown }).id === 'string' &&
+              typeof (parsed as { toolName?: unknown }).toolName === 'string'
             ) {
-              const toolArgs = ((parsed as { arguments?: unknown }).arguments || {}) as Record<string, unknown>
+              const toolArgs = ((parsed as { arguments?: unknown }).arguments || {}) as Record<
+                string,
+                unknown
+              >
               toolCallTargets.set(
                 (parsed as { id: string }).id,
-                inferUpdatedFiles((parsed as { toolName: string }).toolName, toolArgs),
+                inferUpdatedFiles((parsed as { toolName: string }).toolName, toolArgs)
               )
             }
           } catch {
@@ -197,13 +200,18 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
         if (event.event === 'tool_result') {
           const toolName = event.metadata?.toolName || ''
           if (
-            typeof toolName === 'string'
-            && (toolName.includes('write') || toolName.includes('save') || toolName.includes('generate') || toolName.includes('activate') || toolName.includes('modify'))
+            typeof toolName === 'string' &&
+            (toolName.includes('write') ||
+              toolName.includes('save') ||
+              toolName.includes('generate') ||
+              toolName.includes('activate') ||
+              toolName.includes('modify'))
           ) {
             let updatedFiles: string[] = []
             if (hardeningEnabled) {
               try {
-                const resultData = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+                const resultData =
+                  typeof event.data === 'string' ? JSON.parse(event.data) : event.data
                 const toolCallId = (resultData as { id?: string })?.id
                 if (toolCallId && toolCallTargets.has(toolCallId)) {
                   updatedFiles = toolCallTargets.get(toolCallId) || []
@@ -359,28 +367,24 @@ const UpdateThreadSchema = z.object({
  * PATCH /api/secretary/threads/:threadId
  * Update thread title
  */
-secretary.patch(
-  '/threads/:threadId',
-  zValidator('json', UpdateThreadSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const threadId = c.req.param('threadId')
-    const { title } = c.req.valid('json')
-    const { ChatPersistenceService } = await import('@inkdown/ai/agents')
-    const service = new ChatPersistenceService(auth.supabase)
-    try {
-      await service.updateThreadTitle(threadId, title)
-      return c.json({ success: true })
-    } catch (error) {
-      console.warn('secretary.thread_patch.unavailable', {
-        userId: auth.userId,
-        threadId,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      return c.json({ success: false, warning: 'Thread title update is unavailable.' })
-    }
-  },
-)
+secretary.patch('/threads/:threadId', zValidator('json', UpdateThreadSchema), async (c) => {
+  const auth = requireAuth(c)
+  const threadId = c.req.param('threadId')
+  const { title } = c.req.valid('json')
+  const { ChatPersistenceService } = await import('@inkdown/ai/agents')
+  const service = new ChatPersistenceService(auth.supabase)
+  try {
+    await service.updateThreadTitle(threadId, title)
+    return c.json({ success: true })
+  } catch (error) {
+    console.warn('secretary.thread_patch.unavailable', {
+      userId: auth.userId,
+      threadId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return c.json({ success: false, warning: 'Thread title update is unavailable.' })
+  }
+})
 
 // ============================================================================
 // Memory CRUD
@@ -436,7 +440,7 @@ secretary.put(
 
     const file = await memService.writeFile(filename, content)
     return c.json({ file })
-  },
+  }
 )
 
 // ============================================================================
@@ -486,7 +490,8 @@ secretary.post('/prepare-tomorrow', async (c) => {
     const toolCallTargets = new Map<string, string[]>()
     try {
       for await (const event of agent.stream({
-        message: 'Generate my plan for tomorrow. Read my active plans and preferences, then write a time-blocked schedule to Tomorrow.md.',
+        message:
+          'Generate my plan for tomorrow. Read my active plans and preferences, then write a time-blocked schedule to Tomorrow.md.',
       })) {
         await stream.writeSSE({
           event: event.event,
@@ -497,15 +502,18 @@ secretary.post('/prepare-tomorrow', async (c) => {
           try {
             const parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
             if (
-              parsed
-              && typeof parsed === 'object'
-              && typeof (parsed as { id?: unknown }).id === 'string'
-              && typeof (parsed as { toolName?: unknown }).toolName === 'string'
+              parsed &&
+              typeof parsed === 'object' &&
+              typeof (parsed as { id?: unknown }).id === 'string' &&
+              typeof (parsed as { toolName?: unknown }).toolName === 'string'
             ) {
-              const toolArgs = ((parsed as { arguments?: unknown }).arguments || {}) as Record<string, unknown>
+              const toolArgs = ((parsed as { arguments?: unknown }).arguments || {}) as Record<
+                string,
+                unknown
+              >
               toolCallTargets.set(
                 (parsed as { id: string }).id,
-                inferUpdatedFiles((parsed as { toolName: string }).toolName, toolArgs),
+                inferUpdatedFiles((parsed as { toolName: string }).toolName, toolArgs)
               )
             }
           } catch {
@@ -517,13 +525,18 @@ secretary.post('/prepare-tomorrow', async (c) => {
         if (event.event === 'tool_result') {
           const toolName = event.metadata?.toolName || ''
           if (
-            typeof toolName === 'string'
-            && (toolName.includes('write') || toolName.includes('save') || toolName.includes('generate') || toolName.includes('activate') || toolName.includes('modify'))
+            typeof toolName === 'string' &&
+            (toolName.includes('write') ||
+              toolName.includes('save') ||
+              toolName.includes('generate') ||
+              toolName.includes('activate') ||
+              toolName.includes('modify'))
           ) {
             let updatedFiles: string[] = []
             if (hardeningEnabled) {
               try {
-                const resultData = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+                const resultData =
+                  typeof event.data === 'string' ? JSON.parse(event.data) : event.data
                 const toolCallId = (resultData as { id?: string })?.id
                 if (toolCallId && toolCallTargets.has(toolCallId)) {
                   updatedFiles = toolCallTargets.get(toolCallId) || []

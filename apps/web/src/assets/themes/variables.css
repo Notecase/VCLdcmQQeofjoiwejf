@@ -304,7 +304,8 @@
   --float-bg-color: #ffffff;
   --float-hover-color: rgba(0, 0, 0, 0.04);
   --float-border-color: rgba(0, 0, 0, 0.1);
-  --float-shadow: rgb(15 15 15 / 3%) 0 0 0 1px, rgb(15 15 15 / 4%) 0 3px 6px, rgb(15 15 15 / 5%) 0 9px 24px;
+  --float-shadow:
+    rgb(15 15 15 / 3%) 0 0 0 1px, rgb(15 15 15 / 4%) 0 3px 6px, rgb(15 15 15 / 5%) 0 9px 24px;
 
   /* Theme colors */
   --themeColor: #1a1a1a;
@@ -430,14 +431,14 @@
   --diff-remove-text: #991b1b;
 
   /* Inline Diff - Reference Design (Light Theme) */
-  --diff-inline-deletion-bg: #F8D7D5;
-  --diff-inline-deletion-text: #5C4444;
-  --diff-inline-addition-bg: #D4EDDA;
-  --diff-inline-addition-text: #3D5C45;
-  --diff-inline-minus-color: #C9726A;
-  --diff-inline-plus-color: #5A9E6F;
-  --diff-inline-accept-btn: #5A9E6F;
-  --diff-inline-deny-btn: #D46A6A;
+  --diff-inline-deletion-bg: #f8d7d5;
+  --diff-inline-deletion-text: #5c4444;
+  --diff-inline-addition-bg: #d4edda;
+  --diff-inline-addition-text: #3d5c45;
+  --diff-inline-minus-color: #c9726a;
+  --diff-inline-plus-color: #5a9e6f;
+  --diff-inline-accept-btn: #5a9e6f;
+  --diff-inline-deny-btn: #d46a6a;
 
   /* Timeline Thinking Steps */
   --timeline-line-color: rgba(0, 0, 0, 0.1);

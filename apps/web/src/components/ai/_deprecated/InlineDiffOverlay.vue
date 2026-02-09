@@ -11,11 +11,7 @@ import { useAIStore } from '@/stores/ai'
 import { useEditorStore } from '@/stores'
 import InlineDiffHunk from './InlineDiffHunk.vue'
 import type { DiffHunkData } from './InlineDiffHunk.vue'
-import {
-  getMuyaBlocks,
-  findBlockByIndex,
-  waitForMuyaRender,
-} from '@/utils/muyaBlockMapper'
+import { getMuyaBlocks, findBlockByIndex, waitForMuyaRender } from '@/utils/muyaBlockMapper'
 
 const props = defineProps<{
   muContainer: HTMLElement | null // .mu-container - for querying blocks
@@ -119,7 +115,9 @@ async function calculatePositions() {
       const targetBlock = findBlockByIndex(blocks, blockIndex)
 
       if (!targetBlock) {
-        console.warn(`[InlineDiffOverlay] No block found for hunk ${hunk.id} at line ${hunk.oldStart}`)
+        console.warn(
+          `[InlineDiffOverlay] No block found for hunk ${hunk.id} at line ${hunk.oldStart}`
+        )
         continue
       }
 
@@ -143,22 +141,24 @@ async function calculatePositions() {
         width,
       })
 
-      console.debug(`[InlineDiffOverlay] Positioned hunk ${hunk.id} at top=${top}, block=${blockIndex}`)
+      console.debug(
+        `[InlineDiffOverlay] Positioned hunk ${hunk.id} at top=${top}, block=${blockIndex}`
+      )
     }
 
     // Guard: skip update if positions haven't changed (breaks feedback loop)
-    const positionsUnchanged
-      = positioned.length === positionedHunks.value.length
-        && positioned.every((p, i) => {
-          const old = positionedHunks.value[i]
-          return (
-            old
-            && p.hunkId === old.hunkId
-            && p.top === old.top
-            && p.left === old.left
-            && p.width === old.width
-          )
-        })
+    const positionsUnchanged =
+      positioned.length === positionedHunks.value.length &&
+      positioned.every((p, i) => {
+        const old = positionedHunks.value[i]
+        return (
+          old &&
+          p.hunkId === old.hunkId &&
+          p.top === old.top &&
+          p.left === old.left &&
+          p.width === old.width
+        )
+      })
 
     if (positionsUnchanged) {
       console.debug('[InlineDiffOverlay] Positions unchanged, skipping update')
@@ -234,14 +234,11 @@ watch(
 )
 
 // Watch for container changes
-watch(
-  [() => props.muContainer, () => props.scrollContainer],
-  () => {
-    if (props.muContainer && props.scrollContainer) {
-      schedulePositionUpdate()
-    }
+watch([() => props.muContainer, () => props.scrollContainer], () => {
+  if (props.muContainer && props.scrollContainer) {
+    schedulePositionUpdate()
   }
-)
+})
 
 // Recalculate on scroll and resize
 let resizeObserver: ResizeObserver | null = null
@@ -357,7 +354,9 @@ onUnmounted(() => {
    which can trigger ResizeObserver in a feedback loop. */
 .hunk-enter-active,
 .hunk-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .hunk-enter-from {

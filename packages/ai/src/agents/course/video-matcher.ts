@@ -10,7 +10,7 @@ const YOUTUBE_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 async function searchYouTube(
   query: string,
   apiKey: string,
-  maxResults: number = 3,
+  maxResults: number = 3
 ): Promise<YouTubeVideo[]> {
   const params = new URLSearchParams({
     part: 'snippet',
@@ -27,7 +27,7 @@ async function searchYouTube(
     throw new Error(`YouTube API error (${response.status}): ${errorBody}`)
   }
 
-  const data = await response.json() as {
+  const data = (await response.json()) as {
     items: {
       id: { videoId: string }
       snippet: {
@@ -39,7 +39,7 @@ async function searchYouTube(
     }[]
   }
 
-  return (data.items ?? []).map(item => ({
+  return (data.items ?? []).map((item) => ({
     videoId: item.id.videoId,
     title: item.snippet.title,
     channelTitle: item.snippet.channelTitle,
@@ -50,15 +50,14 @@ async function searchYouTube(
 
 export async function matchVideosForLessons(
   modules: CourseModule[],
-  youtubeApiKey: string,
+  youtubeApiKey: string
 ): Promise<LessonVideoMatch[]> {
   const matches: LessonVideoMatch[] = []
 
   for (const mod of modules) {
     for (const lesson of mod.lessons) {
       // Only match video-type and lecture-type lessons
-      if (lesson.type !== 'video' && lesson.type !== 'lecture')
-        continue
+      if (lesson.type !== 'video' && lesson.type !== 'lecture') continue
 
       const query = `"${lesson.title}" tutorial`
       const videos = await searchYouTube(query, youtubeApiKey, 3)

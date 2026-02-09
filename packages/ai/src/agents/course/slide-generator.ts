@@ -13,7 +13,7 @@ export async function generateSlidesWithModel(
   researchContext: string,
   geminiApiKey: string,
   modelName: string = 'gemini-3-flash-preview',
-  maxSlides: number = 15,
+  maxSlides: number = 15
 ): Promise<SlideData[]> {
   const model = new ChatGoogleGenerativeAI({
     model: modelName,
@@ -60,9 +60,10 @@ Return ONLY a JSON array of slide objects with this structure:
 Return ONLY the JSON array, no additional text.`
 
   const response = await model.invoke(prompt)
-  const content = typeof response.content === 'string'
-    ? response.content
-    : response.content.map(c => ('text' in c ? c.text : '')).join('')
+  const content =
+    typeof response.content === 'string'
+      ? response.content
+      : response.content.map((c) => ('text' in c ? c.text : '')).join('')
 
   return parseSlidesJSON(content)
 }
@@ -72,9 +73,16 @@ export async function generateSlides(
   keyTopics: string[],
   researchContext: string,
   geminiApiKey: string,
-  maxSlides: number = 15,
+  maxSlides: number = 15
 ): Promise<SlideData[]> {
-  return generateSlidesWithModel(lessonTitle, keyTopics, researchContext, geminiApiKey, 'gemini-3-flash-preview', maxSlides)
+  return generateSlidesWithModel(
+    lessonTitle,
+    keyTopics,
+    researchContext,
+    geminiApiKey,
+    'gemini-3-flash-preview',
+    maxSlides
+  )
 }
 
 function parseSlidesJSON(text: string): SlideData[] {
@@ -84,7 +92,9 @@ function parseSlidesJSON(text: string): SlideData[] {
   const jsonStr = sanitizeJSONString(rawJson)
 
   const parsed = JSON.parse(jsonStr)
-  const rawSlides: unknown[] = Array.isArray(parsed) ? parsed : ((parsed as Record<string, unknown>).slides as unknown[] ?? [])
+  const rawSlides: unknown[] = Array.isArray(parsed)
+    ? parsed
+    : (((parsed as Record<string, unknown>).slides as unknown[]) ?? [])
 
   return rawSlides.map((raw, index) => {
     const slide = raw as Record<string, unknown>

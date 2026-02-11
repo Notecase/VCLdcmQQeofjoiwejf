@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "turbo dev",
+    "preinstall": "npx -y only-allow pnpm",
+    "dev": "node scripts/check-env.js && turbo dev",
     "build": "turbo build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

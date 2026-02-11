@@ -30,8 +30,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Inkdown',
-        short_name: 'Inkdown',
+        name: 'NoteShell',
+        short_name: 'NoteShell',
         description: 'AI-enhanced markdown editor for the web',
         theme_color: '#1e1e1e',
         background_color: '#1e1e1e',

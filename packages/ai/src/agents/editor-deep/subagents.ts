@@ -15,7 +15,7 @@ export function createEditorSubagents() {
     },
     {
       name: 'edit_subagent',
-      description: 'Handles paragraph and table edits in notes.',
+      description: 'Handles note creation, paragraph edits, and table edits.',
       systemPrompt: EDIT_SUBAGENT_PROMPT,
     },
     {

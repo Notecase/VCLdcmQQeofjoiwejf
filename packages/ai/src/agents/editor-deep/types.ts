@@ -27,6 +27,7 @@ export type EditorDeepAgentEventType =
   | 'thinking'
   | 'clarification-requested'
   | 'edit-proposal'
+  | 'note-navigate'
   | 'artifact'
   | 'error'
   | 'done'

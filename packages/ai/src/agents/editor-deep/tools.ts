@@ -11,7 +11,7 @@ function toToolContext(ctx: EditorToolContext): ToolContext {
   }
 }
 
-function resolveNoteId(ctx: EditorToolContext, noteId?: string): string | undefined {
+function resolveNoteId(ctx: EditorToolContext, noteId?: string | null): string | undefined {
   return noteId || ctx.editorContext.currentNoteId
 }
 
@@ -59,6 +59,48 @@ function splitParagraphs(content: string): string[] {
     .split(/\n\n+/)
     .map((p) => p.trim())
     .filter(Boolean)
+}
+
+async function proposeNoteEdit(
+  ctx: EditorToolContext,
+  noteId: string,
+  proposedContent: string
+): Promise<string> {
+  const readResult = await executeTool(
+    'read_note',
+    { noteId, includeMetadata: false },
+    toToolContext(ctx)
+  )
+  const original = (readResult.data as { content?: string })?.content || ''
+
+  ctx.emitEvent({
+    type: 'edit-proposal',
+    data: {
+      noteId,
+      original,
+      proposed: proposedContent,
+    },
+  })
+
+  return 'Edit proposed for review.'
+}
+
+function buildMarkdownTable(
+  headers: string[],
+  rows: string[][],
+  title?: string | null
+): string {
+  const lines: string[] = []
+  if (title) {
+    lines.push(`### ${title}`, '')
+  }
+  lines.push(`| ${headers.join(' | ')} |`)
+  lines.push(`| ${headers.map(() => '---').join(' | ')} |`)
+  for (const row of rows) {
+    const padded = headers.map((_, i) => row[i] || '')
+    lines.push(`| ${padded.join(' | ')} |`)
+  }
+  return lines.join('\n')
 }
 
 export function createEditorDeepTools(
@@ -116,8 +158,56 @@ export function createEditorDeepTools(
         'Read the active note (or a specific note) and provide the relevant context needed to answer a question.',
       schema: z.object({
         question: z.string().min(1),
-        noteId: z.string().uuid().optional(),
-        blockIndex: z.number().int().min(0).optional(),
+        noteId: z.string().uuid().nullish(),
+        blockIndex: z.number().int().min(0).nullish(),
+      }),
+    }
+  )
+
+  const createNote = tool(
+    async ({ title, content, projectId }) => {
+      const effectiveProjectId = projectId || ctx.editorContext.projectId
+
+      const { data: newNote, error } = await ctx.supabase
+        .from('notes')
+        .insert({
+          user_id: ctx.userId,
+          title: title || 'Untitled',
+          content: '',
+          project_id: effectiveProjectId || null,
+        })
+        .select('id')
+        .single()
+
+      if (error || !newNote) {
+        return `Failed to create note: ${error?.message || 'unknown error'}`
+      }
+
+      const noteId = (newNote as { id: string }).id
+
+      ctx.emitEvent({
+        type: 'note-navigate',
+        data: { noteId },
+      })
+
+      ctx.emitEvent({
+        type: 'edit-proposal',
+        data: {
+          noteId,
+          original: '',
+          proposed: content,
+        },
+      })
+
+      return `Note "${title}" created (ID: ${noteId}). Content proposed for review.`
+    },
+    {
+      name: 'create_note',
+      description: 'Create a new note and propose its content for user review.',
+      schema: z.object({
+        title: z.string().min(1).describe('Title for the new note'),
+        content: z.string().min(1).describe('Full markdown content for the note'),
+        projectId: z.string().uuid().nullish().describe('Project to create the note in'),
       }),
     }
   )
@@ -130,62 +220,35 @@ export function createEditorDeepTools(
         return 'No note selected.'
       }
 
-      const targetIndex = afterBlockIndex ?? getContextBlockIndex(ctx)
-      if (targetIndex === undefined) {
-        const result = await executeTool(
-          'edit_block',
-          {
-            noteId: effectiveNoteId,
-            newContent: `\n\n${paragraph.trim()}`,
-            operation: 'append',
-          },
-          baseCtx
-        )
-
-        return result.success
-          ? 'Paragraph appended to the current note.'
-          : `Failed to append paragraph: ${result.error || 'unknown error'}`
-      }
-
       const readResult = await executeTool(
         'read_note',
-        {
-          noteId: effectiveNoteId,
-          includeMetadata: true,
-        },
+        { noteId: effectiveNoteId, includeMetadata: false },
         baseCtx
       )
-
       if (!readResult.success || !readResult.data) {
-        return `Failed to read note before insertion: ${readResult.error || 'unknown error'}`
+        return `Failed to read note: ${readResult.error || 'unknown error'}`
       }
 
       const current = (readResult.data as { content?: string }).content || ''
       const blocks = splitParagraphs(current)
-      const safeIndex = Math.min(Math.max(targetIndex + 1, 0), blocks.length)
-      blocks.splice(safeIndex, 0, paragraph.trim())
+      const targetIndex = afterBlockIndex ?? getContextBlockIndex(ctx)
 
-      const writeResult = await executeTool(
-        'edit_block',
-        {
-          noteId: effectiveNoteId,
-          newContent: blocks.join('\n\n'),
-          operation: 'replace',
-        },
-        baseCtx
-      )
+      if (targetIndex === undefined) {
+        blocks.push(paragraph.trim())
+      } else {
+        const safeIndex = Math.min(Math.max(targetIndex + 1, 0), blocks.length)
+        blocks.splice(safeIndex, 0, paragraph.trim())
+      }
 
-      return writeResult.success
-        ? `Paragraph inserted at position ${safeIndex + 1}.`
-        : `Failed to insert paragraph: ${writeResult.error || 'unknown error'}`
+      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
     },
     {
       name: 'add_paragraph',
       description: 'Add a paragraph to the current note, optionally after a specific paragraph index.',
       schema: z.object({
-        noteId: z.string().uuid().optional(),
+        noteId: z.string().uuid().nullish(),
         paragraph: z.string().min(1),
-        afterBlockIndex: z.number().int().min(0).optional(),
+        afterBlockIndex: z.number().int().min(0).nullish(),
       }),
     }
   )
@@ -208,7 +271,7 @@ export function createEditorDeepTools(
         'read_note',
         {
           noteId: effectiveNoteId,
-          includeMetadata: true,
+          includeMetadata: false,
         },
         baseCtx
       )
@@ -224,26 +287,14 @@ export function createEditorDeepTools(
       }
 
       blocks.splice(effectiveBlockIndex, 1)
-      const writeResult = await executeTool(
-        'edit_block',
-        {
-          noteId: effectiveNoteId,
-          newContent: blocks.join('\n\n'),
-          operation: 'replace',
-        },
-        baseCtx
-      )
-
-      return writeResult.success
-        ? `Removed paragraph ${effectiveBlockIndex + 1}.`
-        : `Failed to remove paragraph: ${writeResult.error || 'unknown error'}`
+      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
     },
     {
       name: 'remove_paragraph',
       description: 'Remove a paragraph from the current note by index.',
       schema: z.object({
-        noteId: z.string().uuid().optional(),
-        blockIndex: z.number().int().min(0).optional(),
+        noteId: z.string().uuid().nullish(),
+        blockIndex: z.number().int().min(0).nullish(),
       }),
     }
   )
@@ -256,44 +307,35 @@ export function createEditorDeepTools(
         return 'No note selected.'
       }
 
-      const effectiveBlockIndex = blockIndex ?? getContextBlockIndex(ctx)
-      if (effectiveBlockIndex === undefined) {
-        // Default fallback: append content when no explicit target is provided.
-        const appendResult = await executeTool(
-          'edit_block',
-          {
-            noteId: effectiveNoteId,
-            newContent: `\n\n${newContent.trim()}`,
-            operation: 'append',
-          },
-          baseCtx
-        )
-        return appendResult.success
-          ? 'No target paragraph specified, so I appended the content to the end of the note.'
-          : `Failed to append content: ${appendResult.error || 'unknown error'}`
-      }
-
-      const replaceResult = await executeTool(
-        'edit_block',
-        {
-          noteId: effectiveNoteId,
-          blockIndex: effectiveBlockIndex,
-          newContent,
-          operation: 'replace',
-        },
+      const readResult = await executeTool(
+        'read_note',
+        { noteId: effectiveNoteId, includeMetadata: false },
         baseCtx
       )
+      if (!readResult.success || !readResult.data) {
+        return `Failed to read note: ${readResult.error || 'unknown error'}`
+      }
 
-      return replaceResult.success
-        ? `Updated paragraph ${effectiveBlockIndex + 1}.`
-        : `Failed to update paragraph: ${replaceResult.error || 'unknown error'}`
+      const current = (readResult.data as { content?: string }).content || ''
+      const blocks = splitParagraphs(current)
+      const effectiveBlockIndex = blockIndex ?? getContextBlockIndex(ctx)
+
+      if (effectiveBlockIndex === undefined) {
+        blocks.push(newContent.trim())
+      } else if (effectiveBlockIndex < 0 || effectiveBlockIndex >= blocks.length) {
+        return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(blocks.length - 1, 0)}).`
+      } else {
+        blocks[effectiveBlockIndex] = newContent.trim()
+      }
+
+      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
     },
     {
       name: 'edit_paragraph',
       description: 'Edit a specific paragraph in the note, or append content if no index is provided.',
       schema: z.object({
-        noteId: z.string().uuid().optional(),
-        blockIndex: z.number().int().min(0).optional(),
+        noteId: z.string().uuid().nullish(),
+        blockIndex: z.number().int().min(0).nullish(),
         newContent: z.string().min(1),
       }),
     }
@@ -334,7 +376,7 @@ export function createEditorDeepTools(
       name: 'create_artifact_from_note',
       description: 'Persist an HTML/CSS/JS artifact optionally linked to the active note.',
       schema: z.object({
-        noteId: z.string().uuid().optional(),
+        noteId: z.string().uuid().nullish(),
         title: z.string().min(1),
         html: z.string(),
         css: z.string(),
@@ -351,28 +393,29 @@ export function createEditorDeepTools(
         return 'No note selected.'
       }
 
-      const result = await executeTool(
-        'insert_markdown_table',
-        {
-          noteId: effectiveNoteId,
-          title,
-          headers,
-          rows,
-          position,
-        },
+      const readResult = await executeTool(
+        'read_note',
+        { noteId: effectiveNoteId, includeMetadata: false },
         baseCtx
       )
+      if (!readResult.success || !readResult.data) {
+        return `Failed to read note: ${readResult.error || 'unknown error'}`
+      }
 
-      return result.success
-        ? `Inserted table "${title || 'Untitled Table'}" with ${rows.length} rows.`
-        : `Failed to insert table: ${result.error || 'unknown error'}`
+      const current = (readResult.data as { content?: string }).content || ''
+      const tableMarkdown = buildMarkdownTable(headers, rows, title)
+      const proposedContent = position === 'start'
+        ? (current ? `${tableMarkdown}\n\n${current}` : tableMarkdown)
+        : (current ? `${current}\n\n${tableMarkdown}` : tableMarkdown)
+
+      return proposeNoteEdit(ctx, effectiveNoteId, proposedContent)
     },
     {
       name: 'insert_table',
       description: 'Insert a markdown table into the active note.',
       schema: z.object({
-        noteId: z.string().uuid().optional(),
-        title: z.string().optional(),
+        noteId: z.string().uuid().nullish(),
+        title: z.string().nullish(),
         headers: z.array(z.string()).min(1),
         rows: z.array(z.array(z.string())).default([]),
         position: z.enum(['start', 'end']).default('end'),
@@ -435,8 +478,8 @@ export function createEditorDeepTools(
           'get_schema',
           'create_chart_data',
         ]),
-        noteId: z.string().uuid().optional(),
-        databaseId: z.string().uuid().optional(),
+        noteId: z.string().uuid().nullish(),
+        databaseId: z.string().uuid().nullish(),
         args: z.record(z.unknown()).default({}),
       }),
     }
@@ -475,7 +518,7 @@ export function createEditorDeepTools(
         memoryType: z
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences'),
-        key: z.string().optional(),
+        key: z.string().nullish(),
       }),
     }
   )
@@ -514,7 +557,7 @@ export function createEditorDeepTools(
         memoryType: z
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences'),
-        key: z.string().optional(),
+        key: z.string().nullish(),
         content: z.string().min(1),
       }),
     }
@@ -522,6 +565,7 @@ export function createEditorDeepTools(
 
   return [
     answerQuestionAboutNote,
+    createNote,
     addParagraph,
     removeParagraph,
     editParagraph,

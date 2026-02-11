@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+  <!-- Top cap: capsule top half (y: 0 → 194) -->
+  <path d="M52,194 L52,140 A140,140 0 0,1 332,140 L332,194 Z" fill="#FFFFFF"/>
+
+  <!-- Bottom base: capsule bottom half (y: 225 → 512) -->
+  <path d="M52,225 L52,372 A140,140 0 0,0 332,372 L332,225 Z" fill="#FFFFFF"/>
+
+  <!-- Constellation dots in the gap -->
+  <circle cx="172" cy="207" r="5.5" fill="#FFFFFF"/>
+  <circle cx="204" cy="213" r="3.2" fill="#FFFFFF"/>
+  <circle cx="220" cy="203" r="2.2" fill="#FFFFFF"/>
+</svg>

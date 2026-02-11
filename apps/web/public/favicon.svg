@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Dark background -->
+  <rect width="512" height="512" rx="64" fill="#0d0d1a"/>
+
+  <!-- Top cap: capsule top half (y: 64 → 210) -->
+  <path d="M151,210 L151,169 A105,105 0 0,1 361,169 L361,210 Z" fill="#FFFFFF"/>
+
+  <!-- Bottom base: capsule bottom half (y: 233 → 448) -->
+  <path d="M151,233 L151,343 A105,105 0 0,0 361,343 L361,233 Z" fill="#FFFFFF"/>
+
+  <!-- Constellation dots in the gap -->
+  <circle cx="241" cy="219" r="4.2" fill="#FFFFFF"/>
+  <circle cx="265" cy="224" r="2.4" fill="#FFFFFF"/>
+  <circle cx="277" cy="216" r="1.7" fill="#FFFFFF"/>
+</svg>

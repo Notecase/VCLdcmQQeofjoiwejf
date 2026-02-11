@@ -36,17 +36,6 @@ function readBooleanEnv(name: string, defaultValue = false): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase())
 }
 
-function readAllowlistEnv(name: string): Set<string> {
-  const raw = process.env[name]
-  if (!raw) return new Set()
-  return new Set(
-    raw
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean)
-  )
-}
-
 function readIntegerEnv(name: string, defaultValue: number): number {
   const raw = process.env[name]
   if (!raw) return defaultValue
@@ -54,21 +43,17 @@ function readIntegerEnv(name: string, defaultValue: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue
 }
 
-function shouldUseEditorDeepRuntime(userId: string, requestedRuntime?: 'legacy' | 'editor-deep') {
+function shouldUseEditorDeepRuntime(_userId: string, requestedRuntime?: 'legacy' | 'editor-deep') {
   const killSwitch = readBooleanEnv('EDITOR_DEEP_AGENT_KILL_SWITCH', false)
   if (killSwitch) return false
-  if (requestedRuntime === 'legacy') return false
 
-  if (requestedRuntime === 'editor-deep') return true
+  // Legacy path only if EXPLICITLY requested — EditorDeep is now the default for ALL users
+  if (requestedRuntime === 'legacy') {
+    console.warn('[agent] Legacy EditorAgent runtime is deprecated. Use editor-deep instead.')
+    return false
+  }
 
-  const globallyEnabled = readBooleanEnv('EDITOR_DEEP_AGENT_ENABLED', true)
-  const allowlist = readAllowlistEnv('EDITOR_DEEP_AGENT_USER_ALLOWLIST')
-  const userAllowed = allowlist.size > 0 && allowlist.has(userId)
-
-  if (!globallyEnabled) return userAllowed
-  if (allowlist.size > 0) return userAllowed
-
-  return true
+  return true  // Always use EditorDeep
 }
 
 function mergeEditorContext(input: {

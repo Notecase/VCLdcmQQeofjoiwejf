@@ -129,13 +129,62 @@ const INTENT_CLASSIFICATION_PROMPT = `You are an intent classification system. A
 7. **read_memory** - Reading AI preferences, plans, or context
 8. **write_memory** - Updating AI preferences, plans, or context
 
-IMPORTANT DISTINCTION - Tables vs Artifacts:
-- "make a table of fastest birds" → database_action (structured data display)
-- "create a table of top 10 countries" → database_action (data table)
-- "list the top 5 programming languages" → database_action (structured list)
-- "create an interactive bird speed visualization" → create_artifact (needs interactivity)
-- "build a stopwatch timer" → create_artifact (interactive widget)
-- "make a calculator" → create_artifact (interactive widget)
+EXAMPLES BY INTENT:
+
+chat:
+- "What is quantum entanglement?" → chat
+- "Explain the difference between TCP and UDP" → chat
+- "Help me understand this concept" → chat
+
+edit_note:
+- "Write a paragraph about machine learning" → edit_note
+- "Rewrite the introduction section" → edit_note
+- "Add a conclusion to this note" → edit_note
+- "Write about quantum computing" → edit_note (NOT chat — writing TO the note)
+
+follow_up:
+- "Can you elaborate on that?" → follow_up
+- "What about the second point?" → follow_up
+- "Continue from where you left off" → follow_up
+
+open_note:
+- "Open my physics notes" → open_note
+- "Go to the project plan" → open_note
+- "Show me the meeting notes" → open_note
+
+create_artifact:
+- "Create an interactive bird speed visualization" → create_artifact (needs interactivity)
+- "Build a stopwatch timer" → create_artifact (interactive widget)
+- "Make a calculator" → create_artifact (interactive widget)
+
+database_action:
+- "Make a table of fastest birds" → database_action (structured data display)
+- "Create a table of top 10 countries" → database_action (data table)
+- "List the top 5 programming languages" → database_action (structured list)
+
+read_memory:
+- "What are my preferences?" → read_memory
+- "What's in my study plan?" → read_memory
+
+write_memory:
+- "Remember that I prefer morning study sessions" → write_memory
+- "Save this as a preference" → write_memory
+
+CRITICAL DISAMBIGUATION — chat vs edit_note:
+- If the user is asking a QUESTION about a topic → chat
+- If the user wants content WRITTEN INTO the note → edit_note
+- "What is X?" → chat (asking for information)
+- "Write about X" → edit_note (wants content added to note)
+- "Explain X" → chat (wants an explanation in chat)
+- "Add an explanation of X" → edit_note (wants explanation in the note)
+
+CRITICAL DISAMBIGUATION — chat vs open_note:
+- "What is this note about?" → open_note (if no note context) or chat (if note is already open)
+- "Summarize this note" → chat (if note is already open, answer from context)
+
+CRITICAL DISAMBIGUATION — database_action vs create_artifact:
+- Static data table → database_action
+- Interactive widget needing JS → create_artifact
 
 Respond with a JSON object:
 {
@@ -368,11 +417,20 @@ export class EditorAgent {
       const noteContext = await this.fetchNoteContent(this.state.context.currentNoteId)
       if (noteContext) {
         contextInfo += `\n[Current note: "${noteContext.title}"]`
+        // Include first 500 chars of note content for better classification
+        const contentSnippet = noteContext.content.slice(0, 500)
+        if (contentSnippet) {
+          contextInfo += `\n[Note preview: "${contentSnippet}${noteContext.content.length > 500 ? '...' : ''}"]`
+        }
       }
     }
 
     if (this.state.messages.length > 0) {
-      contextInfo += `\nPrevious messages in conversation: ${this.state.messages.length}`
+      const recentMessages = this.state.messages.slice(-4)
+      const historySnippet = recentMessages
+        .map(m => `${m.role}: ${m.content.slice(0, 100)}`)
+        .join('\n')
+      contextInfo += `\nRecent conversation:\n${historySnippet}`
     }
 
     const response = await client.chat.completions.create({

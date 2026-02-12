@@ -169,6 +169,78 @@ Saturday was a lighter schedule day. MDP coding exercise took longer than expect
 `
 
 // =============================================================================
+// History files (for streak/analytics — 7 consecutive days ending Feb 9)
+// =============================================================================
+
+const HISTORY_FEB_03 = `# Daily Plan — Mon 03 Feb 2026
+
+- [x] RL: Markov Decision Processes (theory)
+- [x] Break
+- [x] RL Coding Lab: GridWorld Value Iteration
+- [x] Lunch
+- [x] Read Sutton & Barto Ch. 3
+- [ ] Review MDP exercises
+`
+
+const HISTORY_FEB_04 = `# Daily Plan — Tue 04 Feb 2026
+
+- [x] OpenClaw: Project Setup & Configuration
+- [x] Break
+- [x] OpenClaw: Explore existing codebase
+- [ ] Lunch walk
+- [x] RL: Review Bellman Equations
+- [ ] Write Bellman equation summary notes
+`
+
+const HISTORY_FEB_05 = `# Daily Plan — Wed 05 Feb 2026
+
+- [x] RL: Dynamic Programming — Policy Evaluation
+- [x] Break
+- [x] RL Coding Lab: Policy Iteration Implementation
+- [x] Lunch
+- [x] RL: Value Iteration Derivation
+- [x] Review & summarize DP chapter
+`
+
+const HISTORY_FEB_06 = `# Daily Plan — Thu 06 Feb 2026
+
+- [x] OpenClaw: REST API endpoint design
+- [x] Break
+- [ ] OpenClaw: Rate limiting middleware
+- [x] Lunch
+- [x] Read DQN Paper (Mnih et al.)
+- [ ] DQN Paper summary notes
+`
+
+const HISTORY_FEB_07 = `# Daily Plan — Fri 07 Feb 2026
+
+- [x] RL: Monte Carlo Methods (theory)
+- [x] Break
+- [x] RL Coding Lab: First-Visit MC Prediction
+- [x] Lunch
+- [x] RL: On-policy vs Off-policy MC
+- [ ] Implement off-policy MC control
+`
+
+const HISTORY_FEB_08 = `# Daily Plan — Sat 08 Feb 2026
+
+- [x] RL: Review week 1 concepts
+- [x] Break
+- [x] MDP value iteration coding exercise
+- [ ] Lunch walk
+- [ ] Review OpenClaw installation notes
+`
+
+const HISTORY_FEB_09 = `# Daily Plan — Sun 09 Feb 2026
+
+- [x] RL: TD Learning introduction
+- [x] Break
+- [x] RL Coding Lab: TD(0) Prediction
+- [x] Lunch
+- [ ] Read SARSA paper + notes
+`
+
+// =============================================================================
 // Exports — Memory Files
 // =============================================================================
 
@@ -178,6 +250,13 @@ export const DEMO_MEMORY_FILES: MemoryFile[] = [
   memoryFile('mem-carryover', 'Carryover.md', CARRYOVER_MD),
   memoryFile('mem-today', 'Today.md', TODAY_MD),
   memoryFile('mem-tomorrow', 'Tomorrow.md', TOMORROW_MD),
+  memoryFile('mem-hist-03', 'History/2026-02-03.md', HISTORY_FEB_03),
+  memoryFile('mem-hist-04', 'History/2026-02-04.md', HISTORY_FEB_04),
+  memoryFile('mem-hist-05', 'History/2026-02-05.md', HISTORY_FEB_05),
+  memoryFile('mem-hist-06', 'History/2026-02-06.md', HISTORY_FEB_06),
+  memoryFile('mem-hist-07', 'History/2026-02-07.md', HISTORY_FEB_07),
+  memoryFile('mem-hist-08', 'History/2026-02-08.md', HISTORY_FEB_08),
+  memoryFile('mem-hist-09', 'History/2026-02-09.md', HISTORY_FEB_09),
 ]
 
 // =============================================================================

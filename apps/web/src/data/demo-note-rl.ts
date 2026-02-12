@@ -477,7 +477,7 @@ function makeNote(overrides: Partial<Note> & { id: string; title: string; conten
   const words = text.split(/\s+/).filter(Boolean)
   return {
     user_id: 'demo-user',
-    project_id: 'demo-project',
+    project_id: null,
     parent_note_id: null,
     path: `/${overrides.id}`,
     depth: 0,

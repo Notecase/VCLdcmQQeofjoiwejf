@@ -142,7 +142,41 @@ export const useEditorStore = defineStore('editor', {
      * @param parentNoteId - Optional parent note ID to create as subnote (mutually exclusive with projectId)
      */
     async createDocument(projectId?: string, title: string = 'Untitled', parentNoteId?: string) {
-      if (isDemoMode()) return null
+      if (isDemoMode()) {
+        const id = crypto.randomUUID()
+        const now = new Date().toISOString()
+        const doc: Note = {
+          id,
+          user_id: 'demo-user',
+          project_id: parentNoteId ? null : projectId || null,
+          parent_note_id: parentNoteId || null,
+          path: `/${id}`,
+          depth: 0,
+          title,
+          content: '',
+          content_hash: null,
+          word_count: 0,
+          character_count: 0,
+          reading_time_minutes: 0,
+          link_count: 0,
+          attachment_count: 0,
+          editor_state: {},
+          sort_order: 0,
+          tags: [],
+          last_viewed_at: now,
+          is_pinned: false,
+          is_favorite: false,
+          is_archived: false,
+          is_deleted: false,
+          created_at: now,
+          updated_at: now,
+          deleted_at: null,
+          version: 1,
+        }
+        this.documents.unshift(doc)
+        this.openDocument(doc)
+        return doc
+      }
 
       const authStore = useAuthStore()
       if (!authStore.user?.id) {
@@ -211,7 +245,7 @@ export const useEditorStore = defineStore('editor', {
      */
     async loadDocument(id: string) {
       if (isDemoMode()) {
-        const doc = DEMO_DOCUMENTS.find(d => d.id === id)
+        const doc = DEMO_DOCUMENTS.find(d => d.id === id) || this.documents.find(d => d.id === id)
         if (doc) this.openDocument({ ...doc })
         return
       }
@@ -269,7 +303,18 @@ export const useEditorStore = defineStore('editor', {
      * Save the active document
      */
     async saveDocument() {
-      if (isDemoMode()) return
+      if (isDemoMode()) {
+        const tab = this.activeTab
+        if (tab) {
+          tab.isSaved = true
+          this.lastSaved = new Date()
+          const docIndex = this.documents.findIndex((d) => d.id === tab.document.id)
+          if (docIndex !== -1) {
+            this.documents[docIndex] = { ...tab.document }
+          }
+        }
+        return
+      }
       const tab = this.activeTab
       if (!tab || tab.isSaved) return
 
@@ -346,7 +391,11 @@ export const useEditorStore = defineStore('editor', {
      * Delete a document
      */
     async deleteDocument(id: string) {
-      if (isDemoMode()) return
+      if (isDemoMode()) {
+        this.documents = this.documents.filter((d) => d.id !== id)
+        this.closeTab(id)
+        return
+      }
       try {
         const result = await notesService.deleteNote(id)
 
@@ -369,6 +418,16 @@ export const useEditorStore = defineStore('editor', {
      * Rename a document
      */
     async renameDocument(id: string, newTitle: string) {
+      if (isDemoMode()) {
+        const doc = this.documents.find((d) => d.id === id)
+        if (doc) doc.title = newTitle
+        const tab = this.tabs.find((t) => t.document.id === id)
+        if (tab) tab.document.title = newTitle
+        if (this.currentDocument?.id === id) {
+          this.currentDocument.title = newTitle
+        }
+        return
+      }
       try {
         const result = await notesService.updateNote(id, { title: newTitle })
 

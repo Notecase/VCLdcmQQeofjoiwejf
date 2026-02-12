@@ -51,32 +51,36 @@ const openclawModules: CourseModule[] = [
         content: {
           markdown: `# What is OpenClaw?
 
-OpenClaw is an **open-source, self-hosted AI gateway** that lets you connect multiple AI providers (OpenAI, Anthropic, Google, local models) behind a single unified API. Think of it as a reverse proxy for AI — your applications talk to OpenClaw, and OpenClaw routes requests to the right provider based on rules you define.
+OpenClaw is an **open-source, self-hosted AI agent runtime** that lets you connect multiple AI providers (OpenAI, Anthropic, local models) behind a single hub-and-spoke WebSocket architecture. Think of it as a multi-agent orchestration layer — your applications connect to OpenClaw sessions, and OpenClaw routes messages to the right agent and provider based on workspaces you define. All state is persisted locally in SQLite.
 
 ## Why OpenClaw?
 
-Modern applications rarely rely on a single AI provider. You might use GPT-4 for creative writing, Claude for analysis, and a local Llama model for sensitive data. Without a gateway, each integration requires its own SDK, error handling, and configuration.
+Modern applications rarely rely on a single AI provider. You might use GPT-5.2 for creative writing, Claude Sonnet 4.5 for analysis, and a local Llama model for sensitive data. Without a runtime, each integration requires its own SDK, error handling, and configuration.
 
 OpenClaw solves this by providing:
 
-- **Unified API**: One endpoint for all providers. Switch providers without changing application code.
-- **Intelligent Routing**: Route requests based on model capability, cost, latency, or custom rules.
-- **Multi-Channel Support**: Connect AI to WhatsApp, Telegram, Discord, Slack, and custom webhooks.
-- **Plugin System**: Extend functionality with custom plugins for logging, caching, rate limiting, and more.
+- **Unified API**: One WebSocket endpoint for all providers. Switch providers without changing application code.
+- **Hub-and-Spoke Sessions**: Create isolated workspaces with dedicated agent sessions and SQLite storage.
+- **Multi-Channel Support**: Connect AI to WhatsApp, Telegram, Discord, Slack, iMessage, Signal, and custom webhooks.
+- **Tool System**: Extend functionality with tools, cron jobs, webhooks, and Canvas support.
 - **Cost Management**: Track token usage and costs across all providers with built-in dashboards.
 
 ## Architecture Overview
 
 \`\`\`
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  Your App   │────>│   OpenClaw    │────>│  AI Providers   │
-│  (HTTP/WS)  │<────│   Gateway    │<────│  (OpenAI, etc.) │
-└─────────────┘     ├──────────────┤     └─────────────────┘
-                    │  - Router    │
-┌─────────────┐     │  - Plugins   │     ┌─────────────────┐
-│  Channels   │<───>│  - Channels  │     │  Local Models   │
-│  (WA/TG/DC) │     │  - Auth      │     │  (Ollama, etc.) │
-└─────────────┘     └──────────────┘     └─────────────────┘
+┌─────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│  Your App   │◄═══►│     OpenClaw Hub      │────>│  AI Providers   │
+│  (WebSocket)│     ├──────────────────────┤     │  (OpenAI, etc.) │
+└─────────────┘     │  ┌────────────────┐  │     └─────────────────┘
+                    │  │  Workspace A   │  │
+┌─────────────┐     │  │  ├─ Session 1  │  │     ┌─────────────────┐
+│  Channels   │◄═══►│  │  ├─ Session 2  │  │     │  Local Models   │
+│  (WA/TG/DC) │     │  │  └─ SQLite DB  │  │     │  (Ollama, etc.) │
+└─────────────┘     │  ├────────────────┤  │     └─────────────────┘
+                    │  │  Workspace B   │  │
+                    │  │  └─ Session 3  │  │
+                    │  └────────────────┘  │
+                    └──────────────────────┘
 \`\`\`
 
 ## Key Concepts
@@ -84,28 +88,28 @@ OpenClaw solves this by providing:
 | Concept | Description |
 |---------|-------------|
 | **Provider** | An AI service backend (OpenAI, Anthropic, Ollama) |
-| **Route** | A rule that maps incoming requests to a provider |
+| **Workspace** | An isolated environment with its own agents, sessions, and SQLite storage |
+| **Session** | A stateful conversation thread within a workspace |
 | **Channel** | An external messaging platform (WhatsApp, Telegram) |
-| **Plugin** | A middleware that processes requests/responses |
+| **Tool** | An extension that adds capabilities (tools, cron, webhooks, Canvas) |
 | **Agent** | A configured AI persona with specific instructions and model |
 
 ## Getting Started
 
-To install OpenClaw, you need Node.js 20+ and a package manager. The quickest way:
+To install OpenClaw, you need Node.js 22+ and curl. The quickest way:
 
 \`\`\`bash
-npx create-openclaw my-gateway
-cd my-gateway
-npm start
+curl -fsSL https://openclaw.ai/install.sh | bash
+openclaw onboard --install-daemon
 \`\`\`
 
-This creates a new OpenClaw project with sensible defaults. The gateway will be running at \`http://localhost:3000\`.
+This installs the OpenClaw daemon and runs initial setup. The runtime will be available at \`http://localhost:18789\`.
 
 In the next lessons, we'll explore the architecture in detail and get your first gateway running.`,
           keyTerms: [
-            { term: 'Gateway', definition: 'A reverse proxy that routes AI requests to providers' },
+            { term: 'Hub', definition: 'The central OpenClaw runtime that orchestrates agents and sessions' },
             { term: 'Provider', definition: 'An AI service backend like OpenAI or Anthropic' },
-            { term: 'Route', definition: 'A rule mapping incoming requests to a specific provider' },
+            { term: 'Workspace', definition: 'An isolated environment with its own agents, sessions, and SQLite storage' },
           ],
         },
       },
@@ -120,71 +124,74 @@ In the next lessons, we'll explore the architecture in detail and get your first
         content: {
           markdown: `# Architecture Overview
 
-OpenClaw follows a layered architecture with clear separation of concerns. Understanding these layers is crucial for effective configuration and plugin development.
+OpenClaw follows a hub-and-spoke architecture with clear separation of concerns. Understanding these layers is crucial for effective configuration and tool development.
 
 ## Request Lifecycle
 
-Every request flows through these stages:
+Every message flows through these stages:
 
-1. **Ingestion** — The request arrives via HTTP API or a channel adapter (WhatsApp, Telegram).
+1. **Ingestion** — The message arrives via WebSocket connection or a channel adapter (WhatsApp, Telegram).
 2. **Authentication** — API keys or channel tokens are validated.
-3. **Pre-processing** — Plugins run their \`beforeRequest\` hooks (rate limiting, caching, logging).
-4. **Routing** — The router evaluates rules and selects the target provider.
-5. **Transformation** — The request is converted from OpenClaw format to the provider's SDK format.
+3. **Session Lookup** — The hub resolves the target workspace and session.
+4. **Routing** — The router evaluates workspace rules and selects the target agent and provider.
+5. **Transformation** — The message is converted from OpenClaw format to the provider's SDK format.
 6. **Execution** — The request is sent to the AI provider.
-7. **Post-processing** — Plugins run their \`afterResponse\` hooks (token counting, cost tracking).
-8. **Response** — The unified response is returned to the caller.
+7. **Tool Execution** — Any registered tools are invoked as needed.
+8. **Response** — The unified response is returned to the caller via WebSocket.
 
 ## Configuration File
 
-OpenClaw uses a YAML configuration file (\`openclaw.config.yml\`) at the project root:
+OpenClaw uses a JSON5 configuration file (\`~/.openclaw/openclaw.json\`) in the user's home directory:
 
-\`\`\`yaml
-# openclaw.config.yml
-server:
-  port: 3000
-  cors: true
-
-providers:
-  openai:
-    apiKey: \${OPENAI_API_KEY}
-    models: [gpt-4, gpt-3.5-turbo]
-  anthropic:
-    apiKey: \${ANTHROPIC_API_KEY}
-    models: [claude-3-opus, claude-3-sonnet]
-
-routes:
-  - name: default
-    match: "*"
-    provider: openai
-    model: gpt-3.5-turbo
-  - name: premium
-    match:
-      header: x-tier=premium
-    provider: anthropic
-    model: claude-3-opus
-
-plugins:
-  - name: rate-limiter
-    config:
-      maxRequests: 100
-      windowMs: 60000
-  - name: cost-tracker
+\`\`\`json5
+// ~/.openclaw/openclaw.json
+{
+  server: {
+    port: 18789,
+    cors: true,
+  },
+  providers: {
+    openai: {
+      apiKey: "\${OPENAI_API_KEY}",
+      models: ["openai/gpt-5.2"],
+    },
+    anthropic: {
+      apiKey: "\${ANTHROPIC_API_KEY}",
+      models: ["anthropic/claude-sonnet-4-5", "anthropic/claude-opus-4-5"],
+    },
+  },
+  routes: [
+    {
+      name: "default",
+      match: "*",
+      model: "anthropic/claude-sonnet-4-5",
+    },
+    {
+      name: "premium",
+      match: { header: "x-tier=premium" },
+      model: "anthropic/claude-opus-4-5",
+    },
+  ],
+  tools: [
+    { name: "rate-limiter", config: { maxRequests: 100, windowMs: 60000 } },
+    { name: "cost-tracker" },
+  ],
+}
 \`\`\`
 
 ## Key Directories
 
 | Directory | Purpose |
 |-----------|---------|
-| \`/config\` | Configuration files and environment setup |
-| \`/plugins\` | Custom and built-in plugins |
-| \`/channels\` | Channel adapters (WhatsApp, Telegram, etc.) |
-| \`/providers\` | Provider SDKs and transformers |
-| \`/routes\` | Routing rule definitions |
+| \`~/.openclaw/\` | Main config, SQLite databases, and workspace state |
+| \`~/.openclaw/tools/\` | Custom and built-in tools |
+| \`~/.openclaw/channels/\` | Channel adapters (WhatsApp, Telegram, etc.) |
+| \`~/.openclaw/workspaces/\` | Per-workspace data and sessions |
+| \`~/.openclaw/logs/\` | Structured log output |
 
 ## Environment Variables
 
-OpenClaw reads provider API keys from environment variables. Never hardcode secrets in configuration files. Use a \`.env\` file for local development:
+OpenClaw reads provider API keys from environment variables. Never hardcode secrets in configuration files. Use a \`.env\` file or export directly:
 
 \`\`\`bash
 OPENAI_API_KEY=sk-...
@@ -192,11 +199,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 OPENCLAW_SECRET=your-admin-secret
 \`\`\`
 
-The architecture is designed for extensibility — every layer can be customized through the plugin system, which we'll explore in Module 4.`,
+The architecture is designed for extensibility — every layer can be customized through the tool system, which we'll explore in Module 4.`,
           keyTerms: [
-            { term: 'Request Lifecycle', definition: 'The stages a request passes through from ingestion to response' },
-            { term: 'Route', definition: 'A rule that determines which provider handles a request' },
-            { term: 'Plugin Hook', definition: 'A function that runs at specific points in the request lifecycle' },
+            { term: 'Request Lifecycle', definition: 'The stages a message passes through from ingestion to response' },
+            { term: 'Workspace', definition: 'An isolated environment that determines which agent and provider handle a request' },
+            { term: 'Tool', definition: 'An extension that adds capabilities to the runtime (tools, cron, webhooks)' },
           ],
         },
       },
@@ -211,13 +218,13 @@ The architecture is designed for extensibility — every layer can be customized
         content: {
           markdown: `# Installation & First Run
 
-In this hands-on lesson, you'll install OpenClaw and make your first AI request through the gateway.
+In this hands-on lesson, you'll install OpenClaw and make your first AI request through the runtime.
 
 ## Prerequisites
 
-- Node.js 20 or later
-- npm, pnpm, or yarn
-- An API key from at least one AI provider (OpenAI recommended for this exercise)
+- Node.js 22 or later
+- curl
+- An API key from at least one AI provider (Anthropic recommended for this exercise)
 
 ## Steps
 
@@ -226,23 +233,23 @@ Follow the practice problems below to get OpenClaw running on your machine.`,
             {
               id: 'oc-p1',
               type: 'short-answer',
-              question: 'Run `npx create-openclaw my-first-gateway` and paste the output showing the server URL.',
-              explanation: 'The CLI scaffolds a new project and shows the default server address (http://localhost:3000).',
-              sampleAnswer: 'Server running at http://localhost:3000',
+              question: 'Run `curl -fsSL https://openclaw.ai/install.sh | bash` followed by `openclaw onboard --install-daemon` and paste the output showing the server URL.',
+              explanation: 'The installer downloads the OpenClaw daemon and onboard runs initial setup (default address: http://localhost:18789).',
+              sampleAnswer: 'OpenClaw daemon running at http://localhost:18789',
             },
             {
               id: 'oc-p2',
               type: 'multiple-choice',
               question: 'Which file contains the main OpenClaw configuration?',
-              options: ['package.json', 'openclaw.config.yml', '.env', 'tsconfig.json'],
+              options: ['package.json', '~/.openclaw/openclaw.json', '.env', 'tsconfig.json'],
               correctIndex: 1,
-              explanation: 'openclaw.config.yml is the main configuration file that defines providers, routes, and plugins.',
+              explanation: '~/.openclaw/openclaw.json (JSON5 format) is the main configuration file that defines providers, routes, and tools.',
             },
             {
               id: 'oc-p3',
               type: 'short-answer',
-              question: 'Make a curl request to your running gateway: `curl http://localhost:3000/v1/chat/completions -H "Content-Type: application/json" -d \'{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello"}]}\'`. What response did you get?',
-              explanation: 'The gateway should proxy the request to OpenAI and return a chat completion response.',
+              question: 'Make a curl request to your running runtime: `curl http://localhost:18789/v1/chat/completions -H "Content-Type: application/json" -d \'{"model":"anthropic/claude-sonnet-4-5","messages":[{"role":"user","content":"Hello"}]}\'`. What response did you get?',
+              explanation: 'The runtime should proxy the request to Anthropic and return a chat completion response.',
               sampleAnswer: 'A JSON response with choices[0].message.content containing the AI reply.',
             },
           ],
@@ -272,7 +279,7 @@ Follow the practice problems below to get OpenClaw running on your machine.`,
         content: {
           markdown: `# Channel Concepts
 
-Channels are the bridge between messaging platforms and your AI gateway. Each channel adapter translates platform-specific message formats into OpenClaw's unified format and back.
+Channels are the bridge between messaging platforms and your AI runtime. Each channel adapter translates platform-specific message formats into OpenClaw's unified format and back.
 
 ## How Channels Work
 
@@ -290,40 +297,60 @@ When a user sends a message on WhatsApp, the channel adapter:
 
 | Channel | Status | Auth Method |
 |---------|--------|-------------|
-| WhatsApp Business | Stable | API Token |
-| Telegram Bot | Stable | Bot Token |
+| WhatsApp (Baileys) | Stable | QR Code pairing |
+| Telegram Bot (grammY) | Stable | Bot Token |
 | Discord Bot | Stable | Bot Token |
 | Slack | Beta | OAuth |
+| iMessage | Beta | Apple ID |
+| Signal | Beta | Signal account |
+| Google Chat | Beta | Service Account |
+| Mattermost | Stable | Bot Token |
+| MS Teams | Beta | Azure AD |
 | Custom Webhook | Stable | API Key |
 
 ## Channel Configuration
 
-Each channel is configured in \`openclaw.config.yml\`:
+Each channel is configured in \`~/.openclaw/openclaw.json\`:
 
-\`\`\`yaml
-channels:
-  whatsapp:
-    enabled: true
-    phoneNumberId: \${WA_PHONE_ID}
-    accessToken: \${WA_ACCESS_TOKEN}
-    verifyToken: \${WA_VERIFY_TOKEN}
-    agent: customer-support  # Which agent handles this channel
-
-  telegram:
-    enabled: true
-    botToken: \${TG_BOT_TOKEN}
-    agent: general-assistant
+\`\`\`json5
+{
+  channels: {
+    whatsapp: {
+      enabled: true,
+      // Baileys-based: just scan a QR code to pair
+      agent: "customer-support",  // Which agent handles this channel
+      dmPolicy: "allowlist",      // pairing | allowlist | open | disabled
+    },
+    telegram: {
+      enabled: true,
+      botToken: "\${TG_BOT_TOKEN}",
+      agent: "general-assistant",
+      dmPolicy: "open",
+    },
+  },
+}
 \`\`\`
+
+## DM Policy
+
+Each channel supports a \`dmPolicy\` that controls who can interact:
+
+| Policy | Behavior |
+|--------|----------|
+| **pairing** | Users must be explicitly paired before messaging |
+| **allowlist** | Only pre-approved users can interact |
+| **open** | Anyone can message the agent |
+| **disabled** | Channel receives but does not respond to DMs |
 
 ## Agent-Channel Binding
 
-Each channel is bound to an **agent** — a configured AI persona. This means the WhatsApp channel could use a customer-support-focused agent while Telegram uses a general-purpose assistant. Different channels, different personalities, same gateway.
+Each channel is bound to an **agent** — a configured AI persona. This means the WhatsApp channel could use a customer-support-focused agent while Telegram uses a general-purpose assistant. Different channels, different personalities, same runtime.
 
 The agent configuration includes system prompts, model selection, and behavioral parameters. We'll explore this in Module 3.`,
           keyTerms: [
             { term: 'Channel', definition: 'An adapter connecting a messaging platform to OpenClaw' },
             { term: 'Agent', definition: 'A configured AI persona with specific instructions and model' },
-            { term: 'Webhook', definition: 'An HTTP callback that platforms use to send messages to your server' },
+            { term: 'dmPolicy', definition: 'Controls who can interact with the agent on a channel (pairing, allowlist, open, disabled)' },
           ],
         },
       },
@@ -338,41 +365,52 @@ The agent configuration includes system prompts, model selection, and behavioral
         content: {
           markdown: `# WhatsApp Integration
 
-WhatsApp Business API integration is one of OpenClaw's most popular features. This lesson walks through the setup process.
+WhatsApp integration is one of OpenClaw's most popular features. OpenClaw uses **Baileys** (the WhatsApp Web protocol) rather than Meta's Cloud API, making setup much simpler — just scan a QR code.
 
 ## Prerequisites
 
-- A Meta Business Account
-- A WhatsApp Business Account
-- Access to the WhatsApp Business API (Cloud API)
+- A WhatsApp account (personal or business)
+- OpenClaw daemon running on port 18789
 
 ## Setup Steps
 
-### 1. Create a Meta App
+### 1. Enable WhatsApp Channel
 
-Go to the Meta Developer Portal and create a new app with the WhatsApp product enabled. Note your:
-- **Phone Number ID**: Found in the WhatsApp > Getting Started section
-- **Access Token**: A permanent token from System Users or a temporary one for testing
+Add the WhatsApp channel to your \`~/.openclaw/openclaw.json\`:
 
-### 2. Configure the Webhook
+\`\`\`json5
+{
+  channels: {
+    whatsapp: {
+      enabled: true,
+      agent: "customer-support",
+      dmPolicy: "allowlist",
+    },
+  },
+}
+\`\`\`
 
-OpenClaw exposes a webhook endpoint at \`/channels/whatsapp/webhook\`. Configure it in Meta's dashboard:
+### 2. Scan QR Code
 
-- **Callback URL**: \`https://your-domain.com/channels/whatsapp/webhook\`
-- **Verify Token**: A string you choose (must match \`WA_VERIFY_TOKEN\`)
-- **Subscribed Fields**: \`messages\`
-
-### 3. Environment Variables
+Run the pairing command and scan the QR code with your WhatsApp app:
 
 \`\`\`bash
-WA_PHONE_ID=1234567890
-WA_ACCESS_TOKEN=EAABx...
-WA_VERIFY_TOKEN=my-secret-verify-token
+openclaw channel pair whatsapp
+\`\`\`
+
+This opens a terminal QR code. Scan it from WhatsApp > Linked Devices > Link a Device.
+
+### 3. Verify Connection
+
+Once paired, verify the connection:
+
+\`\`\`bash
+curl http://localhost:18789/channels/whatsapp/status
 \`\`\`
 
 ### 4. Test the Integration
 
-Send a message to your WhatsApp Business number. You should see the message flow through the OpenClaw logs and receive an AI-generated reply.
+Send a message to your WhatsApp number from another phone. You should see the message flow through the OpenClaw logs and receive an AI-generated reply.
 
 ## Message Types
 
@@ -391,12 +429,12 @@ OpenClaw handles various WhatsApp message types:
 ## Error Handling
 
 WhatsApp has strict rate limits and delivery requirements. OpenClaw handles:
-- Automatic retry on 429 (rate limit) responses
+- Automatic retry on rate-limited responses
 - Message status tracking (sent, delivered, read)
 - Fallback to simpler formats when rich messages fail`,
           keyTerms: [
-            { term: 'Phone Number ID', definition: 'Unique identifier for your WhatsApp Business phone number' },
-            { term: 'Verify Token', definition: 'A shared secret used to verify webhook authenticity' },
+            { term: 'Baileys', definition: 'Open-source WhatsApp Web protocol library used by OpenClaw for WhatsApp integration' },
+            { term: 'QR Pairing', definition: 'Authentication method where you scan a QR code to link your WhatsApp account' },
           ],
         },
       },
@@ -415,6 +453,8 @@ Both Telegram and Discord use bot tokens for authentication, making them simpler
 
 ## Telegram Setup
 
+OpenClaw uses the **grammY** framework for Telegram integration.
+
 ### 1. Create a Bot
 
 Talk to @BotFather on Telegram:
@@ -424,13 +464,18 @@ Talk to @BotFather on Telegram:
 
 ### 2. Configure OpenClaw
 
-\`\`\`yaml
-channels:
-  telegram:
-    enabled: true
-    botToken: \${TG_BOT_TOKEN}
-    agent: study-assistant
-    webhook: true  # Use webhook mode (recommended for production)
+\`\`\`json5
+{
+  channels: {
+    telegram: {
+      enabled: true,
+      botToken: "\${TG_BOT_TOKEN}",
+      agent: "study-assistant",
+      webhook: true,  // Use webhook mode (recommended for production)
+      dmPolicy: "open",
+    },
+  },
+}
 \`\`\`
 
 ### 3. Set Webhook
@@ -453,13 +498,18 @@ Go to the Discord Developer Portal:
 
 ### 2. Configure OpenClaw
 
-\`\`\`yaml
-channels:
-  discord:
-    enabled: true
-    botToken: \${DC_BOT_TOKEN}
-    agent: community-helper
-    guilds: ["123456789"]  # Optional: restrict to specific servers
+\`\`\`json5
+{
+  channels: {
+    discord: {
+      enabled: true,
+      botToken: "\${DC_BOT_TOKEN}",
+      agent: "community-helper",
+      guilds: ["123456789"],  // Optional: restrict to specific servers
+      dmPolicy: "open",
+    },
+  },
+}
 \`\`\`
 
 ### 3. Invite the Bot
@@ -471,6 +521,7 @@ Generate an invite URL with the required permissions (Send Messages, Read Messag
 | Feature | Telegram | Discord |
 |---------|----------|---------|
 | Setup complexity | Low | Low |
+| Framework | grammY | discord.js |
 | Message types | Text, images, files | Text, embeds, files |
 | Group support | Yes | Yes (channels & threads) |
 | Rate limits | 30 msg/sec | 50 req/sec per guild |
@@ -479,7 +530,7 @@ Generate an invite URL with the required permissions (Send Messages, Read Messag
 Both platforms work great with OpenClaw. Choose based on where your users already are.`,
           keyTerms: [
             { term: 'Bot Token', definition: 'Authentication credential for a bot account on messaging platforms' },
-            { term: 'Webhook Mode', definition: 'Server receives events via HTTP callbacks instead of polling' },
+            { term: 'grammY', definition: 'The Telegram bot framework used by OpenClaw for Telegram integration' },
           ],
         },
       },
@@ -510,10 +561,10 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
             {
               id: 'oc-q1-2',
               type: 'multiple-choice',
-              question: 'Which authentication method does the WhatsApp Business API use?',
-              options: ['Bot Token', 'OAuth 2.0', 'API Token (Access Token)', 'Username/Password'],
+              question: 'How does OpenClaw authenticate with WhatsApp?',
+              options: ['Bot Token', 'OAuth 2.0', 'QR code pairing via Baileys', 'Username/Password'],
               correctIndex: 2,
-              explanation: 'WhatsApp Business Cloud API uses a permanent or temporary Access Token from Meta.',
+              explanation: 'OpenClaw uses Baileys (WhatsApp Web protocol) and authenticates by scanning a QR code from the Linked Devices menu.',
             },
             {
               id: 'oc-q1-3',
@@ -531,7 +582,7 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
             {
               id: 'oc-q1-4',
               type: 'multiple-choice',
-              question: 'Which field in openclaw.config.yml binds a channel to a specific AI persona?',
+              question: 'Which field in openclaw.json binds a channel to a specific AI persona?',
               options: ['model', 'provider', 'agent', 'route'],
               correctIndex: 2,
               explanation: 'The "agent" field in channel configuration binds the channel to a specific AI persona.',
@@ -563,61 +614,66 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
         content: {
           markdown: `# Connecting AI Providers
 
-OpenClaw supports multiple AI providers out of the box. Each provider is configured with its API credentials and available models.
+OpenClaw supports multiple AI providers out of the box. Each provider is configured with its API credentials and available models. Models use a unified \`"provider/model"\` string format.
 
 ## Supported Providers
 
 | Provider | Models | Streaming | Function Calling |
 |----------|--------|-----------|------------------|
-| OpenAI | GPT-4, GPT-3.5, o1 | Yes | Yes |
-| Anthropic | Claude 3 Opus/Sonnet/Haiku | Yes | Yes |
-| Google | Gemini Pro, Gemini Ultra | Yes | Yes |
+| OpenAI | GPT-5.2 (\`openai/gpt-5.2\`) | Yes | Yes |
+| Anthropic | Claude Opus 4.5 (\`anthropic/claude-opus-4-5\`), Sonnet 4.5 (\`anthropic/claude-sonnet-4-5\`), Haiku 4.5 (\`anthropic/claude-haiku-4-5\`) | Yes | Yes |
 | Ollama | Any local model | Yes | Partial |
-| Azure OpenAI | GPT-4, GPT-3.5 | Yes | Yes |
+| Azure OpenAI | GPT-5.2 (via Azure) | Yes | Yes |
 
 ## Configuration
 
-Add providers to your \`openclaw.config.yml\`:
+Add providers to your \`~/.openclaw/openclaw.json\`:
 
-\`\`\`yaml
-providers:
-  openai:
-    apiKey: \${OPENAI_API_KEY}
-    organization: \${OPENAI_ORG_ID}  # Optional
-    models:
-      - gpt-4
-      - gpt-3.5-turbo
-    defaults:
-      temperature: 0.7
-      maxTokens: 2048
-
-  anthropic:
-    apiKey: \${ANTHROPIC_API_KEY}
-    models:
-      - claude-3-opus-20240229
-      - claude-3-sonnet-20240229
-    defaults:
-      maxTokens: 4096
-
-  ollama:
-    baseUrl: http://localhost:11434
-    models:
-      - llama3
-      - mistral
+\`\`\`json5
+{
+  providers: {
+    openai: {
+      apiKey: "\${OPENAI_API_KEY}",
+      organization: "\${OPENAI_ORG_ID}",  // Optional
+      models: ["openai/gpt-5.2"],
+      defaults: {
+        temperature: 0.7,
+        maxTokens: 2048,
+      },
+    },
+    anthropic: {
+      apiKey: "\${ANTHROPIC_API_KEY}",
+      models: [
+        "anthropic/claude-opus-4-5",
+        "anthropic/claude-sonnet-4-5",
+        "anthropic/claude-haiku-4-5",
+      ],
+      defaults: {
+        maxTokens: 4096,
+      },
+    },
+    ollama: {
+      baseUrl: "http://localhost:11434",
+      models: ["ollama/llama3", "ollama/mistral"],
+    },
+  },
+}
 \`\`\`
 
 ## Provider Health Checks
 
 OpenClaw periodically checks provider availability. If a provider goes down, requests are automatically rerouted to a fallback:
 
-\`\`\`yaml
-routes:
-  - name: resilient
-    provider: openai
-    model: gpt-4
-    fallback:
-      provider: anthropic
-      model: claude-3-sonnet
+\`\`\`json5
+{
+  routes: [
+    {
+      name: "resilient",
+      model: "openai/gpt-5.2",
+      fallback: "anthropic/claude-sonnet-4-5",
+    },
+  ],
+}
 \`\`\`
 
 ## Cost Tracking
@@ -645,34 +701,40 @@ Each provider reports token usage. OpenClaw aggregates this into cost dashboards
         content: {
           markdown: `# Routing Rules
 
-The router is the brain of OpenClaw. It evaluates incoming requests against rules and determines which provider and model should handle each request.
+The router is the brain of OpenClaw. It evaluates incoming messages against workspace rules and determines which agent and model should handle each request. Workspaces provide isolation, and sessions within workspaces maintain conversation state.
 
 ## Rule Anatomy
 
 Each route has these components:
 
-\`\`\`yaml
-routes:
-  - name: premium-coding     # Unique identifier
-    priority: 10              # Higher = evaluated first
-    match:                    # Conditions to check
-      header: x-tier=premium
-      category: coding
-    provider: anthropic       # Target provider
-    model: claude-3-opus      # Target model
-    transform:                # Optional request modifications
-      systemPrompt: "You are a senior software engineer."
-      temperature: 0.3
+\`\`\`json5
+{
+  routes: [
+    {
+      name: "premium-coding",     // Unique identifier
+      priority: 10,               // Higher = evaluated first
+      match: {                    // Conditions to check
+        header: "x-tier=premium",
+        category: "coding",
+      },
+      model: "anthropic/claude-opus-4-5",  // Unified provider/model
+      transform: {                // Optional request modifications
+        systemPrompt: "You are a senior software engineer.",
+        temperature: 0.3,
+      },
+    },
+  ],
+}
 \`\`\`
 
 ## Matching Strategies
 
 | Strategy | Example | Use Case |
 |----------|---------|----------|
-| Header match | \`header: x-tier=premium\` | Tier-based routing |
-| Path match | \`path: /v1/code/*\` | Endpoint-based routing |
+| Header match | \`header: "x-tier=premium"\` | Tier-based routing |
+| Path match | \`path: "/v1/code/*"\` | Endpoint-based routing |
 | Content match | \`contains: "translate"\` | Intent-based routing |
-| Model match | \`model: gpt-4\` | Model preference routing |
+| Model match | \`model: "openai/gpt-5.2"\` | Model preference routing |
 | Random | \`weight: 0.3\` | A/B testing, load distribution |
 | Time-based | \`schedule: "9-17 EST"\` | Cost optimization |
 
@@ -680,22 +742,23 @@ routes:
 
 Routes are evaluated in priority order (highest first). The first matching route wins. If no route matches, the default route is used.
 
-## Dynamic Routing with Plugins
+## Dynamic Routing with Tools
 
-For complex routing logic, use a router plugin:
+For complex routing logic, register a router tool:
 
 \`\`\`typescript
-export default {
+import { defineTool } from '@openclaw/sdk'
+
+export default defineTool({
   name: 'smart-router',
-  hooks: {
-    beforeRoute(ctx) {
-      // Analyze message content and set routing hints
-      if (ctx.message.includes('code')) {
-        ctx.routeHint = 'coding-specialist'
-      }
+  type: 'router',
+  async execute(ctx) {
+    // Analyze message content and set routing hints
+    if (ctx.message.includes('code')) {
+      ctx.routeHint = 'coding-specialist'
     }
-  }
-}
+  },
+})
 \`\`\`
 
 This gives you full programmatic control over routing decisions.`,
@@ -721,9 +784,9 @@ Configure a gateway with multiple agents and routing rules to handle different t
             {
               id: 'oc-p3-1',
               type: 'short-answer',
-              question: 'Write a YAML route that sends requests with the header `x-purpose: creative` to Claude 3 Opus and all other requests to GPT-3.5-turbo.',
+              question: 'Write a JSON5 route config that sends requests with the header `x-purpose: creative` to Claude Opus 4.5 and all other requests to Claude Haiku 4.5.',
               explanation: 'You need two routes: one with header matching and a default fallback.',
-              sampleAnswer: 'routes:\n  - name: creative\n    match:\n      header: x-purpose=creative\n    provider: anthropic\n    model: claude-3-opus\n  - name: default\n    match: "*"\n    provider: openai\n    model: gpt-3.5-turbo',
+              sampleAnswer: 'routes: [\n  { name: "creative", match: { header: "x-purpose=creative" }, model: "anthropic/claude-opus-4-5" },\n  { name: "default", match: "*", model: "anthropic/claude-haiku-4-5" },\n]',
             },
             {
               id: 'oc-p3-2',
@@ -760,67 +823,76 @@ Configure a gateway with multiple agents and routing rules to handle different t
         content: {
           markdown: `# Plugin Architecture
 
-Plugins are the primary extension mechanism in OpenClaw. They hook into the request lifecycle to add functionality like caching, rate limiting, logging, and custom transformations.
+OpenClaw uses a **tool-based extension model**. Extensions are registered as tools, cron jobs, webhooks, or Canvas apps — not lifecycle hooks. This design keeps extensions modular and composable.
 
-## Plugin Structure
+## Extension Types
 
-A plugin is a JavaScript/TypeScript module that exports a plugin object:
+| Type | Description | Example |
+|------|-------------|---------|
+| **Tool** | A callable function agents can invoke | Web search, database query |
+| **Cron** | A scheduled task that runs periodically | Daily report, cleanup job |
+| **Webhook** | An HTTP endpoint that triggers actions | GitHub push handler, payment callback |
+| **Canvas** | An interactive UI component | Dashboard, form, visualization |
+
+## Tool Structure
+
+A tool is a JavaScript/TypeScript module that exports a tool definition:
 
 \`\`\`typescript
-import type { Plugin, RequestContext, ResponseContext } from '@openclaw/sdk'
+import { defineTool } from '@openclaw/sdk'
 
-export default {
-  name: 'my-plugin',
+export default defineTool({
+  name: 'my-tool',
   version: '1.0.0',
+  description: 'Describes what this tool does for the agent',
 
-  async beforeRequest(ctx: RequestContext) {
-    // Runs before the request is sent to the provider
-    console.log('Incoming request:', ctx.model, ctx.messages.length, 'messages')
+  parameters: {
+    query: { type: 'string', description: 'Search query', required: true },
   },
 
-  async afterResponse(ctx: ResponseContext) {
-    // Runs after the response is received
-    console.log('Response tokens:', ctx.usage.totalTokens)
+  async execute(params, ctx) {
+    // Called when an agent invokes this tool
+    console.log('Tool invoked with:', params.query)
+    return { result: 'Tool output here' }
   },
-
-  async onError(error: Error, ctx: RequestContext) {
-    // Runs when an error occurs
-    console.error('Request failed:', error.message)
-  }
-} satisfies Plugin
+})
 \`\`\`
 
-## Lifecycle Hooks
+## Extension Registration
 
-| Hook | When | Use Cases |
-|------|------|-----------|
-| \`beforeRequest\` | Before routing | Auth, rate limiting, caching |
-| \`afterRoute\` | After route selection | Logging, metrics |
-| \`beforeSend\` | Before provider call | Request transformation |
-| \`afterResponse\` | After provider response | Token counting, caching |
-| \`onError\` | On any error | Error reporting, fallback |
-| \`onStream\` | During streaming | Real-time monitoring |
+| Pattern | When It Runs | Use Cases |
+|---------|-------------|-----------|
+| \`tool\` | When an agent invokes it | Search, API calls, data retrieval |
+| \`cron\` | On a schedule | Reports, cleanup, health checks |
+| \`webhook\` | On incoming HTTP request | External integrations, callbacks |
+| \`canvas\` | When a user opens the Canvas | Dashboards, interactive UIs |
 
-## Plugin Configuration
+## Tool Configuration
 
-Plugins receive their configuration from the main config file:
+Tools receive their configuration from the main config file:
 
-\`\`\`yaml
-plugins:
-  - name: my-plugin
-    config:
-      logLevel: debug
-      maxRetries: 3
+\`\`\`json5
+{
+  tools: [
+    {
+      name: "my-tool",
+      config: {
+        logLevel: "debug",
+        maxRetries: 3,
+      },
+    },
+  ],
+}
 \`\`\`
 
-Access the config in your plugin via \`ctx.pluginConfig\`.
+Access the config in your tool via \`ctx.config\`.
 
-## Built-in Plugins
+## Built-in Tools
 
-OpenClaw ships with several built-in plugins: \`rate-limiter\`, \`cost-tracker\`, \`cache\`, \`logger\`, \`retry\`, and \`circuit-breaker\`.`,
+OpenClaw ships with several built-in tools: \`rate-limiter\`, \`cost-tracker\`, \`cache\`, \`logger\`, \`retry\`, and \`web-search\`.`,
           keyTerms: [
-            { term: 'Lifecycle Hook', definition: 'A function that runs at a specific point in request processing' },
-            { term: 'RequestContext', definition: 'Object containing the incoming request data and metadata' },
+            { term: 'Tool', definition: 'A callable extension that agents can invoke during conversations' },
+            { term: 'Canvas', definition: 'An interactive UI component rendered within the OpenClaw interface' },
           ],
         },
       },
@@ -833,14 +905,14 @@ OpenClaw ships with several built-in plugins: \`rate-limiter\`, \`cost-tracker\`
         order: 1,
         status: 'available',
         content: {
-          markdown: '# Plugin Lifecycle\n\nVisual walkthrough of how plugins interact with the request pipeline.',
+          markdown: '# Tool Extension Model\n\nVisual walkthrough of how tools, cron jobs, webhooks, and Canvas extend OpenClaw.',
           slides: [
-            { id: 1, title: 'Plugin Lifecycle', subtitle: 'How plugins hook into the request pipeline', bullets: ['Plugins run at specific lifecycle points', 'Multiple plugins execute in order', 'Each can modify or halt the request'] },
-            { id: 2, title: 'beforeRequest', subtitle: 'First hook in the chain', bullets: ['Validate authentication', 'Check rate limits', 'Return cached responses', 'Reject invalid requests'] },
-            { id: 3, title: 'afterRoute', subtitle: 'After provider selection', bullets: ['Log routing decisions', 'Override route selection', 'Add provider-specific headers'] },
-            { id: 4, title: 'beforeSend', subtitle: 'Right before the API call', bullets: ['Transform request format', 'Add system prompts', 'Inject context or RAG results'] },
-            { id: 5, title: 'afterResponse', subtitle: 'After receiving the response', bullets: ['Count and track tokens', 'Cache the response', 'Transform output format', 'Update cost metrics'] },
-            { id: 6, title: 'onError & onStream', subtitle: 'Special-case hooks', bullets: ['onError: handle failures, trigger fallbacks', 'onStream: monitor streaming responses in real-time', 'Both are optional'] },
+            { id: 1, title: 'Tool Extension Model', subtitle: 'How extensions integrate with the OpenClaw runtime', bullets: ['Extensions register as tools, cron, webhooks, or Canvas', 'Agents invoke tools during conversations', 'Each extension is isolated and composable'] },
+            { id: 2, title: 'Tools', subtitle: 'Agent-callable functions', bullets: ['Defined with defineTool() from @openclaw/sdk', 'Agents decide when to call them based on descriptions', 'Receive parameters and execution context', 'Return structured results to the agent'] },
+            { id: 3, title: 'Cron Jobs', subtitle: 'Scheduled background tasks', bullets: ['Run on a configurable schedule (cron syntax)', 'Useful for reports, cleanup, monitoring', 'Execute independently of agent sessions'] },
+            { id: 4, title: 'Webhooks', subtitle: 'External HTTP triggers', bullets: ['Register custom HTTP endpoints', 'Handle callbacks from external services', 'Can trigger agent actions or update state'] },
+            { id: 5, title: 'Canvas', subtitle: 'Interactive UI components', bullets: ['Render custom dashboards and forms', 'Agents can generate Canvas content', 'Supports real-time updates via WebSocket'] },
+            { id: 6, title: 'Composing Extensions', subtitle: 'Building complex workflows', bullets: ['Tools can call other tools', 'Cron jobs can trigger webhooks', 'Canvas apps can invoke tools on user interaction', 'All extensions share the same config system'] },
           ],
         },
       },
@@ -853,24 +925,24 @@ OpenClaw ships with several built-in plugins: \`rate-limiter\`, \`cost-tracker\`
         order: 2,
         status: 'available',
         content: {
-          markdown: `# Build a Custom Plugin
+          markdown: `# Build a Custom Tool
 
-Create a token budget plugin that tracks cumulative token usage and blocks requests when a daily budget is exceeded.`,
+Create a token budget tool that tracks cumulative token usage and can be queried by agents to check remaining budget.`,
           practiceProblems: [
             {
               id: 'oc-p4-1',
               type: 'short-answer',
-              question: 'Write the `afterResponse` hook for a token budget plugin that tracks daily usage and logs a warning when usage exceeds 80% of the configured `dailyLimit`.',
-              explanation: 'The hook should increment a counter with the response token usage and compare against the limit.',
-              sampleAnswer: 'async afterResponse(ctx) {\n  this.todayTokens += ctx.usage.totalTokens;\n  if (this.todayTokens > this.config.dailyLimit * 0.8) {\n    console.warn(`Token budget: ${this.todayTokens}/${this.config.dailyLimit}`);\n  }\n}',
+              question: 'Write a tool using `defineTool()` that returns the current daily token usage and remaining budget. It should accept a `dailyLimit` from config.',
+              explanation: 'The tool should read from a counter and return usage stats relative to the configured limit.',
+              sampleAnswer: 'export default defineTool({\n  name: "token-budget",\n  description: "Check daily token usage and remaining budget",\n  async execute(params, ctx) {\n    const used = await ctx.store.get("todayTokens") ?? 0;\n    const limit = ctx.config.dailyLimit;\n    return { used, limit, remaining: limit - used, pct: (used / limit * 100).toFixed(1) };\n  },\n})',
             },
             {
               id: 'oc-p4-2',
               type: 'multiple-choice',
-              question: 'Which lifecycle hook should you use to block a request before it reaches the AI provider?',
-              options: ['afterResponse', 'onStream', 'beforeRequest', 'onError'],
+              question: 'Which extension type should you use to run a cleanup task every night at midnight?',
+              options: ['tool', 'canvas', 'cron', 'webhook'],
               correctIndex: 2,
-              explanation: 'beforeRequest runs before routing and provider calls, making it the right place to reject requests.',
+              explanation: 'Cron jobs run on a schedule, making them ideal for periodic tasks like nightly cleanup.',
             },
           ],
         },
@@ -906,30 +978,30 @@ OpenClaw can be deployed anywhere Node.js runs. Here are the most common deploym
 The recommended approach for most production environments:
 
 \`\`\`dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --production
 COPY . .
-EXPOSE 3000
+EXPOSE 18789
 CMD ["node", "dist/server.js"]
 \`\`\`
 
 Build and run:
 \`\`\`bash
 docker build -t openclaw .
-docker run -p 3000:3000 --env-file .env openclaw
+docker run -p 18789:18789 --env-file .env openclaw
 \`\`\`
 
 ## Docker Compose
 
-For multi-service setups (gateway + Redis cache + monitoring):
+For multi-service setups (runtime + Redis cache + monitoring):
 
 \`\`\`yaml
 services:
-  gateway:
+  runtime:
     build: .
-    ports: ["3000:3000"]
+    ports: ["18789:18789"]
     env_file: .env
     depends_on: [redis]
   redis:
@@ -989,17 +1061,21 @@ OpenClaw exposes a Prometheus-compatible metrics endpoint at \`/metrics\`:
 
 Enable JSON logging for production:
 
-\`\`\`yaml
-logging:
-  format: json
-  level: info
-  fields:
-    - requestId
-    - provider
-    - model
-    - tokens
-    - latencyMs
-    - status
+\`\`\`json5
+{
+  logging: {
+    format: "json",
+    level: "info",
+    fields: [
+      "requestId",
+      "provider",
+      "model",
+      "tokens",
+      "latencyMs",
+      "status",
+    ],
+  },
+}
 \`\`\`
 
 ## Dashboard Integration
@@ -1025,7 +1101,7 @@ Configure alerts for:
 The cost-tracker plugin maintains running totals. Access the dashboard at \`/admin/costs\` or query the API:
 
 \`\`\`bash
-curl http://localhost:3000/admin/costs?period=today
+curl http://localhost:18789/admin/costs?period=today
 \`\`\`
 
 Response includes per-provider and per-agent breakdowns.`,
@@ -1062,10 +1138,10 @@ Response includes per-provider and per-agent breakdowns.`,
             {
               id: 'oc-final-2',
               type: 'multiple-choice',
-              question: 'In which lifecycle hook should you implement response caching?',
-              options: ['beforeRequest (cache check) and afterResponse (cache store)', 'onError only', 'beforeSend only', 'afterRoute only'],
+              question: 'Which extension type would you use to let agents search external APIs?',
+              options: ['Tool', 'Cron', 'Webhook', 'Canvas'],
               correctIndex: 0,
-              explanation: 'Check the cache in beforeRequest (return early if cached) and store results in afterResponse.',
+              explanation: 'Tools are callable functions that agents invoke during conversations to perform actions like API searches.',
             },
             {
               id: 'oc-final-3',
@@ -1084,17 +1160,17 @@ Response includes per-provider and per-agent breakdowns.`,
               id: 'oc-final-4',
               type: 'multiple-choice',
               question: 'What format does OpenClaw use for its main configuration file?',
-              options: ['JSON', 'TOML', 'YAML', 'INI'],
+              options: ['YAML', 'TOML', 'JSON5', 'INI'],
               correctIndex: 2,
-              explanation: 'OpenClaw uses openclaw.config.yml (YAML format) for all configuration.',
+              explanation: 'OpenClaw uses ~/.openclaw/openclaw.json (JSON5 format) for all configuration.',
             },
             {
               id: 'oc-final-5',
               type: 'multiple-choice',
-              question: 'Which of these is NOT a built-in OpenClaw plugin?',
-              options: ['rate-limiter', 'cost-tracker', 'model-trainer', 'circuit-breaker'],
+              question: 'Which of these is NOT a built-in OpenClaw tool?',
+              options: ['rate-limiter', 'cost-tracker', 'model-trainer', 'web-search'],
               correctIndex: 2,
-              explanation: 'model-trainer is not a built-in plugin. OpenClaw routes to AI providers, it does not train models.',
+              explanation: 'model-trainer is not a built-in tool. OpenClaw routes to AI providers, it does not train models.',
             },
           ],
         },

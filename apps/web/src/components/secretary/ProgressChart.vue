@@ -13,11 +13,7 @@ const visibleStats = computed(() => {
   return props.stats.slice(-days.value)
 })
 
-function barColor(rate: number): string {
-  if (rate >= 80) return '#34d399'
-  if (rate >= 50) return '#e3b341'
-  return '#f85149'
-}
+const BAR_COLOR = '#f85149'
 
 function shortDate(dateStr: string): string {
   const d = parseDateString(dateStr)
@@ -64,7 +60,7 @@ function shortDate(dateStr: string): string {
             class="bar-fill"
             :style="{
               height: `${Math.max(stat.completionRate, 2)}%`,
-              background: barColor(stat.completionRate),
+              background: BAR_COLOR,
             }"
           />
         </div>

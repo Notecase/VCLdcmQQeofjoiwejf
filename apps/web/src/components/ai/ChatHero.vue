@@ -84,7 +84,7 @@ const recommendations: Recommendation[] = [
 .accent-bar {
   width: 3px;
   height: 14px;
-  background: #58a6ff;
+  background: var(--primary-color, #58a6ff);
   border-radius: 2px;
 }
 
@@ -120,16 +120,16 @@ const recommendations: Recommendation[] = [
 
 /* Only crossing lines - top row has bottom border, left column has right border */
 .quadrant-card:nth-child(1) {
-  border-right: 1px solid rgba(48, 54, 61, 0.6);
-  border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+  border-right: 1px solid var(--border-color, rgba(48, 54, 61, 0.6));
+  border-bottom: 1px solid var(--border-color, rgba(48, 54, 61, 0.6));
 }
 
 .quadrant-card:nth-child(2) {
-  border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+  border-bottom: 1px solid var(--border-color, rgba(48, 54, 61, 0.6));
 }
 
 .quadrant-card:nth-child(3) {
-  border-right: 1px solid rgba(48, 54, 61, 0.6);
+  border-right: 1px solid var(--border-color, rgba(48, 54, 61, 0.6));
 }
 
 .quadrant-card:nth-child(4) {
@@ -137,7 +137,7 @@ const recommendations: Recommendation[] = [
 }
 
 .quadrant-card:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.03));
 }
 
 .card-title {

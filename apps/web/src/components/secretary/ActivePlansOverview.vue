@@ -98,8 +98,8 @@ const selectedPlan = ref<LearningRoadmap | null>(null)
 }
 
 .plan-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: 0 4px 16px var(--glass-shadow, rgba(0, 0, 0, 0.2));
   transform: translateY(-1px);
 }
 
@@ -142,7 +142,7 @@ const selectedPlan = ref<LearningRoadmap | null>(null)
 .progress-bar {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.08));
   overflow: hidden;
 }
 

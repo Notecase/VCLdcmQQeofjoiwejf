@@ -145,7 +145,7 @@ function formatDate(dateStr: string): string {
 }
 
 .file-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .file-item.active {

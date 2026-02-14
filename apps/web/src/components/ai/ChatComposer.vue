@@ -127,10 +127,10 @@ defineExpose({ inputRef })
 }
 
 .composer-card {
-  background: rgba(22, 27, 34, 0.7);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.7));
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   border-radius: 24px;
   overflow: hidden;
   transition:
@@ -145,7 +145,7 @@ defineExpose({ inputRef })
 
 .composer-top {
   border-bottom: 1px solid var(--border-color, #30363d);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.02));
 }
 
 .composer-body {
@@ -172,7 +172,7 @@ defineExpose({ inputRef })
 }
 
 .composer-body textarea::placeholder {
-  color: rgba(139, 148, 158, 0.5);
+  color: var(--text-color-secondary, rgba(139, 148, 158, 0.5));
 }
 
 .action-btn {
@@ -189,19 +189,19 @@ defineExpose({ inputRef })
 }
 
 .send-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(139, 148, 158, 0.4);
+  background: var(--editor-color-10, rgba(255, 255, 255, 0.08));
+  color: var(--text-color-secondary, rgba(139, 148, 158, 0.4));
   cursor: not-allowed;
 }
 
 .send-btn.active {
-  background: #58a6ff;
+  background: var(--primary-color, #58a6ff);
   color: #ffffff;
   cursor: pointer;
 }
 
 .send-btn.active:hover {
-  background: #79c0ff;
+  opacity: 0.85;
   transform: scale(1.05);
 }
 

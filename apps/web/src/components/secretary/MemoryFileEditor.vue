@@ -228,7 +228,7 @@ onUnmounted(() => {
 }
 
 .toggle-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .action-btn {
@@ -272,7 +272,7 @@ onUnmounted(() => {
 }
 
 .action-btn.close:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .editor-textarea {
@@ -318,7 +318,7 @@ onUnmounted(() => {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   font-size: 0.9em;
   padding: 0.2em 0.45em;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.06));
   border-radius: 5px;
   color: #f0883e;
 }
@@ -326,7 +326,7 @@ onUnmounted(() => {
 .prose :deep(pre) {
   margin: 1em 0;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--border-color, #333338);
   border-radius: 8px;
   overflow-x: auto;

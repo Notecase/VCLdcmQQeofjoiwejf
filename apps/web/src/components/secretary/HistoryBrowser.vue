@@ -124,7 +124,7 @@ function extractDate(filename: string): string {
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .empty-state {
@@ -155,7 +155,7 @@ function extractDate(filename: string): string {
 }
 
 .history-entry:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .entry-icon {

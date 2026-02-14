@@ -165,7 +165,7 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
   gap: 8px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--border-color, #333338);
 }
 
@@ -233,7 +233,7 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
 }
 
 .quick-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
   border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.3));
   transform: translateX(2px);
 }

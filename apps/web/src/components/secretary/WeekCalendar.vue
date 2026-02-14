@@ -137,8 +137,8 @@ const weekDays = computed(() => {
   gap: 8px;
   padding: 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.025));
 }
 
 .cal-title {

@@ -208,7 +208,7 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
 .progress-track {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.06));
   overflow: hidden;
   margin-bottom: 12px;
 }
@@ -242,7 +242,7 @@ function handleStudyNow(event: Event, task: ScheduledTask) {
 }
 
 .task-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .task-icon {

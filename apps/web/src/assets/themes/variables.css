@@ -353,7 +353,11 @@
 
   /* Glassmorphism - Light */
   --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-bg-light: rgba(245, 248, 250, 0.7);
+  --glass-bg-hover: rgba(241, 245, 249, 0.8);
+  --glass-bg-active: rgba(226, 232, 240, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-hover: rgba(0, 0, 0, 0.15);
   --glass-shadow: rgba(0, 0, 0, 0.08);
   --glass-shadow-hover: rgba(0, 0, 0, 0.12);
   --glass-inset: rgba(255, 255, 255, 0.6);

@@ -332,7 +332,7 @@ function capitalize(s: string): string {
   padding: 32px 24px 60px;
   background: var(--editorBgColor, var(--card-bg, #282828));
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px var(--glass-border, rgba(255, 255, 255, 0.04));
 }
 
 .content-scroll::-webkit-scrollbar {
@@ -393,7 +393,7 @@ function capitalize(s: string): string {
   border-radius: var(--radius-full, 9999px);
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   font-size: 12px;
   font-weight: 500;
 }

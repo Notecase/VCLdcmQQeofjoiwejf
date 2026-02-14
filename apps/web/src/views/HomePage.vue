@@ -475,7 +475,7 @@ onMounted(async () => {
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   font-size: 12px;
   font-weight: 500;
   color: var(--text-color-secondary, #8b949e);
@@ -516,7 +516,7 @@ onMounted(async () => {
 }
 
 .ghost-action:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .home-body {
@@ -571,7 +571,7 @@ onMounted(async () => {
   max-width: 70%;
   padding: 10px 16px;
   border-radius: 18px 18px 4px 18px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.05));
   color: var(--text-color, #e6edf3);
   font-size: 14px;
   line-height: 1.6;

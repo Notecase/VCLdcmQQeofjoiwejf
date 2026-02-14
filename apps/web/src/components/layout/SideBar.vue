@@ -1416,14 +1416,14 @@ const tabs = [
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   cursor: pointer;
 }
 
 .collapsed-tab-btn:hover,
 .collapsed-tab-btn.active {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e6edf3;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
 }
 
 .spacer {
@@ -1461,7 +1461,7 @@ const tabs = [
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color, #30363d);
   background: transparent;
   color: var(--text-color-secondary, #8b949e);
   cursor: pointer;
@@ -1473,9 +1473,9 @@ const tabs = [
 }
 
 .quick-action-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e6edf3;
-  border-color: #8b949e;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
+  border-color: var(--text-color-secondary, #8b949e);
 }
 
 .quick-action-btn.primary {
@@ -1509,10 +1509,10 @@ const tabs = [
 .inline-search input {
   width: 100%;
   padding: 5px 8px 5px 26px;
-  background: rgba(22, 27, 34, 0.6);
-  border: 1px solid #30363d;
+  background: var(--glass-bg, rgba(22, 27, 34, 0.6));
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
   font-size: 12px;
   height: 28px;
   box-sizing: border-box;
@@ -1520,11 +1520,11 @@ const tabs = [
 
 .inline-search input:focus {
   outline: none;
-  border-color: #58a6ff;
+  border-color: var(--primary-color, #58a6ff);
 }
 
 .inline-search input::placeholder {
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
 }
 
 /* Panels */
@@ -1554,8 +1554,8 @@ const tabs = [
   flex: 1;
   padding: 8px 12px;
   background: transparent;
-  color: #e6edf3;
-  border: 1px solid #30363d;
+  color: var(--text-color, #e6edf3);
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -1564,8 +1564,8 @@ const tabs = [
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: #8b949e;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--text-color-secondary, #8b949e);
 }
 
 .action-btn.primary {
@@ -1618,12 +1618,12 @@ const tabs = [
 }
 
 .tree-item.active .item-name {
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
   font-weight: 500;
 }
 
 .tree-item.active .item-icon {
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
 }
 
 .tree-children {
@@ -1666,7 +1666,7 @@ const tabs = [
 }
 
 .tree-item.active .doc-icon {
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
 }
 
 .item-name {
@@ -1679,8 +1679,8 @@ const tabs = [
 
 .item-count {
   font-size: 11px;
-  color: #8b949e;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color-secondary, #8b949e);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   padding: 1px 6px;
   border-radius: 10px;
   flex-shrink: 0;
@@ -1711,8 +1711,8 @@ const tabs = [
 }
 
 .more-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e6edf3;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
 }
 
 .delete-btn:hover {
@@ -1768,11 +1768,11 @@ const tabs = [
 /* Inline edit */
 .inline-edit {
   flex: 1;
-  background: #0d1117;
-  border: 1px solid #58a6ff;
+  background: var(--bg-color, #0d1117);
+  border: 1px solid var(--primary-color, #58a6ff);
   border-radius: 4px;
   padding: 2px 6px;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
   font-size: 13px;
   outline: none;
 }
@@ -1791,11 +1791,11 @@ const tabs = [
 
 .new-item-input input {
   flex: 1;
-  background: #0d1117;
-  border: 1px solid #58a6ff;
+  background: var(--bg-color, #0d1117);
+  border: 1px solid var(--primary-color, #58a6ff);
   border-radius: 4px;
   padding: 4px 8px;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
   font-size: 13px;
   outline: none;
 }
@@ -1816,18 +1816,18 @@ const tabs = [
   gap: 4px;
   padding: 2px 8px;
   background: transparent;
-  border: 1px dashed #30363d;
+  border: 1px dashed var(--border-color, #30363d);
   border-radius: 4px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .add-doc-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
+  border-color: var(--primary-color, #58a6ff);
+  color: var(--primary-color, #58a6ff);
 }
 
 .empty-state {
@@ -1874,10 +1874,10 @@ const tabs = [
   position: fixed;
   z-index: 10000;
   min-width: 160px;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--card-bg, #161b22);
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px var(--glass-shadow, rgba(0, 0, 0, 0.4));
   padding: 4px;
   animation: fadeIn 0.1s ease;
 }
@@ -1910,7 +1910,7 @@ const tabs = [
 }
 
 .context-menu button:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .context-menu button.danger {
@@ -1923,7 +1923,7 @@ const tabs = [
 
 .menu-divider {
   height: 1px;
-  background: #21262d;
+  background: var(--border-color, #21262d);
   margin: 4px 8px;
 }
 
@@ -1949,7 +1949,7 @@ const tabs = [
 }
 
 .user-profile-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .user-avatar {
@@ -1991,13 +1991,13 @@ const tabs = [
   margin-top: 2px;
   font-size: 10px;
   font-weight: 500;
-  color: #8b949e;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color-secondary, #8b949e);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   border-radius: 4px;
 }
 
 .user-badge.guest {
-  color: #888;
+  color: var(--text-color-secondary, #888);
 }
 
 .expand-icon {
@@ -2016,10 +2016,10 @@ const tabs = [
   left: 12px;
   right: 12px;
   margin-bottom: 8px;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--card-bg, #161b22);
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px var(--glass-shadow, rgba(0, 0, 0, 0.4));
   padding: 8px;
   z-index: 100;
 }
@@ -2027,7 +2027,7 @@ const tabs = [
 /* Theme Toggle */
 .theme-toggle {
   display: flex;
-  background: rgba(22, 27, 34, 0.8);
+  background: var(--editor-color-04, rgba(22, 27, 34, 0.8));
   border-radius: 8px;
   padding: 4px;
   gap: 2px;
@@ -2051,12 +2051,12 @@ const tabs = [
 }
 
 .theme-toggle button:hover {
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
 }
 
 .theme-toggle button.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e6edf3;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--text-color, #e6edf3);
   box-shadow: none;
 }
 
@@ -2078,14 +2078,14 @@ const tabs = [
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .menu-item .shortcut {
   margin-left: auto;
   font-size: 11px;
-  color: #8b949e;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color-secondary, #8b949e);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   padding: 2px 6px;
   border-radius: 4px;
 }

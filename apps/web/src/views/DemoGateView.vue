@@ -55,7 +55,7 @@ function handleKeydown(e: KeyboardEvent) {
           />
           <button
             type="button"
-            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8b949e; cursor: pointer; font-size: 12px;"
+            class="show-password-btn"
             @click="showPassword = !showPassword"
           >
             {{ showPassword ? 'Hide' : 'Show' }}
@@ -90,7 +90,7 @@ function handleKeydown(e: KeyboardEvent) {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--bg-color, #010409);
+  background: var(--app-bg, #010409);
   padding: 20px;
 }
 
@@ -98,12 +98,12 @@ function handleKeydown(e: KeyboardEvent) {
   width: 100%;
   max-width: 380px;
   padding: 48px 40px;
-  background: rgba(22, 27, 34, 0.7);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.7));
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px var(--glass-shadow, rgba(0, 0, 0, 0.3));
   text-align: center;
 }
 
@@ -125,7 +125,7 @@ function handleKeydown(e: KeyboardEvent) {
 .brand-tagline {
   margin: 8px 0 0;
   font-size: 14px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
 }
 
 .gate-form {
@@ -137,8 +137,8 @@ function handleKeydown(e: KeyboardEvent) {
 .gate-input {
   width: 100%;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--editor-color-10, rgba(255, 255, 255, 0.1));
   border-radius: 12px;
   color: var(--text-color, #e2e8f0);
   font-size: 14px;
@@ -152,7 +152,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 .gate-input::placeholder {
-  color: rgba(139, 148, 158, 0.5);
+  color: var(--text-color-secondary, rgba(139, 148, 158, 0.5));
 }
 
 .gate-error {
@@ -186,7 +186,19 @@ function handleKeydown(e: KeyboardEvent) {
 .gate-hint {
   margin: 24px 0 0;
   font-size: 12px;
-  color: #484f58;
+  color: var(--text-color-secondary, #484f58);
+}
+
+.show-password-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-color-secondary, #8b949e);
+  cursor: pointer;
+  font-size: 12px;
 }
 
 /* Shake animation on wrong password */

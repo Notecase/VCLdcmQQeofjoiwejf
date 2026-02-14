@@ -136,15 +136,15 @@ function handleDelete() {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: rgba(22, 27, 34, 0.5);
-  border: 1px solid #30363d;
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color, #333338);
   border-radius: 8px;
   transition: all 0.15s ease;
 }
 
 .source-card:hover {
-  border-color: #58a6ff;
-  background: rgba(22, 27, 34, 0.8);
+  border-color: var(--primary-color, #7c9ef8);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .source-card.processing {
@@ -160,7 +160,7 @@ function handleDelete() {
   height: 32px;
   border-radius: 6px;
   background: rgba(88, 166, 255, 0.1);
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
   flex-shrink: 0;
 }
 
@@ -176,7 +176,7 @@ function handleDelete() {
 .source-title {
   font-size: 13px;
   font-weight: 500;
-  color: #e6edf3;
+  color: var(--text-color, #e2e8f0);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -184,7 +184,7 @@ function handleDelete() {
 
 .source-meta {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Status */
@@ -196,7 +196,7 @@ function handleDelete() {
 }
 
 .source-status.processing {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
 }
 
 .source-status.ready {
@@ -229,14 +229,14 @@ function handleDelete() {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .action-btn:hover {
-  background: #21262d;
-  color: #e6edf3;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e2e8f0);
 }
 
 .action-btn:disabled {

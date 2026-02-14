@@ -373,12 +373,12 @@ onUnmounted(() => {
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .tab.active {
-  background: rgba(255, 255, 255, 0.06);
-  color: #58a6ff;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--primary-color, #58a6ff);
   font-weight: 500;
   box-shadow: none;
 }
@@ -396,7 +396,7 @@ onUnmounted(() => {
 }
 
 .tab-unsaved {
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
   font-size: 16px;
   line-height: 1;
 }
@@ -419,7 +419,7 @@ onUnmounted(() => {
 
 .tab-close:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.1));
 }
 
 .new-tab-btn {
@@ -437,7 +437,7 @@ onUnmounted(() => {
 }
 
 .new-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
   color: var(--text-color, #e2e8f0);
 }
 
@@ -446,7 +446,7 @@ onUnmounted(() => {
   flex: 1;
   background: var(--editorBgColor, var(--card-bg, #ffffff));
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px var(--glass-border, rgba(255, 255, 255, 0.04));
   display: flex;
   flex-direction: column;
   position: relative;

@@ -115,7 +115,7 @@ function shortDate(dateStr: string): string {
 }
 
 .toggle-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .chart-bars {
@@ -138,7 +138,7 @@ function shortDate(dateStr: string): string {
   flex: 1;
   width: 100%;
   max-width: 24px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   border-radius: 4px 4px 0 0;
   display: flex;
   align-items: flex-end;

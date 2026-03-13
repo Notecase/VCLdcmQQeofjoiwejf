@@ -70,6 +70,11 @@ const router = createRouter({
       name: 'demo',
       component: () => import('./views/DemoGateView.vue'),
     },
+    {
+      path: '/cli',
+      name: 'cli-auth',
+      component: () => import('./views/CliAuthView.vue'),
+    },
   ],
 })
 
@@ -77,7 +82,7 @@ const router = createRouter({
 const isProductionDemo = !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === ''
 router.beforeEach((to) => {
   const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
-  if (isProductionDemo && !inDemoMode && to.name !== 'demo') {
+  if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth') {
     return { name: 'demo' }
   }
 })

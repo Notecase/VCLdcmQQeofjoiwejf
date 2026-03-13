@@ -51,6 +51,18 @@ export const config = {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
   },
+
+  // Base URL for building verification URIs in CLI auth flow
+  baseUrl: process.env.BASE_URL || 'https://app.noteshell.io',
+
+  // Feature flags
+  flags: {
+    missionHubV1: !['0', 'false', 'off', 'no'].includes(
+      String(process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true'))
+        .trim()
+        .toLowerCase()
+    ),
+  },
 } as const
 
 /**

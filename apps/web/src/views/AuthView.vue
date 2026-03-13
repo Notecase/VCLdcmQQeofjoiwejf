@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const isLogin = ref(true)
@@ -22,7 +23,8 @@ async function handleSubmit() {
     } else {
       await authStore.signUp(email.value, password.value)
     }
-    router.push('/')
+    const redirectTo = (route.query.redirect as string) || '/'
+    router.push(redirectTo)
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -39,7 +41,8 @@ async function handleOAuth(provider: 'github' | 'google') {
 }
 
 function skipAuth() {
-  router.push('/')
+  const redirectTo = (route.query.redirect as string) || '/'
+  router.push(redirectTo)
 }
 </script>
 

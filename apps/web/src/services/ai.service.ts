@@ -514,6 +514,45 @@ async function streamFromAgent(agentType: string, options: AgentRequestOptions):
 }
 
 /**
+ * Batches high-frequency string pushes into periodic flushes.
+ * Used to throttle Pinia store mutations during fast LLM streams
+ * (~100 text-delta/sec → ~20 store updates/sec at 50ms interval).
+ */
+function createStreamThrottler(
+  flush: (accumulated: string) => void,
+  intervalMs = 50
+) {
+  let buffer = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return {
+    push(delta: string) {
+      buffer += delta
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null
+          if (buffer) {
+            const chunk = buffer
+            buffer = ''
+            flush(chunk)
+          }
+        }, intervalMs)
+      }
+    },
+    forceFlush() {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (buffer) {
+        const chunk = buffer
+        buffer = ''
+        flush(chunk)
+      }
+    },
+  }
+}
+
+/**
  * Process SSE response and update store
  */
 async function processSSEResponse(
@@ -522,6 +561,15 @@ async function processSSEResponse(
 ): Promise<string> {
   const { parseSSEStream } = await import('@/utils/sse-parser')
   let fullContent = ''
+
+  // Throttle text-delta store mutations to ~20/sec instead of ~100/sec.
+  // fullContent accumulation stays synchronous; only the Pinia mutation is batched.
+  const throttler = createStreamThrottler((accumulated) => {
+    const sessionId = store.activeSessionId
+    if (sessionId && store.sessions[sessionId]) {
+      store.appendToLastMessage(sessionId, accumulated)
+    }
+  })
 
   try {
     await parseSSEStream(response, {
@@ -536,22 +584,12 @@ async function processSSEResponse(
               case 'assistant-delta':
               case 'text-delta': {
                 fullContent += chunk.data as string
-                // Use activeSessionId directly to avoid computed property race condition
-                // The computed activeSession can return null if sessions[id] lookup fails
-                // during the brief window between session creation and state synchronization
-                const sessionId = store.activeSessionId
-                if (sessionId && store.sessions[sessionId]) {
-                  store.appendToLastMessage(sessionId, chunk.data as string)
-                } else {
-                  console.warn(
-                    '[AI Service] Received text-delta but no active session - chunk dropped:',
-                    chunk.data
-                  )
-                }
+                throttler.push(chunk.data as string)
                 break
               }
 
               case 'assistant-final': {
+                throttler.forceFlush()
                 const finalText = typeof chunk.data === 'string' ? chunk.data : ''
                 if (finalText && !fullContent.trim()) {
                   fullContent = finalText
@@ -566,10 +604,12 @@ async function processSSEResponse(
 
               case 'done':
               case 'finish':
+                throttler.forceFlush()
                 store.setStatus('idle')
                 break
 
               case 'error':
+                throttler.forceFlush()
                 store.setError(chunk.data as string)
                 break
 
@@ -951,10 +991,12 @@ async function processSSEResponse(
         console.error('[AI Service] Failed to parse SSE chunk:', err)
       },
     })
+    throttler.forceFlush()
     store.setStatus('idle')
     return fullContent
   } catch (error) {
     // Handle stream errors - ensure store state is updated
+    throttler.forceFlush()
     store.setError(error instanceof Error ? error.message : 'Stream error')
     throw error
   }

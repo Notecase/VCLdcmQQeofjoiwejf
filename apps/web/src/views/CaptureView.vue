@@ -65,8 +65,16 @@ async function capture() {
         </button>
       </div>
 
-      <p v-if="status === 'error'" class="capture-error">{{ errorMsg }}</p>
-      <p v-if="status === 'success'" class="capture-success">
+      <p
+        v-if="status === 'error'"
+        class="capture-error"
+      >
+        {{ errorMsg }}
+      </p>
+      <p
+        v-if="status === 'success'"
+        class="capture-success"
+      >
         Added to your inbox. It will be processed into tomorrow's plan.
       </p>
     </div>

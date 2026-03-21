@@ -88,7 +88,10 @@ async function checkDailyCap(
     .eq('user_id', userId)
     .gte('created_at', `${today}T00:00:00Z`)
 
-  const spent = (logs ?? []).reduce((sum: number, l: { cost_usd: number }) => sum + (l.cost_usd || 0), 0)
+  const spent = (logs ?? []).reduce(
+    (sum: number, l: { cost_usd: number }) => sum + (l.cost_usd || 0),
+    0
+  )
 
   return { allowed: spent < cap, spent, cap }
 }
@@ -123,17 +126,15 @@ export async function archiveStaleTodayMd(
     const archiveFilename = `History/${dateMatch[1]}.md`
 
     // Archive
-    await supabase
-      .from('secretary_memory')
-      .upsert(
-        {
-          user_id: userId,
-          filename: archiveFilename,
-          content: today.content,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,filename' }
-      )
+    await supabase.from('secretary_memory').upsert(
+      {
+        user_id: userId,
+        filename: archiveFilename,
+        content: today.content,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,filename' }
+    )
 
     // Carry over incomplete tasks to Tomorrow.md
     const taskPattern = /^- \[[ >]\] .+$/gm
@@ -150,17 +151,15 @@ export async function archiveStaleTodayMd(
       const tomorrowContent = tomorrow?.content ?? ''
       const carryoverSection = `\n\n## Carried Over\n${incomplete.join('\n')}\n`
 
-      await supabase
-        .from('secretary_memory')
-        .upsert(
-          {
-            user_id: userId,
-            filename: 'Tomorrow.md',
-            content: tomorrowContent + carryoverSection,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,filename' }
-        )
+      await supabase.from('secretary_memory').upsert(
+        {
+          user_id: userId,
+          filename: 'Tomorrow.md',
+          content: tomorrowContent + carryoverSection,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,filename' }
+      )
     }
 
     return { success: true, tokens_used: 0, cost_usd: 0, duration_ms: Date.now() - start }
@@ -189,7 +188,9 @@ export async function processInbox(
     const { allowed, spent, cap } = await checkDailyCap(supabase, userId)
     if (!allowed) {
       return {
-        success: false, tokens_used: 0, cost_usd: 0,
+        success: false,
+        tokens_used: 0,
+        cost_usd: 0,
         duration_ms: Date.now() - start,
         error_message: `Daily cap reached: $${spent.toFixed(4)}/$${cap.toFixed(2)}`,
       }
@@ -199,7 +200,9 @@ export async function processInbox(
     const credentials = await getUserApiKey(supabase, userId)
     if (!credentials) {
       return {
-        success: false, tokens_used: 0, cost_usd: 0,
+        success: false,
+        tokens_used: 0,
+        cost_usd: 0,
         duration_ms: Date.now() - start,
         error_message: 'No valid API key found',
       }
@@ -274,7 +277,10 @@ Output the COMPLETE updated Tomorrow.md content. Use the format:
       })
     } else if (credentials.provider === 'openai') {
       apiUrl = 'https://api.openai.com/v1/chat/completions'
-      headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${credentials.apiKey}` }
+      headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${credentials.apiKey}`,
+      }
       body = JSON.stringify({
         model: credentials.model,
         messages: [{ role: 'user', content: prompt }],
@@ -299,7 +305,9 @@ Output the COMPLETE updated Tomorrow.md content. Use the format:
     if (!llmRes.ok) {
       const errText = await llmRes.text()
       return {
-        success: false, tokens_used: 0, cost_usd: 0,
+        success: false,
+        tokens_used: 0,
+        cost_usd: 0,
         duration_ms: Date.now() - start,
         error_message: `LLM call failed: ${llmRes.status} ${errText.slice(0, 200)}`,
       }
@@ -318,7 +326,9 @@ Output the COMPLETE updated Tomorrow.md content. Use the format:
 
     if (!updatedTomorrow.trim()) {
       return {
-        success: false, tokens_used: 0, cost_usd: 0,
+        success: false,
+        tokens_used: 0,
+        cost_usd: 0,
         duration_ms: Date.now() - start,
         error_message: 'LLM returned empty response',
       }
@@ -329,24 +339,26 @@ Output the COMPLETE updated Tomorrow.md content. Use the format:
     const costUsd = tokensUsed * 0.000002 // rough estimate
 
     // Write updated Tomorrow.md
-    await supabase
-      .from('secretary_memory')
-      .upsert({
+    await supabase.from('secretary_memory').upsert(
+      {
         user_id: userId,
         filename: 'Tomorrow.md',
         content: updatedTomorrow,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,filename' })
+      },
+      { onConflict: 'user_id,filename' }
+    )
 
     // Clear Inbox.md
-    await supabase
-      .from('secretary_memory')
-      .upsert({
+    await supabase.from('secretary_memory').upsert(
+      {
         user_id: userId,
         filename: 'Inbox.md',
         content: '# Inbox\n\n',
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,filename' })
+      },
+      { onConflict: 'user_id,filename' }
+    )
 
     // Write context entry
     await supabase.from('user_context_entries').insert({
@@ -357,10 +369,17 @@ Output the COMPLETE updated Tomorrow.md content. Use the format:
       payload: { action: 'process_inbox', inboxCount, provider: credentials.provider },
     })
 
-    return { success: true, tokens_used: tokensUsed, cost_usd: costUsd, duration_ms: Date.now() - start }
+    return {
+      success: true,
+      tokens_used: tokensUsed,
+      cost_usd: costUsd,
+      duration_ms: Date.now() - start,
+    }
   } catch (e) {
     return {
-      success: false, tokens_used: 0, cost_usd: 0,
+      success: false,
+      tokens_used: 0,
+      cost_usd: 0,
       duration_ms: Date.now() - start,
       error_message: (e as Error).message,
     }
@@ -397,7 +416,9 @@ export async function syncIntegrations(
     return { success: true, tokens_used: 0, cost_usd: 0, duration_ms: Date.now() - start }
   } catch (e) {
     return {
-      success: false, tokens_used: 0, cost_usd: 0,
+      success: false,
+      tokens_used: 0,
+      cost_usd: 0,
       duration_ms: Date.now() - start,
       error_message: (e as Error).message,
     }
@@ -417,11 +438,18 @@ async function syncGoogleCalendar(
 
   // Refresh token if expired
   let accessToken = integration.access_token
-  if (integration.token_expires_at && new Date(integration.token_expires_at) < new Date(Date.now() + 5 * 60 * 1000)) {
+  if (
+    integration.token_expires_at &&
+    new Date(integration.token_expires_at) < new Date(Date.now() + 5 * 60 * 1000)
+  ) {
     if (!integration.refresh_token) {
       await supabase
         .from('user_integrations')
-        .update({ status: 'error', sync_error: 'Refresh token missing', updated_at: new Date().toISOString() })
+        .update({
+          status: 'error',
+          sync_error: 'Refresh token missing',
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', integration.id)
       return
     }
@@ -432,7 +460,10 @@ async function syncGoogleCalendar(
     if (!clientId || !clientSecret) {
       await supabase
         .from('user_integrations')
-        .update({ sync_error: 'Google credentials not configured', updated_at: new Date().toISOString() })
+        .update({
+          sync_error: 'Google credentials not configured',
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', integration.id)
       return
     }
@@ -451,7 +482,11 @@ async function syncGoogleCalendar(
     if (!refreshRes.ok) {
       await supabase
         .from('user_integrations')
-        .update({ status: 'error', sync_error: 'Token refresh failed', updated_at: new Date().toISOString() })
+        .update({
+          status: 'error',
+          sync_error: 'Token refresh failed',
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', integration.id)
       return
     }
@@ -462,7 +497,11 @@ async function syncGoogleCalendar(
 
     await supabase
       .from('user_integrations')
-      .update({ access_token: accessToken, token_expires_at: newExpiry, updated_at: new Date().toISOString() })
+      .update({
+        access_token: accessToken,
+        token_expires_at: newExpiry,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', integration.id)
   }
 
@@ -472,9 +511,11 @@ async function syncGoogleCalendar(
   const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2).toISOString()
   const calendarId = integration.config?.calendarId || 'primary'
 
-  const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+  const eventsUrl =
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
     new URLSearchParams({
-      timeMin, timeMax,
+      timeMin,
+      timeMax,
       singleEvents: 'true',
       orderBy: 'startTime',
       maxResults: '50',
@@ -488,13 +529,18 @@ async function syncGoogleCalendar(
     const errText = await eventsRes.text()
     await supabase
       .from('user_integrations')
-      .update({ sync_error: `Events fetch failed: ${errText.slice(0, 100)}`, updated_at: new Date().toISOString() })
+      .update({
+        sync_error: `Events fetch failed: ${errText.slice(0, 100)}`,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', integration.id)
     return
   }
 
   const eventsData = await eventsRes.json()
-  const events = (eventsData.items || []).filter((e: { status?: string }) => e.status !== 'cancelled')
+  const events = (eventsData.items || []).filter(
+    (e: { status?: string }) => e.status !== 'cancelled'
+  )
 
   const todayStr = now.toISOString().slice(0, 10)
   const tomorrowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
@@ -503,10 +549,18 @@ async function syncGoogleCalendar(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formatEvent = (e: any): string => {
     const startTime = e.start?.dateTime
-      ? new Date(e.start.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      ? new Date(e.start.dateTime).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
       : 'All day'
     const endTime = e.end?.dateTime
-      ? new Date(e.end.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      ? new Date(e.end.dateTime).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
       : ''
     const time = endTime ? `${startTime}-${endTime}` : startTime
     const location = e.location ? ` @ ${e.location}` : ''
@@ -526,24 +580,31 @@ async function syncGoogleCalendar(
 
   let calendarMd = `# Calendar\n\n*Last synced: ${new Date().toISOString()}*\n\n`
   calendarMd += `## Today (${todayStr})\n\n`
-  calendarMd += todayEvents.length > 0 ? todayEvents.map(formatEvent).join('\n') + '\n' : '*No events*\n'
+  calendarMd +=
+    todayEvents.length > 0 ? todayEvents.map(formatEvent).join('\n') + '\n' : '*No events*\n'
   calendarMd += `\n## Tomorrow (${tomorrowStr})\n\n`
-  calendarMd += tomorrowEvents.length > 0 ? tomorrowEvents.map(formatEvent).join('\n') + '\n' : '*No events*\n'
+  calendarMd +=
+    tomorrowEvents.length > 0 ? tomorrowEvents.map(formatEvent).join('\n') + '\n' : '*No events*\n'
 
   // Write Calendar.md
-  await supabase
-    .from('secretary_memory')
-    .upsert({
+  await supabase.from('secretary_memory').upsert(
+    {
       user_id: userId,
       filename: 'Calendar.md',
       content: calendarMd,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,filename' })
+    },
+    { onConflict: 'user_id,filename' }
+  )
 
   // Update sync timestamp
   await supabase
     .from('user_integrations')
-    .update({ last_sync_at: new Date().toISOString(), sync_error: null, updated_at: new Date().toISOString() })
+    .update({
+      last_sync_at: new Date().toISOString(),
+      sync_error: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', integration.id)
 }
 
@@ -612,7 +673,9 @@ export async function executePlanSchedule(
 
     if (missionError) {
       return {
-        success: false, tokens_used: 0, cost_usd: 0,
+        success: false,
+        tokens_used: 0,
+        cost_usd: 0,
         duration_ms: Date.now() - start,
         error_message: `Failed to create mission: ${missionError.message}`,
       }
@@ -642,7 +705,12 @@ export async function executePlanSchedule(
       agent: 'heartbeat',
       type: 'active_plan',
       summary: `Plan schedule "${schedule.title}" executed → mission ${mission.id}`,
-      payload: { action: 'plan_schedule', scheduleId: schedule.id, missionId: mission.id, workflow: schedule.workflow },
+      payload: {
+        action: 'plan_schedule',
+        scheduleId: schedule.id,
+        missionId: mission.id,
+        workflow: schedule.workflow,
+      },
     })
 
     return { success: true, tokens_used: 0, cost_usd: 0, duration_ms: Date.now() - start }
@@ -658,7 +726,9 @@ export async function executePlanSchedule(
       .eq('id', schedule.id)
 
     return {
-      success: false, tokens_used: 0, cost_usd: 0,
+      success: false,
+      tokens_used: 0,
+      cost_usd: 0,
       duration_ms: Date.now() - start,
       error_message: (e as Error).message,
     }
@@ -677,8 +747,16 @@ function computeNextRunAt(frequency: string, time: string, days: string[] | null
   if (frequency === 'daily') {
     if (next <= now) next.setDate(next.getDate() + 1)
   } else if (frequency === 'weekly' && days && days.length > 0) {
-    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-    const targetDays = days.map(d => dayMap[d] ?? 0).sort()
+    const dayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    }
+    const targetDays = days.map((d) => dayMap[d] ?? 0).sort()
     const currentDay = now.getDay()
     let found = false
     for (const d of targetDays) {

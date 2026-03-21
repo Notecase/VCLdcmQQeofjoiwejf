@@ -293,7 +293,11 @@ export class PlannerAgent {
         temperature: 0.7,
         max_completion_tokens: 2000,
       })
-      trackOpenAIResponse(response, { model: this.model, taskType: 'planner', startTime: startTime2 })
+      trackOpenAIResponse(response, {
+        model: this.model,
+        taskType: 'planner',
+        startTime: startTime2,
+      })
 
       const content = response.choices[0]?.message?.content || '{}'
       const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())

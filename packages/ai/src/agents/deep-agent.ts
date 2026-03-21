@@ -385,7 +385,9 @@ export class InkdownDeepAgent {
     if (this.sharedContextService) {
       const completedTasks = decomposition.tasks.filter((t) => t.status === 'completed')
       if (completedTasks.length > 0) {
-        const hasCreate = completedTasks.some((t) => t.type === 'edit_note' && !this.context.currentNoteId)
+        const hasCreate = completedTasks.some(
+          (t) => t.type === 'edit_note' && !this.context.currentNoteId
+        )
         try {
           await this.sharedContextService.write({
             agent: 'deep',
@@ -420,7 +422,10 @@ export class InkdownDeepAgent {
   /**
    * Decompose a request into sub-tasks using LLM
    */
-  private async decomposeRequest(message: string, sharedCtx?: string): Promise<DecompositionResult> {
+  private async decomposeRequest(
+    message: string,
+    sharedCtx?: string
+  ): Promise<DecompositionResult> {
     const userContent = sharedCtx ? `${message}\n\n${sharedCtx}` : message
 
     const startTime = Date.now()
@@ -596,7 +601,8 @@ export class InkdownDeepAgent {
       })
 
       for await (const chunk of trackOpenAIStream(rawStream, {
-        model: artifactModel.id, taskType: 'artifact',
+        model: artifactModel.id,
+        taskType: 'artifact',
       })) {
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
@@ -669,7 +675,8 @@ export class InkdownDeepAgent {
         })
 
         for await (const chunk of trackOpenAIStream(retryRawStream, {
-          model: artifactModel.id, taskType: 'artifact',
+          model: artifactModel.id,
+          taskType: 'artifact',
         })) {
           const delta = chunk.choices[0]?.delta?.content
           if (delta) {
@@ -849,7 +856,8 @@ export class InkdownDeepAgent {
     let fullContent = ''
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'chat',
+      model: this.model,
+      taskType: 'chat',
     })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {

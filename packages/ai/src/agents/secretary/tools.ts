@@ -337,7 +337,10 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
             }
           }
         } catch (err) {
-          console.warn('secretary.save_roadmap.auto_link_failed', { planId, error: err instanceof Error ? err.message : String(err) })
+          console.warn('secretary.save_roadmap.auto_link_failed', {
+            planId,
+            error: err instanceof Error ? err.message : String(err),
+          })
         }
       }
 

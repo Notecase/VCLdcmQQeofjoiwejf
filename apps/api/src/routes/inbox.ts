@@ -112,17 +112,15 @@ inbox.post('/capture', zValidator('json', CaptureSchema), async (c) => {
     updatedContent = currentContent.trimEnd() + '\n' + newLine
   }
 
-  await db
-    .from('secretary_memory')
-    .upsert(
-      {
-        user_id: userId,
-        filename: 'Inbox.md',
-        content: updatedContent,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,filename' }
-    )
+  await db.from('secretary_memory').upsert(
+    {
+      user_id: userId,
+      filename: 'Inbox.md',
+      content: updatedContent,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,filename' }
+  )
 
   // Update last_used_at on token (only for token-based auth)
   if (tokenRowId) {
@@ -167,17 +165,15 @@ inbox.get('/', async (c) => {
 inbox.delete('/', async (c) => {
   const auth = requireAuth(c)
 
-  await auth.supabase
-    .from('secretary_memory')
-    .upsert(
-      {
-        user_id: auth.userId,
-        filename: 'Inbox.md',
-        content: '# Inbox\n\n',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,filename' }
-    )
+  await auth.supabase.from('secretary_memory').upsert(
+    {
+      user_id: auth.userId,
+      filename: 'Inbox.md',
+      content: '# Inbox\n\n',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,filename' }
+  )
 
   return c.json({ success: true })
 })
@@ -202,14 +198,12 @@ inbox.post('/tokens', zValidator('json', TokenCreateSchema), async (c) => {
   const tokenHash = hashToken(rawToken)
   const tokenHint = rawToken.slice(-4)
 
-  const { error } = await auth.supabase
-    .from('user_capture_tokens')
-    .insert({
-      user_id: auth.userId,
-      token_hash: tokenHash,
-      token_hint: tokenHint,
-      label: label || 'default',
-    })
+  const { error } = await auth.supabase.from('user_capture_tokens').insert({
+    user_id: auth.userId,
+    token_hash: tokenHash,
+    token_hint: tokenHint,
+    label: label || 'default',
+  })
 
   if (error) {
     return c.json({ error: 'Failed to create token' }, 500)

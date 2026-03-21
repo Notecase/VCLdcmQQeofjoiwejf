@@ -44,7 +44,8 @@ export function registerCalendarTools(server: McpServer, db: DbClient): void {
         })
 
         const result = filtered.join('\n').trim()
-        if (!result || result === '# Calendar') return ok('No calendar events in the specified range.')
+        if (!result || result === '# Calendar')
+          return ok('No calendar events in the specified range.')
         return ok(result)
       } catch (e) {
         return err((e as Error).message)

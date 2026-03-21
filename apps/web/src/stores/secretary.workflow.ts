@@ -104,7 +104,9 @@ export function resolveWorkflowArtifactFromMission(
 
   if (workflowKey === 'make_note_from_task') {
     const handoff = latestHandoffByType(state.handoffs, 'note_draft_set')
-    const noteIds = Array.isArray((handoff?.payload as { noteIds?: unknown[] } | undefined)?.noteIds)
+    const noteIds = Array.isArray(
+      (handoff?.payload as { noteIds?: unknown[] } | undefined)?.noteIds
+    )
       ? (((handoff?.payload as { noteIds?: string[] })?.noteIds || []).filter(
           (item) => typeof item === 'string'
         ) as string[])

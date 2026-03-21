@@ -200,7 +200,8 @@ export class ChatAgent {
     let fullContent = ''
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'chat',
+      model: this.model,
+      taskType: 'chat',
     })) {
       const delta = chunk.choices[0]?.delta?.content
       if (delta) {

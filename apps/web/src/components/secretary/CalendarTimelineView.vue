@@ -75,7 +75,11 @@ const weekLabel = computed(() => {
   const start = weekDays.value[0]
   const end = weekDays.value[6]
   const startStr = start.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const endStr = end.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const endStr = end.date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
   return `${startStr} — ${endStr}`
 })
 
@@ -207,7 +211,6 @@ function closeOverlay() {
           </span>
         </div>
       </div>
-
     </div>
 
     <!-- Day expand overlay (outside grid, fixed position) -->

@@ -96,16 +96,9 @@ function parseTaskArtifacts(line: string): TaskArtifactLink[] {
 
   for (const [idx, match] of matches.entries()) {
     const parts = String(match[1] || '').split('|')
-    const [
-      kind,
-      status,
-      label,
-      targetId,
-      href,
-      missionId,
-      createdByAgent,
-      createdAt,
-    ] = parts.map((part) => decodeArtifactValue(part))
+    const [kind, status, label, targetId, href, missionId, createdByAgent, createdAt] = parts.map(
+      (part) => decodeArtifactValue(part)
+    )
 
     if (!kind || !status || !label || !createdByAgent || !createdAt) {
       continue

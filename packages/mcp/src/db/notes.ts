@@ -88,11 +88,7 @@ export class NotesDb {
     return data as NoteRow
   }
 
-  async create(opts: {
-    title: string
-    content?: string
-    projectId?: string
-  }): Promise<NoteRow> {
+  async create(opts: { title: string; content?: string; projectId?: string }): Promise<NoteRow> {
     const { data, error } = await this.supabase
       .from('notes')
       .insert({
@@ -108,10 +104,7 @@ export class NotesDb {
     return data as NoteRow
   }
 
-  async update(
-    noteId: string,
-    opts: { title?: string; content?: string }
-  ): Promise<NoteRow> {
+  async update(noteId: string, opts: { title?: string; content?: string }): Promise<NoteRow> {
     const updates: Record<string, unknown> = {}
     if (opts.title !== undefined) updates.title = opts.title
     if (opts.content !== undefined) updates.content = opts.content

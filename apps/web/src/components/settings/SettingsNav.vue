@@ -33,16 +33,26 @@ const planColor = computed(() => creditsStore.planDef.color)
         :class="{ active: props.modelValue === section.id }"
         @click="emit('update:modelValue', section.id)"
       >
-        <component :is="section.icon" :size="16" />
+        <component
+          :is="section.icon"
+          :size="16"
+        />
         <span>{{ section.label }}</span>
       </button>
     </div>
 
     <div class="nav-footer">
       <div class="plan-badge-wrap">
-        <span class="plan-dot" :style="{ background: planColor }"></span>
+        <span
+          class="plan-dot"
+          :style="{ background: planColor }"
+        ></span>
         <span class="plan-name">{{ creditsStore.planLabel }}</span>
-        <span v-if="creditsStore.isActive" class="plan-status">Active</span>
+        <span
+          v-if="creditsStore.isActive"
+          class="plan-status"
+          >Active</span
+        >
       </div>
     </div>
   </nav>

@@ -9,6 +9,7 @@
 ## Background
 
 The local patch at `/tmp/noteshell-mcp` already implements the CLI side of the device flow:
+
 - `scripts/noteshell.mjs` — unified CLI entrypoint with `login`, `setup`, `mcp` commands
 - `scripts/lib/device-auth.mjs` — normalizes start/poll API responses
 - `scripts/lib/noteshell-config.mjs` — writes `~/.noteshell.json`
@@ -73,6 +74,7 @@ ALTER TABLE cli_auth_sessions ENABLE ROW LEVEL SECURITY;
 ```
 
 **Columns:**
+
 - `device_code`: 32-char random hex string, opaque, only known to the CLI
 - `user_code`: format `XXXX-XXXX` using uppercase letters A-Z and digits 2-9 (RFC 8628 recommended set, avoids 0/O/1/I confusion). 8 characters from a 32-char alphabet = ~1 trillion combinations.
 - `expires_at`: device code TTL, set to `now() + 10 minutes`
@@ -81,9 +83,11 @@ ALTER TABLE cli_auth_sessions ENABLE ROW LEVEL SECURITY;
 - `access_token` / `refresh_token`: cleared (set to NULL) after first successful poll (`status` set to `consumed`) to prevent replay
 
 **Cleanup:** The `/start` endpoint runs a DELETE of expired rows on each call:
+
 ```sql
 DELETE FROM cli_auth_sessions WHERE expires_at < now() - interval '1 hour';
 ```
+
 This keeps the table small with no extra infrastructure.
 
 ---
@@ -101,11 +105,13 @@ This keeps the table small with no extra infrastructure.
 Creates a new device session.
 
 Request:
+
 ```json
 { "client_name": "@noteshell/mcp", "scopes": [] }
 ```
 
 Response `200`:
+
 ```json
 {
   "device_code": "<32-char-hex>",
@@ -126,23 +132,25 @@ Side effect: deletes expired rows (`expires_at < now() - 1 hour`) before inserti
 Polls for approval. All error responses return **HTTP 400**. Success returns **HTTP 200**.
 
 Request:
+
 ```json
 { "device_code": "<device_code>" }
 ```
 
 Responses:
 
-| Condition | HTTP | Body |
-|-----------|------|------|
-| Row not found | 400 | `{ "error": "expired_token" }` |
-| `status = pending`, polled too fast (< interval seconds) | 400 | `{ "error": "slow_down" }` |
-| `status = pending`, normal | 400 | `{ "error": "authorization_pending" }` |
-| `status = expired` or `expires_at < now()` | 400 | `{ "error": "expired_token" }` |
-| `status = denied` | 400 | `{ "error": "access_denied" }` |
-| `status = consumed` | 400 | `{ "error": "expired_token" }` (token already retrieved) |
-| `status = approved` | 200 | see below |
+| Condition                                                | HTTP | Body                                                     |
+| -------------------------------------------------------- | ---- | -------------------------------------------------------- |
+| Row not found                                            | 400  | `{ "error": "expired_token" }`                           |
+| `status = pending`, polled too fast (< interval seconds) | 400  | `{ "error": "slow_down" }`                               |
+| `status = pending`, normal                               | 400  | `{ "error": "authorization_pending" }`                   |
+| `status = expired` or `expires_at < now()`               | 400  | `{ "error": "expired_token" }`                           |
+| `status = denied`                                        | 400  | `{ "error": "access_denied" }`                           |
+| `status = consumed`                                      | 400  | `{ "error": "expired_token" }` (token already retrieved) |
+| `status = approved`                                      | 200  | see below                                                |
 
 On approval, return tokens and clear them from the row:
+
 ```json
 {
   "access_token": "...",
@@ -153,6 +161,7 @@ On approval, return tokens and clear them from the row:
   "user": { "id": "...", "email": "user@example.com" }
 }
 ```
+
 After returning: UPDATE row SET `status = 'consumed'`, `access_token = NULL`, `refresh_token = NULL`.
 
 `slow_down` enforcement: if `last_polled_at > now() - interval '5 seconds'`, return `slow_down` and update `last_polled_at`. Also increment `poll_count`; if `poll_count > 100`, treat as expired.
@@ -164,6 +173,7 @@ After returning: UPDATE row SET `status = 'consumed'`, `access_token = NULL`, `r
 Called by the web frontend after the user clicks Authorize. The frontend calls `supabase.auth.getSession()` to obtain the tokens and passes them all in the body.
 
 Request:
+
 ```json
 {
   "user_code": "ABCD-1234",
@@ -174,6 +184,7 @@ Request:
 ```
 
 Validation:
+
 - `user_code` must match a `pending` row that hasn't expired
 - `access_token` in the request body must match the `access_token` in the Bearer header (same user, prevents one user approving on behalf of another)
 - Max 5 failed lookups per `user_code` (enforced via `poll_count` or a separate column — use `poll_count` on the approve side too)
@@ -204,6 +215,7 @@ UX on CLI side: the next poll returns `access_denied`, the CLI prints "Login req
 ### Router guard changes (main.ts)
 
 The existing production demo guard must exempt `/cli`:
+
 ```ts
 if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth') {
   return { name: 'demo' }
@@ -213,10 +225,12 @@ if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-au
 ### Auth redirect (AuthView.vue change)
 
 `AuthView.vue` currently hardcodes `router.push('/')` after login. Update it to consume a `?redirect=` query param:
+
 ```ts
 const redirectTo = (route.query.redirect as string) || '/'
 router.push(redirectTo)
 ```
+
 This is a small 2-line change to `AuthView.vue`.
 
 ### Page states
@@ -238,6 +252,7 @@ This is a small 2-line change to `AuthView.vue`.
 ### Visual design
 
 Inherits the existing auth card design from `AuthView.vue`:
+
 - Same `.auth-view` outer wrapper (centered, full-height)
 - Same `.auth-card` (max-width 400px, border-radius 12px, `--editor-bg` background)
 - Terminal/CLI icon (e.g. `>_`) at top instead of the NoteShell wordmark, or show the Noteshell logo
@@ -250,16 +265,16 @@ Inherits the existing auth card design from `AuthView.vue`:
 
 Merge `/tmp/noteshell-mcp` patch into `packages/mcp`:
 
-| File | Action | Notes |
-|------|--------|-------|
-| `scripts/noteshell.mjs` | Add | Unified CLI entrypoint. Fix default `apiUrl`: `noteshell.app` → `app.noteshell.io` |
-| `scripts/lib/device-auth.mjs` | Add | Response parsers, no changes needed |
-| `scripts/lib/noteshell-config.mjs` | Add | Writes `~/.noteshell.json` with refresh_token + expires_at |
-| `scripts/lib/open-browser.mjs` | Add | Cross-platform browser opener |
-| `test/device-auth.test.mjs` | Add | Uses `node:test` (built-in, no extra dep needed) |
-| `scripts/setup.mjs` | Update | Replace inline config-write with `writeNoteshellConfig` from lib. Backward-compatible: same output file, same fields. |
-| `package.json` | Update | Add `"noteshell": "scripts/noteshell.mjs"` and `"mcp": "scripts/noteshell.mjs"` to `bin`. Add `"test": "node --test test/**/*.test.mjs"` script. Bump version `0.1.0` → `0.2.0`. |
-| `src/config.ts` | Update | Add `refresh_token: z.string().optional()` and `expires_at: z.string().optional()` to `ConfigSchema`. These are persisted in `~/.noteshell.json` and used by the MCP server to auto-refresh the token before it expires. |
+| File                               | Action | Notes                                                                                                                                                                                                                    |
+| ---------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/noteshell.mjs`            | Add    | Unified CLI entrypoint. Fix default `apiUrl`: `noteshell.app` → `app.noteshell.io`                                                                                                                                       |
+| `scripts/lib/device-auth.mjs`      | Add    | Response parsers, no changes needed                                                                                                                                                                                      |
+| `scripts/lib/noteshell-config.mjs` | Add    | Writes `~/.noteshell.json` with refresh_token + expires_at                                                                                                                                                               |
+| `scripts/lib/open-browser.mjs`     | Add    | Cross-platform browser opener                                                                                                                                                                                            |
+| `test/device-auth.test.mjs`        | Add    | Uses `node:test` (built-in, no extra dep needed)                                                                                                                                                                         |
+| `scripts/setup.mjs`                | Update | Replace inline config-write with `writeNoteshellConfig` from lib. Backward-compatible: same output file, same fields.                                                                                                    |
+| `package.json`                     | Update | Add `"noteshell": "scripts/noteshell.mjs"` and `"mcp": "scripts/noteshell.mjs"` to `bin`. Add `"test": "node --test test/**/*.test.mjs"` script. Bump version `0.1.0` → `0.2.0`.                                         |
+| `src/config.ts`                    | Update | Add `refresh_token: z.string().optional()` and `expires_at: z.string().optional()` to `ConfigSchema`. These are persisted in `~/.noteshell.json` and used by the MCP server to auto-refresh the token before it expires. |
 
 **Token auto-refresh in MCP server:** `src/db/client.ts` should check `expires_at` on startup; if the token is within 5 minutes of expiry, call `supabase.auth.setSession({ access_token, refresh_token })` to get a fresh token and rewrite `~/.noteshell.json`. This is a small addition to the existing `createClient` setup.
 
@@ -277,6 +292,7 @@ npm publish --access public
 Version: `0.1.0` → `0.2.0`
 
 Users upgrade and re-auth:
+
 ```bash
 npx -y @noteshell/mcp@latest login
 ```

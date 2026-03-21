@@ -15,9 +15,12 @@ const emit = defineEmits<{
 const localInstructions = ref(props.instructions)
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
-watch(() => props.instructions, (val) => {
-  localInstructions.value = val
-})
+watch(
+  () => props.instructions,
+  (val) => {
+    localInstructions.value = val
+  }
+)
 
 function onInstructionsInput() {
   if (saveTimer) clearTimeout(saveTimer)

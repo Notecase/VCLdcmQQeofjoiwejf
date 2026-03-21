@@ -19,7 +19,15 @@ export interface HeartbeatUser {
   last_weekly_at: string | null
 }
 
-export type HeartbeatAction = 'morning' | 'evening' | 'weekly' | 'archive' | 'process_inbox' | 'sync_integrations' | 'plan_schedule' | 'idle'
+export type HeartbeatAction =
+  | 'morning'
+  | 'evening'
+  | 'weekly'
+  | 'archive'
+  | 'process_inbox'
+  | 'sync_integrations'
+  | 'plan_schedule'
+  | 'idle'
 
 export interface CheckResult {
   action: HeartbeatAction
@@ -168,10 +176,7 @@ export async function checkStaleTodayMd(
 /**
  * Check if user has unprocessed inbox captures
  */
-export async function checkInbox(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<boolean> {
+export async function checkInbox(supabase: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('secretary_memory')
     .select('content')

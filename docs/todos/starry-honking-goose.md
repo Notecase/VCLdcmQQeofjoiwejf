@@ -68,74 +68,75 @@ packages/mcp/
 
 ### Notes (12 tools)
 
-| Tool | Type | Purpose |
-|------|------|---------|
-| `notes_list` | read | List notes, filter by project_id |
-| `notes_get` | read | Get note by ID (full markdown content) |
-| `notes_create` | write | Create note with title + content + project_id |
-| `notes_update` | write | Update note title and/or content |
-| `notes_delete` | destructive | Soft-delete (set is_deleted=true) |
-| `notes_move` | write | Move note to different project |
-| `notes_search` | read | Full-text search across note content |
-| `notes_organize` | read | Get note structure (headings, sections, word count) |
-| `notes_summarize` | read | Get note metadata (word count, headings, links, images) |
-| `notes_expand` | read | Get note with project context + related notes |
-| `notes_get_artifacts` | read | List artifacts (HTML/CSS/JS widgets) attached to a note |
-| `projects_list` | read | List all projects/folders |
+| Tool                  | Type        | Purpose                                                 |
+| --------------------- | ----------- | ------------------------------------------------------- |
+| `notes_list`          | read        | List notes, filter by project_id                        |
+| `notes_get`           | read        | Get note by ID (full markdown content)                  |
+| `notes_create`        | write       | Create note with title + content + project_id           |
+| `notes_update`        | write       | Update note title and/or content                        |
+| `notes_delete`        | destructive | Soft-delete (set is_deleted=true)                       |
+| `notes_move`          | write       | Move note to different project                          |
+| `notes_search`        | read        | Full-text search across note content                    |
+| `notes_organize`      | read        | Get note structure (headings, sections, word count)     |
+| `notes_summarize`     | read        | Get note metadata (word count, headings, links, images) |
+| `notes_expand`        | read        | Get note with project context + related notes           |
+| `notes_get_artifacts` | read        | List artifacts (HTML/CSS/JS widgets) attached to a note |
+| `projects_list`       | read        | List all projects/folders                               |
 
 ### Secretary (18 tools)
 
-| Tool | Type | Purpose |
-|------|------|---------|
-| `secretary_memory_read` | read | Read any memory file by filename |
-| `secretary_memory_write` | write | Write/update memory file (upsert) |
-| `secretary_memory_list` | read | List all memory files (optional prefix filter) |
-| `secretary_memory_delete` | destructive | Delete a memory file |
-| `secretary_today` | read | Shortcut: read Today.md |
-| `secretary_tomorrow` | read | Shortcut: read Tomorrow.md |
-| `secretary_plans_list` | read | Read Plan.md (master roadmap index) |
-| `secretary_plan_create` | write | Create Plans/*.md + update Plan.md index |
-| `secretary_plan_activate` | write | Update plan status in Plan.md |
-| `secretary_daily_generate` | write | Write structured daily plan to Today/Tomorrow.md |
-| `secretary_task_modify` | write | Modify task in Today/Tomorrow (time, status, add, remove) |
-| `secretary_bulk_modify` | write | Bulk modify multiple tasks |
-| `secretary_carryover` | write | Move incomplete tasks from Today → Tomorrow |
-| `secretary_recurring_manage` | write | CRUD recurring blocks in Recurring.md |
-| `secretary_log_activity` | write | Append activity entry to Today.md |
-| `secretary_reflect` | write | Write reflection to Today.md |
-| `secretary_preferences` | read | Read study preferences from AI.md |
-| `secretary_analytics` | read | Compute analytics from History/*.md |
+| Tool                         | Type        | Purpose                                                   |
+| ---------------------------- | ----------- | --------------------------------------------------------- |
+| `secretary_memory_read`      | read        | Read any memory file by filename                          |
+| `secretary_memory_write`     | write       | Write/update memory file (upsert)                         |
+| `secretary_memory_list`      | read        | List all memory files (optional prefix filter)            |
+| `secretary_memory_delete`    | destructive | Delete a memory file                                      |
+| `secretary_today`            | read        | Shortcut: read Today.md                                   |
+| `secretary_tomorrow`         | read        | Shortcut: read Tomorrow.md                                |
+| `secretary_plans_list`       | read        | Read Plan.md (master roadmap index)                       |
+| `secretary_plan_create`      | write       | Create Plans/\*.md + update Plan.md index                 |
+| `secretary_plan_activate`    | write       | Update plan status in Plan.md                             |
+| `secretary_daily_generate`   | write       | Write structured daily plan to Today/Tomorrow.md          |
+| `secretary_task_modify`      | write       | Modify task in Today/Tomorrow (time, status, add, remove) |
+| `secretary_bulk_modify`      | write       | Bulk modify multiple tasks                                |
+| `secretary_carryover`        | write       | Move incomplete tasks from Today → Tomorrow               |
+| `secretary_recurring_manage` | write       | CRUD recurring blocks in Recurring.md                     |
+| `secretary_log_activity`     | write       | Append activity entry to Today.md                         |
+| `secretary_reflect`          | write       | Write reflection to Today.md                              |
+| `secretary_preferences`      | read        | Read study preferences from AI.md                         |
+| `secretary_analytics`        | read        | Compute analytics from History/\*.md                      |
 
 ### Context & Soul (5 tools)
 
-| Tool | Type | Purpose |
-|------|------|---------|
-| `context_read` | read | Read recent context entries by type |
-| `context_write` | write | Write a new context entry |
-| `context_entries` | read | List all recent context entries |
-| `soul_read` | read | Read user's soul (goals, preferences, style) |
-| `soul_update` | write | Update soul content |
+| Tool              | Type  | Purpose                                      |
+| ----------------- | ----- | -------------------------------------------- |
+| `context_read`    | read  | Read recent context entries by type          |
+| `context_write`   | write | Write a new context entry                    |
+| `context_entries` | read  | List all recent context entries              |
+| `soul_read`       | read  | Read user's soul (goals, preferences, style) |
+| `soul_update`     | write | Update soul content                          |
 
 ### Calendar (3 tools)
 
-| Tool | Type | Purpose |
-|------|------|---------|
-| `calendar_events` | read | List events from calendar memory files |
-| `calendar_add` | write | Add event to calendar |
-| `calendar_update` | write | Update/remove calendar event |
+| Tool              | Type  | Purpose                                |
+| ----------------- | ----- | -------------------------------------- |
+| `calendar_events` | read  | List events from calendar memory files |
+| `calendar_add`    | write | Add event to calendar                  |
+| `calendar_update` | write | Update/remove calendar event           |
 
 ### Search (2 tools)
 
-| Tool | Type | Purpose |
-|------|------|---------|
-| `search_notes` | read | Search notes by content/title (Postgres FTS) |
-| `search_global` | read | Search across notes + memory files |
+| Tool            | Type | Purpose                                      |
+| --------------- | ---- | -------------------------------------------- |
+| `search_notes`  | read | Search notes by content/title (Postgres FTS) |
+| `search_global` | read | Search across notes + memory files           |
 
 ---
 
 ## Implementation Steps (ordered by dependency)
 
 ### Step 1: Package Scaffold
+
 - Create `packages/mcp/package.json` (name: `@noteshell/mcp`, bin: `noteshell-mcp`)
 - Create `packages/mcp/tsconfig.json` (ES2022, strict, same pattern as `packages/shared/tsconfig.json`)
 - Dependencies: `@modelcontextprotocol/sdk`, `@supabase/supabase-js`, `zod`
@@ -143,10 +144,12 @@ packages/mcp/
 - Run `pnpm install` to validate workspace resolution
 
 ### Step 2: Config + Supabase Client
+
 - `src/config.ts` — Load `~/.noteshell.json`, validate with zod, fallback to env vars
 - `src/db/client.ts` — Create Supabase client with access token auth, extract user_id from JWT
 
 **Config format:**
+
 ```json
 {
   "supabase_url": "https://xxx.supabase.co",
@@ -156,11 +159,13 @@ packages/mcp/
 ```
 
 ### Step 3: Server Bootstrap
+
 - `src/index.ts` — Stdio transport setup with `#!/usr/bin/env node` shebang
 - `src/server.ts` — Create `McpServer`, call `registerAllTools(server, db)`
 - Verify: server starts, `tools/list` returns empty array
 
 ### Step 4: DB Query Layer
+
 - `src/db/notes.ts` — `list()`, `get()`, `create()`, `update()`, `delete()`, `move()`, `getArtifacts()` + project queries
 - `src/db/memory.ts` — `read()`, `write()`, `list()`, `delete()` (adapt pattern from `packages/ai/src/agents/secretary/memory.ts`)
 - `src/db/context.ts` — `readEntries()`, `writeEntry()`, `readSoul()`, `writeSoul()` (adapt from `packages/ai/src/services/shared-context.service.ts`)
@@ -168,6 +173,7 @@ packages/mcp/
 - `src/db/search.ts` — `searchNotes()`, `searchGlobal()` (Postgres FTS via `to_tsvector`/`plainto_tsquery`)
 
 ### Step 5: Response Formatters
+
 - `src/format/notes.ts` — Note list as markdown table, single note as heading + content
 - `src/format/memory.ts` — Memory file as `## filename.md\n[content]`
 - `src/format/tables.ts` — Generic tabular data to markdown tables
@@ -176,25 +182,29 @@ packages/mcp/
 **Formatting principles:** Compact markdown, not JSON. One line per item in lists. Full content for single-item reads. Truncate to first 200 chars in list views.
 
 ### Step 6: Tool Registration — Notes (12 tools)
+
 - `src/tools/notes.ts` — `registerNoteTools(server, db)`
 - Each tool: zod schema → db call → formatter → `{ content: [{ type: 'text', text }] }`
 - Error handling: try/catch → `{ content: [...], isError: true }`
 
 ### Step 7: Tool Registration — Secretary (18 tools)
+
 - `src/tools/secretary.ts` — `registerSecretaryTools(server, db)`
 - Memory CRUD tools + shortcut tools (today, tomorrow, plans)
 - Plan management tools (create, activate, daily generate)
 - Task modification tools (modify, bulk modify, carryover)
 - Activity/reflection tools
-- Analytics tool (compute from History/*.md files)
+- Analytics tool (compute from History/\*.md files)
 
 ### Step 8: Tool Registration — Context, Calendar, Search (10 tools)
+
 - `src/tools/context.ts` — 5 context/soul tools
 - `src/tools/calendar.ts` — 3 calendar tools (read/write calendar memory files)
 - `src/tools/search.ts` — 2 search tools (FTS, no embeddings)
 - `src/tools/index.ts` — Orchestrator that calls all register functions
 
 ### Step 9: SKILL.md Files
+
 - `SKILL.md` — Root skill: tool catalog, parameter patterns, 5-6 quick recipes
 - `skills/study-planning.md` — Roadmap creation, daily plan generation, plan tracking
 - `skills/note-organization.md` — Project hierarchy, rich note creation, Task→Note pattern
@@ -202,6 +212,7 @@ packages/mcp/
 - `skills/daily-workflow.md` — Morning/during/evening routines, activity logging, reflection
 
 ### Step 10: Build + Integration Test
+
 - `pnpm build` — verify clean build
 - `pnpm typecheck` — verify no type errors
 - Manual test: start server, connect from Claude Code, call `notes_list`
@@ -212,6 +223,7 @@ packages/mcp/
 ## Key Patterns
 
 ### Tool Implementation Pattern
+
 ```typescript
 // Each tool file follows this pattern:
 export function registerNoteTools(server: McpServer, db: DbClient): void {
@@ -228,22 +240,26 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
 ```
 
 ### Response Format Examples
+
 ```markdown
 ## Notes (12 results)
-| Title | ID | Updated |
-|---|---|---|
-| Optics Ch3 | abc123 | 2h ago |
-| React Hooks | def456 | 1d ago |
+
+| Title       | ID     | Updated |
+| ----------- | ------ | ------- |
+| Optics Ch3  | abc123 | 2h ago  |
+| React Hooks | def456 | 1d ago  |
 
 ---
 
 # Optics Chapter 3
-**ID:** abc123 | **Project:** Physics | **Words:** 1,247 | **Updated:** 2026-03-12
----
+
+## **ID:** abc123 | **Project:** Physics | **Words:** 1,247 | **Updated:** 2026-03-12
+
 [full markdown content]
 ```
 
 ### Data Flow
+
 ```
 Claude Code / Codex CLI / OpenClaw
   │ MCP protocol (stdio)
@@ -262,18 +278,18 @@ Supabase (RLS enforces user_id)
 
 ## Existing Code to Reuse
 
-| Source File | What to Reuse |
-|-------------|--------------|
-| `packages/ai/src/agents/secretary/memory.ts` | Memory CRUD query patterns (read, write, list, delete) |
-| `packages/ai/src/services/shared-context.service.ts` | Context bus + soul read/write patterns |
-| `packages/shared/src/types/secretary.ts` | `MemoryFile`, `LearningRoadmap`, `StudyPreferences`, `ScheduledTask` types |
-| `packages/shared/src/types/index.ts` | `Note`, `Project` types |
-| `packages/shared/src/types/ai.ts` | `ContextEntry` type |
-| `packages/shared/package.json` | Package.json + tsconfig.json structure template |
-| `apps/api/src/routes/secretary.ts` | API route patterns, Supabase query patterns |
-| `supabase/migrations/009_secretary.sql` | `secretary_memory` table schema |
-| `supabase/migrations/001_*.sql` | `notes`, `projects` table schemas |
-| `supabase/migrations/017_shared_context_bus.sql` | `user_context_entries`, `user_soul` schemas |
+| Source File                                          | What to Reuse                                                              |
+| ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| `packages/ai/src/agents/secretary/memory.ts`         | Memory CRUD query patterns (read, write, list, delete)                     |
+| `packages/ai/src/services/shared-context.service.ts` | Context bus + soul read/write patterns                                     |
+| `packages/shared/src/types/secretary.ts`             | `MemoryFile`, `LearningRoadmap`, `StudyPreferences`, `ScheduledTask` types |
+| `packages/shared/src/types/index.ts`                 | `Note`, `Project` types                                                    |
+| `packages/shared/src/types/ai.ts`                    | `ContextEntry` type                                                        |
+| `packages/shared/package.json`                       | Package.json + tsconfig.json structure template                            |
+| `apps/api/src/routes/secretary.ts`                   | API route patterns, Supabase query patterns                                |
+| `supabase/migrations/009_secretary.sql`              | `secretary_memory` table schema                                            |
+| `supabase/migrations/001_*.sql`                      | `notes`, `projects` table schemas                                          |
+| `supabase/migrations/017_shared_context_bus.sql`     | `user_context_entries`, `user_soul` schemas                                |
 
 ---
 
@@ -296,6 +312,7 @@ Supabase (RLS enforces user_id)
 ## Configuration
 
 **Claude Code MCP config** (`~/.claude.json` or project `mcp_servers`):
+
 ```json
 {
   "mcpServers": {
@@ -308,6 +325,7 @@ Supabase (RLS enforces user_id)
 ```
 
 **Auth config** (`~/.noteshell.json`):
+
 ```json
 {
   "supabase_url": "https://xxx.supabase.co",
@@ -332,23 +350,28 @@ Auth flow: access_token is a Supabase JWT. RLS policies enforce `auth.uid() = us
 ## Post-Implementation Fixes Required
 
 ### Fix 1: Schema Mismatch in `src/db/notes.ts` (HIGH)
+
 **Problem:** `NoteRow` declares columns that don't exist in the `notes` table: `reading_time_minutes`, `link_count`, `tags`.
 **Actual schema** (from migration 001): `word_count`, `character_count`, `attachment_count`, `is_pinned`, `is_archived`, `is_deleted` — no reading_time, link_count, or tags.
 **Fix:** Remove phantom columns from `NoteRow`, `NOTE_COLUMNS`, and `NOTE_LIST_COLUMNS`. Update formatters that reference them.
 
 ### Fix 2: SQL Injection Risk in `src/db/search.ts` (HIGH)
+
 **Problem:** Line 38 interpolates user input into `.or()` filter string: `.or(\`title.ilike.%${query}%,content.ilike.%${query}%\`)`. A crafted query could manipulate the filter.
 **Fix:** Split into two separate queries (title search + content search) and merge results in JS, OR escape special Supabase filter characters from the query.
 
 ### Fix 3: Regex Injection in `src/tools/secretary.ts` (LOW)
+
 **Problem:** `secretary_plan_activate` (line 141) uses `new RegExp()` with user-supplied `plan_id` without escaping. Regex special chars in plan_id will break.
 **Fix:** Escape `plan_id` with a regex escape function before using in `new RegExp()`.
 
 ### Fix 4: Null project_id filter in `src/db/notes.ts` (LOW)
+
 **Problem:** `getWithContext()` line 179: `.eq('project_id', note.project_id ?? '')` — when null, queries for empty string instead of null.
 **Fix:** Use conditional: `if (note.project_id) query.eq('project_id', note.project_id) else query.is('project_id', null)`.
 
 ### Fix 5: Unnecessary dynamic import in `src/tools/notes.ts` (MINOR)
+
 **Problem:** `notes_search` tool uses `await import('../db/search.js')` instead of a static import.
 **Fix:** Convert to static import at top of file.
 

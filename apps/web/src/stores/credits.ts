@@ -93,7 +93,13 @@ export const useCreditsStore = defineStore('credits', () => {
   const weeklyResetLabel = computed(() => {
     if (!weeklyUsage.value?.window_end) return ''
     const end = new Date(weeklyUsage.value.window_end)
-    return end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    return end.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
   })
 
   // ── Billing cycle computed ────────────────────────────────────────
@@ -101,8 +107,11 @@ export const useCreditsStore = defineStore('credits', () => {
   /** Total spent this billing cycle (from credit_transactions ledger) */
   const billingCycleTotalCents = computed(() => {
     if (!monthlyUsage.value) return 0
-    return Number(monthlyUsage.value.ledger_total_cost_cents) ||
-      Number(monthlyUsage.value.total_cost_cents) || 0
+    return (
+      Number(monthlyUsage.value.ledger_total_cost_cents) ||
+      Number(monthlyUsage.value.total_cost_cents) ||
+      0
+    )
   })
 
   /** Formatted dollar amount spent this cycle */
@@ -114,7 +123,10 @@ export const useCreditsStore = defineStore('credits', () => {
   /** Billing cycle reset date (plan_expires_at or 30 days from created_at) */
   const billingCycleResetLabel = computed(() => {
     if (credits.value?.plan_expires_at) {
-      return new Date(credits.value.plan_expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return new Date(credits.value.plan_expires_at).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })
     }
     return ''
   })

@@ -124,7 +124,9 @@ const showConsentModal = ref(false)
 const consentRedirecting = ref(false)
 
 function getIntegration(provider: string): Integration | undefined {
-  return integrations.value.find((i) => i.provider === provider && i.status !== 'revoked' && i.status !== 'pending')
+  return integrations.value.find(
+    (i) => i.provider === provider && i.status !== 'revoked' && i.status !== 'pending'
+  )
 }
 
 async function loadIntegrations() {
@@ -192,7 +194,10 @@ async function connectNotion() {
   try {
     const res = await authFetch(`${apiBase}/api/integrations/notion/connect`, {
       method: 'POST',
-      body: JSON.stringify({ token: notionToken.value.trim(), database_id: notionDbId.value.trim() }),
+      body: JSON.stringify({
+        token: notionToken.value.trim(),
+        database_id: notionDbId.value.trim(),
+      }),
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: 'Failed' }))
@@ -232,7 +237,10 @@ onMounted(async () => {
     <div class="settings-container">
       <!-- Header -->
       <header class="settings-header">
-        <button class="back-btn" @click="router.back()">
+        <button
+          class="back-btn"
+          @click="router.back()"
+        >
           <ArrowLeft :size="18" />
         </button>
         <div>
@@ -241,15 +249,31 @@ onMounted(async () => {
       </header>
 
       <!-- OAuth Status Banner -->
-      <div v-if="gcalConnectStatus === 'success'" class="status-banner success">
+      <div
+        v-if="gcalConnectStatus === 'success'"
+        class="status-banner success"
+      >
         <Check :size="16" />
         <span>Google Calendar connected successfully</span>
-        <button class="banner-dismiss" @click="gcalConnectStatus = null">&times;</button>
+        <button
+          class="banner-dismiss"
+          @click="gcalConnectStatus = null"
+        >
+          &times;
+        </button>
       </div>
-      <div v-if="gcalConnectStatus === 'error'" class="status-banner error">
+      <div
+        v-if="gcalConnectStatus === 'error'"
+        class="status-banner error"
+      >
         <AlertCircle :size="16" />
         <span>Google Calendar connection failed: {{ gcalConnectError }}</span>
-        <button class="banner-dismiss" @click="gcalConnectStatus = null">&times;</button>
+        <button
+          class="banner-dismiss"
+          @click="gcalConnectStatus = null"
+        >
+          &times;
+        </button>
       </div>
 
       <!-- Two-column layout -->
@@ -258,12 +282,18 @@ onMounted(async () => {
 
         <div class="settings-content">
           <!-- Usage Section -->
-          <div v-show="activeSection === 'usage'" class="content-section">
+          <div
+            v-show="activeSection === 'usage'"
+            class="content-section"
+          >
             <UsageSection />
           </div>
 
           <!-- Capture Tokens Section -->
-          <div v-show="activeSection === 'tokens'" class="content-section">
+          <div
+            v-show="activeSection === 'tokens'"
+            class="content-section"
+          >
             <div class="section-intro">
               <h2>Capture Tokens</h2>
               <p>Generate tokens to send quick captures from Apple Shortcuts or external tools.</p>
@@ -277,47 +307,89 @@ onMounted(async () => {
                 class="input-field"
                 placeholder="Token label (e.g. iPhone, iPad)"
               />
-              <button class="btn btn-primary" @click="generateToken">
+              <button
+                class="btn btn-primary"
+                @click="generateToken"
+              >
                 <Plus :size="14" />
                 Generate
               </button>
             </div>
 
             <!-- Newly generated token (show once) -->
-            <div v-if="generatedToken" class="token-reveal">
+            <div
+              v-if="generatedToken"
+              class="token-reveal"
+            >
               <div class="token-reveal-header">
-                <AlertCircle :size="14" class="warning-icon" />
+                <AlertCircle
+                  :size="14"
+                  class="warning-icon"
+                />
                 <strong>Save this token — it cannot be shown again</strong>
               </div>
               <div class="token-value-row">
                 <code class="token-value">{{ generatedToken }}</code>
-                <button class="btn btn-icon" :title="copiedToken ? 'Copied!' : 'Copy'" @click="copyToken">
-                  <Check v-if="copiedToken" :size="14" />
-                  <Copy v-else :size="14" />
+                <button
+                  class="btn btn-icon"
+                  :title="copiedToken ? 'Copied!' : 'Copy'"
+                  @click="copyToken"
+                >
+                  <Check
+                    v-if="copiedToken"
+                    :size="14"
+                  />
+                  <Copy
+                    v-else
+                    :size="14"
+                  />
                 </button>
               </div>
             </div>
 
-            <p v-if="tokenError" class="error-text">{{ tokenError }}</p>
+            <p
+              v-if="tokenError"
+              class="error-text"
+            >
+              {{ tokenError }}
+            </p>
 
             <!-- Token list -->
-            <div v-if="tokensLoading" class="loading-text">Loading tokens...</div>
+            <div
+              v-if="tokensLoading"
+              class="loading-text"
+            >
+              Loading tokens...
+            </div>
             <template v-else-if="tokens.length > 0">
-              <div v-for="token in tokens" :key="token.id" class="row-item">
+              <div
+                v-for="token in tokens"
+                :key="token.id"
+                class="row-item"
+              >
                 <div class="token-info">
                   <span class="token-hint">{{ token.hint }}</span>
                   <span class="token-label">{{ token.label }}</span>
                   <span class="token-meta">
-                    Last used: {{ formatDate(token.lastUsedAt) }}
-                    &middot; Created: {{ formatDate(token.createdAt) }}
+                    Last used: {{ formatDate(token.lastUsedAt) }} &middot; Created:
+                    {{ formatDate(token.createdAt) }}
                   </span>
                 </div>
-                <button class="btn btn-icon" title="Revoke" @click="revokeToken(token.id)">
+                <button
+                  class="btn btn-icon"
+                  title="Revoke"
+                  @click="revokeToken(token.id)"
+                >
                   <Trash2 :size="14" />
                 </button>
               </div>
             </template>
-            <p v-else class="empty-text">No active tokens</p>
+            <p
+              v-else
+              class="empty-text"
+            >
+              No active tokens
+            </p>
 
             <!-- Apple Shortcuts guide -->
             <details class="setup-guide">
@@ -327,7 +399,9 @@ onMounted(async () => {
                 <li>
                   Create a new shortcut with a <strong>Get Contents of URL</strong> action:
                   <ul>
-                    <li>URL: <code>{{ apiBase || 'https://your-server' }}/api/inbox/capture</code></li>
+                    <li>
+                      URL: <code>{{ apiBase || 'https://your-server' }}/api/inbox/capture</code>
+                    </li>
                     <li>Method: <code>POST</code></li>
                     <li>Headers: <code>X-Capture-Token: &lt;your token&gt;</code></li>
                     <li>Body (JSON): <code>{"text": "Ask Each Time"}</code></li>
@@ -339,13 +413,21 @@ onMounted(async () => {
           </div>
 
           <!-- Connectors Section -->
-          <div v-show="activeSection === 'connectors'" class="content-section">
+          <div
+            v-show="activeSection === 'connectors'"
+            class="content-section"
+          >
             <div class="section-intro">
               <h2>Connectors</h2>
               <p>Connect external services to feed data into your Secretary's context.</p>
             </div>
 
-            <div v-if="integrationsLoading" class="loading-text">Loading integrations...</div>
+            <div
+              v-if="integrationsLoading"
+              class="loading-text"
+            >
+              Loading integrations...
+            </div>
 
             <!-- Google Calendar -->
             <div class="connector-row">
@@ -359,18 +441,31 @@ onMounted(async () => {
               <div class="connector-end">
                 <template v-if="getIntegration('gcal')">
                   <div class="connector-status">
-                    <span class="status-dot" :class="getIntegration('gcal')!.status"></span>
+                    <span
+                      class="status-dot"
+                      :class="getIntegration('gcal')!.status"
+                    ></span>
                     <span class="status-text">{{ getIntegration('gcal')!.status }}</span>
                     <span class="status-meta">
                       Synced {{ formatDate(getIntegration('gcal')!.lastSyncAt) }}
                     </span>
                   </div>
-                  <p v-if="getIntegration('gcal')!.syncError" class="error-text small">
+                  <p
+                    v-if="getIntegration('gcal')!.syncError"
+                    class="error-text small"
+                  >
                     {{ getIntegration('gcal')!.syncError }}
                   </p>
                   <div class="connector-actions">
-                    <button class="btn btn-ghost" :disabled="gcalSyncing" @click="syncGcal">
-                      <RefreshCw :size="14" :class="{ spinning: gcalSyncing }" />
+                    <button
+                      class="btn btn-ghost"
+                      :disabled="gcalSyncing"
+                      @click="syncGcal"
+                    >
+                      <RefreshCw
+                        :size="14"
+                        :class="{ spinning: gcalSyncing }"
+                      />
                       {{ gcalSyncing ? 'Syncing...' : 'Sync' }}
                     </button>
                     <button
@@ -380,13 +475,19 @@ onMounted(async () => {
                     >
                       Reconnect
                     </button>
-                    <button class="btn btn-ghost danger" @click="disconnectIntegration('gcal')">
+                    <button
+                      class="btn btn-ghost danger"
+                      @click="disconnectIntegration('gcal')"
+                    >
                       Disconnect
                     </button>
                   </div>
                 </template>
                 <template v-else>
-                  <button class="btn btn-primary" @click="openConsentModal">
+                  <button
+                    class="btn btn-primary"
+                    @click="openConsentModal"
+                  >
                     Connect
                   </button>
                 </template>
@@ -407,11 +508,17 @@ onMounted(async () => {
               <div class="connector-end">
                 <template v-if="getIntegration('notion')">
                   <div class="connector-status">
-                    <span class="status-dot" :class="getIntegration('notion')!.status"></span>
+                    <span
+                      class="status-dot"
+                      :class="getIntegration('notion')!.status"
+                    ></span>
                     <span class="status-text">{{ getIntegration('notion')!.status }}</span>
                   </div>
                   <div class="connector-actions">
-                    <button class="btn btn-ghost danger" @click="disconnectIntegration('notion')">
+                    <button
+                      class="btn btn-ghost danger"
+                      @click="disconnectIntegration('notion')"
+                    >
                       Disconnect
                     </button>
                   </div>
@@ -430,10 +537,18 @@ onMounted(async () => {
                       class="input-field"
                       placeholder="Database ID"
                     />
-                    <button class="btn btn-primary" @click="connectNotion">
+                    <button
+                      class="btn btn-primary"
+                      @click="connectNotion"
+                    >
                       Connect
                     </button>
-                    <p v-if="notionError" class="error-text">{{ notionError }}</p>
+                    <p
+                      v-if="notionError"
+                      class="error-text"
+                    >
+                      {{ notionError }}
+                    </p>
                   </div>
                 </template>
               </div>
@@ -441,7 +556,10 @@ onMounted(async () => {
           </div>
 
           <!-- API Keys Section (placeholder) -->
-          <div v-show="activeSection === 'api-keys'" class="content-section">
+          <div
+            v-show="activeSection === 'api-keys'"
+            class="content-section"
+          >
             <div class="section-intro">
               <h2>API Keys</h2>
               <p>Manage your API keys for AI providers.</p>
@@ -454,7 +572,11 @@ onMounted(async () => {
 
     <!-- Google Calendar Consent Modal -->
     <Teleport to="body">
-      <div v-if="showConsentModal" class="consent-overlay" @click.self="showConsentModal = false">
+      <div
+        v-if="showConsentModal"
+        class="consent-overlay"
+        @click.self="showConsentModal = false"
+      >
         <div class="consent-modal">
           <div class="consent-logos">
             <div class="consent-logo inkdown">
@@ -467,7 +589,8 @@ onMounted(async () => {
           </div>
           <h3 class="consent-title">Connect Google Calendar</h3>
           <p class="consent-desc">
-            Inkdown will request <strong>read-only</strong> access to your calendar events. Events are synced to your Calendar.md file for daily planning.
+            Inkdown will request <strong>read-only</strong> access to your calendar events. Events
+            are synced to your Calendar.md file for daily planning.
           </p>
           <ul class="consent-permissions">
             <li>View events on your calendars</li>
@@ -1086,7 +1209,11 @@ onMounted(async () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

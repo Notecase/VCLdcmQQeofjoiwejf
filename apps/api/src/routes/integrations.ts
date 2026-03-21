@@ -41,7 +41,9 @@ integrations.get('/', async (c) => {
 
   const { data, error } = await auth.supabase
     .from('user_integrations')
-    .select('id, provider, status, external_id, scopes, last_sync_at, sync_error, config, created_at, updated_at')
+    .select(
+      'id, provider, status, external_id, scopes, last_sync_at, sync_error, config, created_at, updated_at'
+    )
     .eq('user_id', auth.userId)
     .order('provider')
 
@@ -86,18 +88,16 @@ integrations.post('/gcal/connect', async (c) => {
 
   // Store state temporarily in user_integrations
   const db = getServiceClient()
-  await db
-    .from('user_integrations')
-    .upsert(
-      {
-        user_id: auth.userId,
-        provider: 'gcal',
-        status: 'pending',
-        config: { oauth_state: state },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,provider' }
-    )
+  await db.from('user_integrations').upsert(
+    {
+      user_id: auth.userId,
+      provider: 'gcal',
+      status: 'pending',
+      config: { oauth_state: state },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,provider' }
+  )
 
   const redirectUri = `${config.baseUrl}/api/integrations/gcal/callback`
   const params = new URLSearchParams({
@@ -123,11 +123,15 @@ integrations.get('/gcal/callback', async (c) => {
   const errorParam = c.req.query('error')
 
   if (errorParam) {
-    return c.redirect(`${config.baseUrl}/settings?integration=gcal&status=error&reason=${encodeURIComponent(errorParam)}`)
+    return c.redirect(
+      `${config.baseUrl}/settings?integration=gcal&status=error&reason=${encodeURIComponent(errorParam)}`
+    )
   }
 
   if (!code || !state) {
-    return c.redirect(`${config.baseUrl}/settings?integration=gcal&status=error&reason=missing_params`)
+    return c.redirect(
+      `${config.baseUrl}/settings?integration=gcal&status=error&reason=missing_params`
+    )
   }
 
   // Look up the integration by state across all users (no auth header in browser redirect)
@@ -138,10 +142,14 @@ integrations.get('/gcal/callback', async (c) => {
     .eq('provider', 'gcal')
     .eq('status', 'pending')
 
-  const integration = rows?.find((r) => (r.config as Record<string, unknown>)?.oauth_state === state)
+  const integration = rows?.find(
+    (r) => (r.config as Record<string, unknown>)?.oauth_state === state
+  )
 
   if (!integration) {
-    return c.redirect(`${config.baseUrl}/settings?integration=gcal&status=error&reason=invalid_state`)
+    return c.redirect(
+      `${config.baseUrl}/settings?integration=gcal&status=error&reason=invalid_state`
+    )
   }
 
   // Exchange code for tokens
@@ -166,9 +174,15 @@ integrations.get('/gcal/callback', async (c) => {
     console.error('Google token exchange failed:', errBody)
     await db
       .from('user_integrations')
-      .update({ status: 'error', sync_error: 'Token exchange failed', updated_at: new Date().toISOString() })
+      .update({
+        status: 'error',
+        sync_error: 'Token exchange failed',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', integration.id)
-    return c.redirect(`${config.baseUrl}/settings?integration=gcal&status=error&reason=token_exchange_failed`)
+    return c.redirect(
+      `${config.baseUrl}/settings?integration=gcal&status=error&reason=token_exchange_failed`
+    )
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -221,11 +235,18 @@ integrations.post('/gcal/sync', async (c) => {
   try {
     // Refresh token if expired
     let accessToken = integration.access_token
-    if (integration.token_expires_at && new Date(integration.token_expires_at) < new Date(Date.now() + 5 * 60 * 1000)) {
+    if (
+      integration.token_expires_at &&
+      new Date(integration.token_expires_at) < new Date(Date.now() + 5 * 60 * 1000)
+    ) {
       if (!integration.refresh_token) {
         await db
           .from('user_integrations')
-          .update({ status: 'error', sync_error: 'Refresh token missing, re-connect needed', updated_at: new Date().toISOString() })
+          .update({
+            status: 'error',
+            sync_error: 'Refresh token missing, re-connect needed',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', integration.id)
         return c.json({ error: 'Token expired, please reconnect' }, 401)
       }
@@ -244,7 +265,11 @@ integrations.post('/gcal/sync', async (c) => {
       if (!refreshRes.ok) {
         await db
           .from('user_integrations')
-          .update({ status: 'error', sync_error: 'Token refresh failed', updated_at: new Date().toISOString() })
+          .update({
+            status: 'error',
+            sync_error: 'Token refresh failed',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', integration.id)
         return c.json({ error: 'Failed to refresh token' }, 500)
       }
@@ -255,7 +280,11 @@ integrations.post('/gcal/sync', async (c) => {
 
       await db
         .from('user_integrations')
-        .update({ access_token: accessToken, token_expires_at: newExpiry, updated_at: new Date().toISOString() })
+        .update({
+          access_token: accessToken,
+          token_expires_at: newExpiry,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', integration.id)
     }
 
@@ -265,7 +294,8 @@ integrations.post('/gcal/sync', async (c) => {
     const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).toISOString()
     const calendarId = (integration.config as Record<string, unknown>)?.calendarId || 'primary'
 
-    const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId as string)}/events?` +
+    const eventsUrl =
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId as string)}/events?` +
       new URLSearchParams({
         timeMin,
         timeMax,
@@ -319,10 +349,18 @@ integrations.post('/gcal/sync', async (c) => {
 
     const formatEvent = (e: (typeof events)[0]): string => {
       const startTime = e.start?.dateTime
-        ? new Date(e.start.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+        ? new Date(e.start.dateTime).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
         : 'All day'
       const endTime = e.end?.dateTime
-        ? new Date(e.end.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+        ? new Date(e.end.dateTime).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
         : ''
       const time = endTime ? `${startTime}-${endTime}` : startTime
       const location = e.location ? ` @ ${e.location}` : ''
@@ -344,17 +382,15 @@ integrations.post('/gcal/sync', async (c) => {
     }
 
     // Write to Calendar.md (today + tomorrow summary for AI context)
-    await db
-      .from('secretary_memory')
-      .upsert(
-        {
-          user_id: auth.userId,
-          filename: 'Calendar.md',
-          content: calendarMd,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,filename' }
-      )
+    await db.from('secretary_memory').upsert(
+      {
+        user_id: auth.userId,
+        filename: 'Calendar.md',
+        content: calendarMd,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,filename' }
+    )
 
     // Write structured events cache (_calendar_events.json) for frontend
     const rangeStartStr = timeMin.slice(0, 10)
@@ -363,7 +399,7 @@ integrations.post('/gcal/sync', async (c) => {
       const isAllDay = !e.start?.dateTime
       const startTime = e.start?.dateTime || e.start?.date || ''
       const endTime = e.end?.dateTime || e.end?.date || ''
-      const date = isAllDay ? (e.start?.date || '') : (e.start?.dateTime?.slice(0, 10) || '')
+      const date = isAllDay ? e.start?.date || '' : e.start?.dateTime?.slice(0, 10) || ''
       return {
         id: e.id || crypto.randomUUID(),
         title: e.summary || 'Untitled',
@@ -384,27 +420,33 @@ integrations.post('/gcal/sync', async (c) => {
       events: structuredEvents,
     }
 
-    await db
-      .from('secretary_memory')
-      .upsert(
-        {
-          user_id: auth.userId,
-          filename: '_calendar_events.json',
-          content: JSON.stringify(eventsCache),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,filename' }
-      )
+    await db.from('secretary_memory').upsert(
+      {
+        user_id: auth.userId,
+        filename: '_calendar_events.json',
+        content: JSON.stringify(eventsCache),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,filename' }
+    )
 
     // Update sync timestamp
     await db
       .from('user_integrations')
-      .update({ last_sync_at: new Date().toISOString(), sync_error: null, updated_at: new Date().toISOString() })
+      .update({
+        last_sync_at: new Date().toISOString(),
+        sync_error: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', integration.id)
 
     return c.json({
       success: true,
-      events: { today: todayEvents.length, tomorrow: tomorrowEvents.length, total: structuredEvents.length },
+      events: {
+        today: todayEvents.length,
+        tomorrow: tomorrowEvents.length,
+        total: structuredEvents.length,
+      },
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -479,21 +521,19 @@ integrations.post('/notion/connect', zValidator('json', NotionConnectSchema), as
   const auth = requireAuth(c)
   const { token, database_id } = c.req.valid('json')
 
-  const { error } = await auth.supabase
-    .from('user_integrations')
-    .upsert(
-      {
-        user_id: auth.userId,
-        provider: 'notion',
-        status: 'active',
-        access_token: token,
-        external_id: database_id,
-        scopes: ['read_content'],
-        config: { databaseId: database_id },
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,provider' }
-    )
+  const { error } = await auth.supabase.from('user_integrations').upsert(
+    {
+      user_id: auth.userId,
+      provider: 'notion',
+      status: 'active',
+      access_token: token,
+      external_id: database_id,
+      scopes: ['read_content'],
+      config: { databaseId: database_id },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,provider' }
+  )
 
   if (error) {
     return c.json({ error: 'Failed to save Notion integration' }, 500)

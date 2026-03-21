@@ -113,7 +113,10 @@ export class GeminiProvider implements AIProvider {
       },
     })
 
-    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'completion' })) {
+    for await (const chunk of trackGeminiStream(result, {
+      model: this.modelName,
+      taskType: 'completion',
+    })) {
       const text = chunk.text()
       if (text) {
         yield text
@@ -149,7 +152,10 @@ ${text}`
       generationConfig: { temperature: 0.7 },
     })
 
-    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'rewrite' })) {
+    for await (const chunk of trackGeminiStream(result, {
+      model: this.modelName,
+      taskType: 'rewrite',
+    })) {
       const chunkText = chunk.text()
       if (chunkText) {
         yield chunkText
@@ -175,7 +181,10 @@ ${text}`
       generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
     })
 
-    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'chat' })) {
+    for await (const chunk of trackGeminiStream(result, {
+      model: this.modelName,
+      taskType: 'chat',
+    })) {
       const text = chunk.text()
       if (text) {
         yield text
@@ -201,7 +210,10 @@ ${text}`
       generationConfig: { temperature: 0.5, maxOutputTokens: 1000 },
     })
 
-    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'summarize' })) {
+    for await (const chunk of trackGeminiStream(result, {
+      model: this.modelName,
+      taskType: 'summarize',
+    })) {
       const chunkText = chunk.text()
       if (chunkText) {
         yield chunkText
@@ -346,7 +358,10 @@ Format as clear, well-organized markdown.`
 
     yield { type: 'progress', data: 'Analyzing sources...' }
 
-    for await (const chunk of trackGeminiStream(result, { model: this.researchModelName, taskType: 'deep-research' })) {
+    for await (const chunk of trackGeminiStream(result, {
+      model: this.researchModelName,
+      taskType: 'deep-research',
+    })) {
       const text = chunk.text()
       if (text) {
         yield { type: 'content', data: text }

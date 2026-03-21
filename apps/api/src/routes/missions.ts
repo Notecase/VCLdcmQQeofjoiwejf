@@ -72,7 +72,8 @@ missions.post(
     const approvalId = c.req.param('approvalId')
     const body = c.req.valid('json')
 
-    const { MissionOrchestratorService, SharedContextService } = await import('@inkdown/ai/services')
+    const { MissionOrchestratorService, SharedContextService } =
+      await import('@inkdown/ai/services')
     const service = new MissionOrchestratorService({
       supabase: auth.supabase,
       userId: auth.userId,
@@ -98,7 +99,8 @@ missions.post(
     const approvalId = c.req.param('approvalId')
     const body = c.req.valid('json')
 
-    const { MissionOrchestratorService, SharedContextService } = await import('@inkdown/ai/services')
+    const { MissionOrchestratorService, SharedContextService } =
+      await import('@inkdown/ai/services')
     const service = new MissionOrchestratorService({
       supabase: auth.supabase,
       userId: auth.userId,

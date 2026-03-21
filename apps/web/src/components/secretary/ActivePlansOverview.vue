@@ -80,7 +80,6 @@ function viewDetails(event: Event, plan: LearningRoadmap) {
         </div>
       </article>
     </div>
-
   </section>
 </template>
 

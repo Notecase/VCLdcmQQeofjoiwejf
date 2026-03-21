@@ -110,7 +110,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
               <span
                 v-if="event.location"
                 class="event-location"
-              >{{ event.location }}</span>
+                >{{ event.location }}</span
+              >
             </div>
           </div>
         </div>
@@ -145,13 +146,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .day-expand-enter-active .day-overlay-card {
-  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 350ms ease;
+  transition:
+    transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 350ms ease;
 }
 .day-expand-leave-active {
   transition: opacity 200ms ease;
 }
 .day-expand-leave-active .day-overlay-card {
-  transition: transform 200ms ease, opacity 200ms ease;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
 }
 .day-expand-enter-from {
   opacity: 0;
@@ -180,7 +185,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .overlay-header {

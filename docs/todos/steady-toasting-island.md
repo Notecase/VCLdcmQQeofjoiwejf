@@ -9,6 +9,7 @@ After the previous round of fixes (empty note content, AI repetition, cursor ali
 ## Root Cause
 
 ### The flow when AI creates a note:
+
 1. Backend `createNote` tool emits `note-navigate` event
 2. Frontend `ai.service.ts:845` calls `editorStore.loadDocument(noteId)`
 3. `loadDocument()` → `openDocument()` → sets `this.currentDocument`
@@ -18,14 +19,17 @@ After the previous round of fixes (empty note content, AI repetition, cursor ali
 7. For new notes, `editor_state?.cursor` is undefined, so `setMarkdown` never calls `setCursor` either
 
 **Result:** After `setContent()`, the editor has new DOM blocks but:
+
 - `editor.activeContentBlock` is null
 - No native DOM selection exists (no cursor in any contenteditable)
 - No `selection-change` event fires → ParagraphFrontButton doesn't reposition
 
 ### Why keyboard breaks:
+
 The event handler in `editor/index.ts:73` calls `this.selection.getSelection()`. With no DOM selection, it returns null → `!isSelectionInSameBlock || !anchorBlock` is true → ALL events (keydown, input) are silently dropped at line 87. The browser's native contenteditable still inserts characters, but Muya doesn't process them (backspace, Enter, etc. are ignored).
 
 ### Why ghost icons appear at corner:
+
 ParagraphFrontButton subscribes to `selection-change`. No event fires after `setContent` → button still references a stale block from the previous note (detached DOM) → `getBoundingClientRect()` returns 0,0 → button renders at top-left corner.
 
 ---
@@ -65,6 +69,7 @@ watch(
 ### Why this works
 
 `muya.focus()` → `editor.focus()` (editor/index.ts:128):
+
 1. Finds first content block via `scrollPage.firstContentInDescendant()`
 2. Calls `firstLeafBlock.setCursor(0, 0, needUpdated)` which:
    - Sets `editor.activeContentBlock = this` → fixes event dispatch
@@ -83,8 +88,8 @@ When a saved cursor exists, `setMarkdown` already handles focus via `setTimeout(
 
 ## File to Modify
 
-| File | Change |
-|------|--------|
+| File                                            | Change                                             |
+| ----------------------------------------------- | -------------------------------------------------- |
 | `apps/web/src/components/editor/EditorArea.vue` | Add `focus()` call in document watcher (line ~256) |
 
 ## Verification

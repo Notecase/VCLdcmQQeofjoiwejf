@@ -63,7 +63,9 @@ export const config = {
   // Feature flags
   flags: {
     missionHubV1: !['0', 'false', 'off', 'no'].includes(
-      String(process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true'))
+      String(
+        process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true')
+      )
         .trim()
         .toLowerCase()
     ),

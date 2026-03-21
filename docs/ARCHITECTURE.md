@@ -411,47 +411,47 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 
 ### API Routes
 
-| Route                                  | Auth | Purpose                                                    |
-| -------------------------------------- | ---- | ---------------------------------------------------------- |
-| `GET /health/*`                        | No   | Health, readiness, liveness checks                         |
-| `POST /api/agent/secretary`            | Yes  | Secretary agent (intent routing) - SSE                     |
-| `POST /api/agent/chat`                 | Yes  | Chat agent with RAG - SSE                                  |
-| `POST /api/agent/note/action`          | Yes  | Note manipulation - SSE                                    |
-| `POST /api/agent/planner/*`            | Yes  | Goal planning - SSE                                        |
-| `POST /api/agent/agentic/*`            | Yes  | Autonomous tasks - SSE                                     |
-| `GET /api/agent/capabilities`          | Yes  | Available agents metadata                                  |
-| `POST /api/chat/sessions`              | Yes  | Chat session CRUD                                          |
-| `POST /api/search/semantic`            | Yes  | Vector search (embedding-based)                            |
-| `POST /api/search/hybrid`              | Yes  | Full-text + semantic search                                |
-| `POST /api/embed/note`                 | Yes  | Queue note for embedding                                   |
-| `POST /api/recommend/*`                | Yes  | Generate recommendations (mindmap, flashcards, etc.) - SSE |
-| `POST /api/orchestration/execute`      | Yes  | Execute workflow - SSE                                     |
-| `POST /api/slides/generate`            | Yes  | Slide generation via Gemini - SSE                          |
-| `POST /api/sources/upload`             | Yes  | Upload file source - SSE                                   |
-| `POST /api/sources/link`               | Yes  | Add link source - SSE                                      |
-| `POST /api/sources/action`             | Yes  | Execute workflow on sources - SSE                          |
-| `POST /api/learning-resources/save`    | Yes  | Save learning resource                                     |
-| `GET /api/learning-resources/note/:id` | Yes  | Get resources for note                                     |
-| `GET /api/settings/api-keys`           | Yes  | List BYOK API keys (hints only)                            |
-| `POST /api/settings/api-keys`          | Yes  | Add/update BYOK API key                                    |
-| `DELETE /api/settings/api-keys/:p`     | Yes  | Remove BYOK API key                                        |
-| `GET /api/settings/ai-preferences`     | Yes  | Get AI model preferences                                   |
-| `PUT /api/settings/ai-preferences`     | Yes  | Update AI model preferences                                |
-| `GET /api/settings/heartbeat`          | Yes  | Get heartbeat state/config                                 |
-| `PUT /api/settings/heartbeat`          | Yes  | Update heartbeat config                                    |
-| `GET /api/settings/heartbeat/logs`     | Yes  | Get heartbeat action logs                                  |
-| `POST /api/inbox/capture`              | Token| Quick capture via X-Capture-Token (Apple Shortcuts, PWA)   |
-| `GET /api/inbox`                       | Yes  | Read Inbox.md content                                      |
-| `DELETE /api/inbox`                    | Yes  | Clear Inbox.md                                             |
-| `POST /api/inbox/tokens`              | Yes  | Generate capture token (raw token returned once)           |
-| `GET /api/inbox/tokens`               | Yes  | List capture tokens (hints only)                           |
-| `DELETE /api/inbox/tokens/:id`        | Yes  | Revoke a capture token                                     |
-| `GET /api/integrations`               | Yes  | List connected integrations                                |
-| `POST /api/integrations/gcal/connect` | Yes  | Get Google OAuth authorization URL                         |
-| `GET /api/integrations/gcal/callback` | Yes  | Handle Google OAuth callback                               |
-| `POST /api/integrations/gcal/sync`    | Yes  | Manual Google Calendar sync → Calendar.md                  |
-| `DELETE /api/integrations/:provider`  | Yes  | Disconnect an integration                                  |
-| `POST /api/integrations/notion/connect`| Yes | Save Notion BYOK token                                     |
+| Route                                   | Auth  | Purpose                                                    |
+| --------------------------------------- | ----- | ---------------------------------------------------------- |
+| `GET /health/*`                         | No    | Health, readiness, liveness checks                         |
+| `POST /api/agent/secretary`             | Yes   | Secretary agent (intent routing) - SSE                     |
+| `POST /api/agent/chat`                  | Yes   | Chat agent with RAG - SSE                                  |
+| `POST /api/agent/note/action`           | Yes   | Note manipulation - SSE                                    |
+| `POST /api/agent/planner/*`             | Yes   | Goal planning - SSE                                        |
+| `POST /api/agent/agentic/*`             | Yes   | Autonomous tasks - SSE                                     |
+| `GET /api/agent/capabilities`           | Yes   | Available agents metadata                                  |
+| `POST /api/chat/sessions`               | Yes   | Chat session CRUD                                          |
+| `POST /api/search/semantic`             | Yes   | Vector search (embedding-based)                            |
+| `POST /api/search/hybrid`               | Yes   | Full-text + semantic search                                |
+| `POST /api/embed/note`                  | Yes   | Queue note for embedding                                   |
+| `POST /api/recommend/*`                 | Yes   | Generate recommendations (mindmap, flashcards, etc.) - SSE |
+| `POST /api/orchestration/execute`       | Yes   | Execute workflow - SSE                                     |
+| `POST /api/slides/generate`             | Yes   | Slide generation via Gemini - SSE                          |
+| `POST /api/sources/upload`              | Yes   | Upload file source - SSE                                   |
+| `POST /api/sources/link`                | Yes   | Add link source - SSE                                      |
+| `POST /api/sources/action`              | Yes   | Execute workflow on sources - SSE                          |
+| `POST /api/learning-resources/save`     | Yes   | Save learning resource                                     |
+| `GET /api/learning-resources/note/:id`  | Yes   | Get resources for note                                     |
+| `GET /api/settings/api-keys`            | Yes   | List BYOK API keys (hints only)                            |
+| `POST /api/settings/api-keys`           | Yes   | Add/update BYOK API key                                    |
+| `DELETE /api/settings/api-keys/:p`      | Yes   | Remove BYOK API key                                        |
+| `GET /api/settings/ai-preferences`      | Yes   | Get AI model preferences                                   |
+| `PUT /api/settings/ai-preferences`      | Yes   | Update AI model preferences                                |
+| `GET /api/settings/heartbeat`           | Yes   | Get heartbeat state/config                                 |
+| `PUT /api/settings/heartbeat`           | Yes   | Update heartbeat config                                    |
+| `GET /api/settings/heartbeat/logs`      | Yes   | Get heartbeat action logs                                  |
+| `POST /api/inbox/capture`               | Token | Quick capture via X-Capture-Token (Apple Shortcuts, PWA)   |
+| `GET /api/inbox`                        | Yes   | Read Inbox.md content                                      |
+| `DELETE /api/inbox`                     | Yes   | Clear Inbox.md                                             |
+| `POST /api/inbox/tokens`                | Yes   | Generate capture token (raw token returned once)           |
+| `GET /api/inbox/tokens`                 | Yes   | List capture tokens (hints only)                           |
+| `DELETE /api/inbox/tokens/:id`          | Yes   | Revoke a capture token                                     |
+| `GET /api/integrations`                 | Yes   | List connected integrations                                |
+| `POST /api/integrations/gcal/connect`   | Yes   | Get Google OAuth authorization URL                         |
+| `GET /api/integrations/gcal/callback`   | Yes   | Handle Google OAuth callback                               |
+| `POST /api/integrations/gcal/sync`      | Yes   | Manual Google Calendar sync → Calendar.md                  |
+| `DELETE /api/integrations/:provider`    | Yes   | Disconnect an integration                                  |
+| `POST /api/integrations/notion/connect` | Yes   | Save Notion BYOK token                                     |
 
 ### Services
 
@@ -482,13 +482,13 @@ Multiple endpoints support SSE (`text/event-stream`). Chunk types: `text-delta`,
 
 ### Routes
 
-| Path        | View            | Purpose                                    |
-| ----------- | --------------- | ------------------------------------------ |
-| `/`         | EditorView      | Main editor with tabs, sidebar, AI panel   |
-| `/auth`     | AuthView        | Login/signup (email, OAuth, guest)         |
-| `/ai`       | AIChat          | Full-page AI chat interface                |
-| `/capture`  | CaptureView     | PWA quick-capture page (mobile-friendly)   |
-| `/settings` | SettingsView    | Capture tokens, integrations management    |
+| Path        | View         | Purpose                                  |
+| ----------- | ------------ | ---------------------------------------- |
+| `/`         | EditorView   | Main editor with tabs, sidebar, AI panel |
+| `/auth`     | AuthView     | Login/signup (email, OAuth, guest)       |
+| `/ai`       | AIChat       | Full-page AI chat interface              |
+| `/capture`  | CaptureView  | PWA quick-capture page (mobile-friendly) |
+| `/settings` | SettingsView | Capture tokens, integrations management  |
 
 ### Pinia Stores
 
@@ -657,8 +657,8 @@ AI proposes edit via edit-proposal SSE chunk
 | `agent_sessions`          | LangGraph state persistence (thread_id, state, checkpoint_id)                    |
 | `ai_memory`               | AI memory storage (memory_type, content, metadata) - accessed via RPC            |
 | `user_profiles`           | User profile data (display_name, plan, storage_used)                             |
-| `user_context_entries`    | Shared context bus logbook (agent, type, summary, payload, expires_at)            |
-| `user_soul`               | User preferences/goals for cross-agent personalization (content text)             |
+| `user_context_entries`    | Shared context bus logbook (agent, type, summary, payload, expires_at)           |
+| `user_soul`               | User preferences/goals for cross-agent personalization (content text)            |
 | `user_api_keys`           | BYOK encrypted API keys (provider, encrypted_key, key_hint, is_valid)            |
 | `user_ai_preferences`     | AI model preferences (preferred_provider, preferred_model, max_daily_cost)       |
 | `agent_heartbeat_state`   | Per-user heartbeat config (enabled, timezone, last_morning/evening/weekly_at)    |
@@ -706,10 +706,12 @@ heartbeat (BYOK)                   -> User's preferred provider via createBYOKPr
 Cross-agent context sharing via a Supabase-backed logbook. Every agent reads recent entries at prompt-build time and writes entries after significant actions.
 
 **Tables:**
+
 - `user_context_entries` — Append-only logbook (agent, type, summary, payload, expires_at)
 - `user_soul` — User-authored preferences and goals (plain text)
 
 **Service:** `SharedContextService` (`packages/ai/src/services/shared-context.service.ts`)
+
 - `read(options?)` — Returns formatted markdown for prompt injection
 - `write(entry)` — Appends a context entry (best-effort, never blocks)
 - `readSoul()` / `writeSoul(content)` — User preference CRUD
@@ -742,17 +744,18 @@ A Supabase Edge Function (`supabase/functions/heartbeat/`) invoked by pg_cron ev
 
 Orchestrated workflows shipped with `@noteshell/mcp`:
 
-| Skill | File | Purpose |
-|-------|------|---------|
-| Morning Routine | `morning-routine.md` | Full daily planning: gather context, archive, focus, generate Today.md |
-| Evening Reflection | `evening-reflection.md` | End-of-day review, reflection, carry over, prepare tomorrow |
-| Weekly Review | `weekly-review.md` | Weekly analysis, patterns, plan progress, soul updates |
-| Study Planning | `study-planning.md` | Creating roadmaps, daily plans, progress tracking |
-| Note Organization | `note-organization.md` | Structuring projects, rich notes |
-| Research to Notes | `research-to-notes.md` | Capturing research as structured notes |
-| Daily Workflow | `daily-workflow.md` | Mid-day activity logging, quick task updates |
+| Skill              | File                    | Purpose                                                                |
+| ------------------ | ----------------------- | ---------------------------------------------------------------------- |
+| Morning Routine    | `morning-routine.md`    | Full daily planning: gather context, archive, focus, generate Today.md |
+| Evening Reflection | `evening-reflection.md` | End-of-day review, reflection, carry over, prepare tomorrow            |
+| Weekly Review      | `weekly-review.md`      | Weekly analysis, patterns, plan progress, soul updates                 |
+| Study Planning     | `study-planning.md`     | Creating roadmaps, daily plans, progress tracking                      |
+| Note Organization  | `note-organization.md`  | Structuring projects, rich notes                                       |
+| Research to Notes  | `research-to-notes.md`  | Capturing research as structured notes                                 |
+| Daily Workflow     | `daily-workflow.md`     | Mid-day activity logging, quick task updates                           |
 
 **API routes:** `apps/api/src/routes/context.ts`
+
 - `GET /api/context/soul` — Read soul content
 - `PUT /api/context/soul` — Update soul content
 - `GET /api/context/entries` — List recent entries
@@ -785,16 +788,16 @@ User Goal → Research → Course Draft → Daily Plan → Note Pack → Done
 
 ### Key Components
 
-| Component | Location | Role |
-|-----------|----------|------|
-| Mission types | `packages/shared/src/types/mission.ts` | All mission types (Mission, MissionStep, MissionApproval, etc.) |
-| MissionOrchestrator | `packages/ai/src/services/mission-orchestrator.ts` | Core engine: stage execution, lock management, approval gates, event log |
-| Mission Adapters | `packages/ai/src/services/mission-adapters.ts` | Real agent wrappers that consume streaming output for structured results |
-| SharedContextService | `packages/ai/src/services/shared-context.service.ts` | Cross-agent context bus (logbook pattern) |
-| API Routes | `apps/api/src/routes/missions.ts` | REST + SSE endpoints for mission CRUD and streaming |
-| Mission Store | `apps/web/src/stores/missions.ts` | Pinia store: SSE streaming, dedup, reconnect, state replay |
-| MissionHubView | `apps/web/src/views/MissionHubView.vue` | Goal entry + mode selection |
-| MissionDetailView | `apps/web/src/views/MissionDetailView.vue` | 5-panel live dashboard |
+| Component            | Location                                             | Role                                                                     |
+| -------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| Mission types        | `packages/shared/src/types/mission.ts`               | All mission types (Mission, MissionStep, MissionApproval, etc.)          |
+| MissionOrchestrator  | `packages/ai/src/services/mission-orchestrator.ts`   | Core engine: stage execution, lock management, approval gates, event log |
+| Mission Adapters     | `packages/ai/src/services/mission-adapters.ts`       | Real agent wrappers that consume streaming output for structured results |
+| SharedContextService | `packages/ai/src/services/shared-context.service.ts` | Cross-agent context bus (logbook pattern)                                |
+| API Routes           | `apps/api/src/routes/missions.ts`                    | REST + SSE endpoints for mission CRUD and streaming                      |
+| Mission Store        | `apps/web/src/stores/missions.ts`                    | Pinia store: SSE streaming, dedup, reconnect, state replay               |
+| MissionHubView       | `apps/web/src/views/MissionHubView.vue`              | Goal entry + mode selection                                              |
+| MissionDetailView    | `apps/web/src/views/MissionDetailView.vue`           | 5-panel live dashboard                                                   |
 
 ### Shared Context Bus
 
@@ -804,27 +807,27 @@ Context entry types: `active_plan`, `research_done`, `course_saved`, `note_creat
 
 ### Database Tables
 
-| Table | Purpose |
-|-------|---------|
-| `missions` | Goal, mode, status, current stage |
-| `mission_steps` | Per-stage status, retry count, timing |
-| `mission_handoffs` | Inter-stage data transfer (research brief, course outline, etc.) |
-| `mission_approvals` | Approval gates with risk level, expiry, resolution |
-| `mission_events` | Sequenced event log for SSE streaming |
-| `mission_run_locks` | Distributed lock preventing concurrent execution |
-| `user_context_entries` | Cross-agent context bus |
-| `user_soul` | User learning preferences |
+| Table                  | Purpose                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| `missions`             | Goal, mode, status, current stage                                |
+| `mission_steps`        | Per-stage status, retry count, timing                            |
+| `mission_handoffs`     | Inter-stage data transfer (research brief, course outline, etc.) |
+| `mission_approvals`    | Approval gates with risk level, expiry, resolution               |
+| `mission_events`       | Sequenced event log for SSE streaming                            |
+| `mission_run_locks`    | Distributed lock preventing concurrent execution                 |
+| `user_context_entries` | Cross-agent context bus                                          |
+| `user_soul`            | User learning preferences                                        |
 
 ### API Routes
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/missions/start` | Create mission + 4 steps, start background run |
-| GET | `/api/missions/:id/state` | Full state snapshot |
-| GET | `/api/missions/:id/stream` | SSE stream (supports `?afterSeq=n` for reconnect) |
-| POST | `/api/missions/:id/approvals/:approvalId/approve` | Approve gate |
-| POST | `/api/missions/:id/approvals/:approvalId/reject` | Reject gate |
-| POST | `/api/missions/:id/resume` | Resume blocked/errored mission |
+| Method | Path                                              | Purpose                                           |
+| ------ | ------------------------------------------------- | ------------------------------------------------- |
+| POST   | `/api/missions/start`                             | Create mission + 4 steps, start background run    |
+| GET    | `/api/missions/:id/state`                         | Full state snapshot                               |
+| GET    | `/api/missions/:id/stream`                        | SSE stream (supports `?afterSeq=n` for reconnect) |
+| POST   | `/api/missions/:id/approvals/:approvalId/approve` | Approve gate                                      |
+| POST   | `/api/missions/:id/approvals/:approvalId/reject`  | Reject gate                                       |
+| POST   | `/api/missions/:id/resume`                        | Resume blocked/errored mission                    |
 
 ### Feature Flags
 
@@ -946,23 +949,23 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 ### API Endpoints (`apps/api/src/routes/secretary.ts`)
 
-| Method | Path                              | Purpose                            |
-| ------ | --------------------------------- | ---------------------------------- |
-| POST   | `/api/secretary/chat`             | Streaming chat via SSE             |
-| GET    | `/api/secretary/memory`           | List all memory files              |
-| GET    | `/api/secretary/memory/:filename` | Get specific memory file           |
-| PUT    | `/api/secretary/memory/:filename` | Update memory file                 |
-| POST   | `/api/secretary/initialize`       | Create default memory files        |
-| POST   | `/api/secretary/prepare-tomorrow` | AI generates tomorrow's plan (SSE) |
-| POST   | `/api/secretary/approve-tomorrow` | Move Tomorrow.md → Today.md        |
-| POST   | `/api/secretary/day-transition`   | Trigger day transition manually    |
-| GET    | `/api/secretary/history`          | List archived daily plans          |
-| GET    | `/api/secretary/plan-links`       | All plan-project links for user    |
-| POST   | `/api/secretary/plan/:id/link-project` | Create folder + link for plan |
-| DELETE | `/api/secretary/plan/:id/unlink-project` | Remove plan-project link    |
-| GET    | `/api/context/soul`               | Read user soul/preferences         |
-| PUT    | `/api/context/soul`               | Update user soul/preferences       |
-| GET    | `/api/context/entries`            | List recent context entries        |
+| Method | Path                                     | Purpose                            |
+| ------ | ---------------------------------------- | ---------------------------------- |
+| POST   | `/api/secretary/chat`                    | Streaming chat via SSE             |
+| GET    | `/api/secretary/memory`                  | List all memory files              |
+| GET    | `/api/secretary/memory/:filename`        | Get specific memory file           |
+| PUT    | `/api/secretary/memory/:filename`        | Update memory file                 |
+| POST   | `/api/secretary/initialize`              | Create default memory files        |
+| POST   | `/api/secretary/prepare-tomorrow`        | AI generates tomorrow's plan (SSE) |
+| POST   | `/api/secretary/approve-tomorrow`        | Move Tomorrow.md → Today.md        |
+| POST   | `/api/secretary/day-transition`          | Trigger day transition manually    |
+| GET    | `/api/secretary/history`                 | List archived daily plans          |
+| GET    | `/api/secretary/plan-links`              | All plan-project links for user    |
+| POST   | `/api/secretary/plan/:id/link-project`   | Create folder + link for plan      |
+| DELETE | `/api/secretary/plan/:id/unlink-project` | Remove plan-project link           |
+| GET    | `/api/context/soul`                      | Read user soul/preferences         |
+| PUT    | `/api/context/soul`                      | Update user soul/preferences       |
+| GET    | `/api/context/entries`                   | List recent context entries        |
 
 ### Frontend
 
@@ -986,11 +989,11 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 ### Database
 
-| Table               | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
-| `secretary_memory`      | Markdown memory files per user (unique on `user_id, filename`). Includes `Inbox.md` (captures) and `Calendar.md` (synced events) |
-| `secretary_threads`     | Chat thread persistence for conversation continuity            |
-| `plan_schedules`        | Recurring automations per plan (workflow, frequency, time, instructions) |
-| `plan_project_links`    | Junction table mapping plan IDs (text) to project/folder UUIDs. Enables "smart folders" — each plan auto-creates an editor folder, and generated notes land there |
-| `user_capture_tokens`   | Hashed capture tokens for mobile/shortcut inbox capture (token auth, not JWT) |
-| `user_integrations`     | Connected external services (Google Calendar, Notion) with OAuth tokens and sync state |
+| Table                 | Purpose                                                                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `secretary_memory`    | Markdown memory files per user (unique on `user_id, filename`). Includes `Inbox.md` (captures) and `Calendar.md` (synced events)                                  |
+| `secretary_threads`   | Chat thread persistence for conversation continuity                                                                                                               |
+| `plan_schedules`      | Recurring automations per plan (workflow, frequency, time, instructions)                                                                                          |
+| `plan_project_links`  | Junction table mapping plan IDs (text) to project/folder UUIDs. Enables "smart folders" — each plan auto-creates an editor folder, and generated notes land there |
+| `user_capture_tokens` | Hashed capture tokens for mobile/shortcut inbox capture (token auth, not JWT)                                                                                     |
+| `user_integrations`   | Connected external services (Google Calendar, Notion) with OAuth tokens and sync state                                                                            |

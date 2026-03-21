@@ -27,8 +27,8 @@ vi.mock('../../providers/client-factory', () => ({
   createLangChainModel: vi.fn(),
 }))
 
-vi.mock('../../providers/model-registry', () => ({
-  selectModel: (taskType: string) => ({
+vi.mock('../../providers/model-registry', () => {
+  const makeEntry = (taskType: string) => ({
     id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-3.1-pro-preview',
     provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
     displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 3.1 Pro',
@@ -38,8 +38,15 @@ vi.mock('../../providers/model-registry', () => ({
     costPer1kOutput: 0,
     maxOutputTokens: 32768,
     supportsToolChoice: false,
-  }),
-}))
+  })
+  return {
+    selectModel: (taskType: string) => makeEntry(taskType),
+    MODEL_REGISTRY: {
+      'gemini-3.1-pro-preview': makeEntry('research'),
+      'kimi-k2.5': makeEntry('artifact'),
+    },
+  }
+})
 
 function createTextStream(chunks: string[]) {
   return {

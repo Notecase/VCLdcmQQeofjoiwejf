@@ -19,11 +19,11 @@ Notion nearly died in 2015. Their v1 was built on a bad tech stack that kept cra
 
 ### The Tool-to-Platform-to-Ecosystem Arc
 
-| Phase | What Notion Did | Strategic Insight |
-|-------|----------------|-------------------|
-| **Tool** (2016-2017) | Personal docs, wikis, tasks. Single-player mode. | Started with a *genuinely useful* single-player tool. No team features needed. |
-| **Platform** (2018-2020) | Databases, templates, team workspaces, API. Real-time collaboration. | The block architecture was the platform primitive. Everything composed from blocks. |
-| **Ecosystem** (2021-present) | Ambassadors, template marketplace, third-party integrations, API developers building businesses on Notion. | The community became the growth engine. Notion didn't build features -- the community built *businesses*. |
+| Phase                        | What Notion Did                                                                                            | Strategic Insight                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Tool** (2016-2017)         | Personal docs, wikis, tasks. Single-player mode.                                                           | Started with a _genuinely useful_ single-player tool. No team features needed.                            |
+| **Platform** (2018-2020)     | Databases, templates, team workspaces, API. Real-time collaboration.                                       | The block architecture was the platform primitive. Everything composed from blocks.                       |
+| **Ecosystem** (2021-present) | Ambassadors, template marketplace, third-party integrations, API developers building businesses on Notion. | The community became the growth engine. Notion didn't build features -- the community built _businesses_. |
 
 ### Distribution Strategy: Bottom-Up, Community-Led
 
@@ -63,9 +63,9 @@ Every successful modern platform followed this sequence:
 
 ### Figma: From Design Tool to Design Platform
 
-- **Started:** Browser-based design tool. The killer insight was *collaboration* -- no more emailing Sketch files.
+- **Started:** Browser-based design tool. The killer insight was _collaboration_ -- no more emailing Sketch files.
 - **Key move:** Built community BEFORE public launch. Shaped the bottoms-up growth strategy while still in stealth. Tapped into #DesignTwitter with analytical precision.
-- **Platform expansion:** Launched Figma Community (templates, plugins, design systems). Opened to third-party developers. This turned Figma from a design *app* into a design *platform*.
+- **Platform expansion:** Launched Figma Community (templates, plugins, design systems). Opened to third-party developers. This turned Figma from a design _app_ into a design _platform_.
 - **Beyond core users:** Created Inspect mode so engineers could use it. "Design goes beyond designers" was the thesis. Made Figma useful for entire product squads, not just designers.
 - **Multi-product:** Shipped four major products in 18 months (Figma AI, Dev Mode, Make, Sites), each leveraging the same UX principles.
 - **Result:** $20B acquisition offer from Adobe (blocked by regulators), demonstrating platform value.
@@ -88,19 +88,19 @@ Every successful modern platform followed this sequence:
 
 ### The Meta-Pattern (Critical for Strategy)
 
-| Principle | Notion | Figma | Linear | Obsidian |
-|-----------|--------|-------|--------|----------|
-| **Start opinionated** | "Blocks for everything" | "Design in the browser" | "Fast, keyboard-first" | "Local-first markdown" |
-| **Single-player first** | Personal workspace | Individual designer | Individual engineer | Personal notes |
-| **Community before scale** | Ambassadors, Reddit | #DesignTwitter, stealth community | Dev community, word-of-mouth | Plugin developers |
-| **Platform via primitives** | Blocks, databases, API | Components, plugins, community files | Cycles, projects, API | Plugin API, markdown |
-| **Near-zero marketing spend** | 95% organic | Community-driven | $35K total | No paid marketing |
+| Principle                     | Notion                  | Figma                                | Linear                       | Obsidian               |
+| ----------------------------- | ----------------------- | ------------------------------------ | ---------------------------- | ---------------------- |
+| **Start opinionated**         | "Blocks for everything" | "Design in the browser"              | "Fast, keyboard-first"       | "Local-first markdown" |
+| **Single-player first**       | Personal workspace      | Individual designer                  | Individual engineer          | Personal notes         |
+| **Community before scale**    | Ambassadors, Reddit     | #DesignTwitter, stealth community    | Dev community, word-of-mouth | Plugin developers      |
+| **Platform via primitives**   | Blocks, databases, API  | Components, plugins, community files | Cycles, projects, API        | Plugin API, markdown   |
+| **Near-zero marketing spend** | 95% organic             | Community-driven                     | $35K total                   | No paid marketing      |
 
 ### Strategic Takeaway
 
 > **The pattern is unmistakable: Start with a single, opinionated use case that a specific community loves. Be genuinely better at that one thing. Let the community pull you into adjacencies. Build primitives (blocks, plugins, APIs) that let others extend your product. The ecosystem IS the moat.**
 >
-> Nobody built a "platform" on day one. They built a *tool* and the platform emerged.
+> Nobody built a "platform" on day one. They built a _tool_ and the platform emerged.
 
 ---
 
@@ -108,11 +108,11 @@ Every successful modern platform followed this sequence:
 
 ### Defining the Spectrum
 
-| Approach | Example | Description |
-|----------|---------|-------------|
-| **AI-Native / AI-First** | Cursor, Lovable, Bolt, Khanmigo | AI is the core interaction model. Remove AI and there's no product. |
-| **AI-Enhanced** | Notion AI, Obsidian + plugins, GitHub Copilot (original) | Existing product adds AI capabilities. Product works without AI. |
-| **AI-Rebuilt** | Notion 3.0 Agents | Existing product fundamentally restructured around AI. |
+| Approach                 | Example                                                  | Description                                                         |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| **AI-Native / AI-First** | Cursor, Lovable, Bolt, Khanmigo                          | AI is the core interaction model. Remove AI and there's no product. |
+| **AI-Enhanced**          | Notion AI, Obsidian + plugins, GitHub Copilot (original) | Existing product adds AI capabilities. Product works without AI.    |
+| **AI-Rebuilt**           | Notion 3.0 Agents                                        | Existing product fundamentally restructured around AI.              |
 
 ### What's Working in 2026 (a16z Data)
 
@@ -126,6 +126,7 @@ According to a16z's "State of Consumer AI 2025" report:
 ### Cursor: The AI-First Proof Point
 
 Cursor is the most dramatic example of AI-first working:
+
 - **$2B+ ARR** as of March 2026 (surpassed in just ~2 years)
 - **Fastest-growing SaaS company in history** from $1M to $500M ARR
 - Revenue doubled roughly every two months in 2025
@@ -149,6 +150,7 @@ The Cursor story proves AI-first CAN scale explosively, but also reveals the eco
 ### The State of the Platform (2026)
 
 Claude Code has evolved into a genuine platform with:
+
 - **MCP (Model Context Protocol):** Open standard for connecting AI tools to external data. Tens of thousands of MCP servers available. Anthropic launched a centralized registry in September 2025.
 - **Skills:** Reusable workflow packages Claude automatically loads.
 - **Hooks:** User-defined shell commands or HTTP endpoints triggered by events.
@@ -162,13 +164,15 @@ Major AI providers (OpenAI, Anthropic, Hugging Face, LangChain) all standardized
 **Short answer: Not yet as primary, but it's a powerful secondary channel.**
 
 **What's happening:**
+
 - Cursor Automations lets you configure AI agents that launch automatically, with a marketplace for templates.
 - Claude Code's MCP ecosystem enables connecting to any external tool/data source.
 - The question "Why don't we see a Cursor for construction, a Claude Code for law?" is being actively discussed -- suggesting the model is TRYING to expand beyond coding.
 
 **What's NOT happening:**
+
 - No breakout product has been built with Claude Code/Cursor as its PRIMARY distribution channel yet.
-- These tools are distribution channels for *developer workflows*, not end-user products.
+- These tools are distribution channels for _developer workflows_, not end-user products.
 - The user base is developers, not the general population.
 
 ### Platform Dependency Risks
@@ -193,7 +197,7 @@ This is the critical strategic concern:
 >
 > The analogy: Slack integrations helped many tools get discovered, but no successful SaaS company's sole distribution was "we're a Slack app." The same applies here.
 >
-> **The real opportunity:** MCP as an integration point. Your AI learning product could be an MCP server that any AI assistant can connect to, making your *content and learning engine* available everywhere, not just in one IDE.
+> **The real opportunity:** MCP as an integration point. Your AI learning product could be an MCP server that any AI assistant can connect to, making your _content and learning engine_ available everywhere, not just in one IDE.
 
 ---
 
@@ -207,16 +211,16 @@ This is the critical strategic concern:
 
 ### Who's Funded and Working
 
-| Company | Funding | What They Do | Status |
-|---------|---------|--------------|--------|
-| **Khanmigo** (Khan Academy) | Backed by Gates Foundation, Google | AI tutor integrated with Khan curriculum. Socratic method, not answer-giving. $4/month. | Top-rated. 4-star overall. Strong educator adoption. |
-| **Duolingo Max** | Public company ($12B+ mkt cap) | AI-powered language learning with roleplay chats and simulated video calls. | Category leader in language. Gamification + AI. |
-| **MagicSchool AI** | $45M Series B | AI productivity tools for educators (lesson plans, rubrics, etc.) | Teacher-focused, not student-facing. |
-| **EdSights** | $80M financing | AI chatbot for college student retention and navigation. | Higher ed focus. |
-| **Amboss** | ~$260M (March 2025) | Medical learning/reference platform. Started with med students, expanded to practitioners. | Vertical-specific. Domain expertise as moat. |
-| **Lingokids** | $120M (September 2025) | AI-powered learning for young children. | Early childhood niche. |
-| **Oboe** | $16M | AI-generated personalized courses on any topic. | Closest to "Notion of AI learning" concept. |
-| **Kyron Learning** | $14.6M Series A | AI-powered edtech. | Earlier stage. |
+| Company                     | Funding                            | What They Do                                                                               | Status                                               |
+| --------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| **Khanmigo** (Khan Academy) | Backed by Gates Foundation, Google | AI tutor integrated with Khan curriculum. Socratic method, not answer-giving. $4/month.    | Top-rated. 4-star overall. Strong educator adoption. |
+| **Duolingo Max**            | Public company ($12B+ mkt cap)     | AI-powered language learning with roleplay chats and simulated video calls.                | Category leader in language. Gamification + AI.      |
+| **MagicSchool AI**          | $45M Series B                      | AI productivity tools for educators (lesson plans, rubrics, etc.)                          | Teacher-focused, not student-facing.                 |
+| **EdSights**                | $80M financing                     | AI chatbot for college student retention and navigation.                                   | Higher ed focus.                                     |
+| **Amboss**                  | ~$260M (March 2025)                | Medical learning/reference platform. Started with med students, expanded to practitioners. | Vertical-specific. Domain expertise as moat.         |
+| **Lingokids**               | $120M (September 2025)             | AI-powered learning for young children.                                                    | Early childhood niche.                               |
+| **Oboe**                    | $16M                               | AI-generated personalized courses on any topic.                                            | Closest to "Notion of AI learning" concept.          |
+| **Kyron Learning**          | $14.6M Series A                    | AI-powered edtech.                                                                         | Earlier stage.                                       |
 
 ### Where the Gaps Are
 
@@ -225,6 +229,7 @@ Most funded AI education tools target K-12 or higher ed. Very few target profess
 
 **Gap 2: "Learning OS" -- The Notion Equivalent**
 Nobody has built the "all-in-one workspace for learning." Existing tools are either:
+
 - Tutoring (Khanmigo, Duolingo) -- reactive, session-based
 - Content delivery (Coursera, Udemy) -- passive, video-first
 - Note-taking (Obsidian, Notion) -- no learning intelligence
@@ -254,6 +259,7 @@ The consensus from multiple sources: **AI that empowers rather than replaces thi
 Based on the patterns above, here is the strategic framework:
 
 #### Phase 1: The Tool (Months 0-12)
+
 **Objective:** Build something individuals love using alone.
 
 - Pick ONE killer use case. Not "all-in-one learning platform." One thing.
@@ -263,6 +269,7 @@ Based on the patterns above, here is the strategic framework:
 - Target a specific community: self-taught developers? Medical students? Language learners? Professional upskilling?
 
 #### Phase 2: Community Before Scale (Months 6-18)
+
 **Objective:** Build ambassadors and let users define the product direction.
 
 - Find your "Notion Ambassadors" -- power users who will evangelize.
@@ -271,6 +278,7 @@ Based on the patterns above, here is the strategic framework:
 - Organic growth target: 95% organic like Notion. If you need paid marketing to grow, the product isn't good enough yet.
 
 #### Phase 3: Platform Primitives (Months 12-24)
+
 **Objective:** Enable others to build on your foundation.
 
 - Open an API. Let third parties create integrations.
@@ -279,6 +287,7 @@ Based on the patterns above, here is the strategic framework:
 - Content creator tools: Let educators and experts build and monetize courses/content on your platform.
 
 #### Phase 4: Ecosystem (Months 24-36+)
+
 **Objective:** The community IS the moat.
 
 - Marketplace for learning content, templates, workflows.
@@ -294,6 +303,7 @@ But: "AI-native" does NOT mean "chatbot." It means the AI understands your learn
 
 **2. Distribution Strategy?**
 Recommendation: **Bottom-up, community-led, product-led growth.**
+
 - Individual learners first (free, single-player)
 - Templates/workflows shared organically
 - Teams/study groups (paid tier)
@@ -302,6 +312,7 @@ Recommendation: **Bottom-up, community-led, product-led growth.**
 
 **3. What's the Moat?**
 Not the AI model (commodity). Not the content (anyone can generate it). The moat is:
+
 - **Proprietary learning graph:** Understanding of what each user knows and doesn't know.
 - **Community content:** Templates, courses, workflows created by users.
 - **Workflow lock-in:** Once your study system is in the product, switching costs are high.
@@ -309,12 +320,14 @@ Not the AI model (commodity). Not the content (anyone can generate it). The moat
 
 **4. Pricing Model?**
 Follow Notion's playbook:
+
 - Free tier that is genuinely useful (not a crippled demo)
 - Personal paid tier for power users ($8-12/month)
 - Team/study group tier ($15-20/user/month)
 - Enterprise later
 
 **5. What NOT to Do?**
+
 - Don't try to be everything on day one (Notion v1 was just "docs, wikis, tasks")
 - Don't rely on a single platform for distribution (platform dependency risk)
 - Don't compete on AI model quality (use the best available models, don't build your own)
@@ -326,6 +339,7 @@ Follow Notion's playbook:
 ## Sources
 
 ### Notion Growth
+
 - [How Notion Grows - How They Grow](https://www.howtheygrow.co/p/how-notion-grows)
 - [How Notion Grew to 20M Users with 95% Organic Growth](https://medium.com/@ehoneahobed/how-notion-grew-to-20-million-users-with-95-organic-growth-and-why-their-boldest-move-almost-7b0031de15d1)
 - [Notion Growth Strategy: Community-Led Growth](https://nogood.io/2022/01/21/notion-growth-strategy/)
@@ -337,27 +351,32 @@ Follow Notion's playbook:
 - [Notion Ecosystem - SaaShill](https://saashill.beehiiv.com/p/notion-ecosystem)
 
 ### Notion 3.0 AI
+
 - [Notion 3.0: Agents - Official Release](https://www.notion.com/releases/2025-09-18)
 - [Introducing Notion 3.0](https://www.notion.com/blog/introducing-notion-3-0)
 - [Notion's Rebuild for Agentic AI - OpenAI](https://openai.com/index/notion/)
 
 ### Figma Growth
+
 - [The 5 Phases of Figma's Community-Led Growth - First Round Review](https://review.firstround.com/the-5-phases-of-figmas-community-led-growth-from-stealth-to-enterprise/)
 - [How Figma Grows - How They Grow](https://www.howtheygrow.co/p/how-figma-grows)
 - [How Figma Builds Product - Lenny's Newsletter](https://www.lennysnewsletter.com/p/how-figma-builds-product)
 - [Figma Product-Led Growth](https://www.ptengine.com/blog/business-strategy/figma-product-led-growth-how-a-design-tool-took-over-the-world/)
 
 ### Linear Growth
+
 - [How Linear Grows - Product Growth](https://www.news.aakashg.com/p/how-linear-grows)
 - [Linear App Case Study: $400M Issue Tracker](https://www.eleken.co/blog-posts/linear-app-case-study)
 - [How Linear Builds Product - Lenny's Newsletter](https://www.lennysnewsletter.com/p/how-linear-builds-product)
 - [Product Lessons from Linear](https://www.command.ai/blog/linear-growth-case-study/)
 
 ### Obsidian
+
 - [Obsidian Pricing Strategy - Robin Landy](https://www.robinlandy.com/blog/obsidian-as-an-example-of-thoughtful-pricing-strategy-and-the-power-of-product-tradeoffs)
 - [Obsidian Product Teardown - Medium](https://medium.com/design-bootcamp/obsidian-app-in-depth-product-teardown-6d685930a367)
 
 ### AI-First vs AI-Enhanced
+
 - [State of Consumer AI 2025 - a16z](https://a16z.com/state-of-consumer-ai-2025-product-hits-misses-and-whats-next/)
 - [The State of AI 2025 - Bessemer](https://www.bvp.com/atlas/the-state-of-ai-2025)
 - [Where AI is Headed in 2026 - Foundation Capital](https://foundationcapital.com/ideas/where-ai-is-headed-in-2026)
@@ -365,11 +384,13 @@ Follow Notion's playbook:
 - [Top 100 Gen AI Consumer Apps - a16z](https://a16z.com/100-gen-ai-apps-6/)
 
 ### Cursor Growth
+
 - [Cursor Revenue - Sacra](https://sacra.com/c/cursor/)
 - [Cursor Surpassed $2B ARR - TechCrunch](https://techcrunch.com/2026/03/02/cursor-has-reportedly-surpassed-2b-in-annualized-revenue/)
 - [Cursor Hit $1B ARR in 24 Months - SaaStr](https://www.saastr.com/cursor-hit-1b-arr-in-17-months-the-fastest-b2b-to-scale-ever-and-its-not-even-close/)
 
 ### Claude Code / MCP
+
 - [Claude Code Overview - Docs](https://code.claude.com/docs/en/overview)
 - [2026 MCP Roadmap](http://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/)
 - [MCP Enterprise Adoption 2026 - CData](https://www.cdata.com/blog/2026-year-enterprise-ready-mcp-adoption)
@@ -377,12 +398,14 @@ Follow Notion's playbook:
 - [Why Hard to Build Cursor/Claude Code in Other Industries](https://medium.com/realworld-ai-use-cases/why-has-it-been-so-hard-to-build-a-cursor-or-claude-code-in-other-industries-a667ed89c31c)
 
 ### Platform Dependency Risk
+
 - [Platform Dependency: How Startups Turn Risk Into Advantage - Willdom](https://willdom.com/blog/platform-dependency-startup-strategic-advantage/)
 - [Platform Risk - Stripe](https://stripe.com/resources/more/platform-risk-how-to-identify-it-assess-it-and-build-a-more-resilient-business)
 - [The Spectrum of Platform Risk - Entrepreneur](https://www.entrepreneur.com/starting-a-business/how-much-platform-risk-is-too-much-for-startups/496917)
 - [Platform Risk Exposed - The Growth Elements](https://www.thegrowthelements.com/p/is-your-startup-disposable-surviving-when-apis-and-platforms-turn-against-you)
 
 ### AI Education Market
+
 - [AI Tutors Market Report - Grand View Research](https://www.grandviewresearch.com/industry-analysis/ai-tutors-market-report)
 - [AI in Education Market - Mordor Intelligence](https://www.mordorintelligence.com/industry-reports/ai-in-education-market)
 - [AI in Education Market 2026-34 - IMARC](https://www.imarcgroup.com/ai-in-education-market)
@@ -393,5 +416,6 @@ Follow Notion's playbook:
 - [AI Trends in Education 2026 - TeachBetter](https://teachbetter.ai/ai-trends-in-education-2026/)
 
 ### Platform Strategy
+
 - [Eight Ways to Launch a Successful Platform - INSEAD](https://knowledge.insead.edu/entrepreneurship/eight-ways-launch-successful-platform-business)
 - [Platform Strategy Guide - Bain](https://www.bain.com/insights/solution-spotlight/platform-strategy/)

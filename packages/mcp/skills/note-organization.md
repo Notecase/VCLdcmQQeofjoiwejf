@@ -8,6 +8,7 @@ description: Structuring projects, creating rich notes, and the Task→Note patt
 ## Project Hierarchy
 
 ### View Structure
+
 ```
 projects_list → see all projects with note counts
 notes_list { project_id: "..." } → notes in a specific project
@@ -15,6 +16,7 @@ notes_organize { note_id: "..." } → heading structure of a note
 ```
 
 ### Create Project-Based Notes
+
 ```
 1. projects_list → identify target project
 2. notes_create { title: "Chapter 3: Lenses", content: "...", project_id: "..." }
@@ -24,6 +26,7 @@ notes_organize { note_id: "..." } → heading structure of a note
 ## Rich Note Creation
 
 ### Structure Guidelines
+
 - Use `#` for the main title
 - Use `##` for major sections
 - Use `###` for subsections
@@ -32,21 +35,27 @@ notes_organize { note_id: "..." } → heading structure of a note
 - Link to other notes by mentioning their titles
 
 ### Example: Study Note
+
 ```markdown
 # Optics Chapter 3: Lenses
 
 ## Key Concepts
+
 ### Thin Lens Equation
+
 1/f = 1/do + 1/di
 
 ### Magnification
+
 M = -di/do = hi/ho
 
 ## Practice Problems
+
 - [ ] Converging lens with f=20cm, object at 30cm
 - [ ] Diverging lens with f=-15cm, object at 25cm
 
 ## Summary
+
 Key takeaway: ...
 ```
 
@@ -65,6 +74,7 @@ When a study task is completed, convert it to a note:
 ```
 
 ## Bulk Organization
+
 ```
 1. notes_list → see all notes
 2. notes_summarize { note_id } → check structure of each

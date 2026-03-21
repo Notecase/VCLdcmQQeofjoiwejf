@@ -1,8 +1,4 @@
-export {
-  EditorDeepAgent,
-  createEditorDeepAgent,
-  type EditorDeepAgentConfig,
-} from './agent'
+export { EditorDeepAgent, createEditorDeepAgent, type EditorDeepAgentConfig } from './agent'
 export { createEditorDeepTools } from './tools'
 export { createEditorSubagents } from './subagents'
 export { EditorLongTermMemory } from './memory'

@@ -10,33 +10,35 @@ Inkdown's AI system has accumulated significant technical debt from rapid iterat
 
 ## AI Features Inventory (14 agents to migrate)
 
-| Agent | File | Framework | LOC | Tools | Subagents | Complexity |
-|-------|------|-----------|-----|-------|-----------|------------|
-| ExplainAgent | `packages/ai/src/agents/explain/index.ts` | OpenAI SDK | ~300 | None | None | Trivial |
-| PlannerAgent | `packages/ai/src/agents/planner.agent.ts` | OpenAI SDK | ~500 | None | None | Low |
-| ChatAgent | `packages/ai/src/agents/chat.agent.ts` | OpenAI SDK | ~800 | RAG (no LLM tools) | None | Low |
-| ArtifactSubagent | `packages/ai/src/agents/subagents/artifact.subagent.ts` | OpenAI SDK | ~300 | None | None | Low |
-| TableSubagent | `packages/ai/src/agents/subagents/table.subagent.ts` | OpenAI SDK | ~300 | executeTool() | None | Low |
-| NoteAgent | `packages/ai/src/agents/note.agent.ts` | OpenAI SDK | ~794 | Supabase writes | None | Medium |
-| EditorAgent | `packages/ai/src/agents/editor.agent.ts` | OpenAI SDK | ~800 | Intent classify + executeTool | None | Medium |
-| DeepAgent | `packages/ai/src/agents/deep-agent.ts` | OpenAI SDK | ~1029 | Task decomposition | NoteAgent, ArtifactSubagent, TableSubagent | Medium |
-| SlideGenerator | `packages/ai/src/agents/course/slide-generator.ts` | LangChain | ~112 | None | None | Low |
-| EditorDeepAgent | `packages/ai/src/agents/editor-deep/agent.ts` | deepagents | ~2000 | 12 LangChain tools | QA, Edit, Artifact, Data, Memory subagents | High |
-| SecretaryAgent | `packages/ai/src/agents/secretary/agent.ts` | deepagents | ~2000 | 6+ LangChain tools | Planner, Researcher subagents | High |
-| ResearchAgent | `packages/ai/src/agents/research/agent.ts` | deepagents | ~2500 | LangChain tools | Researcher, Writer subagents | High |
-| CourseOrchestrator | `packages/ai/src/agents/course/orchestrator.ts` | deepagents | ~1500 | LangChain tools | Lesson, Quiz, Slides writers | High |
-| AgenticAgent | `packages/ai/src/agents/agentic.agent.ts` | OpenAI SDK | ~600 | Stubs only | None | **DELETE** |
+| Agent              | File                                                    | Framework  | LOC   | Tools                         | Subagents                                  | Complexity |
+| ------------------ | ------------------------------------------------------- | ---------- | ----- | ----------------------------- | ------------------------------------------ | ---------- |
+| ExplainAgent       | `packages/ai/src/agents/explain/index.ts`               | OpenAI SDK | ~300  | None                          | None                                       | Trivial    |
+| PlannerAgent       | `packages/ai/src/agents/planner.agent.ts`               | OpenAI SDK | ~500  | None                          | None                                       | Low        |
+| ChatAgent          | `packages/ai/src/agents/chat.agent.ts`                  | OpenAI SDK | ~800  | RAG (no LLM tools)            | None                                       | Low        |
+| ArtifactSubagent   | `packages/ai/src/agents/subagents/artifact.subagent.ts` | OpenAI SDK | ~300  | None                          | None                                       | Low        |
+| TableSubagent      | `packages/ai/src/agents/subagents/table.subagent.ts`    | OpenAI SDK | ~300  | executeTool()                 | None                                       | Low        |
+| NoteAgent          | `packages/ai/src/agents/note.agent.ts`                  | OpenAI SDK | ~794  | Supabase writes               | None                                       | Medium     |
+| EditorAgent        | `packages/ai/src/agents/editor.agent.ts`                | OpenAI SDK | ~800  | Intent classify + executeTool | None                                       | Medium     |
+| DeepAgent          | `packages/ai/src/agents/deep-agent.ts`                  | OpenAI SDK | ~1029 | Task decomposition            | NoteAgent, ArtifactSubagent, TableSubagent | Medium     |
+| SlideGenerator     | `packages/ai/src/agents/course/slide-generator.ts`      | LangChain  | ~112  | None                          | None                                       | Low        |
+| EditorDeepAgent    | `packages/ai/src/agents/editor-deep/agent.ts`           | deepagents | ~2000 | 12 LangChain tools            | QA, Edit, Artifact, Data, Memory subagents | High       |
+| SecretaryAgent     | `packages/ai/src/agents/secretary/agent.ts`             | deepagents | ~2000 | 6+ LangChain tools            | Planner, Researcher subagents              | High       |
+| ResearchAgent      | `packages/ai/src/agents/research/agent.ts`              | deepagents | ~2500 | LangChain tools               | Researcher, Writer subagents               | High       |
+| CourseOrchestrator | `packages/ai/src/agents/course/orchestrator.ts`         | deepagents | ~1500 | LangChain tools               | Lesson, Quiz, Slides writers               | High       |
+| AgenticAgent       | `packages/ai/src/agents/agentic.agent.ts`               | OpenAI SDK | ~600  | Stubs only                    | None                                       | **DELETE** |
 
 ---
 
 ## Phase 0: Branch Setup + Dead Code Cleanup (1 day)
 
 ### Goal
+
 Create migration branch, remove dead code and phantom dependencies to reduce noise.
 
 ### Steps
 
 1. **Create branch**
+
    ```bash
    git checkout -b feature/ai-sdk-migration
    ```
@@ -59,6 +61,7 @@ Create migration branch, remove dead code and phantom dependencies to reduce noi
    - `packages/ai/src/providers/model-registry.ts` — remove `qwen3.5` and `deepseek-r1` (unreachable via `selectModel()`)
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck && pnpm test:run
 ```
@@ -68,11 +71,13 @@ pnpm build && pnpm typecheck && pnpm test:run
 ## Phase 1: AI SDK Provider Layer (2-3 days)
 
 ### Goal
+
 Create AI SDK v6 provider infrastructure that coexists with the old `client-factory.ts` during migration.
 
 ### Steps
 
 1. **Update dependencies in `packages/ai/package.json`**
+
    ```
    Remove: "ai" ^3.4.0 (phantom, reinstall as v6)
    Add:    "ai" ^6.x
@@ -80,7 +85,9 @@ Create AI SDK v6 provider infrastructure that coexists with the old `client-fact
    Update: "@ai-sdk/openai" to latest v6-compatible
    Remove: "@ai-sdk/anthropic" (not currently used by any agent)
    ```
+
    Also install in `apps/web/package.json`:
+
    ```
    Add: "@ai-sdk/vue" latest
    Add: "ai" ^6.x
@@ -104,12 +111,14 @@ Create AI SDK v6 provider infrastructure that coexists with the old `client-fact
    - Add new exports alongside old ones (both coexist)
 
 ### Key files
+
 - Create: `packages/ai/src/providers/ai-sdk-factory.ts`
 - Create: `packages/ai/src/providers/ai-sdk-usage.ts`
 - Modify: `packages/ai/package.json`, `apps/web/package.json`
 - Modify: `packages/ai/src/providers/index.ts`
 
 ### Verify
+
 ```bash
 pnpm install && pnpm build && pnpm typecheck
 # Write unit tests for ai-sdk-factory.ts and ai-sdk-usage.ts
@@ -120,9 +129,11 @@ pnpm install && pnpm build && pnpm typecheck
 ## Phase 2: Simple Agent Migration — No Tools (2-3 days)
 
 ### Goal
+
 Migrate the 5 simplest agents (Pattern A, no LLM tool calling) to AI SDK v6.
 
 ### Migration order
+
 1. **ExplainAgent** — simplest, pure text streaming, proves the pattern
 2. **PlannerAgent** — `generateText()` + `Output.object()` for JSON plan output
 3. **ChatAgent** — `streamText()` for chat, keep embedding via existing OpenAI client for now
@@ -132,6 +143,7 @@ Migrate the 5 simplest agents (Pattern A, no LLM tool calling) to AI SDK v6.
 ### Pattern (ExplainAgent example)
 
 **Before** (`packages/ai/src/agents/explain/index.ts`):
+
 ```typescript
 import { createOpenAIClient } from '../../providers/client-factory'
 import { trackOpenAIStream } from '../../providers/token-tracker'
@@ -145,6 +157,7 @@ for await (const chunk of trackOpenAIStream(rawStream, meta)) {
 ```
 
 **After**:
+
 ```typescript
 import { streamText } from 'ai'
 import { getModelForTask } from '../../providers/ai-sdk-factory'
@@ -163,6 +176,7 @@ for await (const chunk of result.textStream) {
 ```
 
 ### Key files to modify
+
 - `packages/ai/src/agents/explain/index.ts`
 - `packages/ai/src/agents/planner.agent.ts`
 - `packages/ai/src/agents/chat.agent.ts`
@@ -170,11 +184,13 @@ for await (const chunk of result.textStream) {
 - `packages/ai/src/agents/subagents/table.subagent.ts`
 
 ### What stays unchanged
+
 - AsyncGenerator interface (routes consume it identically)
 - SSE event types (frontend unchanged)
 - API routes (no changes needed)
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck && pnpm test:run
 # Manual: curl each endpoint, verify SSE events match existing format
@@ -185,6 +201,7 @@ pnpm build && pnpm typecheck && pnpm test:run
 ## Phase 3: Tool-Using Agent Migration — Pattern A (2-3 days)
 
 ### Goal
+
 Migrate NoteAgent, EditorAgent, and DeepAgent which use manual tool dispatch (not LLM tool calling).
 
 ### Agents
@@ -204,11 +221,13 @@ Migrate NoteAgent, EditorAgent, and DeepAgent which use manual tool dispatch (no
    - Streaming: Replace OpenAI stream patterns with `streamText()`
 
 ### Key files
+
 - `packages/ai/src/agents/note.agent.ts`
 - `packages/ai/src/agents/editor.agent.ts`
 - `packages/ai/src/agents/deep-agent.ts`
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck
 pnpm test:run packages/ai/src/agents/editor.agent.regression.test.ts
@@ -220,6 +239,7 @@ pnpm test:run packages/ai/src/agents/editor.agent.regression.test.ts
 ## Phase 4: Complex Agent Migration — deepagents → AI SDK ToolLoopAgent (5-7 days)
 
 ### Goal
+
 Replace the `deepagents` (LangGraph) framework in all 4 Pattern B agents with AI SDK v6 `ToolLoopAgent` or `streamText()` with tools.
 
 ### Strategy per agent
@@ -227,6 +247,7 @@ Replace the `deepagents` (LangGraph) framework in all 4 Pattern B agents with AI
 #### 4a. EditorDeepAgent (most tested, highest value)
 
 **Current pattern:**
+
 ```typescript
 const { createDeepAgent } = await import('deepagents')
 const llm = await createLangChainModel(editorDeepModel, { callbacks: [tokenCallback] })
@@ -235,6 +256,7 @@ for await (const chunk of agent.stream(messages, { streamMode: ['updates', 'cust
 ```
 
 **New pattern:**
+
 ```typescript
 import { streamText, tool } from 'ai'
 const result = streamText({
@@ -252,6 +274,7 @@ const result = streamText({
 ```
 
 **Files:**
+
 - Modify: `packages/ai/src/agents/editor-deep/agent.ts` — replace `stream()` method
 - Modify: `packages/ai/src/agents/editor-deep/tools.ts` — convert from `@langchain/core/tools` `tool()` to AI SDK `tool()` from `'ai'`
 - Modify: `packages/ai/src/agents/editor-deep/subagents.ts` — convert to AI SDK subagent-as-tool pattern
@@ -259,6 +282,7 @@ const result = streamText({
 - Delete: `packages/ai/src/agents/editor-deep/stream-normalizer.test.ts`
 
 **Tool conversion pattern (LangChain → AI SDK):**
+
 ```typescript
 // Before (LangChain)
 import { tool } from '@langchain/core/tools'
@@ -278,6 +302,7 @@ const readNote = tool({
 #### 4b. SecretaryAgent
 
 **Files:**
+
 - Modify: `packages/ai/src/agents/secretary/agent.ts`
 - Modify: `packages/ai/src/agents/secretary/tools.ts` — convert 6+ tools
 - Modify: `packages/ai/src/agents/secretary/subagents.ts` — planner/researcher become `generateText()` calls inside tools
@@ -286,11 +311,13 @@ const readNote = tool({
 #### 4c. ResearchAgent
 
 **Dual-mode strategy:**
+
 - Simple modes (chat, note, markdown): already use OpenAI SDK → migrate like Phase 2
 - Deep research mode (`streamResearchMode()`): replace `createDeepAgent()` with `streamText()` + tools
 - Interrupts: tool `execute` awaits a Promise that resolves when user responds
 
 **Files:**
+
 - Modify: `packages/ai/src/agents/research/agent.ts`
 - Modify: `packages/ai/src/agents/research/tools.ts`
 - Modify: `packages/ai/src/agents/research/subagent-lifecycle.ts`
@@ -299,11 +326,13 @@ const readNote = tool({
 #### 4d. CourseOrchestrator
 
 **Files:**
+
 - Modify: `packages/ai/src/agents/course/orchestrator.ts`
 - Modify: `packages/ai/src/agents/course/course-tools.ts`
 - Modify: `packages/ai/src/agents/course/slide-generator.ts` — replace `createLangChainModel().invoke()` with `generateText()`
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck
 pnpm test:run packages/ai/src/agents/editor-deep/
@@ -317,6 +346,7 @@ pnpm test:run packages/ai/src/agents/research/
 ## Phase 5: API Route Migration — Hono SSE → AI SDK UIMessageStream (2-3 days)
 
 ### Goal
+
 Transition API routes from manual Hono `streamSSE()` to AI SDK v6 `createUIMessageStreamResponse()`.
 
 ### Strategy: Bridge pattern
@@ -354,6 +384,7 @@ app.post('/api/agent/secretary', async (c) => {
 ```
 
 ### Files to modify
+
 - `apps/api/src/routes/agent.ts`
 - `apps/api/src/routes/secretary.ts`
 - `apps/api/src/routes/research.ts`
@@ -363,9 +394,11 @@ app.post('/api/agent/secretary', async (c) => {
 - `apps/api/src/routes/slides.ts`
 
 ### Create shared utility
+
 - Create: `apps/api/src/utils/ai-sdk-stream.ts` — shared `mapInkdownEventToStreamPart()` function
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck
 # curl each endpoint, verify UIMessageStream protocol output
@@ -376,11 +409,13 @@ pnpm build && pnpm typecheck
 ## Phase 6: Frontend Migration — Vue AI SDK Integration (3-4 days)
 
 ### Goal
+
 Replace 3 manual SSE parsers with `@ai-sdk/vue` `Chat` class + custom data handling.
 
 ### Step 6a: Create shared transport
 
 Create `apps/web/src/services/ai-sdk-transport.ts`:
+
 ```typescript
 import { DefaultChatTransport } from 'ai'
 // Custom transport with Supabase auth headers
@@ -398,6 +433,7 @@ export function createAuthTransport(endpoint: string) {
 ### Step 6b: Migrate AI service SSE parser
 
 Refactor `apps/web/src/services/ai.service.ts`:
+
 - Replace manual `ReadableStream` + `TextDecoder` parsing with `Chat` class from `@ai-sdk/vue`
 - Process `data-custom` parts via callback for Inkdown-specific events (edit-proposal, artifact, thinking, etc.)
 - Keep: `computeDiffHunks()` logic (operates on content, not stream format)
@@ -411,18 +447,21 @@ Refactor `apps/web/src/services/ai.service.ts`:
 ### Step 6d: Update components
 
 Components that directly reference old event types:
+
 - `apps/web/src/components/ai/AISidebar.vue`
 - `apps/web/src/components/ai/ThinkingStepsAccordion.vue`
 - `apps/web/src/views/HomePage.vue`
 - `apps/web/src/components/secretary/SecretaryPanel.vue`
 
 ### Step 6e: Delete dead frontend code
+
 - Merge `SubagentCard.vue` + `SubagentProgressCard.vue` into one component
 - Remove non-functional AISidebar buttons (Attach, Search, Mention)
 - Remove `searchQuery` ref (bound but unused)
 - Remove `currentAgentType` from AI store (set but never read)
 
 ### Verify
+
 ```bash
 pnpm build && pnpm typecheck && pnpm lint
 # Manual: Full UI regression test of all chat interfaces
@@ -435,9 +474,11 @@ pnpm build && pnpm typecheck && pnpm lint
 ## Phase 7: Final Cleanup — Remove Legacy Dependencies (1-2 days)
 
 ### Goal
+
 Remove all old AI framework code and dependencies.
 
 ### Delete files
+
 - `packages/ai/src/providers/client-factory.ts`
 - `packages/ai/src/providers/factory.ts` (if not deleted in Phase 0)
 - `packages/ai/src/providers/langchain-token-callback.ts`
@@ -448,6 +489,7 @@ Remove all old AI framework code and dependencies.
 - Any remaining `*stream-normalizer*` files
 
 ### Remove dependencies from `packages/ai/package.json`
+
 ```
 Remove: "openai"
 Remove: "deepagents"
@@ -458,17 +500,20 @@ Remove: "@google/generative-ai", "@google/genai"
 ```
 
 ### Keep
+
 ```
 "ai" ^6.x, "@ai-sdk/google", "@ai-sdk/openai"
 "@supabase/supabase-js", "zod", "pdf-parse"
 ```
 
 ### Update exports and documentation
+
 - `packages/ai/src/providers/index.ts` — only AI SDK exports
 - `packages/ai/src/index.ts` — clean up barrel exports
 - `docs/ARCHITECTURE.md` — update provider infrastructure section
 
 ### Final verify
+
 ```bash
 pnpm install  # lockfile should shrink significantly (~25MB fewer deps)
 pnpm build && pnpm typecheck && pnpm lint && pnpm test:run
@@ -489,36 +534,36 @@ pnpm build && pnpm typecheck && pnpm lint && pnpm test:run
 
 ## What We Delete (commodity plumbing replaced by AI SDK)
 
-| Deleted | Replaced By | LOC Removed |
-|---------|-------------|-------------|
-| `client-factory.ts` (createOpenAIClient + createLangChainModel) | `ai-sdk-factory.ts` (createAIModel) | ~200 |
-| `factory.ts` (legacy provider factory) | Deleted | ~150 |
-| `openai.ts` (OpenAIProvider class) | `streamText()` / `generateText()` | ~400 |
-| `gemini.ts` (GeminiProvider class) | AI SDK google provider | ~600 |
-| `langchain-token-callback.ts` | `ai-sdk-usage.ts` | ~80 |
-| 3 stream normalizers | AI SDK built-in dedup | ~600 |
-| `base-stream-normalizer.ts` | AI SDK built-in | ~200 |
-| `agentic.agent.ts` + types | Deleted (stub) | ~700 |
-| 3 manual SSE parsers (frontend) | `@ai-sdk/vue` Chat class | ~900 |
-| **Total** | | **~3,830 LOC** |
+| Deleted                                                         | Replaced By                         | LOC Removed    |
+| --------------------------------------------------------------- | ----------------------------------- | -------------- |
+| `client-factory.ts` (createOpenAIClient + createLangChainModel) | `ai-sdk-factory.ts` (createAIModel) | ~200           |
+| `factory.ts` (legacy provider factory)                          | Deleted                             | ~150           |
+| `openai.ts` (OpenAIProvider class)                              | `streamText()` / `generateText()`   | ~400           |
+| `gemini.ts` (GeminiProvider class)                              | AI SDK google provider              | ~600           |
+| `langchain-token-callback.ts`                                   | `ai-sdk-usage.ts`                   | ~80            |
+| 3 stream normalizers                                            | AI SDK built-in dedup               | ~600           |
+| `base-stream-normalizer.ts`                                     | AI SDK built-in                     | ~200           |
+| `agentic.agent.ts` + types                                      | Deleted (stub)                      | ~700           |
+| 3 manual SSE parsers (frontend)                                 | `@ai-sdk/vue` Chat class            | ~900           |
+| **Total**                                                       |                                     | **~3,830 LOC** |
 
 ## Dependencies Removed
 
-| Package | Size | Reason |
-|---------|------|--------|
-| `openai` | ~2MB | Replaced by AI SDK providers |
-| `deepagents` | ~1MB | Replaced by ToolLoopAgent |
-| `langchain` | ~5MB | Replaced by AI SDK |
-| `@langchain/core` | ~3MB | Replaced by AI SDK `tool()` |
-| `@langchain/google-genai` | ~1MB | Replaced by `@ai-sdk/google` |
-| `@langchain/openai` | ~1MB | Replaced by `@ai-sdk/openai` |
-| `@langchain/ollama` | ~500KB | Replaced by OpenAI-compat provider |
-| `@langchain/anthropic` | ~1MB | Not used |
-| `@langchain/langgraph` | ~2MB | Replaced by ToolLoopAgent |
-| `@google/generative-ai` | ~1MB | Replaced by `@ai-sdk/google` |
-| `@google/genai` | ~1MB | Replaced by `@ai-sdk/google` |
-| `@anthropic-ai/sdk` | ~1MB | Not used |
-| **Total** | **~20MB** | |
+| Package                   | Size      | Reason                             |
+| ------------------------- | --------- | ---------------------------------- |
+| `openai`                  | ~2MB      | Replaced by AI SDK providers       |
+| `deepagents`              | ~1MB      | Replaced by ToolLoopAgent          |
+| `langchain`               | ~5MB      | Replaced by AI SDK                 |
+| `@langchain/core`         | ~3MB      | Replaced by AI SDK `tool()`        |
+| `@langchain/google-genai` | ~1MB      | Replaced by `@ai-sdk/google`       |
+| `@langchain/openai`       | ~1MB      | Replaced by `@ai-sdk/openai`       |
+| `@langchain/ollama`       | ~500KB    | Replaced by OpenAI-compat provider |
+| `@langchain/anthropic`    | ~1MB      | Not used                           |
+| `@langchain/langgraph`    | ~2MB      | Replaced by ToolLoopAgent          |
+| `@google/generative-ai`   | ~1MB      | Replaced by `@ai-sdk/google`       |
+| `@google/genai`           | ~1MB      | Replaced by `@ai-sdk/google`       |
+| `@anthropic-ai/sdk`       | ~1MB      | Not used                           |
+| **Total**                 | **~20MB** |                                    |
 
 ---
 
@@ -546,14 +591,14 @@ pnpm test:run
 
 ## Estimated Timeline
 
-| Phase | Description | Days | Risk | Deps |
-|-------|-------------|------|------|------|
-| 0 | Dead code cleanup | 1 | Very Low | None |
-| 1 | AI SDK provider layer | 2-3 | Medium | Phase 0 |
-| 2 | Simple agents (5) | 2-3 | Low | Phase 1 |
-| 3 | Tool agents (3) | 2-3 | Medium | Phase 2 |
-| 4 | Complex agents (4) | 5-7 | High | Phase 3 |
-| 5 | API route migration | 2-3 | Medium | Phase 4 |
-| 6 | Frontend migration | 3-4 | Medium-High | Phase 5 |
-| 7 | Final cleanup | 1-2 | Low | Phase 6 |
-| **Total** | | **18-26 days** | | |
+| Phase     | Description           | Days           | Risk        | Deps    |
+| --------- | --------------------- | -------------- | ----------- | ------- |
+| 0         | Dead code cleanup     | 1              | Very Low    | None    |
+| 1         | AI SDK provider layer | 2-3            | Medium      | Phase 0 |
+| 2         | Simple agents (5)     | 2-3            | Low         | Phase 1 |
+| 3         | Tool agents (3)       | 2-3            | Medium      | Phase 2 |
+| 4         | Complex agents (4)    | 5-7            | High        | Phase 3 |
+| 5         | API route migration   | 2-3            | Medium      | Phase 4 |
+| 6         | Frontend migration    | 3-4            | Medium-High | Phase 5 |
+| 7         | Final cleanup         | 1-2            | Low         | Phase 6 |
+| **Total** |                       | **18-26 days** |             |         |

@@ -49,15 +49,17 @@ const mockStore = vi.hoisted(() => {
     }
   )
 
-  const addMessage = vi.fn((sessionId: string, message: { role: 'user' | 'assistant'; content: string }) => {
-    const session = sessions[sessionId]
-    if (!session) throw new Error(`missing session ${sessionId}`)
-    session.messages.push({
-      id: `m-${session.messages.length + 1}`,
-      role: message.role,
-      content: message.content,
-    })
-  })
+  const addMessage = vi.fn(
+    (sessionId: string, message: { role: 'user' | 'assistant'; content: string }) => {
+      const session = sessions[sessionId]
+      if (!session) throw new Error(`missing session ${sessionId}`)
+      session.messages.push({
+        id: `m-${session.messages.length + 1}`,
+        role: message.role,
+        content: message.content,
+      })
+    }
+  )
 
   const appendToLastMessage = vi.fn((sessionId: string, text: string) => {
     const session = sessions[sessionId]

@@ -479,7 +479,9 @@ Please proceed through the full pipeline: research → index → outline → app
             .from('course_generation_threads')
             .update({ status: 'error', stage: currentStage, error: errorMsg })
             .eq('course_id', input.courseId)
-        } catch { /* best-effort */ }
+        } catch {
+          /* best-effort */
+        }
       } finally {
         eventQueue.finish()
       }

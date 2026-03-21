@@ -14,7 +14,9 @@ const store = useSecretaryStore()
 const now = ref(new Date())
 let clockInterval: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
-  clockInterval = setInterval(() => { now.value = new Date() }, 30_000)
+  clockInterval = setInterval(() => {
+    now.value = new Date()
+  }, 30_000)
 })
 onUnmounted(() => {
   if (clockInterval) clearInterval(clockInterval)
@@ -212,8 +214,12 @@ function badgeType(task: ScheduledTask, _index: number): 'live' | 'next' | null 
 }
 
 @keyframes ticker-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* Items */
@@ -308,8 +314,13 @@ function badgeType(task: ScheduledTask, _index: number): 'live' | 'next' | null 
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+  }
 }
 
 .live-name {
@@ -352,7 +363,9 @@ function badgeType(task: ScheduledTask, _index: number): 'live' | 'next' | null 
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ticker-divider-inline {

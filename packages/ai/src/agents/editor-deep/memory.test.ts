@@ -47,7 +47,7 @@ describe('EditorLongTermMemory', () => {
         id: '3',
         key: 'latest_summary',
         value: 'This note explains maximum likelihood estimation.',
-        memory_type: 'note_summary',
+        memory_type: 'note_context',
         scope_type: 'note',
         scope_id: 'note-1',
         created_at: '2026-02-09T10:02:00.000Z',

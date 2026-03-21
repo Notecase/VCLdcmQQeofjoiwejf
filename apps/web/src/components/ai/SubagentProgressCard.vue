@@ -141,7 +141,9 @@ const statusClass = computed(() => props.subagent.status)
   border: 1px solid var(--border-color, #30363d);
   border-radius: 10px;
   overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .subagent-progress-card.running {

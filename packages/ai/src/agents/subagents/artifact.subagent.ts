@@ -105,7 +105,10 @@ export class ArtifactSubagent {
     let lastProgressUpdate = 0
     const progressInterval = 500
 
-    for await (const chunk of trackOpenAIStream(rawStream, { model: this.model, taskType: 'artifact' })) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model,
+      taskType: 'artifact',
+    })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {
         fullContent += delta
@@ -161,7 +164,11 @@ export class ArtifactSubagent {
           max_completion_tokens: 8000,
           response_format: { type: 'json_object' },
         })
-        trackOpenAIResponse(retryResponse, { model: this.model, taskType: 'artifact', startTime: retryStartTime })
+        trackOpenAIResponse(retryResponse, {
+          model: this.model,
+          taskType: 'artifact',
+          startTime: retryStartTime,
+        })
 
         const retryContent = retryResponse.choices[0]?.message?.content || ''
         console.log(

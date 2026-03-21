@@ -778,7 +778,6 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
   font-size: 0.9em;
 }
 
-
 /* ============================================
  * DIAGRAMS - visual containers
  * ============================================ */
@@ -794,7 +793,6 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
   border-radius: 8px;
   text-align: center;
 }
-
 
 /* ============================================
  * TASK LISTS

@@ -33,8 +33,8 @@ export type TaskComplexity = 'simple' | 'moderate' | 'complex'
 export interface ModelSelection {
   provider: 'google' | 'ollama' | 'openai'
   model: string
-  inputCostPer1M: number   // USD
-  outputCostPer1M: number  // USD
+  inputCostPer1M: number // USD
+  outputCostPer1M: number // USD
 }
 
 export interface ModelPricing {
@@ -52,27 +52,52 @@ Add `selectModel()` function and `MODEL_PRICING` constant map:
 
 ```typescript
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  'gemma-3-27b-it':                   { model: 'gemma-3-27b-it',                   inputCostPer1M: 0.10,  outputCostPer1M: 0.30  },
-  'gemini-2.5-flash-lite-preview-06-17': { model: 'gemini-2.5-flash-lite-preview-06-17', inputCostPer1M: 0.10, outputCostPer1M: 0.40 },
-  'gemini-2.5-flash':                { model: 'gemini-2.5-flash',                inputCostPer1M: 0.30,  outputCostPer1M: 2.50  },
-  'gemini-2.5-pro':                  { model: 'gemini-2.5-pro',                  inputCostPer1M: 1.25,  outputCostPer1M: 10.00 },
-  'gemini-3.1-pro-preview':          { model: 'gemini-3.1-pro-preview',          inputCostPer1M: 2.00,  outputCostPer1M: 12.00 },
-  'kimi-k2.5':                       { model: 'kimi-k2.5',                       inputCostPer1M: 0,     outputCostPer1M: 0     },
-  'deep-research-pro-preview-12-2025':{ model: 'deep-research-pro-preview-12-2025', inputCostPer1M: 2.00, outputCostPer1M: 8.00 },
+  'gemma-3-27b-it': { model: 'gemma-3-27b-it', inputCostPer1M: 0.1, outputCostPer1M: 0.3 },
+  'gemini-2.5-flash-lite-preview-06-17': {
+    model: 'gemini-2.5-flash-lite-preview-06-17',
+    inputCostPer1M: 0.1,
+    outputCostPer1M: 0.4,
+  },
+  'gemini-2.5-flash': { model: 'gemini-2.5-flash', inputCostPer1M: 0.3, outputCostPer1M: 2.5 },
+  'gemini-2.5-pro': { model: 'gemini-2.5-pro', inputCostPer1M: 1.25, outputCostPer1M: 10.0 },
+  'gemini-3.1-pro-preview': {
+    model: 'gemini-3.1-pro-preview',
+    inputCostPer1M: 2.0,
+    outputCostPer1M: 12.0,
+  },
+  'kimi-k2.5': { model: 'kimi-k2.5', inputCostPer1M: 0, outputCostPer1M: 0 },
+  'deep-research-pro-preview-12-2025': {
+    model: 'deep-research-pro-preview-12-2025',
+    inputCostPer1M: 2.0,
+    outputCostPer1M: 8.0,
+  },
 }
 
-export function selectModel(taskType: AITaskType, userTier: UserTier, complexity?: TaskComplexity): ModelSelection {
+export function selectModel(
+  taskType: AITaskType,
+  userTier: UserTier,
+  complexity?: TaskComplexity
+): ModelSelection {
   // Artifacts/code: always kimi-k2.5
-  if (['artifact','code','html','css','javascript'].includes(taskType))
+  if (['artifact', 'code', 'html', 'css', 'javascript'].includes(taskType))
     return { provider: 'ollama', model: 'kimi-k2.5', ...MODEL_PRICING['kimi-k2.5'] }
 
   // Embeddings: always OpenAI
   if (taskType === 'embedding')
-    return { provider: 'openai', model: 'text-embedding-3-large', inputCostPer1M: 0.13, outputCostPer1M: 0 }
+    return {
+      provider: 'openai',
+      model: 'text-embedding-3-large',
+      inputCostPer1M: 0.13,
+      outputCostPer1M: 0,
+    }
 
   // Deep research: keep current model
   if (taskType === 'deep-research')
-    return { provider: 'google', model: 'deep-research-pro-preview-12-2025', ...MODEL_PRICING['deep-research-pro-preview-12-2025'] }
+    return {
+      provider: 'google',
+      model: 'deep-research-pro-preview-12-2025',
+      ...MODEL_PRICING['deep-research-pro-preview-12-2025'],
+    }
 
   // Free tier → Gemma 3 27B for everything
   if (userTier === 'free')
@@ -88,13 +113,21 @@ export function selectModel(taskType: AITaskType, userTier: UserTier, complexity
 
 function getDefaultComplexity(taskType: AITaskType): TaskComplexity {
   switch (taskType) {
-    case 'chat': case 'completion': case 'summarize': case 'secretary': case 'planner':
+    case 'chat':
+    case 'completion':
+    case 'summarize':
+    case 'secretary':
+    case 'planner':
       return 'simple'
-    case 'note-agent': case 'rewrite':
+    case 'note-agent':
+    case 'rewrite':
       return 'moderate'
-    case 'research': case 'course': case 'slides':
+    case 'research':
+    case 'course':
+    case 'slides':
       return 'complex'
-    default: return 'simple'
+    default:
+      return 'simple'
   }
 }
 ```
@@ -121,51 +154,55 @@ Falls back to `'free'` if table doesn't exist yet (Phase 2 creates it).
 Every agent config interface already has `model?: string`. The change is in the **routes** — they call `selectModel()` and pass the result:
 
 **`apps/api/src/routes/agent.ts`** — Main entry point (6 agents created here):
+
 ```typescript
 // At top of each route handler, after requireAuth:
 const userTier = await getUserTier(auth.supabase, auth.userId)
-const modelSelection = selectModel('chat', userTier)  // or 'note-agent', etc.
+const modelSelection = selectModel('chat', userTier) // or 'note-agent', etc.
 
 // Pass to agent:
 const chatAgent = new ChatAgent({
   supabase: auth.supabase,
   userId: auth.userId,
   openaiApiKey,
-  model: modelSelection.model,       // ← NEW
+  model: modelSelection.model, // ← NEW
   sharedContextService,
 })
 ```
 
 **Agents to update (add `model` pass-through):**
 
-| Route File | Agent | taskType param |
-|------------|-------|---------------|
-| `agent.ts` POST `/api/agent/secretary` | EditorDeepAgent | `'note-agent'` (moderate) |
-| `agent.ts` POST `/api/agent/chat` | ChatAgent | `'chat'` (simple) |
-| `agent.ts` POST `/api/agent/note/:action` | NoteAgent | `'note-agent'` (moderate) |
-| `agent.ts` POST `/api/agent/planner/plan` | PlannerAgent | `'planner'` (simple) |
-| `agent.ts` compound fallback | InkdownDeepAgent | `'note-agent'` (moderate) |
-| `secretary.ts` POST `/api/secretary/chat` | SecretaryAgent | `'secretary'` (simple) |
-| `research.ts` POST `/api/research/chat` | ResearchAgent | `'research'` (complex) |
-| `course.ts` | CourseOrchestrator | `'course'` (complex) |
+| Route File                                | Agent              | taskType param            |
+| ----------------------------------------- | ------------------ | ------------------------- |
+| `agent.ts` POST `/api/agent/secretary`    | EditorDeepAgent    | `'note-agent'` (moderate) |
+| `agent.ts` POST `/api/agent/chat`         | ChatAgent          | `'chat'` (simple)         |
+| `agent.ts` POST `/api/agent/note/:action` | NoteAgent          | `'note-agent'` (moderate) |
+| `agent.ts` POST `/api/agent/planner/plan` | PlannerAgent       | `'planner'` (simple)      |
+| `agent.ts` compound fallback              | InkdownDeepAgent   | `'note-agent'` (moderate) |
+| `secretary.ts` POST `/api/secretary/chat` | SecretaryAgent     | `'secretary'` (simple)    |
+| `research.ts` POST `/api/research/chat`   | ResearchAgent      | `'research'` (complex)    |
+| `course.ts`                               | CourseOrchestrator | `'course'` (complex)      |
 
 ### 1.5 Agent Internal Changes (minimal)
 
 Each agent currently hardcodes the model. Change default to use passed-in value:
 
 **Pattern A agents** (OpenAI compat) — e.g., `chat.agent.ts` line 108:
+
 ```typescript
 // BEFORE: this.model = config.model ?? 'gemini-3.1-pro-preview'
 // AFTER:  this.model = config.model ?? 'gemini-2.5-flash'  // safe fallback
 ```
 
 **Pattern B agents** (deepagents/LangChain) — e.g., `secretary/agent.ts` line 62:
+
 ```typescript
 // BEFORE: model: this.config.model ?? 'gemini-3.1-pro-preview'
 // AFTER:  model: this.config.model ?? 'gemini-2.5-flash'
 ```
 
 **Also update constants** in `gemini.ts`:
+
 ```typescript
 // BEFORE: export const DEFAULT_MODEL = 'gemini-3.1-pro-preview'
 // AFTER:  export const DEFAULT_MODEL = 'gemini-2.5-flash'
@@ -254,8 +291,9 @@ import { MODEL_PRICING } from '../providers/factory'
 export function calculateCost(model: string, inputTokens: number, outputTokens: number) {
   const pricing = MODEL_PRICING[model]
   if (!pricing) return { costUsd: 0, credits: 0 }
-  const costUsd = (inputTokens * pricing.inputCostPer1M + outputTokens * pricing.outputCostPer1M) / 1_000_000
-  const credits = Math.ceil(costUsd * 100)  // 1 credit ≈ $0.01
+  const costUsd =
+    (inputTokens * pricing.inputCostPer1M + outputTokens * pricing.outputCostPer1M) / 1_000_000
+  const credits = Math.ceil(costUsd * 100) // 1 credit ≈ $0.01
   return { costUsd, credits }
 }
 ```
@@ -264,23 +302,39 @@ export function calculateCost(model: string, inputTokens: number, outputTokens: 
 
 ```typescript
 export class TokenTracker {
-  constructor(private supabase: SupabaseClient, private userId: string) {}
+  constructor(
+    private supabase: SupabaseClient,
+    private userId: string
+  ) {}
 
   async record(params: {
-    agentId: string; sessionId?: string; model: string;
-    inputTokens: number; outputTokens: number;
+    agentId: string
+    sessionId?: string
+    model: string
+    inputTokens: number
+    outputTokens: number
   }) {
-    const { costUsd, credits } = calculateCost(params.model, params.inputTokens, params.outputTokens)
+    const { costUsd, credits } = calculateCost(
+      params.model,
+      params.inputTokens,
+      params.outputTokens
+    )
     // Write usage event
     await this.supabase.from('usage_events').insert({
-      user_id: this.userId, agent_id: params.agentId,
-      session_id: params.sessionId, model: params.model,
-      input_tokens: params.inputTokens, output_tokens: params.outputTokens,
-      credits_used: credits, cost_usd: costUsd,
+      user_id: this.userId,
+      agent_id: params.agentId,
+      session_id: params.sessionId,
+      model: params.model,
+      input_tokens: params.inputTokens,
+      output_tokens: params.outputTokens,
+      credits_used: credits,
+      cost_usd: costUsd,
     })
     // Debit credits
     await this.supabase.rpc('debit_credits', {
-      p_user_id: this.userId, p_amount: credits, p_source: `agent:${params.agentId}`,
+      p_user_id: this.userId,
+      p_amount: credits,
+      p_source: `agent:${params.agentId}`,
     })
   }
 }
@@ -291,6 +345,7 @@ export class TokenTracker {
 After agent streaming completes, call `tokenTracker.record()` with the usage data from the stream. For Pattern A agents, capture `response.usage` from the final OpenAI stream chunk. For Pattern B agents (deepagents), usage comes from LangChain's `usage_metadata`.
 
 **Key files to modify:**
+
 - `apps/api/src/routes/agent.ts` — Add tracker after each agent stream loop
 - `apps/api/src/routes/secretary.ts` — Same
 - `apps/api/src/routes/research.ts` — Same
@@ -304,12 +359,28 @@ After agent streaming completes, call `tokenTracker.record()` with the usage dat
 
 ```typescript
 export interface AgentEvent {
-  type: 'thinking' | 'text-delta' | 'text' | 'tool-call' | 'tool-result' |
-        'artifact' | 'edit-proposal' | 'stage-update' | 'interrupt' |
-        'cost-update' | 'done' | 'error' |
-        // Existing event types for backward compat:
-        'citation' | 'finish' | 'title' | 'decomposition' |
-        'subtask-start' | 'subtask-progress' | 'subtask-complete' | 'note-navigate'
+  type:
+    | 'thinking'
+    | 'text-delta'
+    | 'text'
+    | 'tool-call'
+    | 'tool-result'
+    | 'artifact'
+    | 'edit-proposal'
+    | 'stage-update'
+    | 'interrupt'
+    | 'cost-update'
+    | 'done'
+    | 'error'
+    // Existing event types for backward compat:
+    | 'citation'
+    | 'finish'
+    | 'title'
+    | 'decomposition'
+    | 'subtask-start'
+    | 'subtask-progress'
+    | 'subtask-complete'
+    | 'note-navigate'
   agentId: string
   timestamp: number
   data: unknown
@@ -344,7 +415,8 @@ export abstract class BaseAgent {
   async *stream(input: AgentInput, context: AgentContext): AsyncGenerator<AgentEvent> {
     // 1. Check credits (future: guardrails here)
     // 2. Delegate to execute()
-    let totalInput = 0, totalOutput = 0
+    let totalInput = 0,
+      totalOutput = 0
     for await (const event of this.execute(input, context)) {
       if (event.tokenUsage) {
         totalInput += event.tokenUsage.input
@@ -355,8 +427,11 @@ export abstract class BaseAgent {
     // 3. Track usage
     if (context.tokenTracker && totalInput + totalOutput > 0) {
       await context.tokenTracker.record({
-        agentId: this.id, sessionId: input.sessionId,
-        model: context.model, inputTokens: totalInput, outputTokens: totalOutput,
+        agentId: this.id,
+        sessionId: input.sessionId,
+        model: context.model,
+        inputTokens: totalInput,
+        outputTokens: totalOutput,
       })
     }
   }
@@ -374,6 +449,7 @@ Do NOT rewrite existing agents. Instead, routes evolve to use BaseAgent wrappers
 ### 4.1 Rate Limiter — `packages/ai/src/guardrails/rate-limiter.ts` (NEW)
 
 In-memory token bucket per user. Limits:
+
 - Free: 20 req/min
 - Pro: 60 req/min
 - Team: 120 req/min
@@ -443,14 +519,17 @@ Pinia store for balance/usage state. CreditBar component shows remaining credits
 ### 6.2 Agent Prompt Integration
 
 Each agent's existing prompt file gets wrapped:
+
 ```typescript
 // e.g., secretary/prompts.ts
 import { composePrompt } from '../../prompts'
 
 export function getSecretarySystemPrompt(opts) {
   return composePrompt({
-    base: true, safety: true, formatting: true,
-    agent: buildSecretaryPrompt(opts),  // existing logic
+    base: true,
+    safety: true,
+    formatting: true,
+    agent: buildSecretaryPrompt(opts), // existing logic
     userTier: opts.userTier,
   })
 }
@@ -461,50 +540,54 @@ export function getSecretarySystemPrompt(opts) {
 ## Files Summary
 
 ### New Files (13)
-| File | Phase | Purpose |
-|------|-------|---------|
-| `packages/ai/src/services/user-tier.ts` | 1 | Look up user tier from credit_balances |
-| `packages/ai/src/services/cost-calculator.ts` | 2 | (model, tokens) → credits/USD |
-| `packages/ai/src/services/token-tracker.ts` | 2 | Record usage events + debit credits |
-| `packages/ai/src/agents/types.ts` | 3 | Unified AgentEvent, AgentInput, AgentContext |
-| `packages/ai/src/agents/base.ts` | 3 | Abstract BaseAgent class |
-| `packages/ai/src/guardrails/rate-limiter.ts` | 4 | Token bucket per user |
-| `packages/ai/src/guardrails/budget-check.ts` | 4 | Credit balance check |
-| `packages/ai/src/guardrails/token-budget.ts` | 4 | Max tokens per agent type |
-| `packages/ai/src/guardrails/index.ts` | 4 | GuardrailChain composition |
-| `packages/ai/src/services/credit-ledger.ts` | 5 | Credit operations wrapper |
-| `packages/ai/src/prompts/base.ts` | 6 | Shared identity prompt |
-| `packages/ai/src/prompts/safety.ts` | 6 | Content policy |
-| `packages/ai/src/prompts/formatting.ts` | 6 | Markdown output rules |
-| `packages/ai/src/prompts/index.ts` | 6 | composePrompt() function |
+
+| File                                          | Phase | Purpose                                      |
+| --------------------------------------------- | ----- | -------------------------------------------- |
+| `packages/ai/src/services/user-tier.ts`       | 1     | Look up user tier from credit_balances       |
+| `packages/ai/src/services/cost-calculator.ts` | 2     | (model, tokens) → credits/USD                |
+| `packages/ai/src/services/token-tracker.ts`   | 2     | Record usage events + debit credits          |
+| `packages/ai/src/agents/types.ts`             | 3     | Unified AgentEvent, AgentInput, AgentContext |
+| `packages/ai/src/agents/base.ts`              | 3     | Abstract BaseAgent class                     |
+| `packages/ai/src/guardrails/rate-limiter.ts`  | 4     | Token bucket per user                        |
+| `packages/ai/src/guardrails/budget-check.ts`  | 4     | Credit balance check                         |
+| `packages/ai/src/guardrails/token-budget.ts`  | 4     | Max tokens per agent type                    |
+| `packages/ai/src/guardrails/index.ts`         | 4     | GuardrailChain composition                   |
+| `packages/ai/src/services/credit-ledger.ts`   | 5     | Credit operations wrapper                    |
+| `packages/ai/src/prompts/base.ts`             | 6     | Shared identity prompt                       |
+| `packages/ai/src/prompts/safety.ts`           | 6     | Content policy                               |
+| `packages/ai/src/prompts/formatting.ts`       | 6     | Markdown output rules                        |
+| `packages/ai/src/prompts/index.ts`            | 6     | composePrompt() function                     |
 
 ### Modified Files (12)
-| File | Phase | Change |
-|------|-------|--------|
-| `packages/shared/src/types/ai.ts` | 1 | Add UserTier, TaskComplexity, ModelSelection types |
-| `packages/shared/src/types/index.ts` | 1 | Export new types |
-| `packages/ai/src/providers/factory.ts` | 1 | Add selectModel(), MODEL_PRICING, getDefaultComplexity() |
-| `packages/ai/src/providers/gemini.ts` | 1 | Change DEFAULT_MODEL to gemini-2.5-flash |
-| `apps/api/src/routes/agent.ts` | 1+2 | getUserTier + selectModel + tokenTracker in each handler |
-| `apps/api/src/routes/secretary.ts` | 1+2 | Same |
-| `apps/api/src/routes/research.ts` | 1+2 | Same |
-| `apps/api/src/routes/course.ts` | 1+2 | Same |
-| `packages/ai/src/agents/chat.agent.ts` | 1 | Fallback model → gemini-2.5-flash |
-| `packages/ai/src/agents/secretary/agent.ts` | 1 | Fallback model → gemini-2.5-flash |
-| `packages/ai/src/agents/deep-agent.ts` | 1 | Fallback model → gemini-2.5-flash |
-| `packages/ai/src/services/index.ts` | 2 | Export new services |
+
+| File                                        | Phase | Change                                                   |
+| ------------------------------------------- | ----- | -------------------------------------------------------- |
+| `packages/shared/src/types/ai.ts`           | 1     | Add UserTier, TaskComplexity, ModelSelection types       |
+| `packages/shared/src/types/index.ts`        | 1     | Export new types                                         |
+| `packages/ai/src/providers/factory.ts`      | 1     | Add selectModel(), MODEL_PRICING, getDefaultComplexity() |
+| `packages/ai/src/providers/gemini.ts`       | 1     | Change DEFAULT_MODEL to gemini-2.5-flash                 |
+| `apps/api/src/routes/agent.ts`              | 1+2   | getUserTier + selectModel + tokenTracker in each handler |
+| `apps/api/src/routes/secretary.ts`          | 1+2   | Same                                                     |
+| `apps/api/src/routes/research.ts`           | 1+2   | Same                                                     |
+| `apps/api/src/routes/course.ts`             | 1+2   | Same                                                     |
+| `packages/ai/src/agents/chat.agent.ts`      | 1     | Fallback model → gemini-2.5-flash                        |
+| `packages/ai/src/agents/secretary/agent.ts` | 1     | Fallback model → gemini-2.5-flash                        |
+| `packages/ai/src/agents/deep-agent.ts`      | 1     | Fallback model → gemini-2.5-flash                        |
+| `packages/ai/src/services/index.ts`         | 2     | Export new services                                      |
 
 ### New Migrations (2)
-| File | Phase | Tables |
-|------|-------|--------|
-| `supabase/migrations/027_usage_tracking.sql` | 2 | usage_events, credit_balances, debit_credits() |
-| `supabase/migrations/028_credit_transactions.sql` | 5 | credit_transactions |
+
+| File                                              | Phase | Tables                                         |
+| ------------------------------------------------- | ----- | ---------------------------------------------- |
+| `supabase/migrations/027_usage_tracking.sql`      | 2     | usage_events, credit_balances, debit_credits() |
+| `supabase/migrations/028_credit_transactions.sql` | 5     | credit_transactions                            |
 
 ---
 
 ## Verification
 
 ### Phase 1
+
 - `pnpm typecheck` passes
 - `pnpm test:run` passes (no behavioral changes)
 - `selectModel('chat', 'free')` → returns `gemma-3-27b-it`
@@ -513,22 +596,27 @@ export function getSecretarySystemPrompt(opts) {
 - Manually test: send a chat message, verify it uses the selected model (check API response headers or logs)
 
 ### Phase 2
+
 - Apply migration 027 to Supabase
 - Send a request, verify `usage_events` row appears with correct model + token counts
 - Verify `credit_balances` row exists and balance decrements
 
 ### Phase 3
+
 - `pnpm typecheck` passes with new AgentEvent types
 - Existing agent tests still pass (no breaking changes)
 
 ### Phase 4
+
 - Test rate limiter: 25 rapid requests as free user → last 5 rejected
 - Test budget check: user with 0 credits → rejected with reason
 
 ### Phase 5
+
 - GET `/api/billing/balance` returns `{ balance: 50, tier: 'free' }`
 - After using credits, balance decreases
 
 ### Phase 6
+
 - Compare agent output before/after prompt composition — quality same or better
 - `pnpm test:run` still passes

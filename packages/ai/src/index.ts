@@ -26,11 +26,7 @@ export type {
 } from './providers/interface'
 
 // Model Registry and Client Factory
-export {
-  MODEL_REGISTRY,
-  selectModel,
-  getModel,
-} from './providers/model-registry'
+export { MODEL_REGISTRY, selectModel, getModel } from './providers/model-registry'
 export type { ModelEntry, ModelProvider, ModelCapability } from './providers/model-registry'
 
 export { createOpenAIClient, createLangChainModel } from './providers/client-factory'

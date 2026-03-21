@@ -8,6 +8,7 @@ description: Creating learning roadmaps, daily plans, and tracking progress with
 ## Creating a Roadmap
 
 ### 1. Gather Context
+
 ```
 secretary_preferences  → study hours, availability, break frequency
 secretary_plans_list   → existing active plans
@@ -15,6 +16,7 @@ soul_read             → learning goals and style
 ```
 
 ### 2. Create the Plan Archive
+
 ```
 secretary_plan_create {
   filename: "algo-roadmap.md",
@@ -24,6 +26,7 @@ secretary_plan_create {
 ```
 
 ### 3. Generate Daily Plan
+
 ```
 secretary_daily_generate {
   target: "Tomorrow.md",
@@ -32,8 +35,10 @@ secretary_daily_generate {
 ```
 
 ## Plan Entry Format
+
 ```markdown
 ### [ID] Plan Name
+
 - Status: active | paused | completed | archived
 - Progress: 3/14
 - Dates: YYYY-MM-DD → YYYY-MM-DD
@@ -42,6 +47,7 @@ secretary_daily_generate {
 ```
 
 ## Daily Plan Format
+
 ```markdown
 # Today's Plan — YYYY-MM-DD
 
@@ -55,6 +61,7 @@ secretary_daily_generate {
 Task markers: `[ ]` pending, `[x]` done, `[>]` carried over, `[-]` skipped
 
 ## Progress Tracking
+
 ```
 secretary_analytics → completion rates, streaks, trends
 secretary_today     → check today's progress

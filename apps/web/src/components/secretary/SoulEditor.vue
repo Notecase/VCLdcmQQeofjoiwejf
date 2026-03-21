@@ -16,14 +16,17 @@ function onInput(event: Event) {
       <span
         v-if="soulSaving"
         class="save-indicator"
-      >Saving...</span>
+        >Saving...</span
+      >
       <span
         v-else
         class="save-indicator saved"
-      >Saved</span>
+        >Saved</span
+      >
     </div>
     <p class="soul-hint">
-      Write your goals, learning style, and preferences. All AI agents will use this to personalize their responses.
+      Write your goals, learning style, and preferences. All AI agents will use this to personalize
+      their responses.
     </p>
     <textarea
       v-if="!soulLoading"

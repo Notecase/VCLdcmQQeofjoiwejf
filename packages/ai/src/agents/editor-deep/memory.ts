@@ -210,10 +210,17 @@ export class EditorLongTermMemory {
 
     const scored = memories.map((memory) => {
       const haystack = `${memory.key}\n${memory.value}`.toLowerCase()
-      const tokenMatches = tokens.reduce((count, token) => count + (haystack.includes(token) ? 1 : 0), 0)
+      const tokenMatches = tokens.reduce(
+        (count, token) => count + (haystack.includes(token) ? 1 : 0),
+        0
+      )
 
       let scopeScore = 0
-      if (memory.scope_type === 'note' && input.currentNoteId && memory.scope_id === input.currentNoteId) {
+      if (
+        memory.scope_type === 'note' &&
+        input.currentNoteId &&
+        memory.scope_id === input.currentNoteId
+      ) {
         scopeScore = 3
       } else if (
         memory.scope_type === 'workspace' &&

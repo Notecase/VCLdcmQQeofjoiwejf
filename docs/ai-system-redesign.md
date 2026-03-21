@@ -29,17 +29,17 @@
 
 ### What We Have Today (9+ Agents, No Unified Framework)
 
-| Agent | File | What It Does | Model Used | Framework |
-|-------|------|-------------|------------|-----------|
-| **Deep Agent** | `deep-agent.ts` (987 lines) | Compound request decomposition → subtasks (edit, create artifact, save) | Gemini 3.1 Pro + kimi-k2.5 (Ollama) | Custom async generators |
-| **Secretary** | `secretary/agent.ts` (330 lines) | Daily planning, roadmaps, calendar sync, preferences | Gemini 3.1 Pro | deepagents (LangGraph) |
-| **Research** | `research/agent.ts` (600+ lines) | Deep research with virtual files, web search, note drafts | Gemini 3.1 Pro + kimi-k2.5 | Custom async generators |
-| **Course Orchestrator** | `course/orchestrator.ts` (520+ lines) | End-to-end course generation (research → outline → lessons → quizzes → slides) | Gemini (configurable) | AsyncEventQueue pipeline |
-| **Planner** | `planner.agent.ts` (515 lines) | Goal decomposition into steps with dependency tracking | OpenAI/Gemini (configurable) | Custom stateful |
-| **Note Agent** | `note.agent.ts` | Note CRUD operations | Configurable | Custom |
-| **Chat Agent** | `chat.agent.ts` | Conversational chat with thread history | Configurable | Custom |
-| **Editor Agent** | `editor.agent.ts` | Inline markdown editing with diff proposals | Configurable | Custom |
-| **Mission Orchestrator** | `missions.ts` (route-level) | Goal-to-execution mission workflow with approval gates | N/A (delegates) | SSE state machine |
+| Agent                    | File                                  | What It Does                                                                   | Model Used                          | Framework                |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------- | ------------------------ |
+| **Deep Agent**           | `deep-agent.ts` (987 lines)           | Compound request decomposition → subtasks (edit, create artifact, save)        | Gemini 3.1 Pro + kimi-k2.5 (Ollama) | Custom async generators  |
+| **Secretary**            | `secretary/agent.ts` (330 lines)      | Daily planning, roadmaps, calendar sync, preferences                           | Gemini 3.1 Pro                      | deepagents (LangGraph)   |
+| **Research**             | `research/agent.ts` (600+ lines)      | Deep research with virtual files, web search, note drafts                      | Gemini 3.1 Pro + kimi-k2.5          | Custom async generators  |
+| **Course Orchestrator**  | `course/orchestrator.ts` (520+ lines) | End-to-end course generation (research → outline → lessons → quizzes → slides) | Gemini (configurable)               | AsyncEventQueue pipeline |
+| **Planner**              | `planner.agent.ts` (515 lines)        | Goal decomposition into steps with dependency tracking                         | OpenAI/Gemini (configurable)        | Custom stateful          |
+| **Note Agent**           | `note.agent.ts`                       | Note CRUD operations                                                           | Configurable                        | Custom                   |
+| **Chat Agent**           | `chat.agent.ts`                       | Conversational chat with thread history                                        | Configurable                        | Custom                   |
+| **Editor Agent**         | `editor.agent.ts`                     | Inline markdown editing with diff proposals                                    | Configurable                        | Custom                   |
+| **Mission Orchestrator** | `missions.ts` (route-level)           | Goal-to-execution mission workflow with approval gates                         | N/A (delegates)                     | SSE state machine        |
 
 ### Current Streaming Pattern
 
@@ -183,11 +183,20 @@ User Request
 
 ```typescript
 interface AgentEvent {
-  type: 'thinking' | 'text-delta' | 'tool-call' | 'tool-result' |
-        'artifact' | 'edit-proposal' | 'stage-update' | 'interrupt' |
-        'cost-update' | 'done' | 'error'
+  type:
+    | 'thinking'
+    | 'text-delta'
+    | 'tool-call'
+    | 'tool-result'
+    | 'artifact'
+    | 'edit-proposal'
+    | 'stage-update'
+    | 'interrupt'
+    | 'cost-update'
+    | 'done'
+    | 'error'
   agentId: string
-  parentAgentId?: string  // for sub-agent tracking
+  parentAgentId?: string // for sub-agent tracking
   timestamp: number
   data: Record<string, unknown>
   tokenUsage?: { input: number; output: number; model: string }
@@ -204,36 +213,36 @@ interface AgentEvent {
 
 **Tier 1 — Core Agents (always available):**
 
-| Agent | Purpose | Default Model | Fallback Model |
-|-------|---------|---------------|----------------|
-| **ChatAgent** | Conversational Q&A, general chat | Gemini 2.5 Flash | DeepSeek V3 |
-| **WriteAgent** | Note creation, inline editing, markdown generation | Gemini 2.5 Pro | Claude Haiku 4.5 |
-| **SummaryAgent** | Summarize documents, conversations, research | Gemini 2.5 Flash | DeepSeek V3 |
+| Agent            | Purpose                                            | Default Model    | Fallback Model   |
+| ---------------- | -------------------------------------------------- | ---------------- | ---------------- |
+| **ChatAgent**    | Conversational Q&A, general chat                   | Gemini 2.5 Flash | DeepSeek V3      |
+| **WriteAgent**   | Note creation, inline editing, markdown generation | Gemini 2.5 Pro   | Claude Haiku 4.5 |
+| **SummaryAgent** | Summarize documents, conversations, research       | Gemini 2.5 Flash | DeepSeek V3      |
 
 **Tier 2 — Orchestrator Agents (compound workflows):**
 
-| Agent | Purpose | Orchestration Model | Sub-Agent Models |
-|-------|---------|-------------------|-----------------|
-| **ResearchOrchestrator** | Multi-step research with sources, synthesis, report | Gemini 2.5 Pro (planning) | Flash (search), Pro (synthesis) |
-| **CourseOrchestrator** | Full course generation pipeline | Gemini 2.5 Pro (planning) | Flash (lessons), Pro (quizzes) |
-| **SecretaryOrchestrator** | Daily planning, roadmaps, calendar | Gemini 2.5 Flash (fast) | Flash (all sub-tasks) |
-| **DeepOrchestrator** | Compound request decomposition | Gemini 2.5 Pro | Delegates to other agents |
+| Agent                     | Purpose                                             | Orchestration Model       | Sub-Agent Models                |
+| ------------------------- | --------------------------------------------------- | ------------------------- | ------------------------------- |
+| **ResearchOrchestrator**  | Multi-step research with sources, synthesis, report | Gemini 2.5 Pro (planning) | Flash (search), Pro (synthesis) |
+| **CourseOrchestrator**    | Full course generation pipeline                     | Gemini 2.5 Pro (planning) | Flash (lessons), Pro (quizzes)  |
+| **SecretaryOrchestrator** | Daily planning, roadmaps, calendar                  | Gemini 2.5 Flash (fast)   | Flash (all sub-tasks)           |
+| **DeepOrchestrator**      | Compound request decomposition                      | Gemini 2.5 Pro            | Delegates to other agents       |
 
 **Tier 3 — Specialized Sub-Agents:**
 
-| Agent | Purpose | Model | Notes |
-|-------|---------|-------|-------|
-| **WebSearchAgent** | Tavily search + result processing | Gemini 2.5 Flash | Cheapest possible |
-| **SynthesisAgent** | Combine multiple sources into coherent analysis | Gemini 2.5 Pro | Needs reasoning |
-| **CitationAgent** | Verify claims, add citations | Gemini 2.5 Flash | Verification task |
-| **OutlineAgent** | Generate structured outlines | Gemini 2.5 Flash | Planning task |
-| **QuizGeneratorAgent** | Generate assessments from content | Gemini 2.5 Flash | Template-based |
-| **SlideGeneratorAgent** | Create slide content | Gemini 2.5 Flash | Structured output |
-| **ArtifactAgent** | Generate interactive components (HTML/React) | Gemini 2.5 Pro | Needs code quality |
-| **PlannerAgent** | Goal decomposition, daily/weekly plans | Gemini 2.5 Flash | Fast planning |
-| **CalendarAgent** | Google Calendar sync & scheduling | Gemini 2.5 Flash | Tool-heavy |
-| **VisionAgent** | OCR, image understanding | Gemini 2.5 Flash | Native multimodal |
-| **ImageGenAgent** | Generate images for notes/slides | Imagen 4 Fast | $0.02/image |
+| Agent                   | Purpose                                         | Model            | Notes              |
+| ----------------------- | ----------------------------------------------- | ---------------- | ------------------ |
+| **WebSearchAgent**      | Tavily search + result processing               | Gemini 2.5 Flash | Cheapest possible  |
+| **SynthesisAgent**      | Combine multiple sources into coherent analysis | Gemini 2.5 Pro   | Needs reasoning    |
+| **CitationAgent**       | Verify claims, add citations                    | Gemini 2.5 Flash | Verification task  |
+| **OutlineAgent**        | Generate structured outlines                    | Gemini 2.5 Flash | Planning task      |
+| **QuizGeneratorAgent**  | Generate assessments from content               | Gemini 2.5 Flash | Template-based     |
+| **SlideGeneratorAgent** | Create slide content                            | Gemini 2.5 Flash | Structured output  |
+| **ArtifactAgent**       | Generate interactive components (HTML/React)    | Gemini 2.5 Pro   | Needs code quality |
+| **PlannerAgent**        | Goal decomposition, daily/weekly plans          | Gemini 2.5 Flash | Fast planning      |
+| **CalendarAgent**       | Google Calendar sync & scheduling               | Gemini 2.5 Flash | Tool-heavy         |
+| **VisionAgent**         | OCR, image understanding                        | Gemini 2.5 Flash | Native multimodal  |
+| **ImageGenAgent**       | Generate images for notes/slides                | Imagen 4 Fast    | $0.02/image        |
 
 ### 4.2 The Router
 
@@ -242,10 +251,10 @@ The Router is the entry point for all AI requests. It replaces the current `isCo
 ```typescript
 // Router classification (runs on cheapest model)
 interface RouteDecision {
-  agent: string           // which agent handles this
+  agent: string // which agent handles this
   complexity: 'simple' | 'moderate' | 'complex'
   estimatedTokens: number // rough estimate for budget
-  modelTier: 'flash' | 'pro' | 'premium'  // based on task + user tier
+  modelTier: 'flash' | 'pro' | 'premium' // based on task + user tier
 }
 ```
 
@@ -253,11 +262,11 @@ The Router itself uses Gemini 2.5 Flash (cheapest: $0.30/$2.50 per 1M tokens) wi
 
 ### 4.3 Model Routing by User Tier
 
-| User Tier | Simple Tasks | Complex Tasks | Research/Course | Image Gen |
-|-----------|-------------|---------------|-----------------|-----------|
-| **Free** | DeepSeek V3 ($0.15/$0.75) | Gemini 2.5 Flash ($0.30/$2.50) | Gemini Flash (capped) | Imagen 4 Fast ($0.02) |
-| **Pro ($12/mo)** | Gemini 2.5 Flash | Gemini 2.5 Pro ($1.25/$10) | Pro (full) | Imagen 4 Fast |
-| **Team ($20/mo/seat)** | Gemini 2.5 Flash | Gemini 2.5 Pro | Pro (full) + longer sessions | Imagen 4 Standard ($0.04) |
+| User Tier              | Simple Tasks              | Complex Tasks                  | Research/Course              | Image Gen                 |
+| ---------------------- | ------------------------- | ------------------------------ | ---------------------------- | ------------------------- |
+| **Free**               | DeepSeek V3 ($0.15/$0.75) | Gemini 2.5 Flash ($0.30/$2.50) | Gemini Flash (capped)        | Imagen 4 Fast ($0.02)     |
+| **Pro ($12/mo)**       | Gemini 2.5 Flash          | Gemini 2.5 Pro ($1.25/$10)     | Pro (full)                   | Imagen 4 Fast             |
+| **Team ($20/mo/seat)** | Gemini 2.5 Flash          | Gemini 2.5 Pro                 | Pro (full) + longer sessions | Imagen 4 Standard ($0.04) |
 
 ---
 
@@ -265,31 +274,31 @@ The Router itself uses Gemini 2.5 Flash (cheapest: $0.30/$2.50 per 1M tokens) wi
 
 ### 5.1 Model Pricing Matrix (March 2026 Verified)
 
-| Model | Input/1M | Output/1M | Best For | Speed |
-|-------|----------|-----------|----------|-------|
-| **Gemini 2.5 Flash** | $0.30 | $2.50 | Routing, summaries, simple generation, planning | Very fast |
-| **Gemini 2.5 Pro** | $1.25 | $10.00 | Complex writing, synthesis, code gen, artifacts | Fast |
-| **Gemini 2.5 Pro (batch)** | $0.625 | $5.00 | Async course gen, bulk research | Delayed |
-| **DeepSeek V3.1** | $0.15 | $0.75 | Free tier chat, simple Q&A | Fast |
-| **DeepSeek R1** | $0.55 | $2.19 | Reasoning tasks (outline planning) | Medium |
-| **Claude Haiku 4.5** | $1.00 | $5.00 | Fallback for writing quality | Fast |
-| **Claude Sonnet 4.5** | $3.00 | $15.00 | Premium writing (Team tier) | Medium |
-| **GPT-4o mini** | $0.15 | $0.60 | Embeddings context, structured extraction | Very fast |
-| **Imagen 4 Fast** | — | $0.02/img | Note illustrations, slide images | Fast |
-| **Imagen 4 Standard** | — | $0.04/img | Higher quality images (Team tier) | Medium |
+| Model                      | Input/1M | Output/1M | Best For                                        | Speed     |
+| -------------------------- | -------- | --------- | ----------------------------------------------- | --------- |
+| **Gemini 2.5 Flash**       | $0.30    | $2.50     | Routing, summaries, simple generation, planning | Very fast |
+| **Gemini 2.5 Pro**         | $1.25    | $10.00    | Complex writing, synthesis, code gen, artifacts | Fast      |
+| **Gemini 2.5 Pro (batch)** | $0.625   | $5.00     | Async course gen, bulk research                 | Delayed   |
+| **DeepSeek V3.1**          | $0.15    | $0.75     | Free tier chat, simple Q&A                      | Fast      |
+| **DeepSeek R1**            | $0.55    | $2.19     | Reasoning tasks (outline planning)              | Medium    |
+| **Claude Haiku 4.5**       | $1.00    | $5.00     | Fallback for writing quality                    | Fast      |
+| **Claude Sonnet 4.5**      | $3.00    | $15.00    | Premium writing (Team tier)                     | Medium    |
+| **GPT-4o mini**            | $0.15    | $0.60     | Embeddings context, structured extraction       | Very fast |
+| **Imagen 4 Fast**          | —        | $0.02/img | Note illustrations, slide images                | Fast      |
+| **Imagen 4 Standard**      | —        | $0.04/img | Higher quality images (Team tier)               | Medium    |
 
 ### 5.2 Cost Per Feature (Estimated)
 
-| Feature | Avg Tokens (in+out) | Model | Cost/Use | Monthly (100 uses) |
-|---------|---------------------|-------|----------|---------------------|
-| **Chat message** | 1K in + 500 out | Flash | $0.0016 | $0.16 |
-| **Note generation** | 2K in + 2K out | Flash | $0.0056 | $0.56 |
-| **Inline edit** | 3K in + 1K out | Flash | $0.0034 | $0.34 |
-| **Research session** | 15K in + 8K out | Pro | $0.099 | $9.90 |
-| **Course generation** | 50K in + 30K out | Pro (batch) | $0.181 | $18.10 |
-| **Daily plan** | 3K in + 2K out | Flash | $0.0059 | $0.59 |
-| **Image generation** | — | Imagen Fast | $0.02 | $2.00 |
-| **OCR/Vision** | 1K in + 500 out | Flash | $0.0016 | $0.16 |
+| Feature               | Avg Tokens (in+out) | Model       | Cost/Use | Monthly (100 uses) |
+| --------------------- | ------------------- | ----------- | -------- | ------------------ |
+| **Chat message**      | 1K in + 500 out     | Flash       | $0.0016  | $0.16              |
+| **Note generation**   | 2K in + 2K out      | Flash       | $0.0056  | $0.56              |
+| **Inline edit**       | 3K in + 1K out      | Flash       | $0.0034  | $0.34              |
+| **Research session**  | 15K in + 8K out     | Pro         | $0.099   | $9.90              |
+| **Course generation** | 50K in + 30K out    | Pro (batch) | $0.181   | $18.10             |
+| **Daily plan**        | 3K in + 2K out      | Flash       | $0.0059  | $0.59              |
+| **Image generation**  | —                   | Imagen Fast | $0.02    | $2.00              |
+| **OCR/Vision**        | 1K in + 500 out     | Flash       | $0.0016  | $0.16              |
 
 ### 5.3 Cost Optimization Strategies
 
@@ -373,14 +382,14 @@ User Input
 
 ```typescript
 interface GuardrailConfig {
-  maxInputTokens: number      // Per-request input limit
-  maxOutputTokens: number     // Per-request output limit
-  maxSessionTokens: number    // Total session budget
+  maxInputTokens: number // Per-request input limit
+  maxOutputTokens: number // Per-request output limit
+  maxSessionTokens: number // Total session budget
   enablePIIDetection: boolean
   enableContentFilter: boolean
   enableCitationCheck: boolean // For research agents only
   costWarningThreshold: number // Warn when cost exceeds this
-  blockedTopics: string[]     // Content policy
+  blockedTopics: string[] // Content policy
 }
 ```
 
@@ -420,12 +429,12 @@ packages/ai/src/prompts/
 class PromptBuilder {
   private parts: PromptPart[] = []
 
-  withBase(): this              // Add system identity
-  withSafety(): this            // Add safety instructions
+  withBase(): this // Add system identity
+  withSafety(): this // Add safety instructions
   withAgent(agent: string): this // Add agent-specific instructions
-  withContext(ctx: AgentContext): this  // Add dynamic context
+  withContext(ctx: AgentContext): this // Add dynamic context
   withTemplate(template: string, vars: Record<string, string>): this
-  withUserTier(tier: UserTier): this   // Adjust instructions per tier
+  withUserTier(tier: UserTier): this // Adjust instructions per tier
   build(): string
 }
 
@@ -448,13 +457,13 @@ Every prompt template has a version. When we change a prompt, we create a new ve
 interface PromptVersion {
   id: string
   agent: string
-  version: string       // semver
+  version: string // semver
   template: string
   createdAt: Date
   metrics?: {
-    avgQuality: number  // From user feedback
-    avgTokens: number   // Cost tracking
-    errorRate: number   // Failure rate
+    avgQuality: number // From user feedback
+    avgTokens: number // Cost tracking
+    errorRate: number // Failure rate
   }
 }
 ```
@@ -475,28 +484,28 @@ interface PromptVersion {
 
 **1 credit = approximately $0.01 of AI compute cost to us.** This gives us room for a healthy margin while keeping credits easy to reason about.
 
-| Action | Credits | Our Cost | Margin |
-|--------|---------|----------|--------|
-| Chat message (simple) | 1 | ~$0.002 | 80% |
-| Note generation | 2 | ~$0.006 | 70% |
-| Inline edit | 2 | ~$0.004 | 80% |
-| Summary | 2 | ~$0.005 | 75% |
-| Research session | 15 | ~$0.10 | 33% |
-| Course generation | 30 | ~$0.18 | 40% |
-| Daily plan | 2 | ~$0.006 | 70% |
-| Image generation | 3 | ~$0.02 | 33% |
-| OCR/Vision | 1 | ~$0.002 | 80% |
+| Action                | Credits | Our Cost | Margin |
+| --------------------- | ------- | -------- | ------ |
+| Chat message (simple) | 1       | ~$0.002  | 80%    |
+| Note generation       | 2       | ~$0.006  | 70%    |
+| Inline edit           | 2       | ~$0.004  | 80%    |
+| Summary               | 2       | ~$0.005  | 75%    |
+| Research session      | 15      | ~$0.10   | 33%    |
+| Course generation     | 30      | ~$0.18   | 40%    |
+| Daily plan            | 2       | ~$0.006  | 70%    |
+| Image generation      | 3       | ~$0.02   | 33%    |
+| OCR/Vision            | 1       | ~$0.002  | 80%    |
 
 **Average blended margin: ~60%.** This is healthy for a SaaS AI product and accounts for infrastructure overhead, Supabase costs, and occasional expensive edge cases.
 
 ### 8.3 Pricing Tiers
 
-| Tier | Monthly Price | Credits/Month | Overage | Target User |
-|------|-------------|---------------|---------|-------------|
-| **Free** | $0 | 50 credits | Not available (hard cap) | Trial users, students |
-| **Pro** | $12/month | 1,000 credits | $0.02/credit | Individual power users |
-| **Team** | $25/seat/month | 2,000 credits/seat | $0.015/credit | Teams, organizations |
-| **Enterprise** | Custom | Custom | Custom | Large orgs |
+| Tier           | Monthly Price  | Credits/Month      | Overage                  | Target User            |
+| -------------- | -------------- | ------------------ | ------------------------ | ---------------------- |
+| **Free**       | $0             | 50 credits         | Not available (hard cap) | Trial users, students  |
+| **Pro**        | $12/month      | 1,000 credits      | $0.02/credit             | Individual power users |
+| **Team**       | $25/seat/month | 2,000 credits/seat | $0.015/credit            | Teams, organizations   |
+| **Enterprise** | Custom         | Custom             | Custom                   | Large orgs             |
 
 **What 50 free credits gets you:** ~25 chat messages + 5 note generations + 2 research sessions. Enough to experience the core value in a single session.
 
@@ -550,9 +559,9 @@ interface CreditTransaction {
   id: string
   userId: string
   type: 'grant' | 'debit' | 'refund' | 'expire' | 'purchase'
-  amount: number          // positive for grants, negative for debits
-  balance: number         // running balance after this transaction
-  source: string          // 'subscription_renewal' | 'agent:research' | 'admin_grant' | 'purchase'
+  amount: number // positive for grants, negative for debits
+  balance: number // running balance after this transaction
+  source: string // 'subscription_renewal' | 'agent:research' | 'admin_grant' | 'purchase'
   metadata: {
     agentId?: string
     sessionId?: string
@@ -561,7 +570,7 @@ interface CreditTransaction {
     stripePriceId?: string
   }
   createdAt: Date
-  expiresAt?: Date        // Credits expire after 30 days (free) or billing cycle (paid)
+  expiresAt?: Date // Credits expire after 30 days (free) or billing cycle (paid)
 }
 ```
 
@@ -663,12 +672,12 @@ Users see:
 
 ### 10.1 First 100 Users Launch Strategy
 
-| Incentive | Credits | Cost to Us | Purpose |
-|-----------|---------|-----------|---------|
-| **Signup bonus** | 50 credits | ~$0.50/user | Let them try everything |
-| **First 100 users bonus** | +100 credits (total 150) | ~$1.50/user | Reward early adopters |
-| **Referral bonus** | +50 credits per referral | ~$0.50/referral | Growth loop |
-| **Feedback bonus** | +25 credits for survey | ~$0.25/user | Collect product feedback |
+| Incentive                 | Credits                  | Cost to Us      | Purpose                  |
+| ------------------------- | ------------------------ | --------------- | ------------------------ |
+| **Signup bonus**          | 50 credits               | ~$0.50/user     | Let them try everything  |
+| **First 100 users bonus** | +100 credits (total 150) | ~$1.50/user     | Reward early adopters    |
+| **Referral bonus**        | +50 credits per referral | ~$0.50/referral | Growth loop              |
+| **Feedback bonus**        | +25 credits for survey   | ~$0.25/user     | Collect product feedback |
 
 **Total cost for 100 early users at max:** 100 × (150 + 50 referral + 25 feedback) × $0.01 = **$225 maximum.** This is negligible for a launch budget.
 
@@ -890,12 +899,12 @@ $$ LANGUAGE plpgsql;
 
 **Assumptions:** 100 users, 60% free / 30% Pro / 10% Team. Average 20 sessions/user/month.
 
-| Segment | Users | Avg Credits/User/Month | Total Credits | Our Cost |
-|---------|-------|----------------------|---------------|----------|
-| Free | 60 | 40 (of 50) | 2,400 | $24 |
-| Pro | 30 | 600 (of 1,000) | 18,000 | $180 |
-| Team | 10 | 1,200 (of 2,000) | 12,000 | $120 |
-| **Total** | **100** | — | **32,400** | **$324** |
+| Segment   | Users   | Avg Credits/User/Month | Total Credits | Our Cost |
+| --------- | ------- | ---------------------- | ------------- | -------- |
+| Free      | 60      | 40 (of 50)             | 2,400         | $24      |
+| Pro       | 30      | 600 (of 1,000)         | 18,000        | $180     |
+| Team      | 10      | 1,200 (of 2,000)       | 12,000        | $120     |
+| **Total** | **100** | —                      | **32,400**    | **$324** |
 
 **Revenue:** (30 × $12) + (10 × $25) = $360 + $250 = **$610/month**
 
@@ -903,13 +912,13 @@ $$ LANGUAGE plpgsql;
 
 ### 13.2 Growth Scenario (1,000 Users, Month 6)
 
-| Segment | Users | Total Credits | Our Cost | Revenue |
-|---------|-------|---------------|----------|---------|
-| Free | 500 | 15,000 | $150 | $0 |
-| Pro | 350 | 210,000 | $2,100 | $4,200 |
-| Team | 150 | 300,000 | $3,000 | $3,750 |
-| Overage | — | 50,000 | $500 | $850 |
-| **Total** | **1,000** | **575,000** | **$5,750** | **$8,800** |
+| Segment   | Users     | Total Credits | Our Cost   | Revenue    |
+| --------- | --------- | ------------- | ---------- | ---------- |
+| Free      | 500       | 15,000        | $150       | $0         |
+| Pro       | 350       | 210,000       | $2,100     | $4,200     |
+| Team      | 150       | 300,000       | $3,000     | $3,750     |
+| Overage   | —         | 50,000        | $500       | $850       |
+| **Total** | **1,000** | **575,000**   | **$5,750** | **$8,800** |
 
 **Gross Margin at 1K users: ~35%.** With corrected Team pricing ($25/seat, 2,000 credits), margins are healthier. Further optimization through model routing and batch API can push this to 45%+.
 
@@ -944,4 +953,4 @@ The agents themselves are identical. Only the middleware layer (budget check, to
 
 ---
 
-*This document should be reviewed and iterated on before implementation begins. Key decisions that need stakeholder input: final pricing tiers, free credit amounts, and Phase 1 team allocation.*
+_This document should be reviewed and iterated on before implementation begins. Key decisions that need stakeholder input: final pricing tiers, free credit amounts, and Phase 1 team allocation._

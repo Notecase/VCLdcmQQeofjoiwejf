@@ -61,7 +61,10 @@ function createSupabaseStub(rows?: {
   } as unknown as SupabaseClient
 }
 
-async function collectStreamText(agent: EditorDeepAgent, input: Parameters<EditorDeepAgent['stream']>[0]) {
+async function collectStreamText(
+  agent: EditorDeepAgent,
+  input: Parameters<EditorDeepAgent['stream']>[0]
+) {
   const events: Array<{ type: string; data: unknown }> = []
   for await (const event of agent.stream(input)) {
     events.push(event as { type: string; data: unknown })
@@ -104,38 +107,37 @@ describe('EditorDeepAgent', () => {
     expect(events.some((event) => event.type === 'assistant-final')).toBe(true)
   })
 
-  it.each([
-    "what's this note about",
-    'whats this note about',
-    'what is this note about',
-  ])('uses deterministic summary fast path for "%s"', async (message) => {
-    executeToolMock.mockResolvedValue({
-      success: true,
-      data: {
-        title: 'MLE and MAP',
-        content: 'MLE chooses parameters maximizing likelihood.\n\nMAP adds priors.',
-      },
-    })
+  it.each(["what's this note about", 'whats this note about', 'what is this note about'])(
+    'uses deterministic summary fast path for "%s"',
+    async (message) => {
+      executeToolMock.mockResolvedValue({
+        success: true,
+        data: {
+          title: 'MLE and MAP',
+          content: 'MLE chooses parameters maximizing likelihood.\n\nMAP adds priors.',
+        },
+      })
 
-    const agent = new EditorDeepAgent({
-      supabase: createSupabaseStub(),
-      userId: 'u1',
-      openaiApiKey: 'test-key',
-    })
+      const agent = new EditorDeepAgent({
+        supabase: createSupabaseStub(),
+        userId: 'u1',
+        openaiApiKey: 'test-key',
+      })
 
-    const events = await collectStreamText(agent, {
-      message,
-      threadId: '22222222-2222-4222-8222-222222222222',
-      context: {
-        currentNoteId: '33333333-3333-4333-8333-333333333333',
-      },
-    })
+      const events = await collectStreamText(agent, {
+        message,
+        threadId: '22222222-2222-4222-8222-222222222222',
+        context: {
+          currentNoteId: '33333333-3333-4333-8333-333333333333',
+        },
+      })
 
-    expect(createDeepAgentMock).not.toHaveBeenCalled()
-    expect(events.some((event) => event.type === 'assistant-final')).toBe(true)
-    const final = events.find((event) => event.type === 'assistant-final')
-    expect(String(final?.data || '')).toContain('mainly about')
-  })
+      expect(createDeepAgentMock).not.toHaveBeenCalled()
+      expect(events.some((event) => event.type === 'assistant-final')).toBe(true)
+      const final = events.find((event) => event.type === 'assistant-final')
+      expect(String(final?.data || '')).toContain('mainly about')
+    }
+  )
 
   it('emits assistant-final before done when deep runtime throws', async () => {
     createDeepAgentMock.mockReturnValue({

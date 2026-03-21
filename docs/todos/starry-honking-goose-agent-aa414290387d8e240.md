@@ -22,6 +22,7 @@ Superdesign is an **AI-powered design agent that lives inside your code editor**
 Superdesign is NOT a single product. It is actually **three separate things** that work together:
 
 ### Product A: The VS Code / IDE Extension (Main Product)
+
 - **What it is**: A VS Code extension installable from the marketplace
 - **Repo**: `github.com/superdesigndev/superdesign`
 - **Tech**: TypeScript (86%), built as a standard VS Code extension with a React-based webview sidebar
@@ -30,17 +31,20 @@ Superdesign is NOT a single product. It is actually **three separate things** th
 - **Works in**: VS Code, Cursor, Windsurf
 
 ### Product B: The MCP Server for Claude Code (Community-Built)
+
 - **What it is**: A separate MCP (Model Context Protocol) server that makes Superdesign's design methodology available as tools inside Claude Code
 - **Repo**: `github.com/jonthebeef/superdesign-mcp-claude-code` (by "jonthebeef", NOT by the main Superdesign team)
 - **Key difference**: No API keys needed -- it piggybacks on Claude Code's built-in LLM connection
 - **Tech**: A single `index.ts` file using `@modelcontextprotocol/sdk`
 
 ### Product C: The Web Platform + Prompt Library
+
 - **What it is**: A web app at `app.superdesign.dev` with a community-driven design prompt library
 - **What it does**: Users share and discover design prompts (styles, animations, UI components) that work with any coding agent
 - **Think of it as**: A "prompt marketplace" for design
 
 ### Product D: Chrome Extension ("Component Grab")
+
 - **What it is**: A Chrome extension that captures any live website's UI and converts it to clean Tailwind CSS code
 - **Pricing**: "Free forever" per Jason Zhou's tweet
 - **Use case**: Clone existing websites/components, paste into Superdesign or your IDE
@@ -50,6 +54,7 @@ Superdesign is NOT a single product. It is actually **three separate things** th
 ## 3. Architecture of the VS Code Extension (Product A) -- Deep Dive
 
 ### File Structure
+
 ```
 superdesign/
   src/
@@ -101,6 +106,7 @@ superdesign/
 The extension supports two fundamentally different ways to call AI:
 
 **Mode 1: Claude API (Default)**
+
 - Uses `@ai-sdk/anthropic` (Vercel AI SDK)
 - Requires user's own Anthropic API key
 - The extension itself is the "brain" -- it calls the AI model, provides tools, orchestrates the conversation
@@ -108,6 +114,7 @@ The extension supports two fundamentally different ways to call AI:
 - Supports OpenAI, OpenRouter, and custom URLs as alternatives
 
 **Mode 2: Claude Code Binary**
+
 - Spawns the `claude` CLI binary as a child process
 - Passes the system prompt via stdin, user prompt via `-p` flag
 - Uses `--dangerously-skip-permissions` to auto-approve file operations
@@ -134,6 +141,7 @@ The `system-prompt.txt` is the heart of Superdesign. It instructs the AI:
 ### The Canvas (Design Preview)
 
 When designs are generated:
+
 1. Files are saved as `.html` in `.superdesign/design_iterations/`
 2. The "Canvas View" (`CanvasView.tsx`) opens as a VS Code webview panel
 3. Each HTML file is rendered in an iframe within the canvas
@@ -143,6 +151,7 @@ When designs are generated:
 ### Initialization Flow
 
 When a user runs "Initialize Superdesign":
+
 1. Creates `.superdesign/` directory in the workspace root
 2. Creates `design_iterations/` subdirectory for generated designs
 3. Creates `moodboard/` subdirectory for uploaded reference images
@@ -183,17 +192,17 @@ The MCP server provides the "design methodology" but Claude Code's own AI does a
 
 ### MCP Tools Exposed
 
-| Tool | Purpose | Parameters |
-|------|---------|------------|
-| `superdesign_generate` | Returns design specs for Claude to execute | `prompt`, `design_type` (ui/wireframe/component/logo/icon), `variations` (1-5), `framework` (html/react/vue) |
-| `superdesign_iterate` | Returns iteration instructions | `design_file` (path), `feedback` (text), `variations` (1-5) |
-| `superdesign_extract_system` | Returns design system extraction instructions | `image_path` (screenshot path) |
-| `superdesign_list` | Lists all generated designs | `workspace_path` (optional) |
-| `superdesign_gallery` | Generates interactive HTML gallery | `workspace_path` (optional) |
-| `superdesign_delete` | Deletes a design file | `filename`, `workspace_path` |
-| `superdesign_cleanup` | Removes old designs | `max_age_days`, `max_count`, `dry_run` |
-| `superdesign_live_gallery` | Starts a live-reloading local web server to browse designs | `workspace_path`, `port` |
-| `superdesign_check_files` | Compares file manifest for smart refresh | `workspace_path`, `manifest` |
+| Tool                         | Purpose                                                    | Parameters                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `superdesign_generate`       | Returns design specs for Claude to execute                 | `prompt`, `design_type` (ui/wireframe/component/logo/icon), `variations` (1-5), `framework` (html/react/vue) |
+| `superdesign_iterate`        | Returns iteration instructions                             | `design_file` (path), `feedback` (text), `variations` (1-5)                                                  |
+| `superdesign_extract_system` | Returns design system extraction instructions              | `image_path` (screenshot path)                                                                               |
+| `superdesign_list`           | Lists all generated designs                                | `workspace_path` (optional)                                                                                  |
+| `superdesign_gallery`        | Generates interactive HTML gallery                         | `workspace_path` (optional)                                                                                  |
+| `superdesign_delete`         | Deletes a design file                                      | `filename`, `workspace_path`                                                                                 |
+| `superdesign_cleanup`        | Removes old designs                                        | `max_age_days`, `max_count`, `dry_run`                                                                       |
+| `superdesign_live_gallery`   | Starts a live-reloading local web server to browse designs | `workspace_path`, `port`                                                                                     |
+| `superdesign_check_files`    | Compares file manifest for smart refresh                   | `workspace_path`, `manifest`                                                                                 |
 
 ### MCP Installation
 
@@ -283,12 +292,12 @@ However, Superdesign effectively achieves the same thing as a skill: when the MC
 
 **Answer: It is a small ecosystem of four independent products.**
 
-| Product | Type | Has Backend? | Has Its Own AI? | Revenue? |
-|---------|------|-------------|----------------|----------|
-| VS Code Extension | IDE Extension | No (calls APIs directly from extension) | No (uses user's API keys) | Free/Open Source |
-| MCP Server | Claude Code Plugin | No (runs locally) | No (uses Claude Code's AI) | Free/Open Source |
-| Web Platform (app.superdesign.dev) | Web App | Yes (has a backend) | Unclear | Likely freemium |
-| Chrome Extension | Browser Extension | No | No | Free forever |
+| Product                            | Type               | Has Backend?                            | Has Its Own AI?            | Revenue?         |
+| ---------------------------------- | ------------------ | --------------------------------------- | -------------------------- | ---------------- |
+| VS Code Extension                  | IDE Extension      | No (calls APIs directly from extension) | No (uses user's API keys)  | Free/Open Source |
+| MCP Server                         | Claude Code Plugin | No (runs locally)                       | No (uses Claude Code's AI) | Free/Open Source |
+| Web Platform (app.superdesign.dev) | Web App            | Yes (has a backend)                     | Unclear                    | Likely freemium  |
+| Chrome Extension                   | Browser Extension  | No                                      | No                         | Free forever     |
 
 Key insight: **The VS Code extension and MCP server have NO backend of their own.** They run entirely on the user's machine. The AI calls go directly from the extension to the AI provider (Anthropic, OpenAI, etc.) using the user's own API keys. There is no Superdesign server involved.
 
@@ -310,16 +319,16 @@ Based on all evidence gathered:
 
 ## 9. VS Code Extension vs. Claude Code MCP: Key Differences
 
-| Aspect | VS Code Extension | MCP Server |
-|--------|-------------------|------------|
-| **Who built it** | Superdesign team (Jason Zhou) | Community member (jonthebeef) |
-| **Integration type** | VS Code extension with sidebar + canvas | MCP tool protocol |
-| **AI execution** | Extension orchestrates AI + tools | Claude Code orchestrates everything |
-| **Preview** | Built-in Canvas View (webview) | Opens in browser (gallery HTML) |
-| **API key needed** | Yes (Anthropic/OpenAI/OpenRouter) OR Claude Code binary | No (uses Claude Code's existing connection) |
-| **Project awareness** | Yes (initialization extracts design context) | Limited (no auto-extraction) |
-| **User experience** | Visual GUI with chat + canvas | Terminal-based (type commands in Claude Code) |
-| **Tools available** | Read, Write, Edit, Bash, Glob, Grep, LS, MultiEdit, Theme | Generate, Iterate, Extract, List, Gallery, Cleanup |
+| Aspect                | VS Code Extension                                         | MCP Server                                         |
+| --------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| **Who built it**      | Superdesign team (Jason Zhou)                             | Community member (jonthebeef)                      |
+| **Integration type**  | VS Code extension with sidebar + canvas                   | MCP tool protocol                                  |
+| **AI execution**      | Extension orchestrates AI + tools                         | Claude Code orchestrates everything                |
+| **Preview**           | Built-in Canvas View (webview)                            | Opens in browser (gallery HTML)                    |
+| **API key needed**    | Yes (Anthropic/OpenAI/OpenRouter) OR Claude Code binary   | No (uses Claude Code's existing connection)        |
+| **Project awareness** | Yes (initialization extracts design context)              | Limited (no auto-extraction)                       |
+| **User experience**   | Visual GUI with chat + canvas                             | Terminal-based (type commands in Claude Code)      |
+| **Tools available**   | Read, Write, Edit, Bash, Glob, Grep, LS, MultiEdit, Theme | Generate, Iterate, Extract, List, Gallery, Cleanup |
 
 ---
 

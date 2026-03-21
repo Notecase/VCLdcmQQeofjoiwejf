@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import {
-  normalizeDeviceStartResponse,
-  parsePollResponse,
-} from '../scripts/lib/device-auth.mjs'
+import { normalizeDeviceStartResponse, parsePollResponse } from '../scripts/lib/device-auth.mjs'
 
 test('normalizeDeviceStartResponse enforces required fields and defaults interval', () => {
   const normalized = normalizeDeviceStartResponse({
@@ -21,7 +18,11 @@ test('normalizeDeviceStartResponse enforces required fields and defaults interva
 
 test('normalizeDeviceStartResponse rejects malformed payloads', () => {
   assert.throws(
-    () => normalizeDeviceStartResponse({ user_code: 'ABCD-EFGH', verification_uri: 'https://app.noteshell.io/cli' }),
+    () =>
+      normalizeDeviceStartResponse({
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://app.noteshell.io/cli',
+      }),
     /device_code/
   )
 })

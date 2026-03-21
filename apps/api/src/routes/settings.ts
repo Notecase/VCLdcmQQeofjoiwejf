@@ -62,19 +62,17 @@ settings.post('/api-keys', zValidator('json', ApiKeySchema), async (c) => {
   const keyHint = '...' + api_key.slice(-4)
 
   // Upsert the key (encrypted_key stored as-is; Supabase Vault handles encryption at rest)
-  const { error } = await auth.supabase
-    .from('user_api_keys')
-    .upsert(
-      {
-        user_id: auth.userId,
-        provider,
-        encrypted_key: api_key,
-        key_hint: keyHint,
-        is_valid: true,
-        last_validated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,provider' }
-    )
+  const { error } = await auth.supabase.from('user_api_keys').upsert(
+    {
+      user_id: auth.userId,
+      provider,
+      encrypted_key: api_key,
+      key_hint: keyHint,
+      is_valid: true,
+      last_validated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,provider' }
+  )
 
   if (error) {
     return c.json({ error: 'Failed to save API key' }, 500)
@@ -155,16 +153,14 @@ settings.put('/ai-preferences', zValidator('json', AiPreferencesSchema), async (
   const auth = requireAuth(c)
   const prefs = c.req.valid('json')
 
-  const { error } = await auth.supabase
-    .from('user_ai_preferences')
-    .upsert(
-      {
-        user_id: auth.userId,
-        ...prefs,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    )
+  const { error } = await auth.supabase.from('user_ai_preferences').upsert(
+    {
+      user_id: auth.userId,
+      ...prefs,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  )
 
   if (error) {
     return c.json({ error: 'Failed to save preferences' }, 500)
@@ -227,17 +223,15 @@ settings.put('/heartbeat', zValidator('json', HeartbeatConfigSchema), async (c) 
   const auth = requireAuth(c)
   const { enabled, config: hbConfig } = c.req.valid('json')
 
-  const { error } = await auth.supabase
-    .from('agent_heartbeat_state')
-    .upsert(
-      {
-        user_id: auth.userId,
-        enabled,
-        config: hbConfig ?? {},
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    )
+  const { error } = await auth.supabase.from('agent_heartbeat_state').upsert(
+    {
+      user_id: auth.userId,
+      enabled,
+      config: hbConfig ?? {},
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  )
 
   if (error) {
     return c.json({ error: 'Failed to update heartbeat config' }, 500)
@@ -281,7 +275,9 @@ settings.get('/credits', async (c) => {
 
   const { data, error } = await auth.supabase
     .from('user_credits')
-    .select('balance_cents, lifetime_granted, lifetime_used, plan_type, plan_expires_at, created_at')
+    .select(
+      'balance_cents, lifetime_granted, lifetime_used, plan_type, plan_expires_at, created_at'
+    )
     .eq('user_id', auth.userId)
     .single()
 
@@ -455,7 +451,10 @@ settings.post(
     const body = c.req.valid('json')
 
     // Check admin authorization
-    const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map((s) => s.trim()).filter(Boolean)
+    const adminIds = (process.env.ADMIN_USER_IDS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
     if (!adminIds.includes(auth.userId)) {
       return c.json({ error: 'Unauthorized: admin access required' }, 403)
     }

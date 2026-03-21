@@ -48,7 +48,9 @@ function handleUpdateInstructions(content: string) {
   store.savePlanInstructions(planId.value, content)
 }
 
-function handleCreateSchedule(schedule: Omit<PlanScheduleItem, 'id' | 'createdAt' | 'runCount' | 'planId'>) {
+function handleCreateSchedule(
+  schedule: Omit<PlanScheduleItem, 'id' | 'createdAt' | 'runCount' | 'planId'>
+) {
   store.createPlanSchedule(planId.value, schedule)
 }
 
@@ -65,7 +67,10 @@ function handleToggleSchedule(id: string, enabled: boolean) {
 }
 
 function handleGenerate(workflow: string) {
-  store.runPlanNow(planId.value, workflow as 'make_note_from_task' | 'research_topic_from_task' | 'make_course_from_plan')
+  store.runPlanNow(
+    planId.value,
+    workflow as 'make_note_from_task' | 'research_topic_from_task' | 'make_course_from_plan'
+  )
 }
 </script>
 
@@ -89,7 +94,9 @@ function handleGenerate(workflow: string) {
       <button
         class="back-btn"
         @click="router.push('/calendar')"
-      >Back to Calendar</button>
+      >
+        Back to Calendar
+      </button>
     </div>
 
     <!-- Main content -->
@@ -176,7 +183,9 @@ function handleGenerate(workflow: string) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state {

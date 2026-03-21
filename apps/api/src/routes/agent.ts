@@ -56,7 +56,7 @@ function shouldUseEditorDeepRuntime(_userId: string, requestedRuntime?: 'legacy'
     return false
   }
 
-  return true  // Always use EditorDeep
+  return true // Always use EditorDeep
 }
 
 function mergeEditorContext(input: {
@@ -89,7 +89,9 @@ function mergeEditorContext(input: {
         ? merged.selectedText
         : undefined,
     projectId:
-      typeof merged.projectId === 'string' && merged.projectId.trim() ? merged.projectId : undefined,
+      typeof merged.projectId === 'string' && merged.projectId.trim()
+        ? merged.projectId
+        : undefined,
     noteIds: Array.isArray(merged.noteIds)
       ? merged.noteIds.filter((value): value is string => typeof value === 'string')
       : undefined,
@@ -572,19 +574,20 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
 
   // Look up plan instructions if the note belongs to a plan-linked folder
   let planInstructions: string | undefined
-  const noteProjectId = mergedEditorContext.workspaceId || mergedEditorContext.currentNoteId
-    ? (await (async () => {
-        // Try to get the note's project_id
-        const noteId = mergedEditorContext.currentNoteId
-        if (!noteId) return null
-        const { data: note } = await auth.supabase
-          .from('notes')
-          .select('project_id')
-          .eq('id', noteId)
-          .maybeSingle()
-        return note?.project_id || null
-      })())
-    : null
+  const noteProjectId =
+    mergedEditorContext.workspaceId || mergedEditorContext.currentNoteId
+      ? await (async () => {
+          // Try to get the note's project_id
+          const noteId = mergedEditorContext.currentNoteId
+          if (!noteId) return null
+          const { data: note } = await auth.supabase
+            .from('notes')
+            .select('project_id')
+            .eq('id', noteId)
+            .maybeSingle()
+          return note?.project_id || null
+        })()
+      : null
 
   if (noteProjectId) {
     try {
@@ -598,7 +601,9 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
       if (link?.plan_id) {
         const { MemoryService } = await import('@inkdown/ai/agents')
         const memService = new MemoryService(auth.supabase, auth.userId)
-        const instFile = await memService.readFile(`Plans/${link.plan_id.toLowerCase()}-instructions.md`)
+        const instFile = await memService.readFile(
+          `Plans/${link.plan_id.toLowerCase()}-instructions.md`
+        )
         if (instFile?.content) planInstructions = instFile.content
       }
     } catch {

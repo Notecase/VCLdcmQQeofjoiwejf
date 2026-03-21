@@ -403,7 +403,8 @@ export class NoteAgent {
     let extractedTitle = ''
 
     for await (const chunk of trackOpenAIStream(stream, {
-      model: this.model, taskType: 'note-agent',
+      model: this.model,
+      taskType: 'note-agent',
     })) {
       // Log chunk structure for debugging GPT-5.2 format
       console.log('[NoteAgent.stream] Chunk:', JSON.stringify(chunk).slice(0, 200))
@@ -548,7 +549,8 @@ export class NoteAgent {
     let fullContent = ''
 
     for await (const chunk of trackOpenAIStream(stream, {
-      model: this.model, taskType: 'note-agent',
+      model: this.model,
+      taskType: 'note-agent',
     })) {
       // Log chunk structure for debugging GPT-5.2 format
       console.log('[NoteAgent.streamSurgicalEdit] Chunk:', JSON.stringify(chunk).slice(0, 200))

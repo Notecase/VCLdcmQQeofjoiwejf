@@ -100,7 +100,7 @@ function handleSubmit() {
         <input
           v-model="endDate"
           type="date"
-        class="field-input"
+          class="field-input"
         />
       </div>
     </div>

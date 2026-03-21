@@ -2,7 +2,24 @@
 name: morning-routine
 description: Complete morning planning workflow — gathers context, analyzes yesterday, archives stale plans, picks focus from active roadmaps, generates Today.md, and presents a dashboard
 platform: universal
-tools_required: [soul_read, secretary_today, secretary_preferences, secretary_plans_list, secretary_analytics, secretary_recurring_manage, calendar_events, context_entries, secretary_memory_write, secretary_carryover, secretary_plan_progress, secretary_memory_read, secretary_daily_generate, notes_create, context_write]
+tools_required:
+  [
+    soul_read,
+    secretary_today,
+    secretary_preferences,
+    secretary_plans_list,
+    secretary_analytics,
+    secretary_recurring_manage,
+    calendar_events,
+    context_entries,
+    secretary_memory_write,
+    secretary_carryover,
+    secretary_plan_progress,
+    secretary_memory_read,
+    secretary_daily_generate,
+    notes_create,
+    context_write,
+  ]
 ---
 
 # Morning Routine
@@ -35,6 +52,7 @@ context_entries              → recent cross-agent activity
 ```
 
 **First-run handling:**
+
 - No soul → ask user to describe their goals, then call `soul_update` before continuing.
 - No Plan.md → suggest using the `study-planning.md` skill first to create a roadmap.
 - No History → skip analytics. Note "This is your first morning routine — welcome!"
@@ -124,7 +142,7 @@ Combine all inputs into a structured daily plan:
 - [ ] HH:MM (XXmin) Another task [PLAN_ID]
 - [ ] HH:MM (10min) Break ☕
 - [ ] HH:MM (XXmin) Recurring: [block name]
-...
+      ...
 ```
 
 ### Present for confirmation
@@ -207,10 +225,10 @@ Adapt the dashboard based on available data. If this is a first run, keep it min
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Today.md already has today's date | Ask user: regenerate or keep current? |
-| No active plans | Generate day from recurring + calendar only |
-| No soul/preferences | Guide user through initial setup |
-| Analytics show low completion | Suggest lighter schedule, shorter focus blocks |
-| Multiple active plans | Prioritize by plan order in Plan.md, or ask user |
+| Issue                             | Solution                                         |
+| --------------------------------- | ------------------------------------------------ |
+| Today.md already has today's date | Ask user: regenerate or keep current?            |
+| No active plans                   | Generate day from recurring + calendar only      |
+| No soul/preferences               | Guide user through initial setup                 |
+| Analytics show low completion     | Suggest lighter schedule, shorter focus blocks   |
+| Multiple active plans             | Prioritize by plan order in Plan.md, or ask user |

@@ -153,7 +153,10 @@ export class ExplainAgent {
         stream_options: { include_usage: true },
       })
 
-      for await (const chunk of trackOpenAIStream(rawStream, { model: this.model, taskType: 'explain' })) {
+      for await (const chunk of trackOpenAIStream(rawStream, {
+        model: this.model,
+        taskType: 'explain',
+      })) {
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
           yield { event: 'text', data: delta }

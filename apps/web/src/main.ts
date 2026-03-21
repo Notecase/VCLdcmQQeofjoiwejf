@@ -107,7 +107,14 @@ const router = createRouter({
 const isProductionDemo = !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === ''
 router.beforeEach((to) => {
   const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
-  if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth' && to.name !== 'capture' && to.name !== 'settings') {
+  if (
+    isProductionDemo &&
+    !inDemoMode &&
+    to.name !== 'demo' &&
+    to.name !== 'cli-auth' &&
+    to.name !== 'capture' &&
+    to.name !== 'settings'
+  ) {
     return { name: 'demo' }
   }
 })
@@ -127,7 +134,7 @@ async function initApp() {
   // Initialize service provider
   // Force local provider in demo mode so all data goes to IndexedDB
   const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
-  const provider = inDemoMode ? 'local' : (isSupabaseConfigured ? 'supabase' : 'local')
+  const provider = inDemoMode ? 'local' : isSupabaseConfigured ? 'supabase' : 'local'
 
   try {
     await initializeServices(provider)

@@ -8,9 +8,11 @@ description: Capturing web research, articles, and findings as structured Inkdow
 ## Workflow
 
 ### 1. Research Phase
+
 Gather information from web sources, papers, documentation, etc.
 
 ### 2. Create Structured Note
+
 ```
 notes_create {
   title: "Research: WebSocket Performance Optimization",
@@ -20,6 +22,7 @@ notes_create {
 ```
 
 ### 3. Log to Context Bus
+
 ```
 context_write {
   agent: "mcp",
@@ -31,42 +34,56 @@ context_write {
 
 ## Note Template
 
-```markdown
+````markdown
 # Research: [Topic]
 
 ## Sources
+
 - [Source 1](url) — brief description
 - [Source 2](url) — brief description
 
 ## Key Findings
+
 ### [Finding 1]
+
 Details...
 
 ### [Finding 2]
+
 Details...
 
 ## Code Examples
+
 ```language
 // relevant code
 ```
+````
 
 ## Comparison
+
 | Approach | Pros | Cons |
-|----------|------|------|
-| A | ... | ... |
-| B | ... | ... |
+| -------- | ---- | ---- |
+| A        | ...  | ...  |
+| B        | ...  | ...  |
 
 ## Actionable Takeaways
+
 1. First action item
 2. Second action item
 
 ## Open Questions
+
 - Question that needs further investigation
+
 ```
 
 ## Linking Research to Plans
 ```
+
 1. notes_create → create research note
 2. secretary_memory_read { filename: "Plans/project.md" } → read plan
 3. secretary_memory_write → update plan with research findings
+
+```
+
 ```

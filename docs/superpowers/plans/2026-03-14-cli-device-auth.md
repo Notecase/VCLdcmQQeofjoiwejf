@@ -15,28 +15,30 @@
 ## File Map
 
 ### Created
-| File | Responsibility |
-|------|---------------|
+
+| File                                   | Responsibility                    |
+| -------------------------------------- | --------------------------------- |
 | `supabase/migrations/022_cli_auth.sql` | `cli_auth_sessions` table + index |
-| `apps/api/src/routes/cli-auth.ts` | 4 device auth endpoints |
-| `apps/web/src/views/CliAuthView.vue` | Browser approval page |
+| `apps/api/src/routes/cli-auth.ts`      | 4 device auth endpoints           |
+| `apps/web/src/views/CliAuthView.vue`   | Browser approval page             |
 
 ### Modified
-| File | Change |
-|------|--------|
-| `apps/api/src/config.ts` | Add `baseUrl` from `BASE_URL` env var |
-| `apps/api/src/routes/index.ts` | Mount `/api/cli` route |
-| `apps/web/src/main.ts` | Add `/cli` route; exempt from demo guard |
-| `apps/web/src/views/AuthView.vue` | Honor `?redirect=` query param after login |
-| `packages/mcp/scripts/noteshell.mjs` | New unified CLI (from /tmp patch) |
-| `packages/mcp/scripts/lib/device-auth.mjs` | Response parsers (from /tmp patch) |
-| `packages/mcp/scripts/lib/noteshell-config.mjs` | Config writer (from /tmp patch) |
-| `packages/mcp/scripts/lib/open-browser.mjs` | Browser opener (from /tmp patch) |
-| `packages/mcp/scripts/setup.mjs` | Use `writeNoteshellConfig` from lib |
-| `packages/mcp/test/device-auth.test.mjs` | Unit tests (from /tmp patch) |
-| `packages/mcp/package.json` | New bin entries, test script, v0.2.0 |
-| `packages/mcp/src/config.ts` | Add `refresh_token`, `expires_at` fields |
-| `packages/mcp/src/db/client.ts` | Token auto-refresh on startup |
+
+| File                                            | Change                                     |
+| ----------------------------------------------- | ------------------------------------------ |
+| `apps/api/src/config.ts`                        | Add `baseUrl` from `BASE_URL` env var      |
+| `apps/api/src/routes/index.ts`                  | Mount `/api/cli` route                     |
+| `apps/web/src/main.ts`                          | Add `/cli` route; exempt from demo guard   |
+| `apps/web/src/views/AuthView.vue`               | Honor `?redirect=` query param after login |
+| `packages/mcp/scripts/noteshell.mjs`            | New unified CLI (from /tmp patch)          |
+| `packages/mcp/scripts/lib/device-auth.mjs`      | Response parsers (from /tmp patch)         |
+| `packages/mcp/scripts/lib/noteshell-config.mjs` | Config writer (from /tmp patch)            |
+| `packages/mcp/scripts/lib/open-browser.mjs`     | Browser opener (from /tmp patch)           |
+| `packages/mcp/scripts/setup.mjs`                | Use `writeNoteshellConfig` from lib        |
+| `packages/mcp/test/device-auth.test.mjs`        | Unit tests (from /tmp patch)               |
+| `packages/mcp/package.json`                     | New bin entries, test script, v0.2.0       |
+| `packages/mcp/src/config.ts`                    | Add `refresh_token`, `expires_at` fields   |
+| `packages/mcp/src/db/client.ts`                 | Token auto-refresh on startup              |
 
 ---
 
@@ -45,6 +47,7 @@
 ### Task 1: Database Migration
 
 **Files:**
+
 - Create: `supabase/migrations/022_cli_auth.sql`
 
 - [ ] **Step 1: Create the migration file**
@@ -107,6 +110,7 @@ git commit -m "feat(db): add cli_auth_sessions table for device auth flow"
 ### Task 2: Add BASE_URL to API Config
 
 **Files:**
+
 - Modify: `apps/api/src/config.ts`
 
 - [ ] **Step 1: Add `baseUrl` to the config object**
@@ -138,6 +142,7 @@ git commit -m "feat(api): add BASE_URL config for CLI auth verification URIs"
 ### Task 3: CLI Auth Route
 
 **Files:**
+
 - Create: `apps/api/src/routes/cli-auth.ts`
 
 - [ ] **Step 1: Write unit tests for pure logic helpers**
@@ -217,11 +222,11 @@ const cliAuth = new Hono()
 
 // RFC 8628 recommended alphabet: avoids 0/O/1/I confusion
 const USER_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const DEVICE_CODE_TTL_SECONDS = 600   // 10 minutes
+const DEVICE_CODE_TTL_SECONDS = 600 // 10 minutes
 const POLL_INTERVAL_SECONDS = 5
 
 function generateDeviceCode(): string {
-  return randomBytes(32).toString('hex')  // 64 hex chars
+  return randomBytes(32).toString('hex') // 64 hex chars
 }
 
 function generateUserCode(): string {
@@ -240,10 +245,13 @@ function generateUserCode(): string {
 
 cliAuth.post(
   '/start',
-  zValidator('json', z.object({
-    client_name: z.string().min(1).max(100).optional(),
-    scopes: z.array(z.string()).optional(),
-  })),
+  zValidator(
+    'json',
+    z.object({
+      client_name: z.string().min(1).max(100).optional(),
+      scopes: z.array(z.string()).optional(),
+    })
+  ),
   async (c) => {
     const { client_name, scopes } = c.req.valid('json')
     const db = getServiceClient()
@@ -367,12 +375,15 @@ cliAuth.post(
 cliAuth.post(
   '/approve',
   authMiddleware,
-  zValidator('json', z.object({
-    user_code: z.string().min(1),
-    access_token: z.string().min(1),
-    refresh_token: z.string().min(1),
-    token_expires_at: z.string().min(1),
-  })),
+  zValidator(
+    'json',
+    z.object({
+      user_code: z.string().min(1),
+      access_token: z.string().min(1),
+      refresh_token: z.string().min(1),
+      token_expires_at: z.string().min(1),
+    })
+  ),
   async (c) => {
     const auth = requireAuth(c)
     const { user_code, access_token, refresh_token, token_expires_at } = c.req.valid('json')
@@ -390,7 +401,12 @@ cliAuth.post(
       .eq('user_code', user_code)
       .single()
 
-    if (error || !session || session.status !== 'pending' || new Date(session.expires_at) < new Date()) {
+    if (
+      error ||
+      !session ||
+      session.status !== 'pending' ||
+      new Date(session.expires_at) < new Date()
+    ) {
       return c.json({ error: 'Code not found or expired' }, 404)
     }
 
@@ -459,6 +475,7 @@ git commit -m "feat(api): add CLI device auth endpoints (RFC 8628)"
 ### Task 4: Register the Route
 
 **Files:**
+
 - Modify: `apps/api/src/routes/index.ts`
 
 - [ ] **Step 1: Import and mount the route**
@@ -510,6 +527,7 @@ git commit -m "feat(api): register /api/cli/auth routes"
 ### Task 5: AuthView Redirect Fix
 
 **Files:**
+
 - Modify: `apps/web/src/views/AuthView.vue`
 
 - [ ] **Step 1: Add `useRoute` import and redirect logic**
@@ -523,7 +541,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
 
 const router = useRouter()
-const route = useRoute()       // ← add this
+const route = useRoute() // ← add this
 const authStore = useAuthStore()
 ```
 
@@ -532,12 +550,14 @@ const authStore = useAuthStore()
 In `AuthView.vue` there are two `router.push('/')` calls to update:
 
 1. In `handleSubmit` (after successful sign-in/sign-up):
+
 ```typescript
-    const redirectTo = (route.query.redirect as string) || '/'
-    router.push(redirectTo)
+const redirectTo = (route.query.redirect as string) || '/'
+router.push(redirectTo)
 ```
 
 2. In `skipAuth` (the "Continue without account" button):
+
 ```typescript
 function skipAuth() {
   const redirectTo = (route.query.redirect as string) || '/'
@@ -567,6 +587,7 @@ git commit -m "feat(web): honor ?redirect= query param after login"
 ### Task 6: CLI Auth View
 
 **Files:**
+
 - Create: `apps/web/src/views/CliAuthView.vue`
 
 - [ ] **Step 1: Create the component**
@@ -583,7 +604,14 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-type PageState = 'loading' | 'code-entry' | 'approval' | 'submitting' | 'success' | 'denied' | 'error'
+type PageState =
+  | 'loading'
+  | 'code-entry'
+  | 'approval'
+  | 'submitting'
+  | 'success'
+  | 'denied'
+  | 'error'
 
 const state = ref<PageState>('loading')
 const userCode = ref('')
@@ -692,7 +720,6 @@ async function handleDeny() {
 <template>
   <div class="auth-view">
     <div class="auth-card">
-
       <!-- Loading -->
       <div v-if="state === 'loading'" class="cli-state">
         <el-icon class="cli-icon" :size="40"><Loading /></el-icon>
@@ -712,7 +739,12 @@ async function handleDeny() {
             size="large"
             @keyup.enter="handleCodeSubmit"
           />
-          <el-button type="primary" size="large" style="width:100%; margin-top:12px" @click="handleCodeSubmit">
+          <el-button
+            type="primary"
+            size="large"
+            style="width:100%; margin-top:12px"
+            @click="handleCodeSubmit"
+          >
             Continue
           </el-button>
         </div>
@@ -724,16 +756,19 @@ async function handleDeny() {
           <span class="cli-terminal-icon">&gt;_</span>
         </div>
         <h2>Authorize Noteshell CLI</h2>
-        <p class="cli-sub">
-          <strong>Noteshell MCP</strong> wants to connect to your account
-        </p>
+        <p class="cli-sub"><strong>Noteshell MCP</strong> wants to connect to your account</p>
         <div class="cli-code-display">{{ userCode }}</div>
         <p class="cli-hint">Confirm this code matches what's in your terminal</p>
         <div class="cli-actions">
           <el-button type="primary" size="large" style="width:100%" @click="handleApprove">
             Authorize
           </el-button>
-          <el-button type="text" size="large" style="width:100%; margin-top:4px" @click="handleDeny">
+          <el-button
+            type="text"
+            size="large"
+            style="width:100%; margin-top:4px"
+            @click="handleDeny"
+          >
             Deny
           </el-button>
         </div>
@@ -764,7 +799,6 @@ async function handleDeny() {
         <el-alert :title="errorMessage" type="error" :closable="false" style="margin-bottom:16px" />
         <el-button @click="state = 'approval'">Try again</el-button>
       </div>
-
     </div>
   </div>
 </template>
@@ -882,8 +916,12 @@ async function handleDeny() {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
 ```
@@ -908,6 +946,7 @@ git commit -m "feat(web): add CLI device auth approval page"
 ### Task 7: Register Route in Router
 
 **Files:**
+
 - Modify: `apps/web/src/main.ts`
 
 - [ ] **Step 1: Add the `/cli` route to the router**
@@ -925,11 +964,13 @@ In `apps/web/src/main.ts`, add inside the `routes` array after the `/demo` route
 - [ ] **Step 2: Exempt `/cli` from the demo guard**
 
 Find the existing guard:
+
 ```typescript
   if (isProductionDemo && !inDemoMode && to.name !== 'demo') {
 ```
 
 Replace with:
+
 ```typescript
   if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth') {
 ```
@@ -964,6 +1005,7 @@ git commit -m "feat(web): add /cli route for device auth approval"
 ### Task 8: Add Patch Library Files
 
 **Files:**
+
 - Create: `packages/mcp/scripts/lib/device-auth.mjs`
 - Create: `packages/mcp/scripts/lib/noteshell-config.mjs`
 - Create: `packages/mcp/scripts/lib/open-browser.mjs`
@@ -1007,7 +1049,9 @@ export function normalizeDeviceStartResponse(payload) {
   const verificationUriComplete = readOptionalString(payload, 'verification_uri_complete')
 
   const interval =
-    typeof payload.interval === 'number' && Number.isFinite(payload.interval) && payload.interval > 0
+    typeof payload.interval === 'number' &&
+    Number.isFinite(payload.interval) &&
+    payload.interval > 0
       ? Math.round(payload.interval)
       : 5
 
@@ -1050,7 +1094,8 @@ export function parsePollResponse(payload) {
   const errorCode = typeof payload.error === 'string' ? payload.error : undefined
   if (errorCode === 'authorization_pending') return { status: 'pending' }
   if (errorCode === 'slow_down') return { status: 'pending', slowDown: true }
-  if (errorCode === 'expired_token') throw new Error('Login session expired. Run `noteshell login` again.')
+  if (errorCode === 'expired_token')
+    throw new Error('Login session expired. Run `noteshell login` again.')
   if (errorCode === 'access_denied') throw new Error('Login request was denied.')
   if (errorCode) throw new Error(`Login failed: ${errorCode}`)
 
@@ -1187,10 +1232,13 @@ async function postJson(url, payload) {
 
   if (!response.ok) {
     const message =
-      typeof body.message === 'string' ? body.message :
-      typeof body.error_description === 'string' ? body.error_description :
-      typeof body.error === 'string' ? body.error :
-      `HTTP ${response.status}`
+      typeof body.message === 'string'
+        ? body.message
+        : typeof body.error_description === 'string'
+          ? body.error_description
+          : typeof body.error === 'string'
+            ? body.error
+            : `HTTP ${response.status}`
     throw new Error(`${url} failed: ${message}`)
   }
 
@@ -1206,7 +1254,10 @@ function parseLoginFlags(argv) {
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
-    if (arg === '--no-browser') { options.openBrowser = false; continue }
+    if (arg === '--no-browser') {
+      options.openBrowser = false
+      continue
+    }
     if (arg === '--api-url') {
       const next = argv[i + 1]
       if (!next || next.startsWith('--')) throw new Error('Missing value for --api-url')
@@ -1217,11 +1268,17 @@ function parseLoginFlags(argv) {
     if (arg === '--scopes') {
       const next = argv[i + 1]
       if (!next || next.startsWith('--')) throw new Error('Missing value for --scopes')
-      options.scopes = next.split(',').map((s) => s.trim()).filter(Boolean)
+      options.scopes = next
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
       i += 1
       continue
     }
-    if (arg === '--help' || arg === '-h') { options.help = true; continue }
+    if (arg === '--help' || arg === '-h') {
+      options.help = true
+      continue
+    }
     throw new Error(`Unknown login option: ${arg}`)
   }
 
@@ -1231,7 +1288,9 @@ function parseLoginFlags(argv) {
 async function runDeviceLogin(argv) {
   const options = parseLoginFlags(argv)
   if (options.help) {
-    console.log('Usage: noteshell login [--api-url URL] [--no-browser] [--scopes notes:read,notes:write]')
+    console.log(
+      'Usage: noteshell login [--api-url URL] [--no-browser] [--scopes notes:read,notes:write]'
+    )
     return
   }
 
@@ -1301,7 +1360,10 @@ function runNodeScript(scriptPath, args) {
     const child = spawn(process.execPath, [scriptPath, ...args], { stdio: 'inherit' })
     child.on('error', reject)
     child.on('exit', (code, signal) => {
-      if (signal) { process.kill(process.pid, signal); return }
+      if (signal) {
+        process.kill(process.pid, signal)
+        return
+      }
       resolve(code ?? 0)
     })
   })
@@ -1348,10 +1410,7 @@ main().catch((error) => {
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import {
-  normalizeDeviceStartResponse,
-  parsePollResponse,
-} from '../scripts/lib/device-auth.mjs'
+import { normalizeDeviceStartResponse, parsePollResponse } from '../scripts/lib/device-auth.mjs'
 
 test('normalizeDeviceStartResponse enforces required fields and defaults interval', () => {
   const normalized = normalizeDeviceStartResponse({
@@ -1368,7 +1427,11 @@ test('normalizeDeviceStartResponse enforces required fields and defaults interva
 
 test('normalizeDeviceStartResponse rejects malformed payloads', () => {
   assert.throws(
-    () => normalizeDeviceStartResponse({ user_code: 'ABCD-EFGH', verification_uri: 'https://app.noteshell.io/cli' }),
+    () =>
+      normalizeDeviceStartResponse({
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://app.noteshell.io/cli',
+      }),
     /device_code/
   )
 })
@@ -1412,6 +1475,7 @@ git commit -m "feat(mcp): add CLI device auth scripts and lib helpers"
 ### Task 9: Update package.json, setup.mjs, config.ts, and client.ts
 
 **Files:**
+
 - Modify: `packages/mcp/package.json`
 - Modify: `packages/mcp/scripts/setup.mjs`
 - Modify: `packages/mcp/src/config.ts`
@@ -1424,6 +1488,7 @@ In `packages/mcp/package.json`, make these changes:
 1. Bump version: `"version": "0.1.0"` → `"version": "0.2.0"`
 
 2. Replace the `"bin"` section:
+
 ```json
   "bin": {
     "noteshell": "scripts/noteshell.mjs",
@@ -1434,6 +1499,7 @@ In `packages/mcp/package.json`, make these changes:
 ```
 
 3. Add `"test"` to `"scripts"`:
+
 ```json
     "test": "node --test test/device-auth.test.mjs",
 ```
@@ -1496,6 +1562,7 @@ console.log(`   Token expires: ${new Date(data.session.expires_at * 1000).toISOS
 In `packages/mcp/src/config.ts`, update the `ConfigSchema`:
 
 Find:
+
 ```typescript
 const ConfigSchema = z.object({
   supabase_url: z.string().url(),
@@ -1507,6 +1574,7 @@ const ConfigSchema = z.object({
 ```
 
 Replace with:
+
 ```typescript
 const ConfigSchema = z.object({
   supabase_url: z.string().url(),
@@ -1588,11 +1656,13 @@ export async function createDbClient(config: NoteshellConfig): Promise<DbClient>
 Note: `createDbClient` is now `async`. There is one caller in `packages/mcp/src/index.ts`. Update it:
 
 Find in `packages/mcp/src/index.ts`:
+
 ```typescript
 const db = createDbClient(config)
 ```
 
 Replace with:
+
 ```typescript
 const db = await createDbClient(config)
 ```
@@ -1674,6 +1744,7 @@ Expected: same usage text as Step 2.
 - [ ] **Step 6: Final commit (version bump already committed in Task 9)**
 
 If there are any remaining unstaged changes:
+
 ```bash
 git add -p
 git commit -m "chore(mcp): publish v0.2.0"

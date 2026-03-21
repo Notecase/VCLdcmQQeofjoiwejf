@@ -21,7 +21,10 @@ export class EditorDeepStreamNormalizer {
   private historyAssistantTexts = new Set<string>()
 
   // Multi-mode subagent tracking
-  private activeSubagents = new Map<string, { name: string; startedAt: number; lastOutput: string }>()
+  private activeSubagents = new Map<
+    string,
+    { name: string; startedAt: number; lastOutput: string }
+  >()
   private completedSubagentIds = new Set<string>()
 
   /**
@@ -92,7 +95,11 @@ export class EditorDeepStreamNormalizer {
    * Parse a namespace array to determine if it's a subagent and extract the name.
    * LangGraph subgraph namespace format: ['tools:subagent_name', ...] or ['subagent_name:uuid', ...]
    */
-  parseNamespace(namespace: string[]): { isSubagent: boolean; subagentId: string | null; subagentName: string | null } {
+  parseNamespace(namespace: string[]): {
+    isSubagent: boolean
+    subagentId: string | null
+    subagentName: string | null
+  } {
     if (!namespace || namespace.length === 0) {
       return { isSubagent: false, subagentId: null, subagentName: null }
     }
@@ -124,12 +131,21 @@ export class EditorDeepStreamNormalizer {
    * Handle 'updates' mode data from a [namespace, 'updates', data] tuple.
    * This is the same structure as the legacy format — each key is a node with messages.
    */
-  normalizeUpdates(namespace: string[], nodeKey: string, message: StreamMessage): EditorDeepAgentEvent[] {
+  normalizeUpdates(
+    namespace: string[],
+    nodeKey: string,
+    message: StreamMessage
+  ): EditorDeepAgentEvent[] {
     const events: EditorDeepAgentEvent[] = []
     const { isSubagent, subagentId, subagentName } = this.parseNamespace(namespace)
 
     // Emit subagent lifecycle events
-    if (isSubagent && subagentId && !this.activeSubagents.has(subagentId) && !this.completedSubagentIds.has(subagentId)) {
+    if (
+      isSubagent &&
+      subagentId &&
+      !this.activeSubagents.has(subagentId) &&
+      !this.completedSubagentIds.has(subagentId)
+    ) {
       this.activeSubagents.set(subagentId, {
         name: subagentName || subagentId,
         startedAt: Date.now(),
@@ -169,7 +185,10 @@ export class EditorDeepStreamNormalizer {
    * Handle 'messages' mode chunk from a [namespace, 'messages', [message, metadata]] tuple.
    * These are token-level deltas — bypass snapshot dedup as they're always new content.
    */
-  normalizeMessageChunk(namespace: string[], chunk: { text?: string; tool_call_chunks?: unknown[] }): EditorDeepAgentEvent[] {
+  normalizeMessageChunk(
+    namespace: string[],
+    chunk: { text?: string; tool_call_chunks?: unknown[] }
+  ): EditorDeepAgentEvent[] {
     if (!chunk?.text) return []
 
     const events: EditorDeepAgentEvent[] = []

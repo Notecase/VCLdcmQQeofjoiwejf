@@ -11,9 +11,9 @@ import { registerCalendarTools } from './calendar.js'
 import { registerSearchTools } from './search.js'
 
 export function registerAllTools(server: McpServer, db: DbClient): void {
-  registerNoteTools(server, db)        // 12 tools
-  registerSecretaryTools(server, db)   // 18 tools
-  registerContextTools(server, db)     // 5 tools
-  registerCalendarTools(server, db)    // 3 tools
-  registerSearchTools(server, db)      // 2 tools
+  registerNoteTools(server, db) // 12 tools
+  registerSecretaryTools(server, db) // 18 tools
+  registerContextTools(server, db) // 5 tools
+  registerCalendarTools(server, db) // 3 tools
+  registerSearchTools(server, db) // 2 tools
 }

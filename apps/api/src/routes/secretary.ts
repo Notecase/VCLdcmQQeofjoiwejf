@@ -28,7 +28,9 @@ import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const secretary = new Hono()
 
-function getTimezone(c: { req: { header: (name: string) => string | undefined } }): string | undefined {
+function getTimezone(c: {
+  req: { header: (name: string) => string | undefined }
+}): string | undefined {
   return c.req.header('X-Timezone') || undefined
 }
 
@@ -800,62 +802,63 @@ const CreateScheduleSchema = z.object({
  * POST /api/secretary/plan/:planId/schedules
  * Create a new schedule automation
  */
-secretary.post(
-  '/plan/:planId/schedules',
-  zValidator('json', CreateScheduleSchema),
-  async (c) => {
-    const auth = requireAuth(c)
-    const planId = c.req.param('planId')
-    const body = c.req.valid('json')
+secretary.post('/plan/:planId/schedules', zValidator('json', CreateScheduleSchema), async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+  const body = c.req.valid('json')
 
-    const { data, error: dbError } = await auth.supabase
-      .from('plan_schedules')
-      .insert({
-        user_id: auth.userId,
-        plan_id: planId,
-        title: body.title,
-        instructions: body.instructions || null,
-        workflow: body.workflow,
-        frequency: body.frequency,
-        time: body.time,
-        days: body.days || null,
-        enabled: body.enabled ?? true,
-      })
-      .select()
-      .single()
-
-    if (dbError) {
-      return c.json({ error: dbError.message }, 500)
-    }
-
-    return c.json({
-      schedule: {
-        id: data.id,
-        planId: data.plan_id,
-        title: data.title,
-        instructions: data.instructions,
-        workflow: data.workflow,
-        frequency: data.frequency,
-        time: data.time,
-        days: data.days,
-        enabled: data.enabled,
-        lastRunAt: data.last_run_at,
-        nextRunAt: data.next_run_at,
-        runCount: data.run_count,
-        lastRunStatus: data.last_run_status,
-        lastRunError: data.last_run_error,
-        createdAt: data.created_at,
-      },
+  const { data, error: dbError } = await auth.supabase
+    .from('plan_schedules')
+    .insert({
+      user_id: auth.userId,
+      plan_id: planId,
+      title: body.title,
+      instructions: body.instructions || null,
+      workflow: body.workflow,
+      frequency: body.frequency,
+      time: body.time,
+      days: body.days || null,
+      enabled: body.enabled ?? true,
     })
+    .select()
+    .single()
+
+  if (dbError) {
+    return c.json({ error: dbError.message }, 500)
   }
-)
+
+  return c.json({
+    schedule: {
+      id: data.id,
+      planId: data.plan_id,
+      title: data.title,
+      instructions: data.instructions,
+      workflow: data.workflow,
+      frequency: data.frequency,
+      time: data.time,
+      days: data.days,
+      enabled: data.enabled,
+      lastRunAt: data.last_run_at,
+      nextRunAt: data.next_run_at,
+      runCount: data.run_count,
+      lastRunStatus: data.last_run_status,
+      lastRunError: data.last_run_error,
+      createdAt: data.created_at,
+    },
+  })
+})
 
 const UpdateScheduleSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   instructions: z.string().optional(),
-  workflow: z.enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan']).optional(),
+  workflow: z
+    .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+    .optional(),
   frequency: z.enum(['daily', 'weekly', 'custom']).optional(),
-  time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
   days: z.array(z.string()).optional(),
   enabled: z.boolean().optional(),
 })
@@ -926,9 +929,16 @@ secretary.delete('/plan/:planId/schedules/:id', async (c) => {
  */
 secretary.post(
   '/plan/:planId/run',
-  zValidator('json', z.object({
-    workflow: z.enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan']).optional(),
-  }).optional()),
+  zValidator(
+    'json',
+    z
+      .object({
+        workflow: z
+          .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+          .optional(),
+      })
+      .optional()
+  ),
   async (c) => {
     const auth = requireAuth(c)
     const planId = c.req.param('planId')
@@ -949,7 +959,9 @@ secretary.post(
     }
 
     // Read plan instructions for context
-    const instructionsFile = await memService.readFile(`Plans/${planId.toLowerCase()}-instructions.md`)
+    const instructionsFile = await memService.readFile(
+      `Plans/${planId.toLowerCase()}-instructions.md`
+    )
     const instructions = instructionsFile?.content || ''
 
     // Build goal with instructions context

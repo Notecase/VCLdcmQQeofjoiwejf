@@ -258,7 +258,7 @@
 
   /* Motion */
   --sec-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --sec-ease-decel: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --sec-ease-decel: cubic-bezier(0, 0, 0.2, 1);
   --sec-transition-micro: 120ms;
   --sec-transition-fast: 180ms;
   --sec-transition-normal: 250ms;
@@ -567,7 +567,7 @@
   --sec-radius-lg: 20px;
   --sec-radius-pill: 999px;
   --sec-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --sec-ease-decel: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --sec-ease-decel: cubic-bezier(0, 0, 0.2, 1);
   --sec-transition-micro: 120ms;
   --sec-transition-fast: 180ms;
   --sec-transition-normal: 250ms;

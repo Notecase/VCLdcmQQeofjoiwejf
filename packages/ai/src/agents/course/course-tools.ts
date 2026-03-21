@@ -606,7 +606,9 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
             .from('course_generation_threads')
             .update({ status: 'complete', stage: 'complete', progress: 100 })
             .eq('course_id', ctx.courseId)
-        } catch { /* best-effort — SSE handler will also update if still connected */ }
+        } catch {
+          /* best-effort — SSE handler will also update if still connected */
+        }
 
         console.log(
           '[CourseTools] save_to_supabase completed successfully, emitting complete event'

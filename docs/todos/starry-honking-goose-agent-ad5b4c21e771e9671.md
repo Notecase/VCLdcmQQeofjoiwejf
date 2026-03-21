@@ -57,7 +57,7 @@ The Claude Code plugin ecosystem is in **rapid early growth** — past the "empt
 
 ### Architecture: Four Component Types
 
-1. **Skills** — Procedural knowledge stored as SKILL.md files (30-50 tokens each, loaded on-demand). The folder name becomes the skill name. Skills tell Claude *how* to do something.
+1. **Skills** — Procedural knowledge stored as SKILL.md files (30-50 tokens each, loaded on-demand). The folder name becomes the skill name. Skills tell Claude _how_ to do something.
 2. **Subagents** — Specialized AI agents for specific tasks (e.g., security-auditor, frontend-developer)
 3. **Commands** — Custom slash commands (e.g., `/push`, `/code-review`)
 4. **Hooks** — Automated triggers at lifecycle events (enforcing code quality, security warnings)
@@ -80,18 +80,18 @@ The Claude Code plugin ecosystem is in **rapid early growth** — past the "empt
 
 ### Categories of Plugins Being Built
 
-| Category | Examples |
-|----------|----------|
-| **Code Review** | PR Review Toolkit (comments, tests, error handling, type design, code quality, simplification) |
-| **Knowledge Management** | Notion workspace integration, second-brain generators, Obsidian vault access |
-| **DevOps** | Deployment automation, CI/CD workflows |
-| **Security** | Vulnerability scanning, credential auditing |
-| **Memory** | Claude-Mem (long-term memory), persistent context |
-| **Planning** | Superpowers (structured lifecycle planning), Plannotator |
-| **AI/ML** | Model training workflows, dataset management |
-| **Database** | PostgreSQL read-only access, natural language queries |
-| **Web Search** | Brave Search MCP, real-time research |
-| **Design** | Figma integration (talk-to-figma-mcp) |
+| Category                 | Examples                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| **Code Review**          | PR Review Toolkit (comments, tests, error handling, type design, code quality, simplification) |
+| **Knowledge Management** | Notion workspace integration, second-brain generators, Obsidian vault access                   |
+| **DevOps**               | Deployment automation, CI/CD workflows                                                         |
+| **Security**             | Vulnerability scanning, credential auditing                                                    |
+| **Memory**               | Claude-Mem (long-term memory), persistent context                                              |
+| **Planning**             | Superpowers (structured lifecycle planning), Plannotator                                       |
+| **AI/ML**                | Model training workflows, dataset management                                                   |
+| **Database**             | PostgreSQL read-only access, natural language queries                                          |
+| **Web Search**           | Brave Search MCP, real-time research                                                           |
+| **Design**               | Figma integration (talk-to-figma-mcp)                                                          |
 
 ### Ecosystem Maturity Assessment
 
@@ -131,14 +131,14 @@ OpenAI's Codex CLI has evolved from a pure coding agent into a more extensible p
 
 ### Comparison with Claude Code
 
-| Dimension | Claude Code | Codex CLI |
-|-----------|------------|-----------|
-| **Plugin types** | Skills, Subagents, Commands, Hooks | Skills, MCP, Apps/Connectors |
-| **Unique features** | DXT packaging, Hook lifecycle, lazy MCP loading | @plugin mentions, cloud delegation |
-| **Ecosystem size** | 488+ extensions | Smaller, growing |
-| **Cross-platform skills** | Yes (AgentSkills standard) | Yes (same standard) |
-| **Enterprise marketplace** | Yes (Feb 2026) | Growing |
-| **IDE integration** | Terminal-first, IDE plugins | VS Code, JetBrains native |
+| Dimension                  | Claude Code                                     | Codex CLI                          |
+| -------------------------- | ----------------------------------------------- | ---------------------------------- |
+| **Plugin types**           | Skills, Subagents, Commands, Hooks              | Skills, MCP, Apps/Connectors       |
+| **Unique features**        | DXT packaging, Hook lifecycle, lazy MCP loading | @plugin mentions, cloud delegation |
+| **Ecosystem size**         | 488+ extensions                                 | Smaller, growing                   |
+| **Cross-platform skills**  | Yes (AgentSkills standard)                      | Yes (same standard)                |
+| **Enterprise marketplace** | Yes (Feb 2026)                                  | Growing                            |
+| **IDE integration**        | Terminal-first, IDE plugins                     | VS Code, JetBrains native          |
 
 ### How Developers Use Both
 
@@ -166,14 +166,14 @@ A common workflow: **Claude Code for initial feature generation and architecture
 
 ### Agent-First vs. App-First
 
-| Dimension | App-First | Agent-First |
-|-----------|-----------|-------------|
-| **Core value** | Features and UI | Autonomous outcomes |
-| **User interaction** | Manual, click-through | Conversational, delegated |
-| **Architecture** | UI -> API -> DB | Agent -> Tools -> Data |
-| **Scaling** | More features | Better agent capabilities |
-| **Competitive moat** | Feature completeness | Data loops + agent quality |
-| **Human-in-the-loop** | Always required | Minimized by design |
+| Dimension             | App-First             | Agent-First                |
+| --------------------- | --------------------- | -------------------------- |
+| **Core value**        | Features and UI       | Autonomous outcomes        |
+| **User interaction**  | Manual, click-through | Conversational, delegated  |
+| **Architecture**      | UI -> API -> DB       | Agent -> Tools -> Data     |
+| **Scaling**           | More features         | Better agent capabilities  |
+| **Competitive moat**  | Feature completeness  | Data loops + agent quality |
+| **Human-in-the-loop** | Always required       | Minimized by design        |
 
 ### Key Thesis: "Services as Software"
 
@@ -183,13 +183,13 @@ Vertical (industry-specific) AI agents almost always have **better economics and
 
 ### Companies in the AI Note-Taking / Knowledge Space
 
-| Company | Approach | Key Differentiator |
-|---------|----------|-------------------|
-| **Notion AI** | AI layer on existing workspace | Meeting transcription, summarization, rewriting. Massive existing user base. |
-| **Mem** | Self-organizing AI-native workspace | NLP understands note content, surfaces related notes. $8.33/month. |
-| **Reflect** | Personal knowledge graph | Backlinks, daily notes, AI links related ideas from past entries. |
-| **Granola** | Privacy-first meeting notes | Local/offline transcription, no bots join calls. |
-| **Lindy** | AI workflow automation | Meeting notes + workflow automation across Slack, Notion, Google Docs. |
+| Company       | Approach                            | Key Differentiator                                                           |
+| ------------- | ----------------------------------- | ---------------------------------------------------------------------------- |
+| **Notion AI** | AI layer on existing workspace      | Meeting transcription, summarization, rewriting. Massive existing user base. |
+| **Mem**       | Self-organizing AI-native workspace | NLP understands note content, surfaces related notes. $8.33/month.           |
+| **Reflect**   | Personal knowledge graph            | Backlinks, daily notes, AI links related ideas from past entries.            |
+| **Granola**   | Privacy-first meeting notes         | Local/offline transcription, no bots join calls.                             |
+| **Lindy**     | AI workflow automation              | Meeting notes + workflow automation across Slack, Notion, Google Docs.       |
 
 ### Investor Thinking (2026)
 
@@ -221,11 +221,11 @@ MCP (Model Context Protocol) is rapidly becoming **the primary distribution chan
 
 It's **both**, but the distribution angle is increasingly dominant:
 
-| Pattern | Description | Examples |
-|---------|-------------|----------|
+| Pattern                  | Description                                                                                      | Examples                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------- |
 | **Distribution channel** | MCP server IS the primary product interface. Users discover + use the product through AI agents. | New startups building MCP-first |
-| **Integration layer** | MCP sits on top of existing products, adding AI agent access | Stripe, Cloudflare, Atlassian |
-| **Acquisition funnel** | MCP server drives organic discovery, converts to paid product | SecureLend ($0 CAC via MCP) |
+| **Integration layer**    | MCP sits on top of existing products, adding AI agent access                                     | Stripe, Cloudflare, Atlassian   |
+| **Acquisition funnel**   | MCP server drives organic discovery, converts to paid product                                    | SecureLend ($0 CAC via MCP)     |
 
 ### Who's Doing It
 
@@ -235,12 +235,12 @@ It's **both**, but the distribution angle is increasingly dominant:
 
 ### Business Models
 
-| Model | How It Works | Margins |
-|-------|-------------|---------|
-| **Pay-per-request** | Same as API monetization, new channel | High |
-| **Subscription** | MCP access bundled with SaaS subscription | 80-90% |
-| **Freemium funnel** | Free MCP server -> paid product upsell | Variable |
-| **Lead generation** | MCP as discovery -> B2B sales | $0 CAC reported |
+| Model               | How It Works                              | Margins         |
+| ------------------- | ----------------------------------------- | --------------- |
+| **Pay-per-request** | Same as API monetization, new channel     | High            |
+| **Subscription**    | MCP access bundled with SaaS subscription | 80-90%          |
+| **Freemium funnel** | Free MCP server -> paid product upsell    | Variable        |
+| **Lead generation** | MCP as discovery -> B2B sales             | $0 CAC reported |
 
 ### Market Data
 
@@ -276,24 +276,24 @@ Education is one of the **most active categories** for MCP server development, d
 
 ### Existing MCP Servers for Education
 
-| Server | What It Does |
-|--------|-------------|
-| **Anki MCP Server** | AI assistants interact with Anki spaced repetition. Create/update/search flashcards. v0.8.0 beta. Multiple implementations (npm, PyPI). |
-| **Rember MCP** | Integrates with Rember spaced repetition platform. Create flashcards directly from Claude conversations. |
-| **Mandarin MCP** | Mandarin Chinese vocabulary from HSK levels 1-6. Progress tracking, spaced repetition, quiz generation, Anki export. |
-| **Google Classroom MCP** | K-12 classroom orchestration. Interact with streams, coursework, student rosters. |
-| **Canvas LMS MCP** | Teacher-facing server wrapping Canvas REST API. Create/manage course content. |
-| **EduChain MCP** | Generative educational content. QTI format for LMS import. |
-| **Obsidian MCP** | Full vault access — read, write, search notes. Knowledge graph. Claude can organize, summarize, build dashboards. |
+| Server                   | What It Does                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Anki MCP Server**      | AI assistants interact with Anki spaced repetition. Create/update/search flashcards. v0.8.0 beta. Multiple implementations (npm, PyPI). |
+| **Rember MCP**           | Integrates with Rember spaced repetition platform. Create flashcards directly from Claude conversations.                                |
+| **Mandarin MCP**         | Mandarin Chinese vocabulary from HSK levels 1-6. Progress tracking, spaced repetition, quiz generation, Anki export.                    |
+| **Google Classroom MCP** | K-12 classroom orchestration. Interact with streams, coursework, student rosters.                                                       |
+| **Canvas LMS MCP**       | Teacher-facing server wrapping Canvas REST API. Create/manage course content.                                                           |
+| **EduChain MCP**         | Generative educational content. QTI format for LMS import.                                                                              |
+| **Obsidian MCP**         | Full vault access — read, write, search notes. Knowledge graph. Claude can organize, summarize, build dashboards.                       |
 
 ### Education Startups with AI Agent Integration
 
-| Startup | Funding | Approach |
-|---------|---------|----------|
-| **Oboe** | $16M | AI-driven personalized course generation. Generate comprehensive courses on any topic in seconds. |
-| **Sparkli** | $5M pre-seed | Kids-first multimodal AI learning (ages 5-12, ~600M learners). Former Google engineers. |
-| **Frizzle** | White House AI Education Partner | Shifts education from "waterfall" to "agile learning". Real-time student thinking insights. |
-| **Risely** | Active | AI agents as "operating system for universities". Improves retention, staff productivity. |
+| Startup     | Funding                          | Approach                                                                                          |
+| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Oboe**    | $16M                             | AI-driven personalized course generation. Generate comprehensive courses on any topic in seconds. |
+| **Sparkli** | $5M pre-seed                     | Kids-first multimodal AI learning (ages 5-12, ~600M learners). Former Google engineers.           |
+| **Frizzle** | White House AI Education Partner | Shifts education from "waterfall" to "agile learning". Real-time student thinking insights.       |
+| **Risely**  | Active                           | AI agents as "operating system for universities". Improves retention, staff productivity.         |
 
 ### Key Patterns in Education + AI
 
@@ -306,6 +306,7 @@ Education is one of the **most active categories** for MCP server development, d
 ### No Direct Claude Code/Codex Education Tool Integration (Yet)
 
 No education-specific tools have been found that deeply integrate with Claude Code or Codex CLI for learning purposes. This represents a **greenfield opportunity**:
+
 - A Claude Code plugin that generates flashcards from code you're studying
 - A Codex skill that creates course materials from a codebase
 - An MCP server that feeds learning progress back into the coding agent's context
@@ -324,14 +325,14 @@ No education-specific tools have been found that deeply integrate with Claude Co
 
 ### The Opportunity Matrix
 
-| Distribution Channel | Effort | Reach | Competitive Density |
-|---------------------|--------|-------|-------------------|
-| Claude Code Plugin | Medium | 488+ plugin marketplace users | Low for education |
-| Codex CLI Skill | Low (same SKILL.md) | Growing Codex user base | Very low |
-| ClawHub Skill | Low (same SKILL.md) | 250K+ OpenClaw users | Very low for education |
-| DXT Package | Medium | Claude Desktop users | Low |
-| MCP Server | High (but high-value) | All AI agent users | Medium overall, low for education |
-| AGENTS.md | Very low | All coding agent users | Extremely low |
+| Distribution Channel | Effort                | Reach                         | Competitive Density               |
+| -------------------- | --------------------- | ----------------------------- | --------------------------------- |
+| Claude Code Plugin   | Medium                | 488+ plugin marketplace users | Low for education                 |
+| Codex CLI Skill      | Low (same SKILL.md)   | Growing Codex user base       | Very low                          |
+| ClawHub Skill        | Low (same SKILL.md)   | 250K+ OpenClaw users          | Very low for education            |
+| DXT Package          | Medium                | Claude Desktop users          | Low                               |
+| MCP Server           | High (but high-value) | All AI agent users            | Medium overall, low for education |
+| AGENTS.md            | Very low              | All coding agent users        | Extremely low                     |
 
 ### Recommended Priority
 
@@ -350,6 +351,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 ## Sources
 
 ### OpenClaw
+
 - [OpenClaw Official Site](https://openclaw.ai/)
 - [OpenClaw GitHub](https://github.com/openclaw/openclaw)
 - [OpenClaw Wikipedia](https://en.wikipedia.org/wiki/OpenClaw)
@@ -360,6 +362,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 - [OpenClaw Ecosystem Revenue | Bitget](https://www.bitget.com/news/detail/12560605228858)
 
 ### Claude Code Plugins
+
 - [Claude Code Plugin Docs](https://code.claude.com/docs/en/plugins)
 - [Official Plugin Directory | GitHub](https://github.com/anthropics/claude-plugins-official)
 - [Claude Plugins Marketplace](https://claude.com/plugins)
@@ -371,6 +374,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 - [DXT Desktop Extensions](https://www.desktopextensions.com/)
 
 ### Codex CLI
+
 - [Codex CLI Official](https://developers.openai.com/codex/cli/)
 - [Codex Agent Skills](https://developers.openai.com/codex/skills/)
 - [Codex Changelog](https://developers.openai.com/codex/changelog/)
@@ -379,6 +383,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 - [Codex vs Claude Code | MorphLLM](https://www.morphllm.com/comparisons/codex-vs-claude-code)
 
 ### Agent-First Platforms
+
 - [5 Key Trends Shaping Agentic Development | The New Stack](https://thenewstack.io/5-key-trends-shaping-agentic-development-in-2026/)
 - [7 Agentic AI Trends | MachineLearningMastery](https://machinelearningmastery.com/7-agentic-ai-trends-to-watch-in-2026/)
 - [Gartner: 40% Enterprise Apps with AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025)
@@ -387,6 +392,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 - [Best AI Note-Taking Apps 2026 | Lindy](https://www.lindy.ai/blog/ai-note-taking-app)
 
 ### MCP Server Strategy
+
 - [PM's Guide to Agent Distribution](https://www.news.aakashg.com/p/master-ai-agent-distribution-channel)
 - [Building Distribution Channel with MCP | DEV.to](https://dev.to/securelend/i-am-building-a-multi-million-dollar-distribution-channel-with-mcp-instead-of-google-ads-mmp)
 - [MCP Demo Day | Cloudflare](https://blog.cloudflare.com/mcp-demo-day/)
@@ -395,6 +401,7 @@ Nobody has built the **"AI-native learning platform that distributes through cod
 - [How to Develop MCP Product Strategy | Substack](https://departmentofproduct.substack.com/p/how-to-develop-an-mcp-product-strategy)
 
 ### Education + AI
+
 - [Best MCP Servers for Education | Fast.io](https://fast.io/resources/best-mcp-servers-education/)
 - [Anki MCP Server | GitHub](https://github.com/ankimcp/anki-mcp-server)
 - [Rember MCP | MCP Market](https://mcpmarket.com/server/rember)

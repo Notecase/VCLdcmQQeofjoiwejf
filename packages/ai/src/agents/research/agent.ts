@@ -172,7 +172,10 @@ export class ResearchAgent {
       stream_options: { include_usage: true },
     })
 
-    for await (const chunk of trackOpenAIStream(rawStream, { model: model.id, taskType: 'research' })) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: model.id,
+      taskType: 'research',
+    })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {
         yield { event: 'text', data: delta, isDelta: true }
@@ -265,7 +268,10 @@ export class ResearchAgent {
     let lastSnapshotAt = 0
     const snapshotIntervalMs = 1500
 
-    for await (const chunk of trackOpenAIStream(rawStream, { model: model.id, taskType: 'research' })) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: model.id,
+      taskType: 'research',
+    })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (!delta) continue
       generated += delta
@@ -432,7 +438,10 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
     })
 
     let raw = ''
-    for await (const chunk of trackOpenAIStream(rawStream, { model: artifactModelEntry.id, taskType: 'artifact' })) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: artifactModelEntry.id,
+      taskType: 'artifact',
+    })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) raw += delta
     }

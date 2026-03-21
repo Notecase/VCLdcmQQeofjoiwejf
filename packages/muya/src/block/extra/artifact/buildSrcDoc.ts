@@ -14,23 +14,25 @@ export interface ArtifactContent {
 function normalizeUnsafeJavaScript(source: string): string {
   if (!source) return ''
 
-  return source
-    // Cross-frame document access is blocked in sandboxed iframes without same-origin.
-    .replace(/\bwindow\.(?:parent|top)\?\.document\b/g, 'document')
-    .replace(/\bwindow\.(?:parent|top)\.document\b/g, 'document')
-    .replace(/\b(?:parent|top)\?\.document\b/g, 'document')
-    .replace(/\b(?:parent|top)\.document\b/g, 'document')
-    // Storage APIs are unavailable in opaque-origin sandboxed iframes.
-    .replace(/\bwindow\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
-    .replace(/\bglobalThis\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
-    .replace(/\bwindow\.localStorage\b/g, 'window.__inkdownLocalStorage')
-    .replace(/\bglobalThis\.localStorage\b/g, 'window.__inkdownLocalStorage')
-    .replace(/\blocalStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownLocalStorage')
-    .replace(/\bwindow\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
-    .replace(/\bglobalThis\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
-    .replace(/\bwindow\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
-    .replace(/\bglobalThis\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
-    .replace(/\bsessionStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownSessionStorage')
+  return (
+    source
+      // Cross-frame document access is blocked in sandboxed iframes without same-origin.
+      .replace(/\bwindow\.(?:parent|top)\?\.document\b/g, 'document')
+      .replace(/\bwindow\.(?:parent|top)\.document\b/g, 'document')
+      .replace(/\b(?:parent|top)\?\.document\b/g, 'document')
+      .replace(/\b(?:parent|top)\.document\b/g, 'document')
+      // Storage APIs are unavailable in opaque-origin sandboxed iframes.
+      .replace(/\bwindow\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
+      .replace(/\bglobalThis\[['"]localStorage['"]\]/g, 'window.__inkdownLocalStorage')
+      .replace(/\bwindow\.localStorage\b/g, 'window.__inkdownLocalStorage')
+      .replace(/\bglobalThis\.localStorage\b/g, 'window.__inkdownLocalStorage')
+      .replace(/\blocalStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownLocalStorage')
+      .replace(/\bwindow\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
+      .replace(/\bglobalThis\[['"]sessionStorage['"]\]/g, 'window.__inkdownSessionStorage')
+      .replace(/\bwindow\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
+      .replace(/\bglobalThis\.sessionStorage\b/g, 'window.__inkdownSessionStorage')
+      .replace(/\bsessionStorage(?=\s*(?:\.|\[|\?\.))/g, 'window.__inkdownSessionStorage')
+  )
 }
 
 /**
@@ -185,7 +187,7 @@ export function buildSrcDoc(content: ArtifactContent): string {
       "        lower.includes('permission') ||",
       "        lower.includes('blocked a frame') ||",
       "        lower.includes('not allowed');",
-      "      const message = isSandboxSecurityError",
+      '      const message = isSandboxSecurityError',
       "        ? 'Sandbox Security Error: ' + errorMessage + '\\nHint: avoid window.parent/window.top and browser storage APIs in artifacts.'",
       "        : 'JavaScript Error: ' + errorMessage;",
       '      const existing = document.getElementById("__inkdown-artifact-error");',

@@ -151,11 +151,7 @@ async function proposeNoteEdit(
   return 'Edit proposed for review.'
 }
 
-function buildMarkdownTable(
-  headers: string[],
-  rows: string[][],
-  title?: string | null
-): string {
+function buildMarkdownTable(headers: string[], rows: string[][], title?: string | null): string {
   const lines: string[] = []
   if (title) {
     lines.push(`### ${title}`, '')
@@ -213,25 +209,35 @@ export function createEditorDeepTools(
       const payload = readResult.data as Record<string, unknown>
       const title = typeof payload.title === 'string' ? payload.title : 'Untitled'
       const content = typeof payload.content === 'string' ? payload.content : ''
-      const truncated = content.length > 8000 ? `${content.slice(0, 8000)}\n...[truncated]` : content
+      const truncated =
+        content.length > 8000 ? `${content.slice(0, 8000)}\n...[truncated]` : content
 
       writer?.({ step: 'analyzing', chars: content.length })
 
-      return [
-        `Question: ${question}`,
-        `Note title: ${title}`,
-        'Note content:',
-        truncated,
-      ].join('\n\n')
+      return [`Question: ${question}`, `Note title: ${title}`, 'Note content:', truncated].join(
+        '\n\n'
+      )
     },
     {
       name: 'answer_question_about_note',
       description:
         'Read the active note and provide context to answer a question. USE THIS for Q&A, summarization, and understanding note content. Do NOT use this for editing — use add_paragraph, edit_paragraph, or remove_paragraph instead.',
       schema: z.object({
-        question: z.string().min(1).describe('The specific question the user is asking about the note content'),
-        noteId: z.string().uuid().optional().describe('UUID of a specific note to read. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).optional().describe('Specific paragraph index to read. Omit to read the full note'),
+        question: z
+          .string()
+          .min(1)
+          .describe('The specific question the user is asking about the note content'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of a specific note to read. Omit to use the currently open note'),
+        blockIndex: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Specific paragraph index to read. Omit to read the full note'),
       }),
     }
   )
@@ -252,7 +258,7 @@ export function createEditorDeepTools(
         return 'Failed to read note.'
       }
 
-      const content = ((readResult.data as { content?: string }).content) || ''
+      const content = (readResult.data as { content?: string }).content || ''
       if (!content.trim()) return 'Note is empty.'
 
       const parsed = parseMarkdownStructure(content)
@@ -268,11 +274,7 @@ export function createEditorDeepTools(
       description:
         'Get the numbered block structure of the note with block indices. Call BEFORE editing to find correct afterBlockIndex values.',
       schema: z.object({
-        noteId: z
-          .string()
-          .uuid()
-          .optional()
-          .describe('Note to analyze. Omit for current note'),
+        noteId: z.string().uuid().optional().describe('Note to analyze. Omit for current note'),
       }),
     }
   )
@@ -314,7 +316,8 @@ export function createEditorDeepTools(
     },
     {
       name: 'create_note',
-      description: 'Create a brand-new note with generated content. ONLY for creating new notes in the workspace. To edit the current note, use add_paragraph, edit_paragraph, or remove_paragraph instead.',
+      description:
+        'Create a brand-new note with generated content. ONLY for creating new notes in the workspace. To edit the current note, use add_paragraph, edit_paragraph, or remove_paragraph instead.',
       schema: z.object({
         title: z.string().min(1).describe('Title for the new note'),
         content: z.string().min(1).describe('Full markdown content for the note'),
@@ -355,12 +358,30 @@ export function createEditorDeepTools(
     },
     {
       name: 'add_paragraph',
-      description: 'Add NEW content as a paragraph to the current note. Use this for inserting new paragraphs, sections, or content that doesn\'t exist yet. To modify existing text, use edit_paragraph. To delete, use remove_paragraph.',
+      description:
+        "Add NEW content as a paragraph to the current note. Use this for inserting new paragraphs, sections, or content that doesn't exist yet. To modify existing text, use edit_paragraph. To delete, use remove_paragraph.",
       schema: z.object({
-        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
-        paragraph: z.string().min(1).describe('Full markdown content of the new paragraph to insert'),
-        afterBlockIndex: z.number().int().min(0).optional().describe('Insert after this paragraph index (0-based). Omit to append at end'),
-        afterHeading: z.string().optional().describe('Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the target note. Omit to use the currently open note'),
+        paragraph: z
+          .string()
+          .min(1)
+          .describe('Full markdown content of the new paragraph to insert'),
+        afterBlockIndex: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Insert after this paragraph index (0-based). Omit to append at end'),
+        afterHeading: z
+          .string()
+          .optional()
+          .describe(
+            'Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'
+          ),
       }),
     }
   )
@@ -403,10 +424,20 @@ export function createEditorDeepTools(
     },
     {
       name: 'remove_paragraph',
-      description: 'Remove an existing paragraph from the note by its index. ONLY use when the user explicitly asks to delete or remove content. Do not use for rewriting — use edit_paragraph for that.',
+      description:
+        'Remove an existing paragraph from the note by its index. ONLY use when the user explicitly asks to delete or remove content. Do not use for rewriting — use edit_paragraph for that.',
       schema: z.object({
-        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).optional().describe('Index of the paragraph to remove (0-based)'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the target note. Omit to use the currently open note'),
+        blockIndex: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Index of the paragraph to remove (0-based)'),
       }),
     }
   )
@@ -445,16 +476,34 @@ export function createEditorDeepTools(
       }
 
       writer?.({ step: 'computing-diff', noteId: effectiveNoteId })
-      const proposed = spliceAtBlockIndex(current, effectiveBlockIndex, 'replace', newContent.trim())
+      const proposed = spliceAtBlockIndex(
+        current,
+        effectiveBlockIndex,
+        'replace',
+        newContent.trim()
+      )
       return proposeNoteEdit(ctx, effectiveNoteId, proposed)
     },
     {
       name: 'edit_paragraph',
-      description: 'Replace or rewrite an existing paragraph in the note by its index. Use this when the user wants to modify, rewrite, improve, or change existing content. For adding new content, use add_paragraph instead.',
+      description:
+        'Replace or rewrite an existing paragraph in the note by its index. Use this when the user wants to modify, rewrite, improve, or change existing content. For adding new content, use add_paragraph instead.',
       schema: z.object({
-        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).optional().describe('Index of the paragraph to replace (0-based). Omit to append'),
-        newContent: z.string().min(1).describe('New markdown content to replace the existing paragraph'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the target note. Omit to use the currently open note'),
+        blockIndex: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Index of the paragraph to replace (0-based). Omit to append'),
+        newContent: z
+          .string()
+          .min(1)
+          .describe('New markdown content to replace the existing paragraph'),
       }),
     }
   )
@@ -492,13 +541,28 @@ export function createEditorDeepTools(
     },
     {
       name: 'create_artifact_from_note',
-      description: 'Create an interactive HTML/CSS/JavaScript widget embedded in the note. ONLY for content that requires interactivity: timers, calculators, games, quizzes, interactive visualizations, animations. For static data tables, use insert_table instead.',
+      description:
+        'Create an interactive HTML/CSS/JavaScript widget embedded in the note. ONLY for content that requires interactivity: timers, calculators, games, quizzes, interactive visualizations, animations. For static data tables, use insert_table instead.',
       schema: z.object({
-        noteId: z.string().uuid().optional().describe('UUID of the note to attach the artifact to. Omit to use the currently open note'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            'UUID of the note to attach the artifact to. Omit to use the currently open note'
+          ),
         title: z.string().min(1).describe('Human-readable title for the artifact widget'),
-        html: z.string().describe('Inner HTML markup only (no html/head/body tags). Rendered in a sandboxed iframe'),
+        html: z
+          .string()
+          .describe(
+            'Inner HTML markup only (no html/head/body tags). Rendered in a sandboxed iframe'
+          ),
         css: z.string().describe('CSS styles as a string. Applied within the sandboxed iframe'),
-        javascript: z.string().describe('JavaScript code (no script tags). Runs in sandboxed iframe — no localStorage, sessionStorage, or cross-frame access'),
+        javascript: z
+          .string()
+          .describe(
+            'JavaScript code (no script tags). Runs in sandboxed iframe — no localStorage, sessionStorage, or cross-frame access'
+          ),
       }),
     }
   )
@@ -546,24 +610,62 @@ export function createEditorDeepTools(
       if (targetIndex !== undefined) {
         proposedContent = spliceAtBlockIndex(current, targetIndex, 'insert-after', tableMarkdown)
       } else {
-        proposedContent = position === 'start'
-          ? (current ? `${tableMarkdown}\n\n${current}` : tableMarkdown)
-          : (current ? `${current}\n\n${tableMarkdown}` : tableMarkdown)
+        proposedContent =
+          position === 'start'
+            ? current
+              ? `${tableMarkdown}\n\n${current}`
+              : tableMarkdown
+            : current
+              ? `${current}\n\n${tableMarkdown}`
+              : tableMarkdown
       }
 
       return proposeNoteEdit(ctx, effectiveNoteId, proposedContent)
     },
     {
       name: 'insert_table',
-      description: 'Insert a static markdown data table into the note. Use for structured data: lists, rankings, comparisons, statistics. For INTERACTIVE content (calculators, timers, quizzes, games) use create_artifact_from_note instead.',
+      description:
+        'Insert a static markdown data table into the note. Use for structured data: lists, rankings, comparisons, statistics. For INTERACTIVE content (calculators, timers, quizzes, games) use create_artifact_from_note instead.',
       schema: z.object({
-        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
-        title: z.string().optional().describe('Optional title heading for the table (rendered as ### heading)'),
-        headers: z.array(z.string()).min(1).describe("Column header names, e.g. ['Name', 'Speed', 'Habitat']"),
-        rows: z.string().default('').describe('Table data rows as JSON array of arrays, e.g. [["Alice","25"],["Bob","30"]]. Each inner array is one row matching the headers'),
-        position: z.enum(['start', 'end']).default('end').describe("Where to insert: 'start' for beginning of note, 'end' for after existing content"),
-        afterBlockIndex: z.number().int().min(0).optional().describe('Insert after this block index (0-based). More precise than position. Call read_note_structure first to find the correct index'),
-        afterHeading: z.string().optional().describe('Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the target note. Omit to use the currently open note'),
+        title: z
+          .string()
+          .optional()
+          .describe('Optional title heading for the table (rendered as ### heading)'),
+        headers: z
+          .array(z.string())
+          .min(1)
+          .describe("Column header names, e.g. ['Name', 'Speed', 'Habitat']"),
+        rows: z
+          .string()
+          .default('')
+          .describe(
+            'Table data rows as JSON array of arrays, e.g. [["Alice","25"],["Bob","30"]]. Each inner array is one row matching the headers'
+          ),
+        position: z
+          .enum(['start', 'end'])
+          .default('end')
+          .describe(
+            "Where to insert: 'start' for beginning of note, 'end' for after existing content"
+          ),
+        afterBlockIndex: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(
+            'Insert after this block index (0-based). More precise than position. Call read_note_structure first to find the correct index'
+          ),
+        afterHeading: z
+          .string()
+          .optional()
+          .describe(
+            'Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'
+          ),
       }),
     }
   )
@@ -616,24 +718,40 @@ export function createEditorDeepTools(
     },
     {
       name: 'database_action',
-      description: 'Run operations against EXISTING embedded databases in notes. For creating new data tables from scratch, use insert_table instead. This tool is for querying, inserting, updating, or deleting rows in databases that already exist.',
+      description:
+        'Run operations against EXISTING embedded databases in notes. For creating new data tables from scratch, use insert_table instead. This tool is for querying, inserting, updating, or deleting rows in databases that already exist.',
       schema: z.object({
-        action: z.enum([
-          'add_row',
-          'insert_rows',
-          'update_rows',
-          'delete_rows',
-          'query_rows',
-          'aggregate',
-          'group_by',
-          'column_stats',
-          'sort_rows',
-          'get_schema',
-          'create_chart_data',
-        ]).describe('The database operation to perform'),
-        noteId: z.string().uuid().optional().describe('UUID of the note containing the database. Omit to use the currently open note'),
-        databaseId: z.string().uuid().optional().describe('UUID of the specific database within the note'),
-        args: z.string().default('{}').describe('JSON-serialized operation arguments (e.g. row data, query filters)'),
+        action: z
+          .enum([
+            'add_row',
+            'insert_rows',
+            'update_rows',
+            'delete_rows',
+            'query_rows',
+            'aggregate',
+            'group_by',
+            'column_stats',
+            'sort_rows',
+            'get_schema',
+            'create_chart_data',
+          ])
+          .describe('The database operation to perform'),
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            'UUID of the note containing the database. Omit to use the currently open note'
+          ),
+        databaseId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the specific database within the note'),
+        args: z
+          .string()
+          .default('{}')
+          .describe('JSON-serialized operation arguments (e.g. row data, query filters)'),
       }),
     }
   )
@@ -666,13 +784,19 @@ export function createEditorDeepTools(
     },
     {
       name: 'read_memory',
-      description: 'Read stored user preferences, plans, or context from long-term memory. Use for retrieving saved preferences, daily plans, or contextual notes.',
+      description:
+        'Read stored user preferences, plans, or context from long-term memory. Use for retrieving saved preferences, daily plans, or contextual notes.',
       schema: z.object({
         memoryType: z
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences')
-          .describe('Category of memory to read: preferences, plan_index, daily, today, tomorrow, or context'),
-        key: z.string().optional().describe('Specific memory key to look up. Omit to read the full memory file'),
+          .describe(
+            'Category of memory to read: preferences, plan_index, daily, today, tomorrow, or context'
+          ),
+        key: z
+          .string()
+          .optional()
+          .describe('Specific memory key to look up. Omit to read the full memory file'),
       }),
     }
   )
@@ -706,13 +830,17 @@ export function createEditorDeepTools(
     },
     {
       name: 'write_memory',
-      description: 'Save user preferences, plans, or context to long-term memory. Store concise facts and preferences, not full note bodies.',
+      description:
+        'Save user preferences, plans, or context to long-term memory. Store concise facts and preferences, not full note bodies.',
       schema: z.object({
         memoryType: z
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences')
           .describe('Category of memory to write to'),
-        key: z.string().optional().describe('Memory key identifier. Omit for default key based on memoryType'),
+        key: z
+          .string()
+          .optional()
+          .describe('Memory key identifier. Omit for default key based on memoryType'),
         content: z.string().min(1).describe('The content to store. Keep concise — max 2000 chars'),
       }),
     }
@@ -739,7 +867,7 @@ export function createEditorDeepTools(
     {
       name: 'ask_user_preference',
       description:
-        'Ask the user a clarifying question BEFORE creating a note or making a major edit. Use when the topic is broad and the user\'s preference would significantly affect the output. DO NOT overuse — simple or specific requests should proceed directly without asking.',
+        "Ask the user a clarifying question BEFORE creating a note or making a major edit. Use when the topic is broad and the user's preference would significantly affect the output. DO NOT overuse — simple or specific requests should proceed directly without asking.",
       schema: z.object({
         question: z
           .string()

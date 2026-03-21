@@ -99,7 +99,7 @@ export const useEditorStore = defineStore('editor', {
 
       try {
         if (isDemoMode()) {
-          this.documents = DEMO_DOCUMENTS.map(d => ({ ...d }))
+          this.documents = DEMO_DOCUMENTS.map((d) => ({ ...d }))
           return
         }
 
@@ -245,7 +245,8 @@ export const useEditorStore = defineStore('editor', {
      */
     async loadDocument(id: string) {
       if (isDemoMode()) {
-        const doc = DEMO_DOCUMENTS.find(d => d.id === id) || this.documents.find(d => d.id === id)
+        const doc =
+          DEMO_DOCUMENTS.find((d) => d.id === id) || this.documents.find((d) => d.id === id)
         if (doc) this.openDocument({ ...doc })
         return
       }

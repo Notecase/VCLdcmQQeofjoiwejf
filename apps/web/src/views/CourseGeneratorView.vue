@@ -68,8 +68,8 @@ function stepStatus(idx: number): 'done' | 'active' | 'pending' {
 const showContentTree = computed(() => {
   const stage = courseStore.generationStage
   return (
-    (stage === 'content' || stage === 'multimedia' || stage === 'saving' || stage === 'assembly')
-    && courseStore.pendingOutline !== null
+    (stage === 'content' || stage === 'multimedia' || stage === 'saving' || stage === 'assembly') &&
+    courseStore.pendingOutline !== null
   )
 })
 
@@ -268,7 +268,12 @@ onMounted(() => {
               />
             </div>
             <div class="progress-meta">
-              <span>{{ courseStore.generatedLessonsCount }}/{{ courseStore.totalExpectedLessons || '?' }} lessons generated</span>
+              <span
+                >{{ courseStore.generatedLessonsCount }}/{{
+                  courseStore.totalExpectedLessons || '?'
+                }}
+                lessons generated</span
+              >
               <span class="progress-pct">{{ courseStore.generationProgress }}%</span>
             </div>
           </div>

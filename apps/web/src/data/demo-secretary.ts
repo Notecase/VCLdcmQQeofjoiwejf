@@ -6,12 +6,7 @@
  * runs without a backend.
  */
 
-import type {
-  DailyPlan,
-  LearningRoadmap,
-  MemoryFile,
-  ScheduledTask,
-} from '@inkdown/shared/types'
+import type { DailyPlan, LearningRoadmap, MemoryFile, ScheduledTask } from '@inkdown/shared/types'
 
 // =============================================================================
 // Helpers
@@ -19,11 +14,7 @@ import type {
 
 const NOW = '2026-02-09T08:00:00.000Z'
 
-function memoryFile(
-  id: string,
-  filename: string,
-  content: string,
-): MemoryFile {
+function memoryFile(id: string, filename: string, content: string): MemoryFile {
   return {
     id,
     userId: 'demo-user',
@@ -36,7 +27,8 @@ function memoryFile(
 
 function task(
   id: string,
-  overrides: Partial<ScheduledTask> & Pick<ScheduledTask, 'title' | 'type' | 'scheduledTime' | 'durationMinutes'>,
+  overrides: Partial<ScheduledTask> &
+    Pick<ScheduledTask, 'title' | 'type' | 'scheduledTime' | 'durationMinutes'>
 ): ScheduledTask {
   return {
     id,

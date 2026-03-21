@@ -65,12 +65,16 @@ export async function runResearchAdapter(
         if (file.name && file.content) {
           files.push({ name: file.name, content: file.content })
         }
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     } else if (event.event === 'thread-id' && event.data) {
       try {
         const parsed = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
         threadId = parsed.threadId || ''
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     } else if (event.event === 'thinking' && deps.onEvent) {
       deps.onEvent({ type: 'thinking', data: event.data })
     }
@@ -105,9 +109,10 @@ export async function runCourseOutlineAdapter(
   }
 ): Promise<{ summary: string; payload: Record<string, unknown> }> {
   // Extract key info from research brief for the course prompt
-  const briefText = typeof input.researchBrief?.brief === 'string'
-    ? input.researchBrief.brief
-    : input.relevantContext
+  const briefText =
+    typeof input.researchBrief?.brief === 'string'
+      ? input.researchBrief.brief
+      : input.relevantContext
 
   // Parse weeks from goal
   const weeksMatch = /(\d+)\s*(week|weeks|wk|wks)/i.exec(input.goal)
@@ -205,9 +210,8 @@ export async function runDailyPlanAdapter(
 
   // Build a message that asks the secretary to create a study plan
   const moduleTitles = extractModuleTitlesFromOutline(input.courseOutline)
-  const moduleContext = moduleTitles.length > 0
-    ? `The course has these modules: ${moduleTitles.join(', ')}.`
-    : ''
+  const moduleContext =
+    moduleTitles.length > 0 ? `The course has these modules: ${moduleTitles.join(', ')}.` : ''
 
   const message = [
     `Create a daily study plan for my mission goal: "${input.goal}".`,
@@ -215,7 +219,9 @@ export async function runDailyPlanAdapter(
     'Structure it with specific time blocks (09:00-16:00 range), each 45-90 minutes.',
     'Include focus work, practice, and review blocks.',
     input.relevantContext ? `Context: ${input.relevantContext.slice(0, 400)}` : '',
-  ].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   let fullText = ''
   for await (const event of agent.stream({ message })) {
@@ -295,14 +301,18 @@ export async function runNotePackAdapter(
     try {
       const { MemoryService } = await import('../agents/secretary/memory')
       const memService = new MemoryService(deps.supabase, deps.userId)
-      const instFile = await memService.readFile(`Plans/${input.sourcePlanId.toLowerCase()}-instructions.md`)
+      const instFile = await memService.readFile(
+        `Plans/${input.sourcePlanId.toLowerCase()}-instructions.md`
+      )
       if (instFile?.content) planInstructions = instFile.content
     } catch {
       // Non-critical — continue without instructions
     }
   }
 
-  const instructionPrefix = planInstructions ? `Follow these plan instructions:\n${planInstructions}\n\n` : ''
+  const instructionPrefix = planInstructions
+    ? `Follow these plan instructions:\n${planInstructions}\n\n`
+    : ''
 
   const singleTaskNotePrompt =
     input.workflowKey === 'make_note_from_task'
@@ -419,7 +429,9 @@ function extractFocusAreasFromBrief(briefText: string, goal: string): string[] {
     if (deduped.length >= 6) break
   }
 
-  return deduped.length > 0 ? deduped : ['Core fundamentals', 'Hands-on practice', 'Review and retention']
+  return deduped.length > 0
+    ? deduped
+    : ['Core fundamentals', 'Hands-on practice', 'Review and retention']
 }
 
 function extractModuleTitlesFromOutline(courseOutline: Record<string, unknown> | null): string[] {
@@ -430,7 +442,11 @@ function extractModuleTitlesFromOutline(courseOutline: Record<string, unknown> |
   return modules
     .map((module) => {
       if (typeof module === 'string') return module
-      if (typeof module === 'object' && module !== null && typeof (module as { title?: unknown }).title === 'string') {
+      if (
+        typeof module === 'object' &&
+        module !== null &&
+        typeof (module as { title?: unknown }).title === 'string'
+      ) {
         return String((module as { title: string }).title)
       }
       return null
@@ -441,12 +457,16 @@ function extractModuleTitlesFromOutline(courseOutline: Record<string, unknown> |
 
 function buildFallbackDailyPlan(goal: string, moduleTitles: string[]): string {
   const today = new Date().toISOString().slice(0, 10)
-  const schedule = moduleTitles.length > 0
-    ? moduleTitles.slice(0, 4).map((title, idx) => {
-        const times = ['09:00', '10:30', '14:00', '15:30']
-        return `- [ ] ${times[idx] || '16:30'} ${title}`
-      }).join('\n')
-    : `- [ ] 09:00 Deep work sprint (60min)\n- [ ] 10:15 Practice + recall (45min)\n- [ ] 14:00 Build + apply (60min)\n- [ ] 15:30 Review and notes (45min)`
+  const schedule =
+    moduleTitles.length > 0
+      ? moduleTitles
+          .slice(0, 4)
+          .map((title, idx) => {
+            const times = ['09:00', '10:30', '14:00', '15:30']
+            return `- [ ] ${times[idx] || '16:30'} ${title}`
+          })
+          .join('\n')
+      : `- [ ] 09:00 Deep work sprint (60min)\n- [ ] 10:15 Practice + recall (45min)\n- [ ] 14:00 Build + apply (60min)\n- [ ] 15:30 Review and notes (45min)`
 
   return `# Today's Plan\n\nDate: ${today}\nMission Goal: ${goal}\n\n## Schedule\n${schedule}\n`
 }

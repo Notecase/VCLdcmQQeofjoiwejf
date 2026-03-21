@@ -26,7 +26,9 @@ export function normalizeDeviceStartResponse(payload) {
   const verificationUriComplete = readOptionalString(payload, 'verification_uri_complete')
 
   const interval =
-    typeof payload.interval === 'number' && Number.isFinite(payload.interval) && payload.interval > 0
+    typeof payload.interval === 'number' &&
+    Number.isFinite(payload.interval) &&
+    payload.interval > 0
       ? Math.round(payload.interval)
       : 5
 
@@ -69,7 +71,8 @@ export function parsePollResponse(payload) {
   const errorCode = typeof payload.error === 'string' ? payload.error : undefined
   if (errorCode === 'authorization_pending') return { status: 'pending' }
   if (errorCode === 'slow_down') return { status: 'pending', slowDown: true }
-  if (errorCode === 'expired_token') throw new Error('Login session expired. Run `noteshell login` again.')
+  if (errorCode === 'expired_token')
+    throw new Error('Login session expired. Run `noteshell login` again.')
   if (errorCode === 'access_denied') throw new Error('Login request was denied.')
   if (errorCode) throw new Error(`Login failed: ${errorCode}`)
 

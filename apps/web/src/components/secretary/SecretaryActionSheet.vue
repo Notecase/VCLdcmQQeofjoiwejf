@@ -123,8 +123,7 @@ function actionClass(tone?: SheetAction['tone']) {
   inset: 0;
   z-index: 70;
   background:
-    radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 34%),
-    rgba(1, 4, 9, 0.68);
+    radial-gradient(circle at top, rgba(16, 185, 129, 0.08), transparent 34%), rgba(1, 4, 9, 0.68);
   backdrop-filter: blur(10px);
   display: flex;
   justify-content: flex-end;
@@ -329,7 +328,8 @@ function actionClass(tone?: SheetAction['tone']) {
     width: 100%;
     height: auto;
     max-height: calc(100vh - 24px);
-    border-radius: var(--sec-radius-lg) var(--sec-radius-lg) var(--sec-radius-md) var(--sec-radius-md);
+    border-radius: var(--sec-radius-lg) var(--sec-radius-lg) var(--sec-radius-md)
+      var(--sec-radius-md);
     overflow: auto;
   }
 

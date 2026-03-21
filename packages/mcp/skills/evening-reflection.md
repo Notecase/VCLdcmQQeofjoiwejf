@@ -2,7 +2,21 @@
 name: evening-reflection
 description: End-of-day reflection workflow — reviews completion, captures mood and learnings, carries over tasks, prepares tomorrow's skeleton, archives today
 platform: universal
-tools_required: [secretary_today, secretary_reflect, secretary_carryover, secretary_preferences, secretary_plans_list, secretary_plan_progress, secretary_recurring_manage, calendar_events, secretary_memory_write, secretary_daily_generate, secretary_memory_read, context_write]
+tools_required:
+  [
+    secretary_today,
+    secretary_reflect,
+    secretary_carryover,
+    secretary_preferences,
+    secretary_plans_list,
+    secretary_plan_progress,
+    secretary_recurring_manage,
+    calendar_events,
+    secretary_memory_write,
+    secretary_daily_generate,
+    secretary_memory_read,
+    context_write,
+  ]
 ---
 
 # Evening Reflection
@@ -25,6 +39,7 @@ secretary_today → read current Today.md
 ```
 
 Parse the plan:
+
 - Count task markers: `[x]` done, `[ ]` pending, `[>]` already carried, `[-]` skipped
 - Calculate completion rate
 - List completed tasks and incomplete tasks separately
@@ -33,6 +48,7 @@ Parse the plan:
 Present a summary:
 
 > **Today's Results:**
+>
 > - Completed: 5/7 tasks (71%)
 > - Pending: 1 task (will carry over)
 > - Skipped: 1 task
@@ -44,6 +60,7 @@ Present a summary:
 ## Step 2: Capture Reflection
 
 Ask the user:
+
 1. **How did today feel?** (great / good / okay / struggling / overwhelmed)
 2. **What went well?**
 3. **What did you struggle with?**
@@ -91,6 +108,7 @@ secretary_memory_read { filename: "Plans/<plan>.md" }
 ```
 
 Generate tomorrow's plan skeleton combining:
+
 - Carried-over tasks (from Step 3)
 - Next plan day's topics
 - Recurring blocks
@@ -165,9 +183,9 @@ Output a brief wrap-up:
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Reflection already exists in Today.md | Warn user, ask if they want to update it |
-| No tasks completed | Encourage user, suggest smaller tasks tomorrow |
-| Today.md is empty | Skip review, just prepare tomorrow |
-| No active plan for tomorrow | Generate from recurring + calendar only |
+| Issue                                 | Solution                                       |
+| ------------------------------------- | ---------------------------------------------- |
+| Reflection already exists in Today.md | Warn user, ask if they want to update it       |
+| No tasks completed                    | Encourage user, suggest smaller tasks tomorrow |
+| Today.md is empty                     | Skip review, just prepare tomorrow             |
+| No active plan for tomorrow           | Generate from recurring + calendar only        |

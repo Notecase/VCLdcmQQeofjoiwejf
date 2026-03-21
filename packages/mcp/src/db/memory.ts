@@ -168,9 +168,7 @@ export class MemoryDb {
     moodTrend: string[]
   }> {
     const historyFiles = await this.list('History/')
-    const recent = historyFiles
-      .sort((a, b) => b.filename.localeCompare(a.filename))
-      .slice(0, days)
+    const recent = historyFiles.sort((a, b) => b.filename.localeCompare(a.filename)).slice(0, days)
 
     if (recent.length === 0) {
       return {

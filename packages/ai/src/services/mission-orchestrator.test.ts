@@ -112,7 +112,9 @@ function createMockSupabase() {
       single: () => Promise.resolve({ data, error }),
       maybeSingle: () => Promise.resolve({ data, error }),
       then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-        Promise.resolve({ data: Array.isArray(data) ? data : data ? [data] : [], error }).then(resolve),
+        Promise.resolve({ data: Array.isArray(data) ? data : data ? [data] : [], error }).then(
+          resolve
+        ),
     }
     return chain
   }
@@ -128,7 +130,10 @@ function createMockSupabase() {
           if (table === 'mission_steps') {
             const rows = Array.isArray(row) ? row : [row]
             const mId = rows[0]?.mission_id as string
-            steps.set(mId, rows.map((r, i) => ({ ...r, id: `step-${i}`, created_at: new Date().toISOString() })))
+            steps.set(
+              mId,
+              rows.map((r, i) => ({ ...r, id: `step-${i}`, created_at: new Date().toISOString() }))
+            )
           }
           if (table === 'mission_events') {
             const r = Array.isArray(row) ? row[0] : row
@@ -141,7 +146,11 @@ function createMockSupabase() {
             const r = Array.isArray(row) ? row[0] : row
             const mId = r.mission_id as string
             const existing = handoffs.get(mId) || []
-            const newRow = { ...r, id: `handoff-${existing.length}`, created_at: new Date().toISOString() }
+            const newRow = {
+              ...r,
+              id: `handoff-${existing.length}`,
+              created_at: new Date().toISOString(),
+            }
             existing.push(newRow)
             handoffs.set(mId, existing)
             return chainableQuery(newRow)
@@ -172,7 +181,10 @@ function createMockSupabase() {
                   single: () => {
                     if (table === 'missions') {
                       const m = [...missions.values()][0]
-                      return Promise.resolve({ data: m || null, error: m ? null : { message: 'Not found' } })
+                      return Promise.resolve({
+                        data: m || null,
+                        error: m ? null : { message: 'Not found' },
+                      })
                     }
                     return Promise.resolve({ data: null, error: null })
                   },
@@ -192,7 +204,10 @@ function createMockSupabase() {
                 single: () => {
                   if (table === 'missions') {
                     const m = [...missions.values()][0]
-                    return Promise.resolve({ data: m || null, error: m ? null : { message: 'Not found' } })
+                    return Promise.resolve({
+                      data: m || null,
+                      error: m ? null : { message: 'Not found' },
+                    })
                   }
                   return Promise.resolve({ data: null, error: null })
                 },
@@ -253,10 +268,10 @@ describe('MissionOrchestratorService', () => {
       await orchestrator.startMission({ goal: 'Learn React' })
 
       // The mission should have been inserted with mode 'suggest_approve'
-      const missionInsert = supabase.from('missions').insert as ReturnType<typeof vi.fn>
-      const insertCalls = missionInsert.mock.calls
-      expect(insertCalls.length).toBeGreaterThan(0)
-      expect(insertCalls[0][0].mode).toBe('suggest_approve')
+      // Verify via the internal missions map since from() creates new spies each call
+      const storedMissions = [...supabase._missions.values()]
+      expect(storedMissions.length).toBeGreaterThan(0)
+      expect(storedMissions[0].mode).toBe('suggest_approve')
     })
   })
 

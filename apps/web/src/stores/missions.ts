@@ -45,15 +45,17 @@ export const useMissionStore = defineStore('missions', () => {
   let streamAbortController: AbortController | null = null
 
   const orderedSteps = computed(() => {
-    return [...steps.value].sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage))
+    return [...steps.value].sort(
+      (a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage)
+    )
   })
 
   const pendingApprovals = computed(() =>
     approvals.value.filter((approval) => approval.status === 'pending')
   )
 
-  const completedSteps = computed(() =>
-    orderedSteps.value.filter((step) => step.status === 'completed').length
+  const completedSteps = computed(
+    () => orderedSteps.value.filter((step) => step.status === 'completed').length
   )
 
   const missionProgress = computed(() => {
@@ -146,7 +148,8 @@ export const useMissionStore = defineStore('missions', () => {
           mission.value = {
             ...mission.value,
             status: 'running',
-            currentStage: (data.currentStage as MissionStage | null | undefined) ?? mission.value.currentStage,
+            currentStage:
+              (data.currentStage as MissionStage | null | undefined) ?? mission.value.currentStage,
             updatedAt: event.ts,
           }
         }
@@ -355,7 +358,10 @@ export const useMissionStore = defineStore('missions', () => {
     maybeResumeMission()
   }
 
-  async function startMission(goal: string, mode: MissionMode = 'suggest_approve'): Promise<string> {
+  async function startMission(
+    goal: string,
+    mode: MissionMode = 'suggest_approve'
+  ): Promise<string> {
     error.value = null
     const { missionId } = await startMissionRequest({ goal, mode })
     events.value = []

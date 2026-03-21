@@ -34,25 +34,25 @@ cp apps/web/.env.example apps/web/.env
 
 Open `apps/api/.env` and fill in your values:
 
-| Variable | Required | Where to get it |
-|----------|----------|-----------------|
-| `SUPABASE_URL` | Yes | Supabase Dashboard → Settings → API → Project URL |
-| `SUPABASE_SERVICE_KEY` | Yes | Supabase Dashboard → Settings → API → `service_role` key |
-| `SUPABASE_ANON_KEY` | Yes | Supabase Dashboard → Settings → API → `anon` key |
-| `OPENAI_API_KEY` | Recommended | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `ANTHROPIC_API_KEY` | Optional | [console.anthropic.com](https://console.anthropic.com/) |
-| `GOOGLE_AI_API_KEY` | Optional | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
+| Variable               | Required    | Where to get it                                                          |
+| ---------------------- | ----------- | ------------------------------------------------------------------------ |
+| `SUPABASE_URL`         | Yes         | Supabase Dashboard → Settings → API → Project URL                        |
+| `SUPABASE_SERVICE_KEY` | Yes         | Supabase Dashboard → Settings → API → `service_role` key                 |
+| `SUPABASE_ANON_KEY`    | Yes         | Supabase Dashboard → Settings → API → `anon` key                         |
+| `OPENAI_API_KEY`       | Recommended | [platform.openai.com/api-keys](https://platform.openai.com/api-keys)     |
+| `ANTHROPIC_API_KEY`    | Optional    | [console.anthropic.com](https://console.anthropic.com/)                  |
+| `GOOGLE_AI_API_KEY`    | Optional    | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
 
 **4. Configure `apps/web/.env`**
 
 Open `apps/web/.env` and fill in:
 
-| Variable | Required | Default | Notes |
-|----------|----------|---------|-------|
-| `VITE_API_URL` | **Yes** | `http://localhost:3001` | Must point to the API server. Without this, the app enters demo mode. |
-| `VITE_SUPABASE_URL` | For Supabase | — | Same URL as in the API config |
-| `VITE_SUPABASE_ANON_KEY` | For Supabase | — | Same anon key as in the API config |
-| `VITE_PROVIDER` | No | `local` | `supabase` for persistent cloud storage, `local` for IndexedDB |
+| Variable                 | Required     | Default                 | Notes                                                                 |
+| ------------------------ | ------------ | ----------------------- | --------------------------------------------------------------------- |
+| `VITE_API_URL`           | **Yes**      | `http://localhost:3001` | Must point to the API server. Without this, the app enters demo mode. |
+| `VITE_SUPABASE_URL`      | For Supabase | —                       | Same URL as in the API config                                         |
+| `VITE_SUPABASE_ANON_KEY` | For Supabase | —                       | Same anon key as in the API config                                    |
+| `VITE_PROVIDER`          | No           | `local`                 | `supabase` for persistent cloud storage, `local` for IndexedDB        |
 
 **5. Start development**
 
@@ -61,6 +61,7 @@ pnpm dev
 ```
 
 This runs an environment check, then starts:
+
 - **Web app** at [http://localhost:5173](http://localhost:5173)
 - **API server** at [http://localhost:3001](http://localhost:3001)
 
@@ -103,15 +104,15 @@ pnpm test:run         # Run tests (single run)
 
 ## Troubleshooting
 
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Stuck on demo password screen | `VITE_API_URL` not set in `apps/web/.env` | Add `VITE_API_URL=http://localhost:3001` |
-| `npm install` fails with workspace errors | Wrong package manager | Use `pnpm install` instead |
-| AI features don't work | No AI API keys configured | Add at least one key to `apps/api/.env` |
-| Data lost on page refresh | Running in demo mode or `VITE_PROVIDER=local` | Set up Supabase and use `VITE_PROVIDER=supabase` |
-| API server crashes on start | Missing Supabase credentials in `apps/api/.env` | Fill in `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` |
-| `pnpm dev` exits immediately | Missing `.env` files | Run the `cp` commands from step 2 |
-| Port 3001 already in use | Another process on that port | Change `PORT` in `apps/api/.env` or kill the other process |
+| Problem                                   | Cause                                           | Fix                                                        |
+| ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| Stuck on demo password screen             | `VITE_API_URL` not set in `apps/web/.env`       | Add `VITE_API_URL=http://localhost:3001`                   |
+| `npm install` fails with workspace errors | Wrong package manager                           | Use `pnpm install` instead                                 |
+| AI features don't work                    | No AI API keys configured                       | Add at least one key to `apps/api/.env`                    |
+| Data lost on page refresh                 | Running in demo mode or `VITE_PROVIDER=local`   | Set up Supabase and use `VITE_PROVIDER=supabase`           |
+| API server crashes on start               | Missing Supabase credentials in `apps/api/.env` | Fill in `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`          |
+| `pnpm dev` exits immediately              | Missing `.env` files                            | Run the `cp` commands from step 2                          |
+| Port 3001 already in use                  | Another process on that port                    | Change `PORT` in `apps/api/.env` or kill the other process |
 
 ## License
 

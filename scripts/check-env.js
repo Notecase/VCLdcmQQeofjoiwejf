@@ -50,7 +50,7 @@ const apiEnv = resolve(root, 'apps/api/.env')
 if (!existsSync(apiEnv)) {
   errors.push(
     `Missing apps/api/.env — AI features and Supabase will not work.\n` +
-    `  Fix: cp apps/api/.env.example apps/api/.env && edit apps/api/.env`
+      `  Fix: cp apps/api/.env.example apps/api/.env && edit apps/api/.env`
   )
 } else {
   // Check for placeholder values in critical fields
@@ -58,14 +58,14 @@ if (!existsSync(apiEnv)) {
   if (isPlaceholder(supabaseUrl)) {
     warnings.push(
       `apps/api/.env: SUPABASE_URL looks like a placeholder ("${supabaseUrl}").\n` +
-      `  Replace it with your actual Supabase project URL.`
+        `  Replace it with your actual Supabase project URL.`
     )
   }
   const serviceKey = getEnvValue(apiEnv, 'SUPABASE_SERVICE_KEY')
   if (isPlaceholder(serviceKey)) {
     warnings.push(
       `apps/api/.env: SUPABASE_SERVICE_KEY looks like a placeholder.\n` +
-      `  Get it from: Supabase Dashboard > Settings > API > service_role key`
+        `  Get it from: Supabase Dashboard > Settings > API > service_role key`
     )
   }
   // AI provider keys — warn if none are set
@@ -75,7 +75,7 @@ if (!existsSync(apiEnv)) {
   if (isPlaceholder(openai) && isPlaceholder(anthropic) && isPlaceholder(google)) {
     warnings.push(
       `apps/api/.env: No AI provider API keys are configured.\n` +
-      `  Set at least one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY`
+        `  Set at least one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY`
     )
   }
 }
@@ -86,15 +86,15 @@ const webEnv = resolve(root, 'apps/web/.env')
 if (!existsSync(webEnv)) {
   errors.push(
     `Missing apps/web/.env — the app will be stuck in demo-only mode.\n` +
-    `  Fix: cp apps/web/.env.example apps/web/.env`
+      `  Fix: cp apps/web/.env.example apps/web/.env`
   )
 } else {
   const apiUrl = getEnvValue(webEnv, 'VITE_API_URL')
   if (!apiUrl) {
     warnings.push(
       `apps/web/.env: VITE_API_URL is not set.\n` +
-      `  The app will enter demo-only mode where nothing saves.\n` +
-      `  Fix: Add VITE_API_URL=http://localhost:3001 to apps/web/.env`
+        `  The app will enter demo-only mode where nothing saves.\n` +
+        `  Fix: Add VITE_API_URL=http://localhost:3001 to apps/web/.env`
     )
   }
 
@@ -106,7 +106,7 @@ if (!existsSync(webEnv)) {
     if (!url || !key) {
       warnings.push(
         `apps/web/.env: VITE_PROVIDER=supabase but Supabase credentials are missing.\n` +
-        `  Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or use VITE_PROVIDER=local.`
+          `  Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or use VITE_PROVIDER=local.`
       )
     }
   }
@@ -118,7 +118,7 @@ const rootEnv = resolve(root, '.env')
 if (existsSync(rootEnv)) {
   warnings.push(
     `Found a root .env file — this is NOT read by either app.\n` +
-    `  Environment variables must go in apps/api/.env and apps/web/.env.`
+      `  Environment variables must go in apps/api/.env and apps/web/.env.`
   )
 }
 

@@ -1,9 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import {
-  DEFAULT_WORKFLOW_KEY,
-  WORKFLOW_KEYS,
-  WORKFLOW_STAGE_MAP,
-} from '@inkdown/shared/types'
+import { DEFAULT_WORKFLOW_KEY, WORKFLOW_KEYS, WORKFLOW_STAGE_MAP } from '@inkdown/shared/types'
 import type {
   Mission,
   MissionApproval,
@@ -59,10 +55,7 @@ interface MissionApprovalTemplate {
 }
 
 interface MissionResearchAdapter {
-  buildBrief(input: {
-    goal: string
-    relevantContext: string
-  }): Promise<{
+  buildBrief(input: { goal: string; relevantContext: string }): Promise<{
     summary: string
     payload: Record<string, unknown>
   }>
@@ -411,7 +404,11 @@ export class MissionOrchestratorService {
   }
 
   /** Extend the run lock expiry for the current stage. */
-  private async refreshRunLock(missionId: string, lockToken: string, stage: MissionStage): Promise<void> {
+  private async refreshRunLock(
+    missionId: string,
+    lockToken: string,
+    stage: MissionStage
+  ): Promise<void> {
     const ttl = this.getLockTtlForStage(stage)
     const expiresAt = new Date(this.now().getTime() + ttl).toISOString()
     await this.supabase
@@ -470,7 +467,11 @@ export class MissionOrchestratorService {
     return { mission, steps, handoffs, approvals, lastEventSeq }
   }
 
-  async getMissionEvents(missionId: string, afterSeq = 0, limit = 200): Promise<MissionEventEnvelope[]> {
+  async getMissionEvents(
+    missionId: string,
+    afterSeq = 0,
+    limit = 200
+  ): Promise<MissionEventEnvelope[]> {
     await this.fetchMission(missionId)
     return this.fetchMissionEvents(missionId, afterSeq, limit)
   }
@@ -711,7 +712,11 @@ export class MissionOrchestratorService {
   }
 
   /** Build adapter deps for the current orchestrator instance + current step. */
-  private buildAdapterDeps(missionId?: string, stepId?: string, stage?: MissionStage): MissionAdapterDeps {
+  private buildAdapterDeps(
+    missionId?: string,
+    stepId?: string,
+    stage?: MissionStage
+  ): MissionAdapterDeps {
     return {
       supabase: this.supabase,
       userId: this.userId,
@@ -739,19 +744,47 @@ export class MissionOrchestratorService {
       },
       course: {
         buildOutline: async ({ goal, researchBrief, relevantContext }) => {
-          return runCourseOutlineAdapter(this.buildAdapterDeps(), { goal, researchBrief, relevantContext })
+          return runCourseOutlineAdapter(this.buildAdapterDeps(), {
+            goal,
+            researchBrief,
+            relevantContext,
+          })
         },
         apply: async (payload) => applyCourseEntitiesAdapter(this.buildAdapterDeps(), payload),
       },
       secretary: {
         buildPlanPatch: async ({ goal, courseOutline, relevantContext }) => {
-          return runDailyPlanAdapter(this.buildAdapterDeps(), { goal, courseOutline, relevantContext })
+          return runDailyPlanAdapter(this.buildAdapterDeps(), {
+            goal,
+            courseOutline,
+            relevantContext,
+          })
         },
         apply: async (payload) => applyDailyPlanPatchAdapter(this.buildAdapterDeps(), payload),
       },
       editor: {
-        buildNotePack: async ({ goal, dailyPlanPatch, relevantContext, workflowKey, sourceTaskTitle, sourcePlanTitle, sourceTopic, sourceProjectId, sourcePlanId }) => {
-          return runNotePackAdapter(this.buildAdapterDeps(), { goal, dailyPlanPatch, relevantContext, workflowKey, sourceTaskTitle, sourcePlanTitle, sourceTopic, sourceProjectId, sourcePlanId })
+        buildNotePack: async ({
+          goal,
+          dailyPlanPatch,
+          relevantContext,
+          workflowKey,
+          sourceTaskTitle,
+          sourcePlanTitle,
+          sourceTopic,
+          sourceProjectId,
+          sourcePlanId,
+        }) => {
+          return runNotePackAdapter(this.buildAdapterDeps(), {
+            goal,
+            dailyPlanPatch,
+            relevantContext,
+            workflowKey,
+            sourceTaskTitle,
+            sourcePlanTitle,
+            sourceTopic,
+            sourceProjectId,
+            sourcePlanId,
+          })
         },
         apply: async (payload) => applyNotePackAdapter(this.buildAdapterDeps(), payload),
       },
@@ -1059,7 +1092,9 @@ export class MissionOrchestratorService {
       throw error || fallbackError
     }
 
-    const lastSeq = Number((fallback && fallback[0] ? (fallback[0] as { seq: number }).seq : 0) || 0)
+    const lastSeq = Number(
+      (fallback && fallback[0] ? (fallback[0] as { seq: number }).seq : 0) || 0
+    )
     return lastSeq + 1
   }
 
@@ -1206,7 +1241,11 @@ export class MissionOrchestratorService {
     if (error) throw error
   }
 
-  private async setStepInProgress(stepId: string, missionId: string, stage: MissionStage): Promise<void> {
+  private async setStepInProgress(
+    stepId: string,
+    missionId: string,
+    stage: MissionStage
+  ): Promise<void> {
     const nowIso = this.now().toISOString()
     const { error } = await this.supabase
       .from('mission_steps')
@@ -1225,7 +1264,10 @@ export class MissionOrchestratorService {
     })
   }
 
-  private async completeStep(stepId: string, patch?: { output_ref?: Record<string, unknown> }): Promise<void> {
+  private async completeStep(
+    stepId: string,
+    patch?: { output_ref?: Record<string, unknown> }
+  ): Promise<void> {
     const { error } = await this.supabase
       .from('mission_steps')
       .update({
@@ -1391,10 +1433,8 @@ export class MissionOrchestratorService {
       constraints,
       workflowKey: resolveWorkflowKey(constraints),
       triggerSource: resolveTriggerSource(constraints),
-      sourceTaskId:
-        typeof constraints.sourceTaskId === 'string' ? constraints.sourceTaskId : null,
-      sourcePlanId:
-        typeof constraints.sourcePlanId === 'string' ? constraints.sourcePlanId : null,
+      sourceTaskId: typeof constraints.sourceTaskId === 'string' ? constraints.sourceTaskId : null,
+      sourcePlanId: typeof constraints.sourcePlanId === 'string' ? constraints.sourcePlanId : null,
       lastError: row.last_error,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

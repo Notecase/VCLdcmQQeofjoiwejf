@@ -34,7 +34,11 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
     },
     async ({ project_id, include_deleted, limit }) => {
       try {
-        const result = await notes.list({ projectId: project_id, includeDeleted: include_deleted, limit })
+        const result = await notes.list({
+          projectId: project_id,
+          includeDeleted: include_deleted,
+          limit,
+        })
         return ok(formatNoteList(result))
       } catch (e) {
         return err((e as Error).message)
@@ -77,7 +81,7 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
 
   server.tool(
     'notes_update',
-    'Update a note\'s title and/or content.',
+    "Update a note's title and/or content.",
     {
       note_id: z.string().uuid().describe('Note UUID'),
       title: z.string().optional().describe('New title'),
@@ -204,7 +208,9 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
     async ({ title, html, css, javascript, note_id }) => {
       try {
         const artifact = await artifacts.create({ title, html, css, javascript, noteId: note_id })
-        return ok(`Created artifact: **${artifact.title}** (${artifact.id})${note_id ? ` attached to note ${note_id}` : ''}`)
+        return ok(
+          `Created artifact: **${artifact.title}** (${artifact.id})${note_id ? ` attached to note ${note_id}` : ''}`
+        )
       } catch (e) {
         return err((e as Error).message)
       }

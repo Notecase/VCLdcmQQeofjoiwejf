@@ -300,7 +300,9 @@ export class SecretaryAgent {
     }
 
     if (context.calendarContent?.trim()) {
-      parts.push(`\n### Calendar (synced from Google Calendar)\n${context.calendarContent.slice(0, 800)}`)
+      parts.push(
+        `\n### Calendar (synced from Google Calendar)\n${context.calendarContent.slice(0, 800)}`
+      )
     }
 
     // Recent performance analytics

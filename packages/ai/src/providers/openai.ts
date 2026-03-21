@@ -78,7 +78,8 @@ export class OpenAIProvider implements AIProvider {
     let outputTokens = 0
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'completion',
+      model: this.model,
+      taskType: 'completion',
     })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
@@ -130,7 +131,8 @@ Only output the rewritten text, nothing else. Maintain the original format and s
     })
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'rewrite',
+      model: this.model,
+      taskType: 'rewrite',
     })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
@@ -165,7 +167,8 @@ Only output the rewritten text, nothing else. Maintain the original format and s
     let outputTokens = 0
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'chat',
+      model: this.model,
+      taskType: 'chat',
     })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
@@ -213,7 +216,8 @@ Only output the rewritten text, nothing else. Maintain the original format and s
     })
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'summarize',
+      model: this.model,
+      taskType: 'summarize',
     })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
@@ -286,7 +290,8 @@ Only output the rewritten text, nothing else. Maintain the original format and s
     })
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'chat',
+      model: this.model,
+      taskType: 'chat',
     })) {
       yield chunk
     }

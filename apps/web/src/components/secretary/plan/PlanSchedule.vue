@@ -2,7 +2,11 @@
 import { ref } from 'vue'
 import { Plus, Trash2, Clock, FileText, Search, GraduationCap } from 'lucide-vue-next'
 import { ElSwitch } from 'element-plus'
-import type { PlanScheduleItem, PlanScheduleWorkflow, PlanScheduleFrequency } from '@inkdown/shared/types'
+import type {
+  PlanScheduleItem,
+  PlanScheduleWorkflow,
+  PlanScheduleFrequency,
+} from '@inkdown/shared/types'
 
 defineProps<{
   schedules: PlanScheduleItem[]
@@ -51,7 +55,7 @@ const frequencyPills: { value: PlanScheduleFrequency; label: string }[] = [
 ]
 
 function getWorkflowPill(workflow: PlanScheduleWorkflow) {
-  return workflowPills.find(p => p.value === workflow) || workflowPills[0]
+  return workflowPills.find((p) => p.value === workflow) || workflowPills[0]
 }
 
 function toggleExpand(id: string) {
@@ -65,11 +69,12 @@ function toggleExpand(id: string) {
 }
 
 function formatScheduleText(schedule: PlanScheduleItem): string {
-  const freq = schedule.frequency === 'daily'
-    ? 'Every day'
-    : schedule.frequency === 'weekly'
-      ? `Every ${(schedule.days || ['Sun']).join(', ')}`
-      : `On ${(schedule.days || []).join(', ')}`
+  const freq =
+    schedule.frequency === 'daily'
+      ? 'Every day'
+      : schedule.frequency === 'weekly'
+        ? `Every ${(schedule.days || ['Sun']).join(', ')}`
+        : `On ${(schedule.days || []).join(', ')}`
   return freq
 }
 
@@ -182,7 +187,9 @@ function handleDelete(id: string) {
             @click.stop
           />
           <span class="card-title">{{ schedule.title }}</span>
-          <span class="card-schedule-text">{{ formatScheduleText(schedule) }} · {{ formatTime(schedule.time) }}</span>
+          <span class="card-schedule-text"
+            >{{ formatScheduleText(schedule) }} · {{ formatTime(schedule.time) }}</span
+          >
         </div>
 
         <!-- Row 2: Workflow badge + Run stats -->
@@ -199,7 +206,13 @@ function handleDelete(id: string) {
             }"
           >
             <component
-              :is="schedule.workflow === 'make_note_from_task' ? FileText : schedule.workflow === 'research_topic_from_task' ? Search : GraduationCap"
+              :is="
+                schedule.workflow === 'make_note_from_task'
+                  ? FileText
+                  : schedule.workflow === 'research_topic_from_task'
+                    ? Search
+                    : GraduationCap
+              "
               :size="11"
             />
             {{ getWorkflowPill(schedule.workflow).label }}
@@ -211,7 +224,8 @@ function handleDelete(id: string) {
               <span
                 class="run-status-badge"
                 :class="schedule.lastRunStatus"
-              >{{ schedule.lastRunStatus }}</span>
+                >{{ schedule.lastRunStatus }}</span
+              >
             </template>
           </span>
         </div>
@@ -263,7 +277,7 @@ function handleDelete(id: string) {
                 v-model="editTitle"
                 class="form-input"
                 placeholder="Name this automation"
-              >
+              />
               <textarea
                 v-model="editInstructions"
                 class="form-textarea"
@@ -281,7 +295,9 @@ function handleDelete(id: string) {
                       class="pill-btn"
                       :class="{ active: editFrequency === pill.value }"
                       @click="editFrequency = pill.value"
-                    >{{ pill.label }}</button>
+                    >
+                      {{ pill.label }}
+                    </button>
                   </div>
                 </div>
                 <div class="form-field">
@@ -290,7 +306,7 @@ function handleDelete(id: string) {
                     v-model="editTime"
                     type="time"
                     class="form-input time-input"
-                  >
+                  />
                 </div>
               </div>
 
@@ -306,7 +322,9 @@ function handleDelete(id: string) {
                     class="day-chip"
                     :class="{ active: editDays.includes(day) }"
                     @click="toggleEditDay(day)"
-                  >{{ day }}</button>
+                  >
+                    {{ day }}
+                  </button>
                 </div>
               </div>
 
@@ -314,12 +332,16 @@ function handleDelete(id: string) {
                 <button
                   class="form-btn cancel"
                   @click.stop="cancelEditing"
-                >Cancel</button>
+                >
+                  Cancel
+                </button>
                 <button
                   class="form-btn submit"
                   :disabled="!editTitle.trim()"
                   @click.stop="submitEdit(schedule.id)"
-                >Save</button>
+                >
+                  Save
+                </button>
               </div>
             </div>
           </template>
@@ -343,7 +365,7 @@ function handleDelete(id: string) {
         v-model="newTitle"
         class="form-input"
         placeholder="Name this automation (e.g. Morning study recap)"
-      >
+      />
       <textarea
         v-model="newInstructions"
         class="form-textarea"
@@ -361,7 +383,9 @@ function handleDelete(id: string) {
               class="pill-btn"
               :class="{ active: newFrequency === pill.value }"
               @click="newFrequency = pill.value"
-            >{{ pill.label }}</button>
+            >
+              {{ pill.label }}
+            </button>
           </div>
         </div>
         <div class="form-field">
@@ -370,7 +394,7 @@ function handleDelete(id: string) {
             v-model="newTime"
             type="time"
             class="form-input time-input"
-          >
+          />
         </div>
       </div>
 
@@ -386,7 +410,9 @@ function handleDelete(id: string) {
             class="day-chip"
             :class="{ active: newDays.includes(day) }"
             @click="toggleNewDay(day)"
-          >{{ day }}</button>
+          >
+            {{ day }}
+          </button>
         </div>
       </div>
 
@@ -394,12 +420,16 @@ function handleDelete(id: string) {
         <button
           class="form-btn cancel"
           @click="showAddForm = false"
-        >Cancel</button>
+        >
+          Cancel
+        </button>
         <button
           class="form-btn submit"
           :disabled="!newTitle.trim()"
           @click="submitNewSchedule"
-        >Add</button>
+        >
+          Add
+        </button>
       </div>
     </div>
 
@@ -440,8 +470,9 @@ function handleDelete(id: string) {
   border: 1px solid var(--sec-glass-border);
   border-radius: var(--sec-radius-sm, 8px);
   background: var(--sec-surface-card);
-  transition: border-color var(--sec-transition-fast) ease,
-              background var(--sec-transition-fast) ease;
+  transition:
+    border-color var(--sec-transition-fast) ease,
+    background var(--sec-transition-fast) ease;
   overflow: hidden;
 }
 

@@ -17,6 +17,7 @@ context_entries → what happened recently
 ```
 
 ### Adjust Tasks
+
 ```
 secretary_task_modify {
   target: "Today.md",
@@ -28,12 +29,15 @@ secretary_task_modify {
 ## During the Day
 
 ### Log Activity
+
 ```
 secretary_log_activity { entry: "Completed 45min of Arrays & Hashing. Solved 3/5 problems." }
 ```
 
 ### Complete Tasks
+
 Update task status in Today.md:
+
 ```
 secretary_task_modify {
   target: "Today.md",
@@ -43,6 +47,7 @@ secretary_task_modify {
 ```
 
 ### Quick Note Capture
+
 ```
 notes_create {
   title: "Quick: Insight about hash collisions",
@@ -55,6 +60,7 @@ notes_create {
 > For the full evening workflow (reflection + archive + tomorrow prep), use **`skills/evening-reflection.md`**.
 
 ### Quick Reflect
+
 ```
 secretary_reflect {
   mood: "good",
@@ -65,6 +71,7 @@ secretary_reflect {
 ```
 
 ### Quick Carry Over
+
 ```
 secretary_carryover → moves [ ] tasks from Today → Tomorrow
 ```
@@ -74,6 +81,7 @@ secretary_carryover → moves [ ] tasks from Today → Tomorrow
 > For the full weekly analysis, use **`skills/weekly-review.md`**.
 
 ### Quick Stats
+
 ```
 secretary_analytics → completion rates, streaks, mood trends
 ```

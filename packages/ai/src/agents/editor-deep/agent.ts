@@ -90,7 +90,10 @@ export class EditorDeepAgent {
 
     const { createDeepAgent } = await import('deepagents')
 
-    const historyService = new EditorConversationHistoryService(this.config.supabase, this.config.userId)
+    const historyService = new EditorConversationHistoryService(
+      this.config.supabase,
+      this.config.userId
+    )
 
     const historyMessages = await historyService.loadThreadMessages({
       threadId,
@@ -126,7 +129,9 @@ export class EditorDeepAgent {
     const editorDeepModel = selectModel('editor-deep')
     const llm = await createLangChainModel(editorDeepModel, {
       temperature: 0.3,
-      callbacks: [new TokenTrackingCallback({ model: editorDeepModel.id, taskType: 'editor-deep' })],
+      callbacks: [
+        new TokenTrackingCallback({ model: editorDeepModel.id, taskType: 'editor-deep' }),
+      ],
     })
 
     const contextSummary = this.buildContextSummary(input.context)
@@ -182,16 +187,22 @@ export class EditorDeepAgent {
         let customData: unknown = null
 
         if (Array.isArray(rawChunk)) {
-          if (rawChunk.length === 3 && Array.isArray(rawChunk[0]) && typeof rawChunk[1] === 'string') {
+          if (
+            rawChunk.length === 3 &&
+            Array.isArray(rawChunk[0]) &&
+            typeof rawChunk[1] === 'string'
+          ) {
             // Format 3: [namespace, mode, data]
             namespace = rawChunk[0] as string[]
             mode = rawChunk[1] as string
-            if (mode === 'updates') updateData = rawChunk[2] as Record<string, { messages?: unknown[] }>
+            if (mode === 'updates')
+              updateData = rawChunk[2] as Record<string, { messages?: unknown[] }>
             else if (mode === 'custom') customData = rawChunk[2]
           } else if (rawChunk.length === 2 && typeof rawChunk[0] === 'string') {
             // Format 2: [mode, data]
             mode = rawChunk[0] as string
-            if (mode === 'updates') updateData = rawChunk[1] as Record<string, { messages?: unknown[] }>
+            if (mode === 'updates')
+              updateData = rawChunk[1] as Record<string, { messages?: unknown[] }>
             else if (mode === 'custom') customData = rawChunk[1]
           }
           // If array but doesn't match either pattern, skip
@@ -284,7 +295,8 @@ export class EditorDeepAgent {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       const fallbackText =
-        this.state.assistantText.trim() || (await this.buildFallbackText(input.context, input.message))
+        this.state.assistantText.trim() ||
+        (await this.buildFallbackText(input.context, input.message))
 
       yield { type: 'error', data: message }
       if (!this.state.assistantText.trim()) {
@@ -334,7 +346,9 @@ export class EditorDeepAgent {
     const currentNormalized = currentMessage.trim()
     const lastMessage = cleanedHistory[cleanedHistory.length - 1]
     const hasCurrentAlready =
-      Boolean(lastMessage) && lastMessage.role === 'user' && lastMessage.content === currentNormalized
+      Boolean(lastMessage) &&
+      lastMessage.role === 'user' &&
+      lastMessage.content === currentNormalized
 
     if (hasCurrentAlready) {
       return cleanedHistory
@@ -352,7 +366,10 @@ export class EditorDeepAgent {
     if (!noteId) {
       const clarification =
         'I need an open note to answer that. Please open a note or tell me which note to use.'
-      const assistantStart: EditorDeepAgentEvent = { type: 'assistant-start', data: { sourceNode: 'fast-path' } }
+      const assistantStart: EditorDeepAgentEvent = {
+        type: 'assistant-start',
+        data: { sourceNode: 'fast-path' },
+      }
       const assistantFinal: EditorDeepAgentEvent = { type: 'assistant-final', data: clarification }
       const done: EditorDeepAgentEvent = { type: 'done', data: { threadId } }
 
@@ -409,7 +426,10 @@ export class EditorDeepAgent {
       finalText = this.summarizeNoteContent(data.title || 'Untitled', data.content || '')
     }
 
-    const assistantStart: EditorDeepAgentEvent = { type: 'assistant-start', data: { sourceNode: 'fast-path' } }
+    const assistantStart: EditorDeepAgentEvent = {
+      type: 'assistant-start',
+      data: { sourceNode: 'fast-path' },
+    }
     const assistantFinal: EditorDeepAgentEvent = { type: 'assistant-final', data: finalText }
     const done: EditorDeepAgentEvent = { type: 'done', data: { threadId } }
 

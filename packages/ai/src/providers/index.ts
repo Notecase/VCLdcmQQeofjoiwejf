@@ -20,23 +20,11 @@ export type {
 } from './interface'
 
 // Model Registry (new — central source of truth)
-export {
-  MODEL_REGISTRY,
-  selectModel,
-  getModel,
-} from './model-registry'
-export type {
-  AITaskType,
-  ModelEntry,
-  ModelProvider,
-  ModelCapability,
-} from './model-registry'
+export { MODEL_REGISTRY, selectModel, getModel } from './model-registry'
+export type { AITaskType, ModelEntry, ModelProvider, ModelCapability } from './model-registry'
 
 // Client Factory (new — creates configured LLM clients)
-export {
-  createOpenAIClient,
-  createLangChainModel,
-} from './client-factory'
+export { createOpenAIClient, createLangChainModel } from './client-factory'
 
 // Token Tracker (new — usage tracking)
 export {

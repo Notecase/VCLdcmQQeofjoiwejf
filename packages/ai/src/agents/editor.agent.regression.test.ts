@@ -141,9 +141,9 @@ describe('EditorAgent regression', () => {
       ],
     }
 
-    const delta = (agent as unknown as { extractStreamDelta: (c: unknown) => string }).extractStreamDelta(
-      chunk
-    )
+    const delta = (
+      agent as unknown as { extractStreamDelta: (c: unknown) => string }
+    ).extractStreamDelta(chunk)
     expect(delta).toBe('Hello world')
   })
 })

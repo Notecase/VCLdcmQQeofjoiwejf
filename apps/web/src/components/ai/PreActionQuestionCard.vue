@@ -7,7 +7,14 @@
  * clean card style with numbered options and keyboard navigation.
  */
 import { ref, computed } from 'vue'
-import { MessageCircleQuestion, ChevronLeft, ChevronRight, ArrowRight, Pencil, X } from 'lucide-vue-next'
+import {
+  MessageCircleQuestion,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Pencil,
+  X,
+} from 'lucide-vue-next'
 
 const props = defineProps<{
   question: {
@@ -63,13 +70,21 @@ function nextPage() {
     <!-- Header -->
     <div class="card-header">
       <div class="header-left">
-        <MessageCircleQuestion :size="16" class="header-icon" />
+        <MessageCircleQuestion
+          :size="16"
+          class="header-icon"
+        />
         <p class="header-question">{{ question.question }}</p>
       </div>
       <div class="header-right">
         <!-- Pagination -->
         <template v-if="totalPages > 1">
-          <button class="nav-btn" type="button" :disabled="currentPage === 0" @click="prevPage">
+          <button
+            class="nav-btn"
+            type="button"
+            :disabled="currentPage === 0"
+            @click="prevPage"
+          >
             <ChevronLeft :size="14" />
           </button>
           <span class="page-indicator">{{ currentPage + 1 }} of {{ totalPages }}</span>
@@ -82,7 +97,12 @@ function nextPage() {
             <ChevronRight :size="14" />
           </button>
         </template>
-        <button class="close-btn" type="button" aria-label="Skip question" @click="emit('skip')">
+        <button
+          class="close-btn"
+          type="button"
+          aria-label="Skip question"
+          @click="emit('skip')"
+        >
           <X :size="14" />
         </button>
       </div>
@@ -102,18 +122,38 @@ function nextPage() {
       >
         <span class="option-number">{{ currentPage * PAGE_SIZE + i + 1 }}</span>
         <span class="option-label">{{ option.label }}</span>
-        <ArrowRight v-if="hoveredIndex === i" :size="14" class="option-arrow" />
+        <ArrowRight
+          v-if="hoveredIndex === i"
+          :size="14"
+          class="option-arrow"
+        />
       </button>
 
       <!-- Free text option -->
-      <div v-if="question.allowFreeText && !showFreeText" class="option-row free-text-trigger" @click="showFreeText = true">
-        <Pencil :size="14" class="option-number-icon" />
+      <div
+        v-if="question.allowFreeText && !showFreeText"
+        class="option-row free-text-trigger"
+        @click="showFreeText = true"
+      >
+        <Pencil
+          :size="14"
+          class="option-number-icon"
+        />
         <span class="option-label placeholder">Something else</span>
-        <button class="skip-btn" type="button" @click.stop="emit('skip')">Skip</button>
+        <button
+          class="skip-btn"
+          type="button"
+          @click.stop="emit('skip')"
+        >
+          Skip
+        </button>
       </div>
 
       <!-- Free text input (expanded) -->
-      <div v-if="showFreeText" class="free-text-row">
+      <div
+        v-if="showFreeText"
+        class="free-text-row"
+      >
         <input
           v-model="freeTextValue"
           class="free-text-input"
@@ -123,7 +163,13 @@ function nextPage() {
           @keydown.enter="submitFreeText"
           @keydown.escape="showFreeText = false"
         />
-        <button class="skip-btn" type="button" @click="emit('skip')">Skip</button>
+        <button
+          class="skip-btn"
+          type="button"
+          @click="emit('skip')"
+        >
+          Skip
+        </button>
       </div>
     </div>
   </div>

@@ -101,9 +101,10 @@ export async function createLangChainModel(
         baseUrl,
         model: model.id,
         temperature,
-        headers: model.provider === 'ollama-cloud' && process.env.OLLAMA_API_KEY
-          ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` }
-          : undefined,
+        headers:
+          model.provider === 'ollama-cloud' && process.env.OLLAMA_API_KEY
+            ? { Authorization: `Bearer ${process.env.OLLAMA_API_KEY}` }
+            : undefined,
         callbacks,
       })
     }

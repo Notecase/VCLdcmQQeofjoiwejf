@@ -110,7 +110,9 @@ export function formatNoteExpanded(
     parts.push('')
     parts.push('## Related Notes in Project')
     for (const s of siblings.slice(0, 5)) {
-      parts.push(`- **${s.title}** (${s.id}) — ${formatNumber(s.word_count)}w, ${relativeTime(s.updated_at)}`)
+      parts.push(
+        `- **${s.title}** (${s.id}) — ${formatNumber(s.word_count)}w, ${relativeTime(s.updated_at)}`
+      )
     }
   }
 

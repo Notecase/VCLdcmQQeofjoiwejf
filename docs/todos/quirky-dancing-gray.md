@@ -10,6 +10,7 @@ Plans in the AI Secretary currently live as markdown files in `secretary_memory`
 The core problem: when the heartbeat triggers a recurring task (e.g., "generate daily study note"), the `NoteAgent` creates an orphan note with no `project_id`. There's no way to link generated content back to a plan or make it discoverable in the folder tree.
 
 ### What exists today
+
 - `plan_schedules` table (recurring automations per plan)
 - Mission orchestrator pipeline: research -> course -> daily_plan -> note_pack
 - `NoteAgent` already accepts `projectId?: string` in its input schema
@@ -18,6 +19,7 @@ The core problem: when the heartbeat triggers a recurring task (e.g., "generate 
 - Plan workspace at `/calendar/plan/:planId` with PlanHeader, PlanOverview, PlanSchedule, PlanArtifacts
 
 ### What's missing
+
 - No database link between plans (text ID like "OPT") and projects/folders (UUID)
 - `runNotePackAdapter` doesn't pass `projectId` to NoteAgent — notes are orphaned
 - No plan creation UI (hybrid form + AI chat)
@@ -54,10 +56,12 @@ CREATE POLICY "Users manage own plan-project links"
 ### 1.2 Type changes
 
 **`packages/shared/src/types/secretary.ts`:**
+
 - Add `projectId?: string` to `LearningRoadmap`
 - Add `projectId?: string` and `projectNotes?: Array<{ id: string; title: string; updatedAt: string }>` to `PlanWorkspaceState`
 
 **`packages/shared/src/types/mission.ts`:**
+
 - Add `sourceProjectId?: string | null` to the `Mission.constraints` type
 
 ---
@@ -69,6 +73,7 @@ CREATE POLICY "Users manage own plan-project links"
 **File: `packages/ai/src/agents/secretary/tools.ts`** — In `save_roadmap` tool handler:
 
 After saving the roadmap markdown, check if a `plan_project_links` row exists. If not:
+
 1. Create a project via `supabase.from('projects').insert({ name: planName, icon: '📋', color: '#10b981' })`
 2. Insert `plan_project_links` row linking `plan_id` -> `project.id`
 
@@ -79,6 +84,7 @@ This means every new plan automatically gets a folder in the note editor sidebar
 **File: `packages/ai/src/services/mission-orchestrator.ts`:**
 
 In `runStageWithRetry`, when stage is `note_pack`, look up the target folder:
+
 ```typescript
 const { data: link } = await this.supabase
   .from('plan_project_links')
@@ -87,11 +93,13 @@ const { data: link } = await this.supabase
   .eq('plan_id', mission.constraints.sourcePlanId)
   .single()
 ```
+
 Pass `sourceProjectId: link?.project_id` to the note pack adapter.
 
 **File: `packages/ai/src/services/mission-adapters.ts`:**
 
 In `runNotePackAdapter` (line 270-360):
+
 1. Add `sourceProjectId?: string` to the input type
 2. Add `sourcePlanId?: string` to the input type (for instruction loading)
 3. On line 331-334, change `noteAgent.stream({ action: 'create', input: def.input })` to include `projectId: input.sourceProjectId`
@@ -107,11 +115,11 @@ In `executePlanSchedule`, look up `plan_project_links.project_id` and include `s
 
 **File: `apps/api/src/routes/secretary.ts`** — Add:
 
-| Route | Purpose |
-|-------|---------|
-| `GET /api/secretary/plan-links` | All links for user (bulk, called on init) |
-| `POST /api/secretary/plan/:planId/link-project` | Create project + link |
-| `DELETE /api/secretary/plan/:planId/unlink-project` | Remove link |
+| Route                                               | Purpose                                   |
+| --------------------------------------------------- | ----------------------------------------- |
+| `GET /api/secretary/plan-links`                     | All links for user (bulk, called on init) |
+| `POST /api/secretary/plan/:planId/link-project`     | Create project + link                     |
+| `DELETE /api/secretary/plan/:planId/unlink-project` | Remove link                               |
 
 Enhance existing `GET /api/secretary/plan/:planId` to return `projectId` and `projectNotes[]` from the linked folder.
 
@@ -122,6 +130,7 @@ Enhance existing `GET /api/secretary/plan/:planId` to return `projectId` and `pr
 ### 3.1 New route
 
 **File: `apps/web/src/main.ts`** — Add:
+
 ```typescript
 { path: '/calendar/plan/new', name: 'plan-create', component: () => import('./views/PlanCreateView.vue') }
 ```
@@ -129,16 +138,19 @@ Enhance existing `GET /api/secretary/plan/:planId` to return `projectId` and `pr
 ### 3.2 Entry points
 
 Add a "+ Create Plan" button in two places:
+
 1. **ActivePlansOverview** — A dashed-border "add" card at the end of the horizontal plan cards scroll on the dashboard
 2. **Plans tab** — A button in the Plans browser view header
 
 ### 3.3 PlanCreateView + PlanCreationWizard
 
 **New files:**
+
 - `apps/web/src/views/PlanCreateView.vue` — thin wrapper
 - `apps/web/src/components/secretary/plan/PlanCreationWizard.vue` — 2-step wizard
 
 **Step 1 — Form fields (user fills in):**
+
 - Plan name (text)
 - Date range (start + end date pickers)
 - Hours per day (number, 0.5-8)
@@ -146,6 +158,7 @@ Add a "+ Create Plan" button in two places:
 - Icon picker (optional, defaults to "📋")
 
 **Step 2 — AI Chat (conversational refinement):**
+
 - Chat interface using existing secretary SSE streaming
 - System prompt constrained to roadmap creation mode
 - Form data from Step 1 injected as structured context in the first message
@@ -158,6 +171,7 @@ Add a "+ Create Plan" button in two places:
 ### 3.4 Recurring task creation form
 
 When creating a plan, after the roadmap is saved, optionally prompt to add recurring automations. The form (modal or inline) has:
+
 - Title (text input)
 - Description/Instructions (textarea — "What should the AI do each time?")
 - Workflow type (segmented pills: Note / Research / Course)
@@ -187,6 +201,7 @@ Replace the current `<select>` dropdowns + rows with compact row card layout:
 ```
 
 Each schedule is a single compact card:
+
 - **Row 1:** Enabled toggle + title (bold) + schedule text ("Every day · 7:05 AM")
 - **Row 2:** Workflow badge (colored pill: "Note" green, "Research" blue, "Course" purple) + run count + last status
 - **Click to expand:** Shows instructions preview + full edit form inline + delete button
@@ -204,6 +219,7 @@ Add an optional `instructions` textarea to the schedule creation/edit form. Thes
 ### 5.1 Secretary store additions
 
 **File: `apps/web/src/stores/secretary.ts`:**
+
 - Add `planProjectLinks: Map<string, string>` (planId -> projectId) and `projectPlanLinks: Map<string, string>` (reverse)
 - Add `loadPlanProjectLinks()` action (calls `GET /api/secretary/plan-links`)
 - Add `linkPlanToProject(planId)` action (calls `POST /api/secretary/plan/:planId/link-project`)
@@ -214,15 +230,18 @@ Add an optional `instructions` textarea to the schedule creation/edit form. Thes
 **File: `apps/web/src/components/layout/SideBar.vue`:**
 
 For project folders that have a linked plan (check `projectPlanLinks` map):
+
 - Show a small calendar/plan icon badge next to the folder name
 - Add "Open Plan Dashboard" context menu item → navigates to `/calendar/plan/:planId`
 
 ### 5.3 Plan workspace folder link
 
 **File: `apps/web/src/components/secretary/plan/PlanHeader.vue`:**
+
 - Add "View Folder" button/link → navigates to `/editor` with the folder expanded
 
 **File: `apps/web/src/components/secretary/plan/PlanArtifacts.vue`:**
+
 - Show notes from `projectNotes[]` (loaded from the linked folder) alongside mission artifacts
 - Deduplicate: if a note appears in both artifacts and projectNotes, show once
 
@@ -235,12 +254,14 @@ For project folders that have a linked plan (check `projectPlanLinks` map):
 Plan-level instructions are stored in `secretary_memory` as `Plans/<planId>-instructions.md`. These are already editable in PlanOverview.vue.
 
 **Injection points (ALL AI operations within plan scope):**
+
 1. **Mission note_pack stage:** `runNotePackAdapter` loads instructions and prepends to each note prompt (Phase 2.2)
 2. **Heartbeat execution:** Instructions included in mission goal context via `executePlanSchedule`
 3. **Manual "Run Now":** Same pipeline as missions — instructions loaded from memory
 4. **Manual AI editing in editor:** When the user uses the AI editor on a note inside a plan-linked folder, the editor agent looks up the note's `project_id` → `plan_project_links` → loads `Plans/<planId>-instructions.md` and injects into the prompt. This requires a small change to the editor agent (`packages/ai/src/agents/editor.agent.ts`) to accept and use plan context.
 
 **Implementation for editor injection (Point 4):**
+
 - In the API route `apps/api/src/routes/agent.ts`, when handling an edit request, check if the note's `project_id` has a plan link
 - If linked, fetch `Plans/<planId>-instructions.md` from `secretary_memory`
 - Pass as `planInstructions` to the editor agent config
@@ -258,37 +279,37 @@ Plan-level instructions are stored in `secretary_memory` as `Plans/<planId>-inst
 
 ### New files to create
 
-| File | Purpose |
-|------|---------|
-| `supabase/migrations/029_plan_project_links.sql` | Junction table |
-| `apps/web/src/views/PlanCreateView.vue` | Plan creation view (thin wrapper) |
-| `apps/web/src/components/secretary/plan/PlanCreationWizard.vue` | 2-step wizard (form + AI chat) |
-| `apps/web/src/components/secretary/plan/PlanCreationForm.vue` | Step 1: structured form |
-| `apps/web/src/components/secretary/plan/PlanCreationChat.vue` | Step 2: AI chat refinement |
-| `apps/web/src/components/secretary/plan/ScheduleCard.vue` | Individual schedule card component |
-| `apps/web/src/components/secretary/plan/ScheduleForm.vue` | Reusable schedule creation/edit form |
+| File                                                            | Purpose                              |
+| --------------------------------------------------------------- | ------------------------------------ |
+| `supabase/migrations/029_plan_project_links.sql`                | Junction table                       |
+| `apps/web/src/views/PlanCreateView.vue`                         | Plan creation view (thin wrapper)    |
+| `apps/web/src/components/secretary/plan/PlanCreationWizard.vue` | 2-step wizard (form + AI chat)       |
+| `apps/web/src/components/secretary/plan/PlanCreationForm.vue`   | Step 1: structured form              |
+| `apps/web/src/components/secretary/plan/PlanCreationChat.vue`   | Step 2: AI chat refinement           |
+| `apps/web/src/components/secretary/plan/ScheduleCard.vue`       | Individual schedule card component   |
+| `apps/web/src/components/secretary/plan/ScheduleForm.vue`       | Reusable schedule creation/edit form |
 
 ### Files to modify
 
-| File | Changes |
-|------|---------|
-| `packages/shared/src/types/secretary.ts` | Add `projectId` to LearningRoadmap + PlanWorkspaceState |
-| `packages/shared/src/types/mission.ts` | Add `sourceProjectId` to Mission constraints |
-| `packages/ai/src/agents/secretary/tools.ts` | Auto-create project in `save_roadmap` |
-| `packages/ai/src/services/mission-orchestrator.ts` | Look up projectId from `plan_project_links`, pass to adapter |
-| `packages/ai/src/services/mission-adapters.ts` | Add `sourceProjectId` + `sourcePlanId` to `runNotePackAdapter`, pass `projectId` to NoteAgent, inject instructions |
-| `apps/api/src/routes/secretary.ts` | Add plan-link CRUD routes, enhance workspace endpoint |
-| `apps/web/src/stores/secretary.ts` | Add planProjectLinks maps + actions |
-| `apps/web/src/components/secretary/plan/PlanSchedule.vue` | Full redesign: cards + instructions field |
-| `apps/web/src/components/secretary/plan/PlanHeader.vue` | Add "View Folder" link |
-| `apps/web/src/components/secretary/plan/PlanArtifacts.vue` | Show folder notes alongside artifacts |
-| `apps/web/src/components/secretary/ActivePlansOverview.vue` | Add "+ Create Plan" card |
-| `apps/web/src/components/layout/SideBar.vue` | Plan badge on linked folders + context menu |
-| `apps/web/src/main.ts` | Add `/calendar/plan/new` route |
-| `apps/api/src/routes/agent.ts` | Look up plan context from note's project, pass plan instructions to editor agent |
-| `packages/ai/src/agents/editor.agent.ts` | Accept + inject `planInstructions` into system prompt |
-| `supabase/functions/heartbeat/actions.ts` | Include `sourceProjectId` in mission constraints |
-| `docs/ARCHITECTURE.md` | Document plan-project link system |
+| File                                                        | Changes                                                                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `packages/shared/src/types/secretary.ts`                    | Add `projectId` to LearningRoadmap + PlanWorkspaceState                                                            |
+| `packages/shared/src/types/mission.ts`                      | Add `sourceProjectId` to Mission constraints                                                                       |
+| `packages/ai/src/agents/secretary/tools.ts`                 | Auto-create project in `save_roadmap`                                                                              |
+| `packages/ai/src/services/mission-orchestrator.ts`          | Look up projectId from `plan_project_links`, pass to adapter                                                       |
+| `packages/ai/src/services/mission-adapters.ts`              | Add `sourceProjectId` + `sourcePlanId` to `runNotePackAdapter`, pass `projectId` to NoteAgent, inject instructions |
+| `apps/api/src/routes/secretary.ts`                          | Add plan-link CRUD routes, enhance workspace endpoint                                                              |
+| `apps/web/src/stores/secretary.ts`                          | Add planProjectLinks maps + actions                                                                                |
+| `apps/web/src/components/secretary/plan/PlanSchedule.vue`   | Full redesign: cards + instructions field                                                                          |
+| `apps/web/src/components/secretary/plan/PlanHeader.vue`     | Add "View Folder" link                                                                                             |
+| `apps/web/src/components/secretary/plan/PlanArtifacts.vue`  | Show folder notes alongside artifacts                                                                              |
+| `apps/web/src/components/secretary/ActivePlansOverview.vue` | Add "+ Create Plan" card                                                                                           |
+| `apps/web/src/components/layout/SideBar.vue`                | Plan badge on linked folders + context menu                                                                        |
+| `apps/web/src/main.ts`                                      | Add `/calendar/plan/new` route                                                                                     |
+| `apps/api/src/routes/agent.ts`                              | Look up plan context from note's project, pass plan instructions to editor agent                                   |
+| `packages/ai/src/agents/editor.agent.ts`                    | Accept + inject `planInstructions` into system prompt                                                              |
+| `supabase/functions/heartbeat/actions.ts`                   | Include `sourceProjectId` in mission constraints                                                                   |
+| `docs/ARCHITECTURE.md`                                      | Document plan-project link system                                                                                  |
 
 ---
 

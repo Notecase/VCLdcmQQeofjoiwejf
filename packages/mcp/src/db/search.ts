@@ -48,24 +48,21 @@ export class SearchDb {
     const { data, error } = await dbQuery
     if (error) throw new Error(`search.searchNotes failed: ${error.message}`)
 
-    return ((data ?? []) as Array<{ id: string; title: string; content: string; updated_at: string }>).map(
-      (row) => ({
-        id: row.id,
-        title: row.title,
-        snippet: extractSnippet(row.content, query),
-        source: 'note' as const,
-        updated_at: row.updated_at,
-      })
-    )
+    return (
+      (data ?? []) as Array<{ id: string; title: string; content: string; updated_at: string }>
+    ).map((row) => ({
+      id: row.id,
+      title: row.title,
+      snippet: extractSnippet(row.content, query),
+      source: 'note' as const,
+      updated_at: row.updated_at,
+    }))
   }
 
   /**
    * Search across notes + secretary memory files.
    */
-  async searchGlobal(
-    query: string,
-    opts?: { limit?: number }
-  ): Promise<SearchHit[]> {
+  async searchGlobal(query: string, opts?: { limit?: number }): Promise<SearchHit[]> {
     const limit = opts?.limit ?? 20
     const half = Math.ceil(limit / 2)
 
@@ -84,7 +81,12 @@ export class SearchDb {
     if (memError) throw new Error(`search.searchGlobal (memory) failed: ${memError.message}`)
 
     const memHits: SearchHit[] = (
-      (memData ?? []) as Array<{ id: string; filename: string; content: string; updated_at: string }>
+      (memData ?? []) as Array<{
+        id: string
+        filename: string
+        content: string
+        updated_at: string
+      }>
     ).map((row) => ({
       id: row.id,
       title: row.filename,

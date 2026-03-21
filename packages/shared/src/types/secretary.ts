@@ -433,7 +433,10 @@ export interface SecretaryChatMessageRow {
 export type PlanScheduleFrequency = 'daily' | 'weekly' | 'custom'
 
 /** Workflow types available for plan schedule automations */
-export type PlanScheduleWorkflow = 'make_note_from_task' | 'research_topic_from_task' | 'make_course_from_plan'
+export type PlanScheduleWorkflow =
+  | 'make_note_from_task'
+  | 'research_topic_from_task'
+  | 'make_course_from_plan'
 
 /** A recurring automation attached to a plan */
 export interface PlanScheduleItem {

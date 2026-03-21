@@ -10,18 +10,19 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 
-const ConfigSchema = z.object({
-  supabase_url: z.string().url(),
-  supabase_anon_key: z.string().min(1),
-  access_token: z.string().min(1).optional(),
-  refresh_token: z.string().min(1).optional(),
-  expires_at: z.string().optional(),      // ISO string — when access_token expires
-  service_key: z.string().min(1).optional(),
-  user_id: z.string().uuid().optional(),
-}).refine(
-  (c) => c.access_token || (c.service_key && c.user_id),
-  { message: 'Provide either access_token OR service_key + user_id' }
-)
+const ConfigSchema = z
+  .object({
+    supabase_url: z.string().url(),
+    supabase_anon_key: z.string().min(1),
+    access_token: z.string().min(1).optional(),
+    refresh_token: z.string().min(1).optional(),
+    expires_at: z.string().optional(), // ISO string — when access_token expires
+    service_key: z.string().min(1).optional(),
+    user_id: z.string().uuid().optional(),
+  })
+  .refine((c) => c.access_token || (c.service_key && c.user_id), {
+    message: 'Provide either access_token OR service_key + user_id',
+  })
 
 export type NoteshellConfig = z.infer<typeof ConfigSchema>
 

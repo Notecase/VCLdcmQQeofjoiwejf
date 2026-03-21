@@ -19,11 +19,11 @@ const cliAuth = new Hono()
 
 // RFC 8628 recommended alphabet: avoids 0/O/1/I confusion
 const USER_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const DEVICE_CODE_TTL_SECONDS = 600   // 10 minutes
+const DEVICE_CODE_TTL_SECONDS = 600 // 10 minutes
 const POLL_INTERVAL_SECONDS = 5
 
 function generateDeviceCode(): string {
-  return randomBytes(32).toString('hex')  // 64 hex chars
+  return randomBytes(32).toString('hex') // 64 hex chars
 }
 
 function generateUserCode(): string {
@@ -42,10 +42,13 @@ function generateUserCode(): string {
 
 cliAuth.post(
   '/start',
-  zValidator('json', z.object({
-    client_name: z.string().min(1).max(100).optional(),
-    scopes: z.array(z.string()).optional(),
-  })),
+  zValidator(
+    'json',
+    z.object({
+      client_name: z.string().min(1).max(100).optional(),
+      scopes: z.array(z.string()).optional(),
+    })
+  ),
   async (c) => {
     const { client_name, scopes } = c.req.valid('json')
     const db = getServiceClient()
@@ -169,12 +172,15 @@ cliAuth.post(
 cliAuth.post(
   '/approve',
   authMiddleware,
-  zValidator('json', z.object({
-    user_code: z.string().min(1),
-    access_token: z.string().min(1),
-    refresh_token: z.string().min(1),
-    token_expires_at: z.string().min(1),
-  })),
+  zValidator(
+    'json',
+    z.object({
+      user_code: z.string().min(1),
+      access_token: z.string().min(1),
+      refresh_token: z.string().min(1),
+      token_expires_at: z.string().min(1),
+    })
+  ),
   async (c) => {
     const auth = requireAuth(c)
     const { user_code, access_token, refresh_token, token_expires_at } = c.req.valid('json')
@@ -192,7 +198,12 @@ cliAuth.post(
       .eq('user_code', user_code)
       .single()
 
-    if (error || !session || session.status !== 'pending' || new Date(session.expires_at) < new Date()) {
+    if (
+      error ||
+      !session ||
+      session.status !== 'pending' ||
+      new Date(session.expires_at) < new Date()
+    ) {
       return c.json({ error: 'Code not found or expired' }, 404)
     }
 

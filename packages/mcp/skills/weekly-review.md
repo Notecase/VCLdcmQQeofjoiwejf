@@ -2,7 +2,19 @@
 name: weekly-review
 description: Weekly review workflow — aggregates 7 days of history, identifies patterns, checks plan progress, generates summary note, and suggests adjustments
 platform: universal
-tools_required: [secretary_analytics, secretary_history_bulk, secretary_memory_list, secretary_memory_read, secretary_plans_list, secretary_plan_progress, soul_read, notes_create, soul_update, context_write]
+tools_required:
+  [
+    secretary_analytics,
+    secretary_history_bulk,
+    secretary_memory_list,
+    secretary_memory_read,
+    secretary_plans_list,
+    secretary_plan_progress,
+    soul_read,
+    notes_create,
+    soul_update,
+    context_write,
+  ]
 ---
 
 # Weekly Review
@@ -73,6 +85,7 @@ secretary_plan_progress { plan_id: "<PLAN_ID>", action: "read" }
 ```
 
 Calculate:
+
 - Expected progress vs actual progress
 - Days remaining
 - Whether the plan is on track, ahead, or behind
@@ -96,40 +109,49 @@ notes_create {
 # Weekly Review — YYYY-MM-DD
 
 ## Overview
+
 - Days tracked: X/7
 - Average completion: X%
 - Current streak: X days
 - Mood trend: [great, good, okay, good, good]
 
 ## Completion by Day
-| Day | Date | Completion | Mood | Notes |
-|-----|------|-----------|------|-------|
-| Mon | 03-07 | 85% | good | Finished arrays |
-| Tue | 03-08 | 70% | okay | Struggled with DP |
-| ... | ... | ... | ... | ... |
+
+| Day | Date  | Completion | Mood | Notes             |
+| --- | ----- | ---------- | ---- | ----------------- |
+| Mon | 03-07 | 85%        | good | Finished arrays   |
+| Tue | 03-08 | 70%        | okay | Struggled with DP |
+| ... | ...   | ...        | ...  | ...               |
 
 ## Patterns Identified
+
 ### Strengths
+
 - Consistently strong in [topics]
 - Best focus during [morning/afternoon]
 
 ### Growth Areas
+
 - [Topic X] appeared in struggles 3/5 days
 - Completion drops after 3pm
 - [Specific pattern]
 
 ## Plan Progress
+
 ### [ALGO] Algorithm Mastery
+
 - Expected: Day 8/14 | Actual: Day 6/14
 - Status: 2 days behind
 - Recommendation: [adjustment suggestion]
 
 ## Suggestions for Next Week
+
 1. [Actionable suggestion based on data]
 2. [Another suggestion]
 3. [Optional: soul update suggestion]
 
 ## Raw Stats
+
 - Total tasks scheduled: XX
 - Total completed: XX
 - Total carried over: XX
@@ -143,19 +165,25 @@ notes_create {
 Based on the analysis, suggest specific changes:
 
 ### If completion < 50%
+
 > Your completion rate was X% this week. Consider:
+>
 > - Reducing daily tasks from Y to Z
 > - Shortening focus blocks from 60min to 45min
 > - Adding more breaks
 
 ### If a plan is behind schedule
+
 > [PLAN_ID] is 2 days behind. Options:
+>
 > 1. Extend the plan deadline
 > 2. Combine lighter days
 > 3. Pause a secondary plan to focus
 
 ### If mood is declining
+
 > Your mood has trended from [good] to [struggling]. Consider:
+>
 > - Taking a lighter day
 > - Reviewing if the current plan difficulty is appropriate
 > - Updating your soul with adjusted goals
@@ -167,6 +195,7 @@ Based on the analysis, suggest specific changes:
 If the week's data reveals new insights about the user's learning style or goals:
 
 > Based on this week, I'd suggest updating your soul with:
+>
 > - Learning style: "Prefers shorter focus blocks (45min vs 60min)"
 > - Strength: "Strong in [topic] — can move faster here"
 > - Challenge: "[Topic] needs more time — allocate extra review"
@@ -201,9 +230,9 @@ context_write {
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Fewer than 7 days of history | Work with available data, note "X of 7 days tracked" |
-| No active plans | Focus on general productivity patterns only |
-| All plans completed | Congratulate user, suggest new plan creation |
-| No reflection data in history | Base analysis on task completion only |
+| Issue                         | Solution                                             |
+| ----------------------------- | ---------------------------------------------------- |
+| Fewer than 7 days of history  | Work with available data, note "X of 7 days tracked" |
+| No active plans               | Focus on general productivity patterns only          |
+| All plans completed           | Congratulate user, suggest new plan creation         |
+| No reflection data in history | Base analysis on task completion only                |

@@ -62,7 +62,8 @@ const focusItems = computed(() => {
         v-if="store.attentionItems.length > 0"
         class="attention-badge"
       >
-        {{ store.attentionItems.length }} item{{ store.attentionItems.length > 1 ? 's' : '' }} need attention
+        {{ store.attentionItems.length }} item{{ store.attentionItems.length > 1 ? 's' : '' }} need
+        attention
       </div>
     </section>
 

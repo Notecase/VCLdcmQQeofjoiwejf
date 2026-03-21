@@ -34,7 +34,9 @@ const hoveredTaskId = ref<string | null>(null)
 const now = ref(new Date())
 let clockInterval: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
-  clockInterval = setInterval(() => { now.value = new Date() }, 30_000)
+  clockInterval = setInterval(() => {
+    now.value = new Date()
+  }, 30_000)
 })
 onUnmounted(() => {
   if (clockInterval) clearInterval(clockInterval)
@@ -64,7 +66,7 @@ function startTask(task: ScheduledTask) {
 }
 
 function openPopover(event: MouseEvent, task: ScheduledTask) {
-  const target = (event.currentTarget as HTMLElement)
+  const target = event.currentTarget as HTMLElement
   popoverTriggerRect.value = target.getBoundingClientRect()
   popoverTask.value = task
 }
@@ -103,7 +105,9 @@ function toggleTask(event: Event, taskId: string) {
 
   if (nextStatus === 'completed') {
     completingTaskId.value = taskId
-    setTimeout(() => { completingTaskId.value = null }, 300)
+    setTimeout(() => {
+      completingTaskId.value = null
+    }, 300)
   }
 
   store.updateTaskStatus(taskId, nextStatus)
@@ -178,7 +182,14 @@ async function runTaskAction(actionId: string) {
         v-for="task in store.todayPlan.tasks"
         :key="task.id"
         class="task-item"
-        :class="[task.status, { upcoming: isUpcoming(task), current: isCurrent(task), 'just-completed': completingTaskId === task.id }]"
+        :class="[
+          task.status,
+          {
+            upcoming: isUpcoming(task),
+            current: isCurrent(task),
+            'just-completed': completingTaskId === task.id,
+          },
+        ]"
         @mouseenter="hoveredTaskId = task.id"
         @mouseleave="hoveredTaskId = null"
       >
@@ -245,7 +256,8 @@ async function runTaskAction(actionId: string) {
           :to="`/calendar/plan/${task.planId}`"
           class="task-plan-tag"
           @click.stop
-        >{{ task.planId }}</router-link>
+          >{{ task.planId }}</router-link
+        >
 
         <button
           v-if="hoveredTaskId === task.id && task.status === 'pending' && !isBreak(task)"
@@ -367,7 +379,9 @@ async function runTaskAction(actionId: string) {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  transition: background 0.12s ease, opacity 400ms ease;
+  transition:
+    background 0.12s ease,
+    opacity 400ms ease;
 }
 
 .task-item:hover {
@@ -407,9 +421,16 @@ async function runTaskAction(actionId: string) {
 }
 
 @keyframes task-fade-complete {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; background: var(--sec-primary-bg); }
-  100% { opacity: 0.55; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+    background: var(--sec-primary-bg);
+  }
+  100% {
+    opacity: 0.55;
+  }
 }
 
 /* ── Icon ── */
@@ -431,10 +452,18 @@ async function runTaskAction(actionId: string) {
 }
 
 @keyframes check-spring {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.25); }
-  70% { transform: scale(0.92); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .task-item.completed .task-icon {
@@ -513,7 +542,9 @@ async function runTaskAction(actionId: string) {
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
   flex-shrink: 0;
 }
 

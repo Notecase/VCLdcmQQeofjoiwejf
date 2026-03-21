@@ -39,7 +39,9 @@ describe('EditorDeepStreamNormalizer', () => {
 
     expect(first.map((e) => e.type)).toEqual(['assistant-start', 'assistant-delta'])
     expect(duplicate).toHaveLength(0)
-    expect(normalizer.getAssistantText()).toBe('Created a Study Timer artifact linked to your current note.')
+    expect(normalizer.getAssistantText()).toBe(
+      'Created a Study Timer artifact linked to your current note.'
+    )
   })
 
   it('emits only suffix when a new node snapshot is a superset of accumulated text', () => {
@@ -56,7 +58,9 @@ describe('EditorDeepStreamNormalizer', () => {
 
     expect(suffixOnly.map((e) => e.type)).toEqual(['assistant-delta'])
     expect(suffixOnly[0].data).toBe(' artifact linked to your current note.')
-    expect(normalizer.getAssistantText()).toBe('Created a Study Timer artifact linked to your current note.')
+    expect(normalizer.getAssistantText()).toBe(
+      'Created a Study Timer artifact linked to your current note.'
+    )
   })
 
   it('uses message id as stable source key across node changes', () => {
@@ -211,11 +215,10 @@ describe('EditorDeepStreamNormalizer', () => {
   describe('multi-mode: updates', () => {
     it('emits subagent-start on first event from a subagent namespace', () => {
       const normalizer = new EditorDeepStreamNormalizer()
-      const events = normalizer.normalizeUpdates(
-        ['tools:edit_subagent'],
-        'agent',
-        { role: 'assistant', content: 'Working on edit...' }
-      )
+      const events = normalizer.normalizeUpdates(['tools:edit_subagent'], 'agent', {
+        role: 'assistant',
+        content: 'Working on edit...',
+      })
 
       const types = events.map((e) => e.type)
       expect(types).toContain('subagent-start')
@@ -226,16 +229,14 @@ describe('EditorDeepStreamNormalizer', () => {
     it('does not emit duplicate subagent-start for same subagent', () => {
       const normalizer = new EditorDeepStreamNormalizer()
 
-      normalizer.normalizeUpdates(
-        ['tools:edit_subagent'],
-        'agent',
-        { role: 'assistant', content: 'First' }
-      )
-      const second = normalizer.normalizeUpdates(
-        ['tools:edit_subagent'],
-        'agent',
-        { role: 'assistant', content: 'First continued' }
-      )
+      normalizer.normalizeUpdates(['tools:edit_subagent'], 'agent', {
+        role: 'assistant',
+        content: 'First',
+      })
+      const second = normalizer.normalizeUpdates(['tools:edit_subagent'], 'agent', {
+        role: 'assistant',
+        content: 'First continued',
+      })
 
       const startEvents = second.filter((e) => e.type === 'subagent-start')
       expect(startEvents).toHaveLength(0)
@@ -243,11 +244,11 @@ describe('EditorDeepStreamNormalizer', () => {
 
     it('processes tool results from subagent namespace', () => {
       const normalizer = new EditorDeepStreamNormalizer()
-      const events = normalizer.normalizeUpdates(
-        ['tools:edit_subagent'],
-        'tools',
-        { type: 'tool', name: 'read_note', content: 'note content here' }
-      )
+      const events = normalizer.normalizeUpdates(['tools:edit_subagent'], 'tools', {
+        type: 'tool',
+        name: 'read_note',
+        content: 'note content here',
+      })
 
       expect(events.some((e) => e.type === 'subagent-start')).toBe(true)
       expect(events.some((e) => e.type === 'tool-result')).toBe(true)
@@ -268,16 +269,12 @@ describe('EditorDeepStreamNormalizer', () => {
       const normalizer = new EditorDeepStreamNormalizer()
 
       // First trigger subagent-start via updates
-      normalizer.normalizeUpdates(
-        ['tools:writer'],
-        'agent',
-        { role: 'assistant', content: 'start' }
-      )
+      normalizer.normalizeUpdates(['tools:writer'], 'agent', {
+        role: 'assistant',
+        content: 'start',
+      })
 
-      const events = normalizer.normalizeMessageChunk(
-        ['tools:writer'],
-        { text: ' more text' }
-      )
+      const events = normalizer.normalizeMessageChunk(['tools:writer'], { text: ' more text' })
 
       expect(events).toHaveLength(1)
       expect(events[0].type).toBe('subagent-delta')
@@ -319,11 +316,10 @@ describe('EditorDeepStreamNormalizer', () => {
       const normalizer = new EditorDeepStreamNormalizer()
 
       // Start subagent
-      normalizer.normalizeUpdates(
-        ['tools:edit_subagent'],
-        'agent',
-        { role: 'assistant', content: 'Working...' }
-      )
+      normalizer.normalizeUpdates(['tools:edit_subagent'], 'agent', {
+        role: 'assistant',
+        content: 'Working...',
+      })
 
       expect(normalizer.getActiveSubagentIds()).toEqual(['edit_subagent'])
 
@@ -356,7 +352,10 @@ describe('EditorDeepStreamNormalizer', () => {
       const normalizer = new EditorDeepStreamNormalizer()
 
       // Start and complete a subagent
-      normalizer.normalizeUpdates(['tools:sub_a'], 'agent', { role: 'assistant', content: 'Work done' })
+      normalizer.normalizeUpdates(['tools:sub_a'], 'agent', {
+        role: 'assistant',
+        content: 'Work done',
+      })
       normalizer.completeSubagent('sub_a')
 
       // Now finalize — should include synthesis-start

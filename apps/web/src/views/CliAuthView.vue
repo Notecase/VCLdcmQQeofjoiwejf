@@ -9,7 +9,14 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-type PageState = 'loading' | 'code-entry' | 'approval' | 'submitting' | 'success' | 'denied' | 'error'
+type PageState =
+  | 'loading'
+  | 'code-entry'
+  | 'approval'
+  | 'submitting'
+  | 'success'
+  | 'denied'
+  | 'error'
 
 const state = ref<PageState>('loading')
 const userCode = ref('')
@@ -118,14 +125,23 @@ async function handleDeny() {
 <template>
   <div class="auth-view">
     <div class="auth-card">
-
       <!-- Loading -->
-      <div v-if="state === 'loading'" class="cli-state">
-        <el-icon class="cli-icon spin" :size="40"><Loading /></el-icon>
+      <div
+        v-if="state === 'loading'"
+        class="cli-state"
+      >
+        <el-icon
+          class="cli-icon spin"
+          :size="40"
+          ><Loading
+        /></el-icon>
       </div>
 
       <!-- Code entry (user navigated manually without ?code=) -->
-      <div v-else-if="state === 'code-entry'" class="cli-state">
+      <div
+        v-else-if="state === 'code-entry'"
+        class="cli-state"
+      >
         <div class="cli-icon-wrap">
           <span class="cli-terminal-icon">&gt;_</span>
         </div>
@@ -138,59 +154,95 @@ async function handleDeny() {
             size="large"
             @keyup.enter="handleCodeSubmit"
           />
-          <el-button type="primary" size="large" style="width:100%; margin-top:12px" @click="handleCodeSubmit">
+          <el-button
+            type="primary"
+            size="large"
+            style="width: 100%; margin-top: 12px"
+            @click="handleCodeSubmit"
+          >
             Continue
           </el-button>
         </div>
       </div>
 
       <!-- Approval screen -->
-      <div v-else-if="state === 'approval'" class="cli-state">
+      <div
+        v-else-if="state === 'approval'"
+        class="cli-state"
+      >
         <div class="cli-icon-wrap">
           <span class="cli-terminal-icon">&gt;_</span>
         </div>
         <h2>Authorize Noteshell CLI</h2>
-        <p class="cli-sub">
-          <strong>Noteshell MCP</strong> wants to connect to your account
-        </p>
+        <p class="cli-sub"><strong>Noteshell MCP</strong> wants to connect to your account</p>
         <div class="cli-code-display">{{ userCode }}</div>
         <p class="cli-hint">Confirm this code matches what's in your terminal</p>
         <div class="cli-actions">
-          <el-button type="primary" size="large" style="width:100%" @click="handleApprove">
+          <el-button
+            type="primary"
+            size="large"
+            style="width: 100%"
+            @click="handleApprove"
+          >
             Authorize
           </el-button>
-          <el-button type="text" size="large" style="width:100%; margin-top:4px" @click="handleDeny">
+          <el-button
+            type="text"
+            size="large"
+            style="width: 100%; margin-top: 4px"
+            @click="handleDeny"
+          >
             Deny
           </el-button>
         </div>
       </div>
 
       <!-- Submitting -->
-      <div v-else-if="state === 'submitting'" class="cli-state">
-        <el-icon class="cli-icon spin" :size="40"><Loading /></el-icon>
+      <div
+        v-else-if="state === 'submitting'"
+        class="cli-state"
+      >
+        <el-icon
+          class="cli-icon spin"
+          :size="40"
+          ><Loading
+        /></el-icon>
         <p class="cli-sub">Processing...</p>
       </div>
 
       <!-- Success -->
-      <div v-else-if="state === 'success'" class="cli-state">
+      <div
+        v-else-if="state === 'success'"
+        class="cli-state"
+      >
         <div class="cli-result-icon success">✓</div>
         <h2>Authorized</h2>
         <p class="cli-sub">You can close this tab. Your CLI is now connected.</p>
       </div>
 
       <!-- Denied -->
-      <div v-else-if="state === 'denied'" class="cli-state">
+      <div
+        v-else-if="state === 'denied'"
+        class="cli-state"
+      >
         <div class="cli-result-icon denied">✕</div>
         <h2>Request Denied</h2>
         <p class="cli-sub">You can close this tab.</p>
       </div>
 
       <!-- Error -->
-      <div v-else-if="state === 'error'" class="cli-state">
-        <el-alert :title="errorMessage" type="error" :closable="false" style="margin-bottom:16px" />
+      <div
+        v-else-if="state === 'error'"
+        class="cli-state"
+      >
+        <el-alert
+          :title="errorMessage"
+          type="error"
+          :closable="false"
+          style="margin-bottom: 16px"
+        />
         <el-button @click="state = 'approval'">Try again</el-button>
       </div>
-
     </div>
   </div>
 </template>
@@ -307,7 +359,11 @@ async function handleDeny() {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

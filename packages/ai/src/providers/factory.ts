@@ -21,11 +21,7 @@ import {
   SLIDES_MODEL,
   RESEARCH_MODEL,
 } from './gemini'
-import {
-  selectModel,
-  type AITaskType,
-  type ModelProvider,
-} from './model-registry'
+import { selectModel, type AITaskType, type ModelProvider } from './model-registry'
 
 // Re-export AITaskType from model-registry (was previously defined here)
 export type { AITaskType } from './model-registry'
@@ -177,8 +173,8 @@ export function createBYOKProvider(byok: BYOKConfig): AIProvider {
 // ============================================================================
 
 const PROVIDER_MAP: Record<ModelProvider, 'openai' | 'ollama' | 'gemini'> = {
-  'openai': 'openai',
-  'gemini': 'gemini',
+  openai: 'openai',
+  gemini: 'gemini',
   'ollama-cloud': 'ollama',
   'ollama-local': 'ollama',
 }

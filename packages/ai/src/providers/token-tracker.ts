@@ -74,8 +74,8 @@ class TokenTracker {
     if (event.inputTokens > 0 || event.outputTokens > 0) {
       console.log(
         `[TokenTracker] ${event.taskType} (${event.model}): ` +
-        `${event.inputTokens} in / ${event.outputTokens} out ` +
-        `($${event.costCents.toFixed(3)}c, ${event.durationMs}ms)`
+          `${event.inputTokens} in / ${event.outputTokens} out ` +
+          `($${event.costCents.toFixed(3)}c, ${event.durationMs}ms)`
       )
     }
 
@@ -188,7 +188,9 @@ export function trackOpenAIResponse(
  * Usage is on `result.response.usageMetadata`.
  */
 export function trackGeminiResponse(
-  result: { response: { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } } },
+  result: {
+    response: { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }
+  },
   meta: {
     model: string
     taskType: AITaskType
@@ -220,7 +222,9 @@ export function trackGeminiResponse(
 export async function* trackGeminiStream(
   streamResult: {
     stream: AsyncIterable<{ text: () => string }>
-    response: Promise<{ usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }>
+    response: Promise<{
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }
+    }>
   },
   meta: {
     model: string

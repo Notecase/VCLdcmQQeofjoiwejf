@@ -54,10 +54,13 @@ async function postJson(url, payload) {
 
   if (!response.ok) {
     const message =
-      typeof body.message === 'string' ? body.message :
-      typeof body.error_description === 'string' ? body.error_description :
-      typeof body.error === 'string' ? body.error :
-      `HTTP ${response.status}`
+      typeof body.message === 'string'
+        ? body.message
+        : typeof body.error_description === 'string'
+          ? body.error_description
+          : typeof body.error === 'string'
+            ? body.error
+            : `HTTP ${response.status}`
     throw new Error(`${url} failed: ${message}`)
   }
 
@@ -73,7 +76,10 @@ function parseLoginFlags(argv) {
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
-    if (arg === '--no-browser') { options.openBrowser = false; continue }
+    if (arg === '--no-browser') {
+      options.openBrowser = false
+      continue
+    }
     if (arg === '--api-url') {
       const next = argv[i + 1]
       if (!next || next.startsWith('--')) throw new Error('Missing value for --api-url')
@@ -84,11 +90,17 @@ function parseLoginFlags(argv) {
     if (arg === '--scopes') {
       const next = argv[i + 1]
       if (!next || next.startsWith('--')) throw new Error('Missing value for --scopes')
-      options.scopes = next.split(',').map((s) => s.trim()).filter(Boolean)
+      options.scopes = next
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
       i += 1
       continue
     }
-    if (arg === '--help' || arg === '-h') { options.help = true; continue }
+    if (arg === '--help' || arg === '-h') {
+      options.help = true
+      continue
+    }
     throw new Error(`Unknown login option: ${arg}`)
   }
 
@@ -98,7 +110,9 @@ function parseLoginFlags(argv) {
 async function runDeviceLogin(argv) {
   const options = parseLoginFlags(argv)
   if (options.help) {
-    console.log('Usage: noteshell login [--api-url URL] [--no-browser] [--scopes notes:read,notes:write]')
+    console.log(
+      'Usage: noteshell login [--api-url URL] [--no-browser] [--scopes notes:read,notes:write]'
+    )
     return
   }
 
@@ -168,7 +182,10 @@ function runNodeScript(scriptPath, args) {
     const child = spawn(process.execPath, [scriptPath, ...args], { stdio: 'inherit' })
     child.on('error', reject)
     child.on('exit', (code, signal) => {
-      if (signal) { process.kill(process.pid, signal); return }
+      if (signal) {
+        process.kill(process.pid, signal)
+        return
+      }
       resolve(code ?? 0)
     })
   })

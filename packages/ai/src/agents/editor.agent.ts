@@ -433,7 +433,7 @@ export class EditorAgent {
     if (this.state.messages.length > 0) {
       const recentMessages = this.state.messages.slice(-4)
       const historySnippet = recentMessages
-        .map(m => `${m.role}: ${m.content.slice(0, 100)}`)
+        .map((m) => `${m.role}: ${m.content.slice(0, 100)}`)
         .join('\n')
       contextInfo += `\nRecent conversation:\n${historySnippet}`
     }
@@ -923,7 +923,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     })
 
     for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model, taskType: 'chat',
+      model: this.model,
+      taskType: 'chat',
     })) {
       const delta = this.extractStreamDelta(chunk)
 

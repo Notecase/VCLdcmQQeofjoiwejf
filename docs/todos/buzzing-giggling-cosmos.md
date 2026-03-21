@@ -28,6 +28,7 @@ The ledger query was correct, but it was only attached to the response when the 
 ### File: `apps/api/src/routes/settings.ts` (line 336-339)
 
 **Before** (broken):
+
 ```typescript
 const usage = data?.[0] ?? null
 return c.json({
@@ -36,6 +37,7 @@ return c.json({
 ```
 
 **After** (fixed — always return a valid object with ledger data):
+
 ```typescript
 const rpcUsage = data?.[0] ?? null
 return c.json({
@@ -57,8 +59,8 @@ No changes needed in `credits.ts` — the store code from the previous fix is al
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
+| File                              | Change                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------- |
 | `apps/api/src/routes/settings.ts` | Always return valid usage object (don't discard ledger when RPC is empty) |
 
 ## Verification

@@ -52,7 +52,7 @@ export async function creditGuard(c: Context, next: Next) {
     throw new HTTPException(402, {
       message: JSON.stringify({
         code: 'CREDITS_EXHAUSTED',
-        message: 'You\'ve used all your AI credits.',
+        message: "You've used all your AI credits.",
       }),
     })
   }

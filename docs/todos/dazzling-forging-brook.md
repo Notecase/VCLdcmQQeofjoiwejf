@@ -47,10 +47,10 @@ Remove the `console.info('[secretary/chat] SSE →', ...)` line added for debugg
 
 ## Critical Files
 
-| File | Change |
-|------|--------|
+| File                                           | Change                        |
+| ---------------------------------------------- | ----------------------------- |
 | `apps/web/src/stores/secretary.ts` (line ~840) | Get reactive proxy after push |
-| `apps/api/src/routes/secretary.ts` (line ~204) | Remove diagnostic log |
+| `apps/api/src/routes/secretary.ts` (line ~204) | Remove diagnostic log         |
 
 ---
 

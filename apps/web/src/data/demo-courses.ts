@@ -107,9 +107,16 @@ This installs the OpenClaw daemon and runs initial setup. The runtime will be av
 
 In the next lessons, we'll explore the architecture in detail and get your first gateway running.`,
           keyTerms: [
-            { term: 'Hub', definition: 'The central OpenClaw runtime that orchestrates agents and sessions' },
+            {
+              term: 'Hub',
+              definition: 'The central OpenClaw runtime that orchestrates agents and sessions',
+            },
             { term: 'Provider', definition: 'An AI service backend like OpenAI or Anthropic' },
-            { term: 'Workspace', definition: 'An isolated environment with its own agents, sessions, and SQLite storage' },
+            {
+              term: 'Workspace',
+              definition:
+                'An isolated environment with its own agents, sessions, and SQLite storage',
+            },
           ],
         },
       },
@@ -201,9 +208,20 @@ OPENCLAW_SECRET=your-admin-secret
 
 The architecture is designed for extensibility — every layer can be customized through the tool system, which we'll explore in Module 4.`,
           keyTerms: [
-            { term: 'Request Lifecycle', definition: 'The stages a message passes through from ingestion to response' },
-            { term: 'Workspace', definition: 'An isolated environment that determines which agent and provider handle a request' },
-            { term: 'Tool', definition: 'An extension that adds capabilities to the runtime (tools, cron, webhooks)' },
+            {
+              term: 'Request Lifecycle',
+              definition: 'The stages a message passes through from ingestion to response',
+            },
+            {
+              term: 'Workspace',
+              definition:
+                'An isolated environment that determines which agent and provider handle a request',
+            },
+            {
+              term: 'Tool',
+              definition:
+                'An extension that adds capabilities to the runtime (tools, cron, webhooks)',
+            },
           ],
         },
       },
@@ -233,8 +251,10 @@ Follow the practice problems below to get OpenClaw running on your machine.`,
             {
               id: 'oc-p1',
               type: 'short-answer',
-              question: 'Run `curl -fsSL https://openclaw.ai/install.sh | bash` followed by `openclaw onboard --install-daemon` and paste the output showing the server URL.',
-              explanation: 'The installer downloads the OpenClaw daemon and onboard runs initial setup (default address: http://localhost:18789).',
+              question:
+                'Run `curl -fsSL https://openclaw.ai/install.sh | bash` followed by `openclaw onboard --install-daemon` and paste the output showing the server URL.',
+              explanation:
+                'The installer downloads the OpenClaw daemon and onboard runs initial setup (default address: http://localhost:18789).',
               sampleAnswer: 'OpenClaw daemon running at http://localhost:18789',
             },
             {
@@ -243,14 +263,18 @@ Follow the practice problems below to get OpenClaw running on your machine.`,
               question: 'Which file contains the main OpenClaw configuration?',
               options: ['package.json', '~/.openclaw/openclaw.json', '.env', 'tsconfig.json'],
               correctIndex: 1,
-              explanation: '~/.openclaw/openclaw.json (JSON5 format) is the main configuration file that defines providers, routes, and tools.',
+              explanation:
+                '~/.openclaw/openclaw.json (JSON5 format) is the main configuration file that defines providers, routes, and tools.',
             },
             {
               id: 'oc-p3',
               type: 'short-answer',
-              question: 'Make a curl request to your running runtime: `curl http://localhost:18789/v1/chat/completions -H "Content-Type: application/json" -d \'{"model":"anthropic/claude-sonnet-4-5","messages":[{"role":"user","content":"Hello"}]}\'`. What response did you get?',
-              explanation: 'The runtime should proxy the request to Anthropic and return a chat completion response.',
-              sampleAnswer: 'A JSON response with choices[0].message.content containing the AI reply.',
+              question:
+                'Make a curl request to your running runtime: `curl http://localhost:18789/v1/chat/completions -H "Content-Type: application/json" -d \'{"model":"anthropic/claude-sonnet-4-5","messages":[{"role":"user","content":"Hello"}]}\'`. What response did you get?',
+              explanation:
+                'The runtime should proxy the request to Anthropic and return a chat completion response.',
+              sampleAnswer:
+                'A JSON response with choices[0].message.content containing the AI reply.',
             },
           ],
         },
@@ -348,9 +372,19 @@ Each channel is bound to an **agent** — a configured AI persona. This means th
 
 The agent configuration includes system prompts, model selection, and behavioral parameters. We'll explore this in Module 3.`,
           keyTerms: [
-            { term: 'Channel', definition: 'An adapter connecting a messaging platform to OpenClaw' },
-            { term: 'Agent', definition: 'A configured AI persona with specific instructions and model' },
-            { term: 'dmPolicy', definition: 'Controls who can interact with the agent on a channel (pairing, allowlist, open, disabled)' },
+            {
+              term: 'Channel',
+              definition: 'An adapter connecting a messaging platform to OpenClaw',
+            },
+            {
+              term: 'Agent',
+              definition: 'A configured AI persona with specific instructions and model',
+            },
+            {
+              term: 'dmPolicy',
+              definition:
+                'Controls who can interact with the agent on a channel (pairing, allowlist, open, disabled)',
+            },
           ],
         },
       },
@@ -433,8 +467,16 @@ WhatsApp has strict rate limits and delivery requirements. OpenClaw handles:
 - Message status tracking (sent, delivered, read)
 - Fallback to simpler formats when rich messages fail`,
           keyTerms: [
-            { term: 'Baileys', definition: 'Open-source WhatsApp Web protocol library used by OpenClaw for WhatsApp integration' },
-            { term: 'QR Pairing', definition: 'Authentication method where you scan a QR code to link your WhatsApp account' },
+            {
+              term: 'Baileys',
+              definition:
+                'Open-source WhatsApp Web protocol library used by OpenClaw for WhatsApp integration',
+            },
+            {
+              term: 'QR Pairing',
+              definition:
+                'Authentication method where you scan a QR code to link your WhatsApp account',
+            },
           ],
         },
       },
@@ -529,8 +571,14 @@ Generate an invite URL with the required permissions (Send Messages, Read Messag
 
 Both platforms work great with OpenClaw. Choose based on where your users already are.`,
           keyTerms: [
-            { term: 'Bot Token', definition: 'Authentication credential for a bot account on messaging platforms' },
-            { term: 'grammY', definition: 'The Telegram bot framework used by OpenClaw for Telegram integration' },
+            {
+              term: 'Bot Token',
+              definition: 'Authentication credential for a bot account on messaging platforms',
+            },
+            {
+              term: 'grammY',
+              definition: 'The Telegram bot framework used by OpenClaw for Telegram integration',
+            },
           ],
         },
       },
@@ -543,7 +591,8 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
         order: 3,
         status: 'available',
         content: {
-          markdown: '# Channel Configuration Quiz\n\nTest your understanding of OpenClaw channel setup and concepts.',
+          markdown:
+            '# Channel Configuration Quiz\n\nTest your understanding of OpenClaw channel setup and concepts.',
           practiceProblems: [
             {
               id: 'oc-q1-1',
@@ -556,15 +605,22 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
                 'Stores conversation history',
               ],
               correctIndex: 1,
-              explanation: 'Channel adapters convert between platform-specific formats and OpenClaw\'s unified message format.',
+              explanation:
+                "Channel adapters convert between platform-specific formats and OpenClaw's unified message format.",
             },
             {
               id: 'oc-q1-2',
               type: 'multiple-choice',
               question: 'How does OpenClaw authenticate with WhatsApp?',
-              options: ['Bot Token', 'OAuth 2.0', 'QR code pairing via Baileys', 'Username/Password'],
+              options: [
+                'Bot Token',
+                'OAuth 2.0',
+                'QR code pairing via Baileys',
+                'Username/Password',
+              ],
               correctIndex: 2,
-              explanation: 'OpenClaw uses Baileys (WhatsApp Web protocol) and authenticates by scanning a QR code from the Linked Devices menu.',
+              explanation:
+                'OpenClaw uses Baileys (WhatsApp Web protocol) and authenticates by scanning a QR code from the Linked Devices menu.',
             },
             {
               id: 'oc-q1-3',
@@ -577,7 +633,8 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
                 'A load balancer instance',
               ],
               correctIndex: 1,
-              explanation: 'An agent is a configured AI persona bound to a channel, with its own system prompt and model selection.',
+              explanation:
+                'An agent is a configured AI persona bound to a channel, with its own system prompt and model selection.',
             },
             {
               id: 'oc-q1-4',
@@ -585,7 +642,8 @@ Both platforms work great with OpenClaw. Choose based on where your users alread
               question: 'Which field in openclaw.json binds a channel to a specific AI persona?',
               options: ['model', 'provider', 'agent', 'route'],
               correctIndex: 2,
-              explanation: 'The "agent" field in channel configuration binds the channel to a specific AI persona.',
+              explanation:
+                'The "agent" field in channel configuration binds the channel to a specific AI persona.',
             },
           ],
         },
@@ -686,7 +744,10 @@ Each provider reports token usage. OpenClaw aggregates this into cost dashboards
 - Budget alerts and limits`,
           keyTerms: [
             { term: 'Provider', definition: 'A configured connection to an AI service backend' },
-            { term: 'Fallback', definition: 'An alternative provider/model used when the primary is unavailable' },
+            {
+              term: 'Fallback',
+              definition: 'An alternative provider/model used when the primary is unavailable',
+            },
           ],
         },
       },
@@ -763,8 +824,14 @@ export default defineTool({
 
 This gives you full programmatic control over routing decisions.`,
           keyTerms: [
-            { term: 'Route Priority', definition: 'Numeric value determining rule evaluation order (higher first)' },
-            { term: 'Fallthrough', definition: 'When a route does not match, evaluation continues to the next rule' },
+            {
+              term: 'Route Priority',
+              definition: 'Numeric value determining rule evaluation order (higher first)',
+            },
+            {
+              term: 'Fallthrough',
+              definition: 'When a route does not match, evaluation continues to the next rule',
+            },
           ],
         },
       },
@@ -784,17 +851,25 @@ Configure a gateway with multiple agents and routing rules to handle different t
             {
               id: 'oc-p3-1',
               type: 'short-answer',
-              question: 'Write a JSON5 route config that sends requests with the header `x-purpose: creative` to Claude Opus 4.5 and all other requests to Claude Haiku 4.5.',
+              question:
+                'Write a JSON5 route config that sends requests with the header `x-purpose: creative` to Claude Opus 4.5 and all other requests to Claude Haiku 4.5.',
               explanation: 'You need two routes: one with header matching and a default fallback.',
-              sampleAnswer: 'routes: [\n  { name: "creative", match: { header: "x-purpose=creative" }, model: "anthropic/claude-opus-4-5" },\n  { name: "default", match: "*", model: "anthropic/claude-haiku-4-5" },\n]',
+              sampleAnswer:
+                'routes: [\n  { name: "creative", match: { header: "x-purpose=creative" }, model: "anthropic/claude-opus-4-5" },\n  { name: "default", match: "*", model: "anthropic/claude-haiku-4-5" },\n]',
             },
             {
               id: 'oc-p3-2',
               type: 'multiple-choice',
               question: 'If two routes both match a request, which one is selected?',
-              options: ['The first defined in the config', 'The one with higher priority', 'A random choice', 'Both are executed'],
+              options: [
+                'The first defined in the config',
+                'The one with higher priority',
+                'A random choice',
+                'Both are executed',
+              ],
               correctIndex: 1,
-              explanation: 'Routes are evaluated by priority (highest first). The first matching route wins.',
+              explanation:
+                'Routes are evaluated by priority (highest first). The first matching route wins.',
             },
           ],
         },
@@ -891,8 +966,14 @@ Access the config in your tool via \`ctx.config\`.
 
 OpenClaw ships with several built-in tools: \`rate-limiter\`, \`cost-tracker\`, \`cache\`, \`logger\`, \`retry\`, and \`web-search\`.`,
           keyTerms: [
-            { term: 'Tool', definition: 'A callable extension that agents can invoke during conversations' },
-            { term: 'Canvas', definition: 'An interactive UI component rendered within the OpenClaw interface' },
+            {
+              term: 'Tool',
+              definition: 'A callable extension that agents can invoke during conversations',
+            },
+            {
+              term: 'Canvas',
+              definition: 'An interactive UI component rendered within the OpenClaw interface',
+            },
           ],
         },
       },
@@ -905,14 +986,71 @@ OpenClaw ships with several built-in tools: \`rate-limiter\`, \`cost-tracker\`, 
         order: 1,
         status: 'available',
         content: {
-          markdown: '# Tool Extension Model\n\nVisual walkthrough of how tools, cron jobs, webhooks, and Canvas extend OpenClaw.',
+          markdown:
+            '# Tool Extension Model\n\nVisual walkthrough of how tools, cron jobs, webhooks, and Canvas extend OpenClaw.',
           slides: [
-            { id: 1, title: 'Tool Extension Model', subtitle: 'How extensions integrate with the OpenClaw runtime', bullets: ['Extensions register as tools, cron, webhooks, or Canvas', 'Agents invoke tools during conversations', 'Each extension is isolated and composable'] },
-            { id: 2, title: 'Tools', subtitle: 'Agent-callable functions', bullets: ['Defined with defineTool() from @openclaw/sdk', 'Agents decide when to call them based on descriptions', 'Receive parameters and execution context', 'Return structured results to the agent'] },
-            { id: 3, title: 'Cron Jobs', subtitle: 'Scheduled background tasks', bullets: ['Run on a configurable schedule (cron syntax)', 'Useful for reports, cleanup, monitoring', 'Execute independently of agent sessions'] },
-            { id: 4, title: 'Webhooks', subtitle: 'External HTTP triggers', bullets: ['Register custom HTTP endpoints', 'Handle callbacks from external services', 'Can trigger agent actions or update state'] },
-            { id: 5, title: 'Canvas', subtitle: 'Interactive UI components', bullets: ['Render custom dashboards and forms', 'Agents can generate Canvas content', 'Supports real-time updates via WebSocket'] },
-            { id: 6, title: 'Composing Extensions', subtitle: 'Building complex workflows', bullets: ['Tools can call other tools', 'Cron jobs can trigger webhooks', 'Canvas apps can invoke tools on user interaction', 'All extensions share the same config system'] },
+            {
+              id: 1,
+              title: 'Tool Extension Model',
+              subtitle: 'How extensions integrate with the OpenClaw runtime',
+              bullets: [
+                'Extensions register as tools, cron, webhooks, or Canvas',
+                'Agents invoke tools during conversations',
+                'Each extension is isolated and composable',
+              ],
+            },
+            {
+              id: 2,
+              title: 'Tools',
+              subtitle: 'Agent-callable functions',
+              bullets: [
+                'Defined with defineTool() from @openclaw/sdk',
+                'Agents decide when to call them based on descriptions',
+                'Receive parameters and execution context',
+                'Return structured results to the agent',
+              ],
+            },
+            {
+              id: 3,
+              title: 'Cron Jobs',
+              subtitle: 'Scheduled background tasks',
+              bullets: [
+                'Run on a configurable schedule (cron syntax)',
+                'Useful for reports, cleanup, monitoring',
+                'Execute independently of agent sessions',
+              ],
+            },
+            {
+              id: 4,
+              title: 'Webhooks',
+              subtitle: 'External HTTP triggers',
+              bullets: [
+                'Register custom HTTP endpoints',
+                'Handle callbacks from external services',
+                'Can trigger agent actions or update state',
+              ],
+            },
+            {
+              id: 5,
+              title: 'Canvas',
+              subtitle: 'Interactive UI components',
+              bullets: [
+                'Render custom dashboards and forms',
+                'Agents can generate Canvas content',
+                'Supports real-time updates via WebSocket',
+              ],
+            },
+            {
+              id: 6,
+              title: 'Composing Extensions',
+              subtitle: 'Building complex workflows',
+              bullets: [
+                'Tools can call other tools',
+                'Cron jobs can trigger webhooks',
+                'Canvas apps can invoke tools on user interaction',
+                'All extensions share the same config system',
+              ],
+            },
           ],
         },
       },
@@ -932,17 +1070,22 @@ Create a token budget tool that tracks cumulative token usage and can be queried
             {
               id: 'oc-p4-1',
               type: 'short-answer',
-              question: 'Write a tool using `defineTool()` that returns the current daily token usage and remaining budget. It should accept a `dailyLimit` from config.',
-              explanation: 'The tool should read from a counter and return usage stats relative to the configured limit.',
-              sampleAnswer: 'export default defineTool({\n  name: "token-budget",\n  description: "Check daily token usage and remaining budget",\n  async execute(params, ctx) {\n    const used = await ctx.store.get("todayTokens") ?? 0;\n    const limit = ctx.config.dailyLimit;\n    return { used, limit, remaining: limit - used, pct: (used / limit * 100).toFixed(1) };\n  },\n})',
+              question:
+                'Write a tool using `defineTool()` that returns the current daily token usage and remaining budget. It should accept a `dailyLimit` from config.',
+              explanation:
+                'The tool should read from a counter and return usage stats relative to the configured limit.',
+              sampleAnswer:
+                'export default defineTool({\n  name: "token-budget",\n  description: "Check daily token usage and remaining budget",\n  async execute(params, ctx) {\n    const used = await ctx.store.get("todayTokens") ?? 0;\n    const limit = ctx.config.dailyLimit;\n    return { used, limit, remaining: limit - used, pct: (used / limit * 100).toFixed(1) };\n  },\n})',
             },
             {
               id: 'oc-p4-2',
               type: 'multiple-choice',
-              question: 'Which extension type should you use to run a cleanup task every night at midnight?',
+              question:
+                'Which extension type should you use to run a cleanup task every night at midnight?',
               options: ['tool', 'canvas', 'cron', 'webhook'],
               correctIndex: 2,
-              explanation: 'Cron jobs run on a schedule, making them ideal for periodic tasks like nightly cleanup.',
+              explanation:
+                'Cron jobs run on a schedule, making them ideal for periodic tasks like nightly cleanup.',
             },
           ],
         },
@@ -1030,7 +1173,10 @@ services:
 - [ ] Configure webhook URLs for channels
 - [ ] Test failover to fallback providers`,
           keyTerms: [
-            { term: 'Health Check', definition: 'An endpoint that reports service status for load balancers' },
+            {
+              term: 'Health Check',
+              definition: 'An endpoint that reports service status for load balancers',
+            },
           ],
         },
       },
@@ -1106,8 +1252,14 @@ curl http://localhost:18789/admin/costs?period=today
 
 Response includes per-provider and per-agent breakdowns.`,
           keyTerms: [
-            { term: 'Prometheus', definition: 'Open-source monitoring system with dimensional data model' },
-            { term: 'Structured Logging', definition: 'JSON-formatted logs that can be parsed and queried programmatically' },
+            {
+              term: 'Prometheus',
+              definition: 'Open-source monitoring system with dimensional data model',
+            },
+            {
+              term: 'Structured Logging',
+              definition: 'JSON-formatted logs that can be parsed and queried programmatically',
+            },
           ],
         },
       },
@@ -1133,7 +1285,8 @@ Response includes per-provider and per-agent breakdowns.`,
                 'A database for storing AI models',
               ],
               correctIndex: 1,
-              explanation: 'OpenClaw is a self-hosted AI gateway that provides a unified API for multiple AI providers.',
+              explanation:
+                'OpenClaw is a self-hosted AI gateway that provides a unified API for multiple AI providers.',
             },
             {
               id: 'oc-final-2',
@@ -1141,7 +1294,8 @@ Response includes per-provider and per-agent breakdowns.`,
               question: 'Which extension type would you use to let agents search external APIs?',
               options: ['Tool', 'Cron', 'Webhook', 'Canvas'],
               correctIndex: 0,
-              explanation: 'Tools are callable functions that agents invoke during conversations to perform actions like API searches.',
+              explanation:
+                'Tools are callable functions that agents invoke during conversations to perform actions like API searches.',
             },
             {
               id: 'oc-final-3',
@@ -1149,12 +1303,13 @@ Response includes per-provider and per-agent breakdowns.`,
               question: 'How does OpenClaw handle provider failures?',
               options: [
                 'Returns an error immediately',
-                'Falls back to the route\'s configured fallback provider',
+                "Falls back to the route's configured fallback provider",
                 'Retries the same provider indefinitely',
                 'Switches to a local model automatically',
               ],
               correctIndex: 1,
-              explanation: 'Routes can define a fallback provider/model that is used when the primary fails.',
+              explanation:
+                'Routes can define a fallback provider/model that is used when the primary fails.',
             },
             {
               id: 'oc-final-4',
@@ -1162,7 +1317,8 @@ Response includes per-provider and per-agent breakdowns.`,
               question: 'What format does OpenClaw use for its main configuration file?',
               options: ['YAML', 'TOML', 'JSON5', 'INI'],
               correctIndex: 2,
-              explanation: 'OpenClaw uses ~/.openclaw/openclaw.json (JSON5 format) for all configuration.',
+              explanation:
+                'OpenClaw uses ~/.openclaw/openclaw.json (JSON5 format) for all configuration.',
             },
             {
               id: 'oc-final-5',
@@ -1170,7 +1326,8 @@ Response includes per-provider and per-agent breakdowns.`,
               question: 'Which of these is NOT a built-in OpenClaw tool?',
               options: ['rate-limiter', 'cost-tracker', 'model-trainer', 'web-search'],
               correctIndex: 2,
-              explanation: 'model-trainer is not a built-in tool. OpenClaw routes to AI providers, it does not train models.',
+              explanation:
+                'model-trainer is not a built-in tool. OpenClaw routes to AI providers, it does not train models.',
             },
           ],
         },
@@ -1245,9 +1402,18 @@ The key insight: **performance improvements are predictable across many orders o
 
 This predictability is what makes scaling laws practically useful. If you know the scaling exponent, you can extrapolate from small experiments to predict the performance of models 100x or 1000x larger.`,
           keyTerms: [
-            { term: 'Power Law', definition: 'A mathematical relationship y = ax^b, appearing linear on log-log plots' },
-            { term: 'Scaling Exponent', definition: 'The power b in the power law, determining the rate of scaling' },
-            { term: 'Log-Log Plot', definition: 'A graph with logarithmic axes where power laws appear as straight lines' },
+            {
+              term: 'Power Law',
+              definition: 'A mathematical relationship y = ax^b, appearing linear on log-log plots',
+            },
+            {
+              term: 'Scaling Exponent',
+              definition: 'The power b in the power law, determining the rate of scaling',
+            },
+            {
+              term: 'Log-Log Plot',
+              definition: 'A graph with logarithmic axes where power laws appear as straight lines',
+            },
           ],
         },
       },
@@ -1301,8 +1467,14 @@ Each hypothesis makes different predictions:
 
 Current evidence supports elements of all three, suggesting the truth involves multiple mechanisms.`,
           keyTerms: [
-            { term: 'Irreducible Loss', definition: 'The minimum achievable loss, representing inherent data uncertainty' },
-            { term: 'Broken Power Law', definition: 'A power law with different exponents in different regimes' },
+            {
+              term: 'Irreducible Loss',
+              definition: 'The minimum achievable loss, representing inherent data uncertainty',
+            },
+            {
+              term: 'Broken Power Law',
+              definition: 'A power law with different exponents in different regimes',
+            },
           ],
         },
       },
@@ -1322,16 +1494,20 @@ Learn to estimate FLOPs for transformer training runs and convert between differ
             {
               id: 'sc-p1-1',
               type: 'multiple-choice',
-              question: 'For a transformer with N parameters trained on D tokens, approximately how many FLOPs are needed?',
+              question:
+                'For a transformer with N parameters trained on D tokens, approximately how many FLOPs are needed?',
               options: ['N × D', '6 × N × D', 'N² × D', 'N × D²'],
               correctIndex: 1,
-              explanation: 'The standard approximation is C ≈ 6ND FLOPs, accounting for forward and backward passes through the model.',
+              explanation:
+                'The standard approximation is C ≈ 6ND FLOPs, accounting for forward and backward passes through the model.',
             },
             {
               id: 'sc-p1-2',
               type: 'short-answer',
-              question: 'A 7B parameter model is trained on 2T tokens. Estimate the total compute in FLOPs and PetaFLOP-days (assuming 1 PetaFLOP-day = 8.64 × 10¹⁹ FLOPs).',
-              explanation: 'C = 6 × 7×10⁹ × 2×10¹² = 8.4×10²² FLOPs = 8.4×10²² / 8.64×10¹⁹ ≈ 972 PetaFLOP-days.',
+              question:
+                'A 7B parameter model is trained on 2T tokens. Estimate the total compute in FLOPs and PetaFLOP-days (assuming 1 PetaFLOP-day = 8.64 × 10¹⁹ FLOPs).',
+              explanation:
+                'C = 6 × 7×10⁹ × 2×10¹² = 8.4×10²² FLOPs = 8.4×10²² / 8.64×10¹⁹ ≈ 972 PetaFLOP-days.',
               sampleAnswer: 'C = 6 × 7B × 2T = 8.4 × 10²² FLOPs ≈ 972 PetaFLOP-days',
             },
           ],
@@ -1408,8 +1584,14 @@ The study trained over 1,000 transformer models ranging from 768 to 1.5 billion 
 
 The consistency of the power law fits across all these variations was striking.`,
           keyTerms: [
-            { term: 'Kaplan Scaling Laws', definition: 'Empirical power laws relating loss to parameters, data, and compute' },
-            { term: 'Compute-Optimal', definition: 'The allocation of compute that minimizes loss for a given budget' },
+            {
+              term: 'Kaplan Scaling Laws',
+              definition: 'Empirical power laws relating loss to parameters, data, and compute',
+            },
+            {
+              term: 'Compute-Optimal',
+              definition: 'The allocation of compute that minimizes loss for a given budget',
+            },
           ],
         },
       },
@@ -1424,11 +1606,59 @@ The consistency of the power law fits across all these variations was striking.`
         content: {
           markdown: '# Loss vs Parameters\n\nVisual exploration of scaling curves.',
           slides: [
-            { id: 1, title: 'Loss vs Parameters', subtitle: 'The fundamental scaling relationship', bullets: ['Cross-entropy loss decreases as a power law with model parameters', 'The relationship holds across 6+ orders of magnitude', 'Architecture details (depth vs width) have minimal effect'] },
-            { id: 2, title: 'The Log-Log Plot', subtitle: 'Straight lines reveal power laws', bullets: ['Plot log(loss) vs log(parameters)', 'Slope gives the scaling exponent α ≈ 0.076', 'Intercept relates to irreducible loss'] },
-            { id: 3, title: 'Three Independent Axes', subtitle: 'N, D, and C each follow power laws', bullets: ['Parameters (N): α_N ≈ 0.076', 'Data (D): α_D ≈ 0.095', 'Compute (C): α_C ≈ 0.050', 'Each variable has a different scaling exponent'] },
-            { id: 4, title: 'Compute-Optimal Frontier', subtitle: 'Kaplan\'s allocation recommendation', bullets: ['Given a compute budget C', 'Scale N as C^0.73 (most compute to model size)', 'Scale D as C^0.27 (less to data)', 'This was later challenged by Chinchilla'] },
-            { id: 5, title: 'Limitations', subtitle: 'Where the original analysis fell short', bullets: ['Assumed fixed training tokens per model size', 'Did not optimize learning rate per model', 'Led to "undertrained" large models', 'Chinchilla would correct this'] },
+            {
+              id: 1,
+              title: 'Loss vs Parameters',
+              subtitle: 'The fundamental scaling relationship',
+              bullets: [
+                'Cross-entropy loss decreases as a power law with model parameters',
+                'The relationship holds across 6+ orders of magnitude',
+                'Architecture details (depth vs width) have minimal effect',
+              ],
+            },
+            {
+              id: 2,
+              title: 'The Log-Log Plot',
+              subtitle: 'Straight lines reveal power laws',
+              bullets: [
+                'Plot log(loss) vs log(parameters)',
+                'Slope gives the scaling exponent α ≈ 0.076',
+                'Intercept relates to irreducible loss',
+              ],
+            },
+            {
+              id: 3,
+              title: 'Three Independent Axes',
+              subtitle: 'N, D, and C each follow power laws',
+              bullets: [
+                'Parameters (N): α_N ≈ 0.076',
+                'Data (D): α_D ≈ 0.095',
+                'Compute (C): α_C ≈ 0.050',
+                'Each variable has a different scaling exponent',
+              ],
+            },
+            {
+              id: 4,
+              title: 'Compute-Optimal Frontier',
+              subtitle: "Kaplan's allocation recommendation",
+              bullets: [
+                'Given a compute budget C',
+                'Scale N as C^0.73 (most compute to model size)',
+                'Scale D as C^0.27 (less to data)',
+                'This was later challenged by Chinchilla',
+              ],
+            },
+            {
+              id: 5,
+              title: 'Limitations',
+              subtitle: 'Where the original analysis fell short',
+              bullets: [
+                'Assumed fixed training tokens per model size',
+                'Did not optimize learning rate per model',
+                'Led to "undertrained" large models',
+                'Chinchilla would correct this',
+              ],
+            },
           ],
         },
       },
@@ -1441,21 +1671,26 @@ The consistency of the power law fits across all these variations was striking.`
         order: 2,
         status: 'available',
         content: {
-          markdown: '# Scaling Experiments Lab\n\nApply the Kaplan scaling laws to real predictions.',
+          markdown:
+            '# Scaling Experiments Lab\n\nApply the Kaplan scaling laws to real predictions.',
           practiceProblems: [
             {
               id: 'sc-p2-1',
               type: 'multiple-choice',
-              question: 'According to Kaplan et al., doubling the number of parameters approximately reduces loss by what factor?',
+              question:
+                'According to Kaplan et al., doubling the number of parameters approximately reduces loss by what factor?',
               options: ['2^(-0.076) ≈ 5%', '2^(-0.5) ≈ 29%', '50%', 'No change'],
               correctIndex: 0,
-              explanation: 'With α_N ≈ 0.076, doubling N gives L(2N)/L(N) = 2^(-0.076) ≈ 0.949, so about 5% reduction.',
+              explanation:
+                'With α_N ≈ 0.076, doubling N gives L(2N)/L(N) = 2^(-0.076) ≈ 0.949, so about 5% reduction.',
             },
             {
               id: 'sc-p2-2',
               type: 'short-answer',
-              question: 'If a 1B parameter model achieves loss L=3.0, predict the loss for a 10B parameter model using α_N = 0.076.',
-              explanation: 'L(10B) = L(1B) × (1B/10B)^0.076 = 3.0 × 10^(-0.076) = 3.0 × 0.839 ≈ 2.52.',
+              question:
+                'If a 1B parameter model achieves loss L=3.0, predict the loss for a 10B parameter model using α_N = 0.076.',
+              explanation:
+                'L(10B) = L(1B) × (1B/10B)^0.076 = 3.0 × 10^(-0.076) = 3.0 × 0.839 ≈ 2.52.',
               sampleAnswer: 'L(10B) = 3.0 × (1/10)^0.076 = 3.0 × 0.839 ≈ 2.52',
             },
           ],
@@ -1526,9 +1761,15 @@ The Chinchilla paper shifted the industry:
 - Shifted focus from "biggest model wins" to "best-trained model wins"
 - Made smaller, well-trained models competitive with larger ones`,
           keyTerms: [
-            { term: 'Chinchilla Optimal', definition: 'Training with ~20 tokens per parameter for compute efficiency' },
+            {
+              term: 'Chinchilla Optimal',
+              definition: 'Training with ~20 tokens per parameter for compute efficiency',
+            },
             { term: 'IsoFLOP Curve', definition: 'Loss vs model size at a fixed compute budget' },
-            { term: 'Undertrained', definition: 'A model that could achieve lower loss if trained on more data' },
+            {
+              term: 'Undertrained',
+              definition: 'A model that could achieve lower loss if trained on more data',
+            },
           ],
         },
       },
@@ -1589,8 +1830,14 @@ Recent work suggests the optimal ratio may be even higher than 20:1 for inferenc
 
 This has led to the concept of **inference-optimal scaling**, which extends Chinchilla to account for total lifetime cost.`,
           keyTerms: [
-            { term: 'Compute Budget', definition: 'The total FLOPs available for training a model' },
-            { term: 'Inference-Optimal', definition: 'Scaling that accounts for both training and serving costs' },
+            {
+              term: 'Compute Budget',
+              definition: 'The total FLOPs available for training a model',
+            },
+            {
+              term: 'Inference-Optimal',
+              definition: 'Scaling that accounts for both training and serving costs',
+            },
           ],
         },
       },
@@ -1603,12 +1850,14 @@ This has led to the concept of **inference-optimal scaling**, which extends Chin
         order: 2,
         status: 'available',
         content: {
-          markdown: '# Data vs Parameters Quiz\n\nTest your understanding of compute-optimal training.',
+          markdown:
+            '# Data vs Parameters Quiz\n\nTest your understanding of compute-optimal training.',
           practiceProblems: [
             {
               id: 'sc-q3-1',
               type: 'multiple-choice',
-              question: 'According to Chinchilla, approximately how many tokens per parameter is compute-optimal?',
+              question:
+                'According to Chinchilla, approximately how many tokens per parameter is compute-optimal?',
               options: ['1-2', '5-10', '20', '100'],
               correctIndex: 2,
               explanation: 'Chinchilla found that ~20 tokens per parameter is compute-optimal.',
@@ -1624,12 +1873,13 @@ This has led to the concept of **inference-optimal scaling**, which extends Chin
                 'More training epochs on the same data',
               ],
               correctIndex: 1,
-              explanation: 'Chinchilla was trained on 1.4T tokens (20 tokens/param) vs Gopher\'s 300B (1.1 tokens/param).',
+              explanation:
+                "Chinchilla was trained on 1.4T tokens (20 tokens/param) vs Gopher's 300B (1.1 tokens/param).",
             },
             {
               id: 'sc-q3-3',
               type: 'multiple-choice',
-              question: 'What was wrong with Kaplan\'s compute allocation recommendation?',
+              question: "What was wrong with Kaplan's compute allocation recommendation?",
               options: [
                 'The exponents were mathematically incorrect',
                 'It over-invested in model size and under-invested in data',
@@ -1637,12 +1887,14 @@ This has led to the concept of **inference-optimal scaling**, which extends Chin
                 'It required too much compute',
               ],
               correctIndex: 1,
-              explanation: 'Kaplan recommended N ∝ C^0.73, over-allocating to parameters. Chinchilla showed equal scaling is optimal.',
+              explanation:
+                'Kaplan recommended N ∝ C^0.73, over-allocating to parameters. Chinchilla showed equal scaling is optimal.',
             },
             {
               id: 'sc-q3-4',
               type: 'multiple-choice',
-              question: 'The equation C ≈ 6ND approximates total training FLOPs. What does the factor 6 account for?',
+              question:
+                'The equation C ≈ 6ND approximates total training FLOPs. What does the factor 6 account for?',
               options: [
                 'Six transformer layers',
                 'Forward pass (2x) + backward pass (4x) per token',
@@ -1650,7 +1902,8 @@ This has led to the concept of **inference-optimal scaling**, which extends Chin
                 'Data augmentation factor',
               ],
               correctIndex: 1,
-              explanation: 'The factor 6 approximates ~2 FLOPs per parameter for forward pass and ~4 for backward pass, per token.',
+              explanation:
+                'The factor 6 approximates ~2 FLOPs per parameter for forward pass and ~4 for backward pass, per token.',
             },
           ],
         },
@@ -1720,9 +1973,18 @@ A related phenomenon is **grokking** — where a model suddenly generalizes afte
 - "Scale and see" is sometimes the only way to discover new abilities
 - Safety implications: harmful capabilities might also emerge unpredictably`,
           keyTerms: [
-            { term: 'Emergent Ability', definition: 'A capability present in large models but absent in smaller ones' },
-            { term: 'Phase Transition', definition: 'A sudden change in behavior at a critical scale threshold' },
-            { term: 'Grokking', definition: 'Delayed generalization after memorization during extended training' },
+            {
+              term: 'Emergent Ability',
+              definition: 'A capability present in large models but absent in smaller ones',
+            },
+            {
+              term: 'Phase Transition',
+              definition: 'A sudden change in behavior at a critical scale threshold',
+            },
+            {
+              term: 'Grokking',
+              definition: 'Delayed generalization after memorization during extended training',
+            },
           ],
         },
       },
@@ -1784,9 +2046,18 @@ where $N$ is parameters and $k$ is number of in-context examples. The exponent $
 - Example quality matters more than quantity
 - ICL can sometimes match fine-tuning for well-defined tasks`,
           keyTerms: [
-            { term: 'In-Context Learning', definition: 'Learning from examples in the prompt without parameter updates' },
-            { term: 'Few-Shot', definition: 'Providing a small number of examples to guide model behavior' },
-            { term: 'Mesa-Optimization', definition: 'An internal learned optimization algorithm within the model' },
+            {
+              term: 'In-Context Learning',
+              definition: 'Learning from examples in the prompt without parameter updates',
+            },
+            {
+              term: 'Few-Shot',
+              definition: 'Providing a small number of examples to guide model behavior',
+            },
+            {
+              term: 'Mesa-Optimization',
+              definition: 'An internal learned optimization algorithm within the model',
+            },
           ],
         },
       },
@@ -1804,7 +2075,8 @@ where $N$ is parameters and $k$ is number of in-context examples. The exponent $
             {
               id: 'sc-p4-1',
               type: 'multiple-choice',
-              question: 'According to Schaeffer et al. (2023), why might emergent abilities be a "mirage"?',
+              question:
+                'According to Schaeffer et al. (2023), why might emergent abilities be a "mirage"?',
               options: [
                 'The models were not large enough',
                 'Non-linear metrics (like exact match) create artificial sharp transitions',
@@ -1812,14 +2084,18 @@ where $N$ is parameters and $k$ is number of in-context examples. The exponent $
                 'The models were overtrained',
               ],
               correctIndex: 1,
-              explanation: 'Schaeffer et al. showed that switching to continuous/linear metrics often reveals smooth scaling instead of sharp transitions.',
+              explanation:
+                'Schaeffer et al. showed that switching to continuous/linear metrics often reveals smooth scaling instead of sharp transitions.',
             },
             {
               id: 'sc-p4-2',
               type: 'short-answer',
-              question: 'Design an experiment to test whether 3-digit addition is truly emergent. What metrics would you use, and how would you control for metric artifacts?',
-              explanation: 'Use both exact-match accuracy (which may show emergence) and per-digit accuracy (which may show smooth scaling). Train models at many intermediate scales.',
-              sampleAnswer: 'Train models from 10M to 100B parameters. Measure both exact-match accuracy (binary: all digits correct) and digit-level accuracy (fraction of correct digits). If exact-match shows a sharp jump but digit-level shows smooth improvement, emergence is a metric artifact.',
+              question:
+                'Design an experiment to test whether 3-digit addition is truly emergent. What metrics would you use, and how would you control for metric artifacts?',
+              explanation:
+                'Use both exact-match accuracy (which may show emergence) and per-digit accuracy (which may show smooth scaling). Train models at many intermediate scales.',
+              sampleAnswer:
+                'Train models from 10M to 100B parameters. Measure both exact-match accuracy (binary: all digits correct) and digit-level accuracy (fraction of correct digits). If exact-match shows a sharp jump but digit-level shows smooth improvement, emergence is a metric artifact.',
             },
           ],
         },
@@ -1896,8 +2172,14 @@ Major AI labs use scaling laws to:
 - **Data curation**: Quantify the value of higher-quality data
 - **Risk assessment**: Predict when models might develop concerning capabilities`,
           keyTerms: [
-            { term: 'Extrapolation', definition: 'Predicting beyond the observed range using fitted scaling laws' },
-            { term: 'Task Saturation', definition: 'When model performance approaches the theoretical maximum for a task' },
+            {
+              term: 'Extrapolation',
+              definition: 'Predicting beyond the observed range using fitted scaling laws',
+            },
+            {
+              term: 'Task Saturation',
+              definition: 'When model performance approaches the theoretical maximum for a task',
+            },
           ],
         },
       },
@@ -1910,13 +2192,64 @@ Major AI labs use scaling laws to:
         order: 1,
         status: 'available',
         content: {
-          markdown: '# Cost-Performance Analysis\n\nTranslating scaling laws into business decisions.',
+          markdown:
+            '# Cost-Performance Analysis\n\nTranslating scaling laws into business decisions.',
           slides: [
-            { id: 1, title: 'Cost-Performance Analysis', subtitle: 'From scaling laws to budget decisions', bullets: ['Scaling laws let you estimate cost for target performance', 'Key question: What\'s the cheapest way to reach loss L?', 'Answer depends on training + inference costs'] },
-            { id: 2, title: 'Training Cost Model', subtitle: 'GPU-hours = f(FLOPs, hardware)', bullets: ['C = 6ND FLOPs for N parameters, D tokens', 'GPU-hours = C / (GPU TFLOPS × utilization)', 'Cost = GPU-hours × $/GPU-hour', 'A100: ~312 TFLOPS (BF16), ~$2/GPU-hour'] },
-            { id: 3, title: 'Inference Cost Model', subtitle: 'Cost per query matters at scale', bullets: ['Latency ∝ N / (GPU memory bandwidth)', 'Throughput ∝ 1/N for auto-regressive decoding', 'Smaller Chinchilla-optimal models are cheaper to serve', 'Total cost = training + (queries × cost_per_query)'] },
-            { id: 4, title: 'The Trade-off Space', subtitle: 'Bigger is not always better', bullets: ['10B model: $100K to train, $0.001/query', '100B model: $10M to train, $0.01/query', 'Break-even depends on expected query volume', 'Often: smaller, better-trained model wins'] },
-            { id: 5, title: 'Decision Framework', subtitle: 'Choosing the right scale', bullets: ['1. Define target performance (loss or benchmark)', '2. Estimate N, D from scaling laws', '3. Compute training cost', '4. Estimate inference volume and cost', '5. Compare total cost across scale options'] },
+            {
+              id: 1,
+              title: 'Cost-Performance Analysis',
+              subtitle: 'From scaling laws to budget decisions',
+              bullets: [
+                'Scaling laws let you estimate cost for target performance',
+                "Key question: What's the cheapest way to reach loss L?",
+                'Answer depends on training + inference costs',
+              ],
+            },
+            {
+              id: 2,
+              title: 'Training Cost Model',
+              subtitle: 'GPU-hours = f(FLOPs, hardware)',
+              bullets: [
+                'C = 6ND FLOPs for N parameters, D tokens',
+                'GPU-hours = C / (GPU TFLOPS × utilization)',
+                'Cost = GPU-hours × $/GPU-hour',
+                'A100: ~312 TFLOPS (BF16), ~$2/GPU-hour',
+              ],
+            },
+            {
+              id: 3,
+              title: 'Inference Cost Model',
+              subtitle: 'Cost per query matters at scale',
+              bullets: [
+                'Latency ∝ N / (GPU memory bandwidth)',
+                'Throughput ∝ 1/N for auto-regressive decoding',
+                'Smaller Chinchilla-optimal models are cheaper to serve',
+                'Total cost = training + (queries × cost_per_query)',
+              ],
+            },
+            {
+              id: 4,
+              title: 'The Trade-off Space',
+              subtitle: 'Bigger is not always better',
+              bullets: [
+                '10B model: $100K to train, $0.001/query',
+                '100B model: $10M to train, $0.01/query',
+                'Break-even depends on expected query volume',
+                'Often: smaller, better-trained model wins',
+              ],
+            },
+            {
+              id: 5,
+              title: 'Decision Framework',
+              subtitle: 'Choosing the right scale',
+              bullets: [
+                '1. Define target performance (loss or benchmark)',
+                '2. Estimate N, D from scaling laws',
+                '3. Compute training cost',
+                '4. Estimate inference volume and cost',
+                '5. Compare total cost across scale options',
+              ],
+            },
           ],
         },
       },
@@ -1937,12 +2270,14 @@ Major AI labs use scaling laws to:
               question: 'What does a power law relationship look like on a log-log plot?',
               options: ['An exponential curve', 'A straight line', 'A parabola', 'A step function'],
               correctIndex: 1,
-              explanation: 'log(y) = b·log(x) + log(a) is a linear equation, so power laws appear as straight lines on log-log plots.',
+              explanation:
+                'log(y) = b·log(x) + log(a) is a linear equation, so power laws appear as straight lines on log-log plots.',
             },
             {
               id: 'sc-final-2',
               type: 'multiple-choice',
-              question: 'What was the key difference between Kaplan and Chinchilla scaling recommendations?',
+              question:
+                'What was the key difference between Kaplan and Chinchilla scaling recommendations?',
               options: [
                 'Kaplan recommended more data, Chinchilla more parameters',
                 'Kaplan recommended more parameters, Chinchilla equal scaling',
@@ -1950,7 +2285,8 @@ Major AI labs use scaling laws to:
                 'Chinchilla focused on model architecture',
               ],
               correctIndex: 1,
-              explanation: 'Kaplan: N ∝ C^0.73 (more parameters). Chinchilla: N ∝ C^0.50 (equal scaling of parameters and data).',
+              explanation:
+                'Kaplan: N ∝ C^0.73 (more parameters). Chinchilla: N ∝ C^0.50 (equal scaling of parameters and data).',
             },
             {
               id: 'sc-final-3',
@@ -1971,7 +2307,8 @@ Major AI labs use scaling laws to:
                 'The training loss minus validation loss',
               ],
               correctIndex: 1,
-              explanation: 'Irreducible loss is the floor that no model can go below, representing inherent uncertainty in the data.',
+              explanation:
+                'Irreducible loss is the floor that no model can go below, representing inherent uncertainty in the data.',
             },
             {
               id: 'sc-final-5',
@@ -1984,7 +2321,8 @@ Major AI labs use scaling laws to:
                 'Only GPT models show emergence',
               ],
               correctIndex: 1,
-              explanation: 'Switching from metrics like exact-match (binary) to continuous metrics often reveals smooth underlying improvement.',
+              explanation:
+                'Switching from metrics like exact-match (binary) to continuous metrics often reveals smooth underlying improvement.',
             },
           ],
         },
@@ -2003,7 +2341,8 @@ export const DEMO_COURSES: Course[] = [
     userId: 'demo-user',
     title: 'OpenClaw: Self-Hosted AI Gateway',
     topic: 'OpenClaw AI Gateway',
-    description: 'Learn to deploy and configure OpenClaw, an open-source AI gateway that unifies multiple AI providers behind a single API. Covers installation, multi-channel setup, routing, plugins, and production deployment.',
+    description:
+      'Learn to deploy and configure OpenClaw, an open-source AI gateway that unifies multiple AI providers behind a single API. Covers installation, multi-channel setup, routing, plugins, and production deployment.',
     difficulty: 'beginner',
     estimatedHours: 8,
     prerequisites: ['Basic Node.js', 'CLI familiarity'],
@@ -2028,7 +2367,8 @@ export const DEMO_COURSES: Course[] = [
     userId: 'demo-user',
     title: 'Scaling Laws in AI: From Theory to Practice',
     topic: 'AI Scaling Laws',
-    description: 'Explore the empirical power laws governing neural network performance. From the original Kaplan scaling laws to Chinchilla compute-optimal training, emergent capabilities, and practical cost-performance analysis.',
+    description:
+      'Explore the empirical power laws governing neural network performance. From the original Kaplan scaling laws to Chinchilla compute-optimal training, emergent capabilities, and practical cost-performance analysis.',
     difficulty: 'intermediate',
     estimatedHours: 10,
     prerequisites: ['ML basics', 'Statistics fundamentals'],

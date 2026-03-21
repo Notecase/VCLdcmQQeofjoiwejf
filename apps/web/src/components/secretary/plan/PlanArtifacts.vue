@@ -64,19 +64,27 @@ const showGenerateMenu = ref(false)
 
 function kindIcon(kind: TaskArtifactKind) {
   switch (kind) {
-    case 'note': return FileText
-    case 'research': return Search
-    case 'course': return GraduationCap
-    default: return BookOpen
+    case 'note':
+      return FileText
+    case 'research':
+      return Search
+    case 'course':
+      return GraduationCap
+    default:
+      return BookOpen
   }
 }
 
 function kindColor(kind: TaskArtifactKind): string {
   switch (kind) {
-    case 'note': return 'var(--sec-primary, #10b981)'
-    case 'research': return '#818cf8'
-    case 'course': return 'var(--sec-accent, #f59e0b)'
-    default: return 'var(--text-color-secondary)'
+    case 'note':
+      return 'var(--sec-primary, #10b981)'
+    case 'research':
+      return '#818cf8'
+    case 'course':
+      return 'var(--sec-accent, #f59e0b)'
+    default:
+      return 'var(--text-color-secondary)'
   }
 }
 
@@ -137,7 +145,9 @@ function handleGenerate(workflowId: string) {
         class="filter-chip"
         :class="{ active: activeFilter === opt.value }"
         @click="activeFilter = opt.value"
-      >{{ opt.label }}</button>
+      >
+        {{ opt.label }}
+      </button>
     </div>
 
     <div
@@ -159,15 +169,22 @@ function handleGenerate(workflowId: string) {
           <span
             class="badge-text"
             :style="{ color: kindColor(artifact.kind) }"
-          >{{ artifact.kind }}</span>
+            >{{ artifact.kind }}</span
+          >
         </div>
         <span class="card-title">{{ artifact.label }}</span>
         <div class="card-footer">
-          <span class="card-date">{{ new Date(artifact.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}</span>
+          <span class="card-date">{{
+            new Date(artifact.createdAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })
+          }}</span>
           <span
             class="card-status"
             :class="artifact.status"
-          >{{ artifact.status }}</span>
+            >{{ artifact.status }}</span
+          >
         </div>
       </article>
     </div>
@@ -388,8 +405,13 @@ function handleGenerate(workflowId: string) {
 }
 
 @keyframes pulse-amber {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .empty-artifacts p {

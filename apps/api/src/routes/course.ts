@@ -328,7 +328,10 @@ course.get('/generate/:threadId/stream', async (c) => {
               .eq('id', threadId)
 
             if (interruptUpdateError) {
-              console.error(`[Course SSE] Failed to update thread ${threadId} to awaiting_approval:`, interruptUpdateError.message)
+              console.error(
+                `[Course SSE] Failed to update thread ${threadId} to awaiting_approval:`,
+                interruptUpdateError.message
+              )
             }
           }
         }
@@ -514,7 +517,9 @@ course.post('/generate/:threadId/approve', zValidator('json', ApproveSchema), as
     if (thread.status === 'generating_content' || thread.status === 'complete') {
       return c.json({ status: thread.status, threadId, alreadyProcessed: true })
     }
-    console.warn(`[Course Approve] Thread ${threadId} status is "${thread.status}", expected "awaiting_approval"`)
+    console.warn(
+      `[Course Approve] Thread ${threadId} status is "${thread.status}", expected "awaiting_approval"`
+    )
     return c.json({ error: `Cannot approve: thread status is "${thread.status}"` }, 400)
   }
 
@@ -543,7 +548,9 @@ course.post('/generate/:threadId/approve', zValidator('json', ApproveSchema), as
         return c.json({ status: latestThread.status, threadId, alreadyProcessed: true })
       }
 
-      console.warn(`[Course Approve] Thread ${threadId}: resolveInterrupt() returned false (no pending interrupt)`)
+      console.warn(
+        `[Course Approve] Thread ${threadId}: resolveInterrupt() returned false (no pending interrupt)`
+      )
       return c.json({ error: 'No pending interrupt to resolve' }, 400)
     }
 
@@ -551,9 +558,14 @@ course.post('/generate/:threadId/approve', zValidator('json', ApproveSchema), as
     entry.expiresAt = Date.now() + 3_600_000
   } else {
     // Orchestrator lost (server restart, TTL expiry, etc.) — fail honestly
-    console.warn(`[Course Approve] Orchestrator not found for thread ${threadId}. Cannot resume generation.`)
+    console.warn(
+      `[Course Approve] Orchestrator not found for thread ${threadId}. Cannot resume generation.`
+    )
     return c.json(
-      { error: 'Generation process was lost (server may have restarted). Please start a new generation.' },
+      {
+        error:
+          'Generation process was lost (server may have restarted). Please start a new generation.',
+      },
       400
     )
   }

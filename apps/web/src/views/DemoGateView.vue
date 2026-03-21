@@ -12,7 +12,12 @@ const showPassword = ref(false)
 console.log('[DemoGate] Expected password:', JSON.stringify(DEMO_PASSWORD))
 
 function handleSubmit() {
-  console.log('[DemoGate] Entered:', JSON.stringify(password.value), 'Expected:', JSON.stringify(DEMO_PASSWORD))
+  console.log(
+    '[DemoGate] Entered:',
+    JSON.stringify(password.value),
+    'Expected:',
+    JSON.stringify(DEMO_PASSWORD)
+  )
   if (password.value === DEMO_PASSWORD) {
     enterDemoMode()
     router.push('/editor')
@@ -44,7 +49,7 @@ function handleKeydown(e: KeyboardEvent) {
       </div>
 
       <div class="gate-form">
-        <div style="position: relative;">
+        <div style="position: relative">
           <input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
@@ -77,9 +82,7 @@ function handleKeydown(e: KeyboardEvent) {
         </button>
       </div>
 
-      <p class="gate-hint">
-        Contact us for access credentials
-      </p>
+      <p class="gate-hint">Contact us for access credentials</p>
     </div>
   </div>
 </template>
@@ -171,7 +174,9 @@ function handleKeydown(e: KeyboardEvent) {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
 }
 
 .gate-button:hover {
@@ -207,8 +212,18 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 50%, 90% { transform: translateX(-6px); }
-  30%, 70% { transform: translateX(6px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  50%,
+  90% {
+    transform: translateX(-6px);
+  }
+  30%,
+  70% {
+    transform: translateX(6px);
+  }
 }
 </style>

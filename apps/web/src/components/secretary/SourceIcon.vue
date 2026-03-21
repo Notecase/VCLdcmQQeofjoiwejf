@@ -8,7 +8,7 @@ const props = withDefaults(
     source: TaskSource
     size?: number
   }>(),
-  { size: 13 },
+  { size: 13 }
 )
 
 const config = computed(() => {

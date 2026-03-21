@@ -454,7 +454,8 @@ export const useCourseStore = defineStore('course', () => {
     }
 
     // Exhausted all polls — surface a recoverable message
-    generationError.value = 'Connection lost. Generation may still be running. Check your courses list.'
+    generationError.value =
+      'Connection lost. Generation may still be running. Check your courses list.'
     isGenerating.value = false
   }
 

@@ -23,10 +23,7 @@ export class ContextDb {
     private userId: string
   ) {}
 
-  async readEntries(opts?: {
-    types?: string[]
-    limit?: number
-  }): Promise<ContextEntryRow[]> {
+  async readEntries(opts?: { types?: string[]; limit?: number }): Promise<ContextEntryRow[]> {
     let query = this.supabase
       .from('user_context_entries')
       .select('*')

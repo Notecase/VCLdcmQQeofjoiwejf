@@ -187,7 +187,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
   const primaryPlan = computed(() => activePlans.value[0] || null)
 
   const currentTopic = computed(
-    () => primaryPlan.value?.currentTopic || todayPlan.value?.tasks.find((task) => task.status !== 'completed')?.title || ''
+    () =>
+      primaryPlan.value?.currentTopic ||
+      todayPlan.value?.tasks.find((task) => task.status !== 'completed')?.title ||
+      ''
   )
 
   const nextTask = computed(
@@ -261,7 +264,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
           id: `${planId}:${artifact.id}`,
           kind: 'artifact',
           title: artifact.label,
-          summary: plan ? `${plan.name}${plan.currentTopic ? ` · ${plan.currentTopic}` : ''}` : planId,
+          summary: plan
+            ? `${plan.name}${plan.currentTopic ? ` · ${plan.currentTopic}` : ''}`
+            : planId,
           status:
             artifact.status === 'blocked'
               ? 'blocked'
@@ -403,7 +408,11 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }, 120)
   }
 
-  async function updateMemoryFile(filename: string, content: string, options?: { silent?: boolean }) {
+  async function updateMemoryFile(
+    filename: string,
+    content: string,
+    options?: { silent?: boolean }
+  ) {
     if (isDemoMode()) {
       const idx = memoryFiles.value.findIndex((f) => f.filename === filename)
       if (idx >= 0) {
@@ -458,7 +467,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
     const artifacts = [...(task.artifacts || [])]
     const idx = artifacts.findIndex(
-      (item) => item.id === artifact.id || (item.kind === artifact.kind && item.missionId === artifact.missionId)
+      (item) =>
+        item.id === artifact.id ||
+        (item.kind === artifact.kind && item.missionId === artifact.missionId)
     )
 
     if (idx >= 0) {
@@ -478,7 +489,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
   function upsertPlanArtifact(planId: string, artifact: TaskArtifactLink) {
     const current = [...(planArtifacts.value[planId] || [])]
     const idx = current.findIndex(
-      (item) => item.id === artifact.id || (item.kind === artifact.kind && item.missionId === artifact.missionId)
+      (item) =>
+        item.id === artifact.id ||
+        (item.kind === artifact.kind && item.missionId === artifact.missionId)
     )
 
     if (idx >= 0) {
@@ -1275,9 +1288,12 @@ export const useSecretaryStore = defineStore('secretary', () => {
   async function linkPlanToProject(planId: string): Promise<string | undefined> {
     if (isDemoMode()) return
     try {
-      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/link-project`, {
-        method: 'POST',
-      })
+      const res = await authFetch(
+        `${SECRETARY_API}/plan/${encodeURIComponent(planId)}/link-project`,
+        {
+          method: 'POST',
+        }
+      )
       const data = await res.json()
       if (data.projectId) {
         planProjectLinks.value.set(planId, data.projectId)
@@ -1354,7 +1370,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }
   }
 
-  async function createPlanSchedule(planId: string, schedule: Omit<PlanScheduleItem, 'id' | 'createdAt' | 'runCount' | 'planId'>) {
+  async function createPlanSchedule(
+    planId: string,
+    schedule: Omit<PlanScheduleItem, 'id' | 'createdAt' | 'runCount' | 'planId'>
+  ) {
     try {
       const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules`, {
         method: 'POST',
@@ -1372,18 +1391,28 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }
   }
 
-  async function updatePlanSchedule(planId: string, scheduleId: string, updates: Partial<PlanScheduleItem>) {
+  async function updatePlanSchedule(
+    planId: string,
+    scheduleId: string,
+    updates: Partial<PlanScheduleItem>
+  ) {
     try {
-      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-      })
+      const res = await authFetch(
+        `${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(updates),
+        }
+      )
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
         const idx = currentWorkspace.value.schedules.findIndex((s) => s.id === scheduleId)
         if (idx >= 0) {
-          currentWorkspace.value.schedules[idx] = { ...currentWorkspace.value.schedules[idx], ...updates }
+          currentWorkspace.value.schedules[idx] = {
+            ...currentWorkspace.value.schedules[idx],
+            ...updates,
+          }
         }
       }
     } catch (err) {
@@ -1394,13 +1423,18 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   async function deletePlanSchedule(planId: string, scheduleId: string) {
     try {
-      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`, {
-        method: 'DELETE',
-      })
+      const res = await authFetch(
+        `${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`,
+        {
+          method: 'DELETE',
+        }
+      )
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
-        currentWorkspace.value.schedules = currentWorkspace.value.schedules.filter((s) => s.id !== scheduleId)
+        currentWorkspace.value.schedules = currentWorkspace.value.schedules.filter(
+          (s) => s.id !== scheduleId
+        )
       }
       notifications.success('Automation deleted')
     } catch (err) {
@@ -1413,7 +1447,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
     await updatePlanSchedule(planId, scheduleId, { enabled })
   }
 
-  async function runPlanNow(planId: string, workflow: PlanScheduleWorkflow = 'make_note_from_task') {
+  async function runPlanNow(
+    planId: string,
+    workflow: PlanScheduleWorkflow = 'make_note_from_task'
+  ) {
     const plan = activePlans.value.find((p) => p.id === planId) || currentWorkspace.value?.plan
     if (!plan) {
       notifications.error('Plan not found')

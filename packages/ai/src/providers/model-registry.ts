@@ -6,7 +6,13 @@
  */
 
 export type ModelProvider = 'gemini' | 'ollama-cloud' | 'ollama-local' | 'openai'
-export type ModelCapability = 'chat' | 'tool-calling' | 'vision' | 'embedding' | 'research' | 'image-gen'
+export type ModelCapability =
+  | 'chat'
+  | 'tool-calling'
+  | 'vision'
+  | 'embedding'
+  | 'research'
+  | 'image-gen'
 
 export interface ModelEntry {
   id: string
@@ -141,24 +147,24 @@ export type AITaskType =
 
 // Task → model mapping
 const TASK_MODEL_MAP: Record<AITaskType, string> = {
-  'chat': 'gemini-3.1-pro-preview',
+  chat: 'gemini-3.1-pro-preview',
   'note-agent': 'gemini-3.1-pro-preview',
-  'planner': 'gemini-3.1-pro-preview',
-  'secretary': 'gemini-3.1-pro-preview',
-  'editor': 'gemini-3.1-pro-preview',
+  planner: 'gemini-3.1-pro-preview',
+  secretary: 'gemini-3.1-pro-preview',
+  editor: 'gemini-3.1-pro-preview',
   'editor-deep': 'gemini-3.1-pro-preview',
-  'completion': 'gemini-3.1-pro-preview',
-  'rewrite': 'gemini-3.1-pro-preview',
-  'summarize': 'gemini-3.1-pro-preview',
-  'explain': 'gemini-3.1-pro-preview',
-  'table': 'gemini-3.1-pro-preview',
-  'research': 'gemini-3.1-pro-preview',
-  'artifact': 'kimi-k2.5',
-  'code': 'kimi-k2.5',
-  'slides': 'gemini-3.1-pro-preview',
-  'course': 'gemini-3-flash-preview',
+  completion: 'gemini-3.1-pro-preview',
+  rewrite: 'gemini-3.1-pro-preview',
+  summarize: 'gemini-3.1-pro-preview',
+  explain: 'gemini-3.1-pro-preview',
+  table: 'gemini-3.1-pro-preview',
+  research: 'gemini-3.1-pro-preview',
+  artifact: 'kimi-k2.5',
+  code: 'kimi-k2.5',
+  slides: 'gemini-3.1-pro-preview',
+  course: 'gemini-3-flash-preview',
   'deep-research': 'deep-research-pro-preview-12-2025',
-  'embedding': 'text-embedding-3-large',
+  embedding: 'text-embedding-3-large',
 }
 
 /**
@@ -169,7 +175,9 @@ export function selectModel(taskType: AITaskType): ModelEntry {
   const modelId = TASK_MODEL_MAP[taskType]
   const entry = MODEL_REGISTRY[modelId]
   if (!entry) {
-    console.warn(`[ModelRegistry] Unknown model "${modelId}" for task "${taskType}", falling back to gemini-3.1-pro`)
+    console.warn(
+      `[ModelRegistry] Unknown model "${modelId}" for task "${taskType}", falling back to gemini-3.1-pro`
+    )
     return MODEL_REGISTRY['gemini-3.1-pro-preview']
   }
   return entry

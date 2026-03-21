@@ -39,6 +39,7 @@ User sends AI request
 ### Tables
 
 **`user_credits`** — One row per user, fast balance lookups:
+
 ```sql
 CREATE TABLE user_credits (
   user_id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -54,6 +55,7 @@ CREATE TABLE user_credits (
 ```
 
 **`credit_transactions`** — Append-only audit ledger:
+
 ```sql
 CREATE TABLE credit_transactions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,6 +75,7 @@ CREATE TABLE credit_transactions (
 ### Functions
 
 **`deduct_credits()`** — Atomic deduction with `FOR UPDATE` row lock (prevents concurrent overdraft):
+
 - Locks user's credit row
 - Checks balance >= amount
 - Updates balance, lifetime_used
@@ -80,6 +83,7 @@ CREATE TABLE credit_transactions (
 - Returns `(success, new_balance)`
 
 **`grant_credits()`** — Admin grant with upsert:
+
 - Uses `ON CONFLICT (user_id) DO UPDATE` to add to existing balance
 - Inserts 'grant' transaction
 - Returns new balance
@@ -105,6 +109,7 @@ Uses Node.js `AsyncLocalStorage` to propagate userId through the call stack with
 **Modify:** `packages/ai/src/providers/token-tracker.ts`
 
 Minimal changes:
+
 1. In `record()`: if `event.userId` is missing, fill from `getCurrentUserId()`
 2. Add `onRecord?: (event: TokenUsageEvent) => void` callback property
 3. Call `this.onRecord?.(event)` after pushing to in-memory array
@@ -114,6 +119,7 @@ Minimal changes:
 **New file:** `packages/ai/src/providers/usage-persister.ts`
 
 Exports `initUsagePersister(supabaseClient)` that:
+
 1. Sets `tokenTracker.onRecord` to a function that:
    - INSERTs into `ai_usage` table (finally activating the existing schema)
    - Calls `deduct_credits()` RPC if userId present and costCents > 0
@@ -128,6 +134,7 @@ Exports `initUsagePersister(supabaseClient)` that:
 ### 2E. API Startup
 
 **Modify:** `apps/api/src/index.ts` (or wherever the Hono app initializes)
+
 - Call `initUsagePersister(getServiceClient())` once at startup
 
 ---
@@ -139,6 +146,7 @@ Exports `initUsagePersister(supabaseClient)` that:
 **New file:** `apps/api/src/middleware/credits.ts`
 
 Hono middleware that:
+
 1. Reads `auth.userId` from context
 2. Queries `user_credits.balance_cents` for that user
 3. If no row or balance <= 0: throw `HTTPException(402)` with `CREDITS_EXHAUSTED` code
@@ -150,24 +158,26 @@ Pattern follows existing `authMiddleware` in `apps/api/src/middleware/auth.ts`.
 
 **Modify these files** — add `creditGuard` after `authMiddleware`, wrap agent calls in `requestContext.run()`:
 
-| Route File | Pattern |
-|---|---|
-| `apps/api/src/routes/agent.ts` | `agent.use('*', creditGuard)` after line 17 |
-| `apps/api/src/routes/secretary.ts` | Same pattern |
-| `apps/api/src/routes/research.ts` | Same pattern |
-| `apps/api/src/routes/course.ts` | Same pattern |
-| `apps/api/src/routes/explain.ts` | Same pattern |
-| `apps/api/src/routes/slides.ts` | Same pattern |
-| `apps/api/src/routes/orchestration.ts` | Same pattern |
-| `apps/api/src/routes/recommend.ts` | Same pattern |
-| `apps/api/src/routes/chat.ts` | Same pattern |
+| Route File                             | Pattern                                     |
+| -------------------------------------- | ------------------------------------------- |
+| `apps/api/src/routes/agent.ts`         | `agent.use('*', creditGuard)` after line 17 |
+| `apps/api/src/routes/secretary.ts`     | Same pattern                                |
+| `apps/api/src/routes/research.ts`      | Same pattern                                |
+| `apps/api/src/routes/course.ts`        | Same pattern                                |
+| `apps/api/src/routes/explain.ts`       | Same pattern                                |
+| `apps/api/src/routes/slides.ts`        | Same pattern                                |
+| `apps/api/src/routes/orchestration.ts` | Same pattern                                |
+| `apps/api/src/routes/recommend.ts`     | Same pattern                                |
+| `apps/api/src/routes/chat.ts`          | Same pattern                                |
 
 **Routes that do NOT get creditGuard** (no AI token consumption):
+
 - `settings.ts`, `context.ts`, `inbox.ts`, `integrations.ts`, `search.ts`, `embed.ts`, `sources.ts`, `cli-auth.ts`, `health.ts`
 
 ### 3C. requestContext Wrapping
 
 In each AI route handler, wrap the agent call:
+
 ```typescript
 import { requestContext } from '@inkdown/ai'
 
@@ -187,13 +197,13 @@ This is ~1 line change per route handler. All downstream tracking calls automati
 
 New endpoints:
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/settings/credits` | Current balance, plan info, lifetime stats |
-| `GET` | `/api/settings/usage` | Monthly usage (calls existing `get_monthly_ai_usage` RPC) |
-| `GET` | `/api/settings/usage/daily` | Daily breakdown (calls existing `get_daily_ai_usage` RPC) |
-| `GET` | `/api/settings/transactions` | Credit transaction history (paginated, limit 50) |
-| `POST` | `/api/settings/credits/grant` | Admin-only: grant credits (service key auth check) |
+| Method | Path                          | Purpose                                                   |
+| ------ | ----------------------------- | --------------------------------------------------------- |
+| `GET`  | `/api/settings/credits`       | Current balance, plan info, lifetime stats                |
+| `GET`  | `/api/settings/usage`         | Monthly usage (calls existing `get_monthly_ai_usage` RPC) |
+| `GET`  | `/api/settings/usage/daily`   | Daily breakdown (calls existing `get_daily_ai_usage` RPC) |
+| `GET`  | `/api/settings/transactions`  | Credit transaction history (paginated, limit 50)          |
+| `POST` | `/api/settings/credits/grant` | Admin-only: grant credits (service key auth check)        |
 
 The admin grant endpoint checks for a hardcoded admin user list via env var `ADMIN_USER_IDS` or validates `role = 'admin'` in user metadata.
 
@@ -233,6 +243,7 @@ Actions:
 **Modify:** `apps/web/src/services/ai.service.ts` (or `apps/web/src/utils/api.ts`)
 
 In the SSE/fetch error handling, detect `response.status === 402`:
+
 - Set `creditsStore.balance = 0`
 - Emit a special error state that the UI can detect
 - Don't throw — handle gracefully with a user-visible banner
@@ -241,11 +252,11 @@ In the SSE/fetch error handling, detect `response.status === 402`:
 
 Add inline banners in AI input areas when `creditsStore.isExhausted`:
 
-| Component | Banner Location |
-|---|---|
-| `EditorArea.vue` | Above/replacing the AI prompt input |
-| `SecretaryView.vue` | In the secretary chat area |
-| `CourseGeneratorView.vue` | At the top of the generator |
+| Component                 | Banner Location                     |
+| ------------------------- | ----------------------------------- |
+| `EditorArea.vue`          | Above/replacing the AI prompt input |
+| `SecretaryView.vue`       | In the secretary chat area          |
+| `CourseGeneratorView.vue` | At the top of the generator         |
 
 Message: "You've used all your AI credits. [View Usage →]"
 
@@ -264,6 +275,7 @@ Message: "You've used all your AI credits. [View Usage →]"
 Three sections, minimal boxes, following existing SettingsView CSS patterns:
 
 **Section 1: Credit Balance**
+
 - Plan badge: "Trial Plan" / "No Plan" with subtle border
 - Balance display: "$X.XX remaining" in large text + "of $12.00" in secondary
 - Progress bar: green (#22c55e) > 30%, amber (#f59e0b) 10-30%, red (#ef4444) < 10%
@@ -271,6 +283,7 @@ Three sections, minimal boxes, following existing SettingsView CSS patterns:
 - Clean horizontal layout, no card/box wrapper (matches Claude's flat style)
 
 **Section 2: Monthly Usage**
+
 - "This month" header with reset date ("Resets Apr 1")
 - Total spent: "$X.XX" prominent
 - Breakdown by agent type as simple rows (not cards):
@@ -283,6 +296,7 @@ Three sections, minimal boxes, following existing SettingsView CSS patterns:
 - Inline progress bars with agent type labels
 
 **Section 3: Recent Activity** (collapsible via `<details>`)
+
 - Simple table/list of last 20 transactions
 - Columns: Date, Type (grant/deduction), Description, Amount
 - Grant rows in green text, deduction rows in secondary text
@@ -301,24 +315,25 @@ Three sections, minimal boxes, following existing SettingsView CSS patterns:
 
 ## Implementation Order
 
-| Step | Files | What | Dependency |
-|------|-------|------|------------|
-| 1 | `027_user_credits.sql` | DB migration: tables + functions | None |
-| 2 | `request-context.ts` | AsyncLocalStorage userId propagation | None |
-| 3 | `token-tracker.ts` (modify) | Add onRecord hook + userId fallback | Step 2 |
-| 4 | `usage-persister.ts` | DB persistence bridge | Steps 1, 3 |
-| 5 | `providers/index.ts`, `ai/index.ts` | Export new modules | Steps 2, 4 |
-| 6 | API startup file | Initialize persister | Step 5 |
-| 7 | `credits.ts` middleware | Credit guard (402) | Step 1 |
-| 8 | AI route files (9 files) | Apply creditGuard + requestContext.run | Steps 6, 7 |
-| 9 | `settings.ts` routes | Usage/credits API endpoints | Step 1 |
-| 10 | `credits.ts` store | Pinia store | Step 9 |
-| 11 | `ai.service.ts` | 402 error handling | Step 10 |
-| 12 | `UsageSection.vue` | Usage UI component | Step 10 |
-| 13 | `SettingsView.vue` | Mount UsageSection | Step 12 |
-| 14 | AI input areas (3 files) | Credit exhaustion banners | Step 11 |
+| Step | Files                               | What                                   | Dependency |
+| ---- | ----------------------------------- | -------------------------------------- | ---------- |
+| 1    | `027_user_credits.sql`              | DB migration: tables + functions       | None       |
+| 2    | `request-context.ts`                | AsyncLocalStorage userId propagation   | None       |
+| 3    | `token-tracker.ts` (modify)         | Add onRecord hook + userId fallback    | Step 2     |
+| 4    | `usage-persister.ts`                | DB persistence bridge                  | Steps 1, 3 |
+| 5    | `providers/index.ts`, `ai/index.ts` | Export new modules                     | Steps 2, 4 |
+| 6    | API startup file                    | Initialize persister                   | Step 5     |
+| 7    | `credits.ts` middleware             | Credit guard (402)                     | Step 1     |
+| 8    | AI route files (9 files)            | Apply creditGuard + requestContext.run | Steps 6, 7 |
+| 9    | `settings.ts` routes                | Usage/credits API endpoints            | Step 1     |
+| 10   | `credits.ts` store                  | Pinia store                            | Step 9     |
+| 11   | `ai.service.ts`                     | 402 error handling                     | Step 10    |
+| 12   | `UsageSection.vue`                  | Usage UI component                     | Step 10    |
+| 13   | `SettingsView.vue`                  | Mount UsageSection                     | Step 12    |
+| 14   | AI input areas (3 files)            | Credit exhaustion banners              | Step 11    |
 
 **Phase checkpoints:**
+
 - After Step 6: Every AI call writes to `ai_usage` + deducts credits. Verify with manual SQL grant.
 - After Step 8: AI blocked for users with 0 credits. Verify 402 response.
 - After Step 9: Usage data queryable via API. Verify with curl.

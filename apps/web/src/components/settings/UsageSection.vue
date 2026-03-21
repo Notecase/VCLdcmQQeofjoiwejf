@@ -34,19 +34,34 @@ async function refresh() {
 <template>
   <div class="usage-section">
     <!-- Loading -->
-    <div v-if="store.loading && !store.credits" class="loading-text">Loading usage data...</div>
+    <div
+      v-if="store.loading && !store.credits"
+      class="loading-text"
+    >
+      Loading usage data...
+    </div>
 
     <template v-else>
       <!-- Plan Card -->
-      <div v-if="store.credits" class="plan-card">
+      <div
+        v-if="store.credits"
+        class="plan-card"
+      >
         <div class="plan-card-header">
           <div class="plan-card-title">
             <span class="plan-name">{{ store.planLabel }} Plan</span>
-            <span v-if="store.isActive" class="plan-active-badge">
+            <span
+              v-if="store.isActive"
+              class="plan-active-badge"
+            >
               <Check :size="12" />
               Active
             </span>
-            <span v-else class="plan-inactive-badge">Inactive</span>
+            <span
+              v-else
+              class="plan-inactive-badge"
+              >Inactive</span
+            >
           </div>
           <p class="plan-card-desc">
             {{ store.planDef.features.join(', ') || 'No active plan' }}
@@ -55,7 +70,10 @@ async function refresh() {
       </div>
 
       <!-- Weekly Usage -->
-      <div v-if="store.planDef.weeklyCreditsCents > 0" class="usage-group">
+      <div
+        v-if="store.planDef.weeklyCreditsCents > 0"
+        class="usage-group"
+      >
         <h3 class="group-heading">Weekly limits</h3>
 
         <div class="bar-row">
@@ -68,7 +86,8 @@ async function refresh() {
               <div
                 class="bar-fill"
                 :class="{
-                  'bar-fill--warning': store.weeklyUsedPercent > 70 && store.weeklyUsedPercent <= 90,
+                  'bar-fill--warning':
+                    store.weeklyUsedPercent > 70 && store.weeklyUsedPercent <= 90,
                   'bar-fill--danger': store.weeklyUsedPercent > 90,
                 }"
                 :style="{ width: store.weeklyUsedPercent + '%' }"
@@ -80,14 +99,24 @@ async function refresh() {
 
         <div class="updated-row">
           <span class="updated-label">Last updated: {{ lastUpdatedLabel() }}</span>
-          <button class="refresh-btn" title="Refresh" @click="refresh">
-            <RefreshCw :size="12" :class="{ spinning: store.loading }" />
+          <button
+            class="refresh-btn"
+            title="Refresh"
+            @click="refresh"
+          >
+            <RefreshCw
+              :size="12"
+              :class="{ spinning: store.loading }"
+            />
           </button>
         </div>
       </div>
 
       <!-- Extra Usage (billing cycle) -->
-      <div v-if="store.planDef.monthlyCreditsCents > 0" class="usage-group">
+      <div
+        v-if="store.planDef.monthlyCreditsCents > 0"
+        class="usage-group"
+      >
         <h3 class="group-heading">Extra usage</h3>
 
         <div class="extra-row">
@@ -100,7 +129,8 @@ async function refresh() {
               <div
                 class="bar-fill"
                 :class="{
-                  'bar-fill--warning': store.billingCycleUsedPercent > 70 && store.billingCycleUsedPercent <= 90,
+                  'bar-fill--warning':
+                    store.billingCycleUsedPercent > 70 && store.billingCycleUsedPercent <= 90,
                   'bar-fill--danger': store.billingCycleUsedPercent > 90,
                 }"
                 :style="{ width: Math.min(100, store.billingCycleUsedPercent) + '%' }"
@@ -119,12 +149,18 @@ async function refresh() {
       </div>
 
       <!-- No plan fallback -->
-      <div v-if="store.planDef.weeklyCreditsCents === 0 && store.planDef.monthlyCreditsCents === 0" class="no-plan-notice">
+      <div
+        v-if="store.planDef.weeklyCreditsCents === 0 && store.planDef.monthlyCreditsCents === 0"
+        class="no-plan-notice"
+      >
         <p>No active plan. Usage tracking is unavailable.</p>
       </div>
 
       <!-- Activity Log -->
-      <details v-if="store.transactions.length > 0" class="activity-section">
+      <details
+        v-if="store.transactions.length > 0"
+        class="activity-section"
+      >
         <summary class="activity-toggle">
           <TrendingDown :size="14" />
           Activity log ({{ store.transactions.length }})
@@ -136,7 +172,11 @@ async function refresh() {
             class="activity-row"
           >
             <span class="activity-date">{{ formatActivityDate(tx.created_at) }}</span>
-            <span class="activity-type" :class="tx.type">{{ tx.type }}</span>
+            <span
+              class="activity-type"
+              :class="tx.type"
+              >{{ tx.type }}</span
+            >
             <span class="activity-desc">{{ tx.description || '—' }}</span>
           </div>
         </div>
@@ -337,8 +377,12 @@ async function refresh() {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Extra Usage ───────────────────────────── */

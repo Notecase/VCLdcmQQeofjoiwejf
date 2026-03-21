@@ -8,6 +8,7 @@
 ## 1. Superdesign Plugin Architecture
 
 ### What It Is
+
 Superdesign is an open-source AI design agent that lives inside IDEs (Cursor, Windsurf, Claude Code, VS Code). It generates UI mockups, wireframes, components, logos, and SVG icons from natural language prompts. Created by @jasonzhou1993 and @jackjack_eth.
 
 ### Two Distribution Mechanisms
@@ -15,6 +16,7 @@ Superdesign is an open-source AI design agent that lives inside IDEs (Cursor, Wi
 Superdesign ships **two separate packages** for Claude Code integration:
 
 #### A. MCP Server (`jonthebeef/superdesign-mcp-claude-code`)
+
 - A standalone MCP server that registers tools directly into Claude Code
 - Operates as a **"design orchestrator"** -- it does NOT generate designs itself. Instead, it translates requests into highly structured specifications and hands them to the IDE's built-in LLM to execute
 - **No API key required** -- leverages Claude Code's existing LLM connection
@@ -27,6 +29,7 @@ Superdesign ships **two separate packages** for Claude Code integration:
 - All designs saved locally in `.superdesign/` directory inside the project
 
 #### B. Claude Code Skill (`superdesigndev/superdesign-skill`)
+
 - A simpler integration using the SKILL.md format
 - Located at `skills/superdesign/SKILL.md`
 - Contains YAML frontmatter (name, description) + markdown instructions
@@ -34,6 +37,7 @@ Superdesign ships **two separate packages** for Claude Code integration:
 - Can reference optional scripts/, references/, and assets/ directories
 
 ### VS Code Extension Architecture (the core product)
+
 - Source files in `src/tools/`: `read-tool.ts`, `write-tool.ts`, `theme-tool.ts` (9 tools total)
 - All tools receive an `ExecutionContext` with working directory path, output channel, abort controller
 - Enforces a **four-step gated workflow** requiring user approval between stages
@@ -43,9 +47,11 @@ Superdesign ships **two separate packages** for Claude Code integration:
 - Creates IDE-specific integration files: `.cursor/rules/design.mdc`, `CLAUDE.md`, `.windsurfrules`
 
 ### Key Architectural Insight
+
 Superdesign demonstrates the **"orchestrator" pattern**: the MCP server doesn't do the heavy lifting itself. It provides structured context/specifications that the host LLM executes. This is highly relevant for Inkdown -- an MCP server could provide note context, document structure, and editing specifications without duplicating AI logic.
 
 **Sources:**
+
 - [Superdesign GitHub](https://github.com/superdesigndev/superdesign)
 - [Superdesign Skill GitHub](https://github.com/superdesigndev/superdesign-skill)
 - [Superdesign MCP Server](https://github.com/jonthebeef/superdesign-mcp-claude-code)
@@ -61,6 +67,7 @@ Superdesign demonstrates the **"orchestrator" pattern**: the MCP server doesn't 
 A Claude Code plugin is a directory containing a manifest and optional skills, agents, hooks, and MCP servers. Plugins launched in public beta October 2025 and are now stable.
 
 #### Directory Layout
+
 ```
 my-plugin/
   .claude-plugin/
@@ -79,6 +86,7 @@ my-plugin/
 **Critical rule:** Components (commands, agents, hooks, skills) must be at the plugin root level, NOT inside `.claude-plugin/`. Only `plugin.json` belongs in `.claude-plugin/`.
 
 #### plugin.json Format
+
 ```json
 {
   "name": "my-plugin",
@@ -90,6 +98,7 @@ my-plugin/
   "keywords": ["design", "ui"]
 }
 ```
+
 Required fields: `name`, `version`, `description`.
 
 ### Skills System (SKILL.md)
@@ -97,10 +106,11 @@ Required fields: `name`, `version`, `description`.
 Skills are the primary extension point for Claude Code. Each skill is a directory containing a `SKILL.md` file.
 
 #### SKILL.md Format
+
 ```markdown
 ---
 name: my-skill
-description: "What this skill does and WHEN Claude should use it. This is the discovery mechanism."
+description: 'What this skill does and WHEN Claude should use it. This is the discovery mechanism.'
 disable-model-invocation: false
 allowed-tools:
   - Bash
@@ -114,15 +124,17 @@ allowed-tools:
 ```
 
 #### Frontmatter Fields
-| Field | Required | Purpose |
-|-------|----------|---------|
-| `name` | Recommended | Max 64 chars, lowercase letters/numbers/hyphens only |
-| `description` | Recommended | Max 1024 chars. THE key field -- Claude matches this to decide when to activate |
-| `disable-model-invocation` | Optional | `true` = only user can invoke (via slash command). Use for side-effect workflows like /commit, /deploy |
-| `user-invocable` | Optional | `false` = only Claude can invoke (background knowledge, not a command) |
-| `allowed-tools` | Optional | Tools Claude can use without per-use approval when skill is active. CLI-only feature, not SDK |
+
+| Field                      | Required    | Purpose                                                                                                |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `name`                     | Recommended | Max 64 chars, lowercase letters/numbers/hyphens only                                                   |
+| `description`              | Recommended | Max 1024 chars. THE key field -- Claude matches this to decide when to activate                        |
+| `disable-model-invocation` | Optional    | `true` = only user can invoke (via slash command). Use for side-effect workflows like /commit, /deploy |
+| `user-invocable`           | Optional    | `false` = only Claude can invoke (background knowledge, not a command)                                 |
+| `allowed-tools`            | Optional    | Tools Claude can use without per-use approval when skill is active. CLI-only feature, not SDK          |
 
 #### How Auto-Activation Works (Progressive Disclosure)
+
 1. **Startup**: Claude pre-loads ONLY the `name` + `description` of every installed skill into its system prompt. Lightweight -- many skills, minimal context cost.
 2. **Matching**: When user request matches a skill's description, Claude decides to activate it.
 3. **Loading**: Claude reads the full SKILL.md from the filesystem via bash, bringing full instructions into context.
@@ -134,24 +146,25 @@ This is a two-tier system: cheap metadata for discovery, full instructions loade
 
 Claude Code provides 12 lifecycle events for hooks:
 
-| Event | Purpose |
-|-------|---------|
-| `PreToolUse` | Before any tool execution. Can approve/deny/modify |
-| `PostToolUse` | After tool execution. Can check/format results |
-| `PermissionRequest` | When Claude needs permission |
-| `UserPromptSubmit` | Validate/enrich prompts before Claude processes |
-| `SessionStart` | Set up environment, load context |
-| `SessionEnd` | Clean up, log |
-| `Notification` | Alert events (permission_prompt, idle_prompt, auth_success) |
-| `Stop` | End-of-response control |
-| `SubagentStop` | Subagent completion |
-| `PreCompact` | Before context compaction |
+| Event               | Purpose                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| `PreToolUse`        | Before any tool execution. Can approve/deny/modify          |
+| `PostToolUse`       | After tool execution. Can check/format results              |
+| `PermissionRequest` | When Claude needs permission                                |
+| `UserPromptSubmit`  | Validate/enrich prompts before Claude processes             |
+| `SessionStart`      | Set up environment, load context                            |
+| `SessionEnd`        | Clean up, log                                               |
+| `Notification`      | Alert events (permission_prompt, idle_prompt, auth_success) |
+| `Stop`              | End-of-response control                                     |
+| `SubagentStop`      | Subagent completion                                         |
+| `PreCompact`        | Before context compaction                                   |
 
 MCP server tools appear as regular tools in tool events (PreToolUse, PostToolUse, etc.), so hooks can intercept MCP tool calls the same way.
 
 ### MCP Configuration in Plugins
 
 Plugins configure MCP servers in `.mcp.json` at the plugin root:
+
 ```json
 {
   "mcpServers": {
@@ -165,18 +178,21 @@ Plugins configure MCP servers in `.mcp.json` at the plugin root:
   }
 }
 ```
+
 - `${CLAUDE_PLUGIN_ROOT}` resolves to the plugin directory
 - Servers auto-start when the plugin enables
 - Must restart Claude Code to apply MCP server changes
 - Supports stdio, SSE, and HTTP transports
 
 ### Distribution
+
 - Install via `/plugin` command or configure in `.claude/settings.json`
 - Organization-level skills deployed workspace-wide (shipped Dec 18, 2025)
 - Official plugin directory at `anthropics/claude-plugins-official`
 - Community marketplaces (SkillsMP, etc.)
 
 **Sources:**
+
 - [Create Plugins - Claude Code Docs](https://code.claude.com/docs/en/plugins)
 - [Plugins Reference](https://code.claude.com/docs/en/plugins-reference)
 - [Extend Claude with Skills](https://code.claude.com/docs/en/skills)
@@ -197,6 +213,7 @@ Plugins configure MCP servers in `.mcp.json` at the plugin root:
 MCP is an open protocol (by Anthropic, now widely adopted) that standardizes how LLM applications connect to external data sources and tools. Current stable spec: **2025-11-25**.
 
 #### Client-Server Architecture
+
 ```
 AI Application (Host)
   |
@@ -216,6 +233,7 @@ AI Application (Host)
 ### Three Core Primitives
 
 #### Tools (function calling)
+
 - Function-like interface with structured input/output
 - AI decides WHEN to call tools based on context
 - Each tool has: unique name, parameter schema (Zod/JSON Schema), handler function
@@ -223,12 +241,14 @@ AI Application (Host)
 - Tool annotations (spec 2025-03-26): `title`, `readOnlyHint`, `openWorldHint` for UI/LLM hints
 
 #### Resources (data access)
+
 - Represent any data: files, database records, API responses, computed values
 - Clients discover available resources, then request specific content
 - URI-based addressing
 - Supports subscriptions for live updates
 
 #### Prompts (templates)
+
 - Servers expose reusable prompt templates
 - Clients discover available prompts and provide arguments to customize
 - Useful for complex multi-step workflows
@@ -265,6 +285,7 @@ AI Application (Host)
 Three message types: **requests** (expect response), **responses** (to requests), **notifications** (fire-and-forget).
 
 ### Transport Options
+
 - **stdio**: Local process communication (most common for CLI tools)
 - **Streamable HTTP**: Remote services, supports stateless horizontal scaling (introduced 2025-06-18 spec)
 - **SSE** (Server-Sent Events): Legacy, being phased out in favor of Streamable HTTP
@@ -272,34 +293,35 @@ Three message types: **requests** (expect response), **responses** (to requests)
 ### TypeScript SDK Implementation
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
 
 const server = new McpServer({
-  name: "my-server",
-  version: "1.0.0"
-});
+  name: 'my-server',
+  version: '1.0.0',
+})
 
 // Register a tool
 server.tool(
-  "search_notes",
+  'search_notes',
   "Search through user's notes by keyword",
-  { query: z.string().describe("Search query"), limit: z.number().optional() },
+  { query: z.string().describe('Search query'), limit: z.number().optional() },
   async ({ query, limit }) => {
-    const results = await searchNotes(query, limit);
+    const results = await searchNotes(query, limit)
     return {
-      content: [{ type: "text", text: JSON.stringify(results) }]
-    };
+      content: [{ type: 'text', text: JSON.stringify(results) }],
+    }
   }
-);
+)
 
 // Connect via stdio
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-const transport = new StdioServerTransport();
-await server.connect(transport);
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+const transport = new StdioServerTransport()
+await server.connect(transport)
 ```
 
 ### Security Considerations (2025-11-25 Spec)
+
 - OAuth 2.1 authorization framework for remote servers
 - 43% of early MCP servers had command injection vulnerabilities (2025 Invariant Labs audit)
 - Best practices: input validation, rate limiting, health checks, structured logging, graceful shutdown
@@ -307,11 +329,13 @@ await server.connect(transport);
 - For HTTP servers, allow clients to supply keys via headers
 
 ### 2026 Roadmap Priorities
+
 - Better horizontal scaling for Streamable HTTP
 - Server discovery/registry standards
 - Improved stateful session handling with load balancers
 
 **Sources:**
+
 - [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
 - [MCP 2026 Roadmap](http://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/)
 - [TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
@@ -326,14 +350,18 @@ await server.connect(transport);
 ## 4. Codex CLI (OpenAI) Plugin/Extension System
 
 ### Overview
+
 OpenAI's Codex is an open-source coding agent that runs in the terminal (CLI) and also as a VS Code extension. It shares configuration between both surfaces.
 
 ### Configuration Architecture
+
 - Config file: `~/.codex/config.toml` (global) or `.codex/config.toml` (project-scoped, trusted projects only)
 - Shared between CLI and IDE extension
 
 ### MCP Integration
+
 Codex has first-class MCP support:
+
 ```toml
 [mcp_servers.context7]
 command = "npx"
@@ -353,7 +381,9 @@ CLI management: `codex mcp add <name> -- <command> [args...]`
 Codex launches MCP servers automatically at session start and exposes their tools alongside built-ins.
 
 ### Skills System (SKILL.md -- Universal Format)
+
 Codex adopted the same `SKILL.md` format as Claude Code, making skills **cross-compatible**:
+
 - A skill = directory with `SKILL.md` + optional `scripts/`, `references/`, `assets/`
 - SKILL.md has YAML frontmatter (`name`, `description`) + markdown instructions
 - Same progressive disclosure: metadata loaded at startup, full instructions loaded on demand
@@ -361,25 +391,29 @@ Codex adopted the same `SKILL.md` format as Claude Code, making skills **cross-c
 - OpenAI maintains `openai/skills` catalog on GitHub
 
 ### Plugin System
+
 - Plugin marketplace with metadata
 - Codex tells the model which plugins are enabled at session start
 - Per-skill enablement overrides in `config.toml`
 - Prompting and auto-installing missing MCP dependencies for skills (stable, on by default)
 
 ### AGENTS.md
+
 Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `CLAUDE.md`), providing project-level context and rules.
 
 ### Key Differences from Claude Code
-| Feature | Claude Code | Codex CLI |
-|---------|------------|-----------|
-| Config format | JSON (settings.json, .mcp.json) | TOML (config.toml) |
-| Plugin manifest | plugin.json | Via config.toml |
-| Skill format | SKILL.md | SKILL.md (compatible) |
-| Project instructions | CLAUDE.md | AGENTS.md |
-| MCP management | `claude mcp add` | `codex mcp add` |
-| Hook system | 12 lifecycle events | Not documented |
+
+| Feature              | Claude Code                     | Codex CLI             |
+| -------------------- | ------------------------------- | --------------------- |
+| Config format        | JSON (settings.json, .mcp.json) | TOML (config.toml)    |
+| Plugin manifest      | plugin.json                     | Via config.toml       |
+| Skill format         | SKILL.md                        | SKILL.md (compatible) |
+| Project instructions | CLAUDE.md                       | AGENTS.md             |
+| MCP management       | `claude mcp add`                | `codex mcp add`       |
+| Hook system          | 12 lifecycle events             | Not documented        |
 
 **Sources:**
+
 - [Codex MCP Docs](https://developers.openai.com/codex/mcp/)
 - [Codex Config Reference](https://developers.openai.com/codex/config-reference/)
 - [Codex CLI Features](https://developers.openai.com/codex/cli/features/)
@@ -394,9 +428,11 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 ## 5. Similar Products/Concepts
 
 ### A. OpenAI Prism
+
 **What:** A free, cloud-based LaTeX workspace for scientific writing with GPT-5.2 integrated directly into the authoring workflow. Launched January 2026.
 
 **Architecture -- Context-Aware AI:**
+
 - GPT-5.2 has access to FULL document context: equations, figures, citations, text structure, prior revisions
 - NOT a separate chat interface -- AI is inline in the document workflow
 - Can highlight text and ask for specific actions (formalize, expand, revise)
@@ -407,20 +443,24 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 **Key Insight for Inkdown:** Prism demonstrates the **"context-aware AI in document"** paradigm. The AI doesn't just answer questions -- it operates within the full document structure. Inkdown already does this with its editor agents. The difference is Prism is a standalone web app, while Inkdown could expose this capability to external AI assistants via MCP.
 
 **Sources:**
+
 - [Prism by OpenAI](https://openai.com/prism/)
 - [Introducing Prism](https://openai.com/index/introducing-prism/)
 - [InfoQ Coverage](https://www.infoq.com/news/2026/01/openai-prism/)
 
 ### B. Notion MCP Server (Official)
+
 **What:** Official hosted MCP server that gives AI tools secure access to Notion workspaces.
 
 **Architecture:**
+
 - Hosted by Notion (not self-hosted, though open-source option exists)
 - Markdown-based API optimized for token efficiency with LLMs
 - OAuth-based authentication per user
 - Works with ChatGPT, Claude Code, Cursor, VS Code
 
 **Tools Exposed:**
+
 - `notion-search` / `notion-fetch` -- search workspace and fetch page content
 - `create pages` -- create one or more pages with properties and content, supports database templates
 - `create database` -- create databases with initial properties and views
@@ -428,24 +468,29 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 - Page updates with template application
 
 **Limitations:**
+
 - Rate limited: 180 requests/minute average, search operations more restricted
 - V2.0.0 migrated to data sources as primary abstraction (API 2025-09-03)
 - Prefix handling: OpenAI clients auto-strip `notion-` prefix
 
 **Sources:**
+
 - [Notion MCP Docs](https://developers.notion.com/docs/mcp)
 - [Notion MCP Tools](https://developers.notion.com/docs/mcp-supported-tools)
 - [Notion MCP Server GitHub](https://github.com/makenotion/notion-mcp-server)
 
 ### C. Obsidian MCP Server (Community)
+
 **What:** Community-built MCP servers that expose Obsidian vaults to AI assistants.
 
 **Architecture:**
+
 - Runs locally (no cloud sync required)
 - Connects via Obsidian Local REST API plugin
 - Multiple implementations available (cyanheads, jacksteamdev, tokidoo)
 
 **Tools Exposed:**
+
 - Read/write notes
 - Search across vault
 - Manage frontmatter and tags
@@ -456,6 +501,7 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 **Key Pattern:** Obsidian MCP demonstrates how a **local-first note-taking app** can expose itself to AI assistants while keeping data on the user's machine. Highly relevant to Inkdown.
 
 **Sources:**
+
 - [MCP-Obsidian](https://mcp-obsidian.org/)
 - [Obsidian MCP Server GitHub](https://github.com/cyanheads/obsidian-mcp-server)
 - [Obsidian MCP Tools GitHub](https://github.com/jacksteamdev/obsidian-mcp-tools)
@@ -465,6 +511,7 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 ## 6. Real-World MCP Server Examples
 
 ### A. Supabase MCP Server
+
 **Architecture:** Stateless middleware layer enabling horizontal scaling.
 
 **Tool Groups (all enabled by default except Storage):**
@@ -484,13 +531,16 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 **Safety Pattern:** Queries categorized as safe (read-only), write (requires write mode), destructive (requires write mode + 2-step confirmation). Feature flags to restrict tool groups.
 
 **Sources:**
+
 - [Supabase MCP Docs](https://supabase.com/docs/guides/getting-started/mcp)
 - [Supabase MCP GitHub](https://github.com/supabase-community/supabase-mcp)
 
 ### B. Linear MCP Server
+
 **Architecture:** Authenticated remote MCP server (centrally hosted by Linear) built on top of Linear's GraphQL API.
 
 **Tools:**
+
 - Find, create, update issues
 - Manage projects and comments
 - Team operations
@@ -499,15 +549,18 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 **Key Pattern:** Linear demonstrates the **"remote hosted MCP"** approach -- the server runs on Linear's infrastructure, not locally. Authentication via OAuth. Contrasts with Obsidian's local-first approach.
 
 **Sources:**
+
 - [Linear MCP Docs](https://linear.app/docs/mcp)
 - [Linear MCP GitHub](https://github.com/tacticlaunch/mcp-linear)
 
 ### C. GitHub MCP Server
+
 - Official GitHub MCP server for repository management
 - Tools for issues, PRs, code search, file operations
 - Widely used as reference implementation
 
 ### D. JetBrains IDE MCP Server
+
 - Starting v2025.2, JetBrains IDEs include a built-in MCP server
 - Exposes IDE context to external AI clients (Claude, Cursor, Codex)
 - One-click setup
@@ -517,25 +570,33 @@ Codex also supports `AGENTS.md` for custom instructions (analogous to Claude's `
 ## Cross-Cutting Patterns & Insights for Inkdown
 
 ### Pattern 1: The Orchestrator Model (Superdesign)
+
 Don't duplicate AI logic. Provide structured context/specifications that the HOST LLM executes. Inkdown MCP server could provide note content, project structure, and editing specifications without running its own AI inference.
 
 ### Pattern 2: Progressive Disclosure (Claude/Codex Skills)
+
 Two-tier system: lightweight metadata for discovery (loaded at startup), full instructions loaded on demand. Keeps context costs low while supporting many capabilities.
 
 ### Pattern 3: Tool Group Organization (Supabase)
+
 Organize tools into logical groups with feature flags. Allow users to enable/disable groups to reduce attack surface and limit LLM actions.
 
 ### Pattern 4: Safety Categorization (Supabase)
+
 Categorize operations as read-only, write, or destructive. Require escalating confirmation for dangerous operations.
 
 ### Pattern 5: Local-First Data (Obsidian)
+
 Keep user data on their machine. MCP server runs locally, connects to local data. No cloud dependency for core functionality.
 
 ### Pattern 6: Token-Efficient Responses (Notion)
+
 Use Markdown-based responses optimized for LLM token consumption. Notion specifically designed their MCP API to be more token-efficient than their REST API.
 
 ### Pattern 7: Universal Skill Format (SKILL.md)
+
 The SKILL.md format is now a universal standard across Claude Code, Codex CLI, and others. Building a skill in this format gives maximum reach.
 
 ### Pattern 8: Dual Distribution (Superdesign)
+
 Ship both an MCP server (for tool integration) AND a SKILL.md (for instruction-based integration). The MCP server provides tools; the skill provides context and workflow guidance.

@@ -69,9 +69,10 @@ function handleStreamEvent(event: SecretaryStreamEvent) {
     case 'tool_call': {
       let toolData: Record<string, unknown>
       try {
-        toolData = (
-          typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-        ) as Record<string, unknown>
+        toolData = (typeof event.data === 'string' ? JSON.parse(event.data) : event.data) as Record<
+          string,
+          unknown
+        >
       } catch {
         break
       }
@@ -145,9 +146,7 @@ function handleStreamEvent(event: SecretaryStreamEvent) {
 
       // Detect save_roadmap tool completion
       const toolName =
-        (resultData.toolName as string | undefined) ||
-        (resultData.name as string | undefined) ||
-        ''
+        (resultData.toolName as string | undefined) || (resultData.name as string | undefined) || ''
       if (toolName === 'save_roadmap' && !resultData.error) {
         planCreated.value = true
         // Try to extract plan ID from result

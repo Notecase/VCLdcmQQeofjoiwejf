@@ -55,7 +55,13 @@ const calendarDays = computed<CalDay[]>(() => {
     const prevMonth = month === 0 ? 12 : month
     const prevYear = month === 0 ? year - 1 : year
     const dateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    days.push({ date: dateStr, day: d, isCurrentMonth: false, isToday: false, hasItems: busyDates.value.has(dateStr) })
+    days.push({
+      date: dateStr,
+      day: d,
+      isCurrentMonth: false,
+      isToday: false,
+      hasItems: busyDates.value.has(dateStr),
+    })
   }
 
   // Current month days
@@ -78,7 +84,13 @@ const calendarDays = computed<CalDay[]>(() => {
       const nextYear = nextMonth > 12 ? year + 1 : year
       const nm = nextMonth > 12 ? 1 : nextMonth
       const dateStr = `${nextYear}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      days.push({ date: dateStr, day: d, isCurrentMonth: false, isToday: false, hasItems: busyDates.value.has(dateStr) })
+      days.push({
+        date: dateStr,
+        day: d,
+        isCurrentMonth: false,
+        isToday: false,
+        hasItems: busyDates.value.has(dateStr),
+      })
     }
   }
 

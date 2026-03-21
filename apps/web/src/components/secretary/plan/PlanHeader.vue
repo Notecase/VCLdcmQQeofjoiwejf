@@ -26,10 +26,14 @@ function goToFolder() {
 
 const statusClass = computed(() => {
   switch (props.plan.status) {
-    case 'active': return 'status-active'
-    case 'paused': return 'status-paused'
-    case 'completed': return 'status-completed'
-    default: return 'status-archived'
+    case 'active':
+      return 'status-active'
+    case 'paused':
+      return 'status-paused'
+    case 'completed':
+      return 'status-completed'
+    default:
+      return 'status-archived'
   }
 })
 
@@ -38,8 +42,14 @@ const statusLabel = computed(() => {
 })
 
 function formatDateRange(plan: LearningRoadmap): string {
-  const start = new Date(plan.dateRange.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const end = new Date(plan.dateRange.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const start = new Date(plan.dateRange.start).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+  const end = new Date(plan.dateRange.end).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
   return `${start} — ${end} · ${plan.schedule.hoursPerDay}h/day`
 }
 
@@ -105,11 +115,13 @@ function goBack() {
       <span
         class="status-badge"
         :class="statusClass"
-      >{{ statusLabel }}</span>
+        >{{ statusLabel }}</span
+      >
       <span
         v-if="plan.currentTopic"
         class="current-topic"
-      >{{ plan.currentTopic }}</span>
+        >{{ plan.currentTopic }}</span
+      >
     </div>
 
     <div class="progress-section">
@@ -120,7 +132,10 @@ function goBack() {
         />
       </div>
       <div class="progress-meta">
-        <span class="progress-label">{{ plan.progress.currentDay }}/{{ plan.progress.totalDays }} days · {{ plan.progress.percentComplete }}%</span>
+        <span class="progress-label"
+          >{{ plan.progress.currentDay }}/{{ plan.progress.totalDays }} days ·
+          {{ plan.progress.percentComplete }}%</span
+        >
         <span class="date-range">{{ formatDateRange(plan) }}</span>
       </div>
     </div>

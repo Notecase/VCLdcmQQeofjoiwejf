@@ -19,8 +19,21 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { fetchDueUsers, determineAction, checkStaleTodayMd, checkInbox, checkIntegrations, checkPlanSchedules } from './checks.ts'
-import { executeAction, archiveStaleTodayMd, processInbox, syncIntegrations, executePlanSchedule } from './actions.ts'
+import {
+  fetchDueUsers,
+  determineAction,
+  checkStaleTodayMd,
+  checkInbox,
+  checkIntegrations,
+  checkPlanSchedules,
+} from './checks.ts'
+import {
+  executeAction,
+  archiveStaleTodayMd,
+  processInbox,
+  syncIntegrations,
+  executePlanSchedule,
+} from './actions.ts'
 
 Deno.serve(async (req) => {
   const startTime = Date.now()
@@ -190,9 +203,7 @@ Deno.serve(async (req) => {
       if (check.action === 'evening') stateUpdate.last_evening_at = new Date().toISOString()
       if (check.action === 'weekly') stateUpdate.last_weekly_at = new Date().toISOString()
 
-      await supabase
-        .from('agent_heartbeat_state')
-        .upsert(stateUpdate, { onConflict: 'user_id' })
+      await supabase.from('agent_heartbeat_state').upsert(stateUpdate, { onConflict: 'user_id' })
 
       results.push({
         user_id: user.user_id,
@@ -227,9 +238,9 @@ Deno.serve(async (req) => {
     )
   } catch (error) {
     console.error('heartbeat.fatal_error', (error as Error).message)
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 })

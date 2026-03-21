@@ -15,7 +15,11 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
   server.tool(
     'secretary_memory_read',
     'Read any memory file by filename (e.g. "Plan.md", "AI.md", "Plans/optics.md").',
-    { filename: z.string().describe('Memory filename (e.g. "Plan.md", "Today.md", "Plans/algo.md")') },
+    {
+      filename: z
+        .string()
+        .describe('Memory filename (e.g. "Plan.md", "Today.md", "Plans/algo.md")'),
+    },
     async ({ filename }) => {
       try {
         const file = await memory.read(filename)
@@ -72,7 +76,7 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     }
   )
 
-  server.tool('secretary_today', 'Shortcut: read Today.md (today\'s daily plan).', {}, async () => {
+  server.tool('secretary_today', "Shortcut: read Today.md (today's daily plan).", {}, async () => {
     try {
       const file = await memory.read('Today.md')
       if (!file || !file.content.trim()) return ok('No plan for today yet.')
@@ -82,25 +86,35 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     }
   })
 
-  server.tool('secretary_tomorrow', 'Shortcut: read Tomorrow.md (tomorrow\'s pre-generated plan).', {}, async () => {
-    try {
-      const file = await memory.read('Tomorrow.md')
-      if (!file || !file.content.trim()) return ok('No plan for tomorrow yet.')
-      return ok(formatMemoryFile(file))
-    } catch (e) {
-      return err((e as Error).message)
+  server.tool(
+    'secretary_tomorrow',
+    "Shortcut: read Tomorrow.md (tomorrow's pre-generated plan).",
+    {},
+    async () => {
+      try {
+        const file = await memory.read('Tomorrow.md')
+        if (!file || !file.content.trim()) return ok('No plan for tomorrow yet.')
+        return ok(formatMemoryFile(file))
+      } catch (e) {
+        return err((e as Error).message)
+      }
     }
-  })
+  )
 
-  server.tool('secretary_plans_list', 'Read Plan.md (master roadmap index with active plans, schedule, archives).', {}, async () => {
-    try {
-      const file = await memory.read('Plan.md')
-      if (!file || !file.content.trim()) return ok('No plans yet. Plan.md is empty.')
-      return ok(formatMemoryFile(file))
-    } catch (e) {
-      return err((e as Error).message)
+  server.tool(
+    'secretary_plans_list',
+    'Read Plan.md (master roadmap index with active plans, schedule, archives).',
+    {},
+    async () => {
+      try {
+        const file = await memory.read('Plan.md')
+        if (!file || !file.content.trim()) return ok('No plans yet. Plan.md is empty.')
+        return ok(formatMemoryFile(file))
+      } catch (e) {
+        return err((e as Error).message)
+      }
     }
-  })
+  )
 
   server.tool(
     'secretary_plan_create',
@@ -128,7 +142,7 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
 
   server.tool(
     'secretary_plan_activate',
-    'Update a plan\'s status in Plan.md (active/paused/completed/archived).',
+    "Update a plan's status in Plan.md (active/paused/completed/archived).",
     {
       plan_id: z.string().describe('Plan ID (short code like "OPT", "AWS")'),
       status: z.enum(['active', 'paused', 'completed', 'archived']).describe('New status'),
@@ -202,10 +216,14 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     'Bulk modify multiple tasks in Today/Tomorrow.md.',
     {
       target: z.enum(['Today.md', 'Tomorrow.md']).describe('Which file'),
-      modifications: z.array(z.object({
-        task_pattern: z.string().describe('Text pattern to find'),
-        replacement: z.string().describe('Replacement line'),
-      })).describe('List of modifications'),
+      modifications: z
+        .array(
+          z.object({
+            task_pattern: z.string().describe('Text pattern to find'),
+            replacement: z.string().describe('Replacement line'),
+          })
+        )
+        .describe('List of modifications'),
     },
     async ({ target, modifications }) => {
       try {
@@ -227,27 +245,32 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     }
   )
 
-  server.tool('secretary_carryover', 'Move incomplete tasks from Today.md → Tomorrow.md.', {}, async () => {
-    try {
-      const today = await memory.read('Today.md')
-      if (!today || !today.content.trim()) return ok('Today.md is empty, nothing to carry over.')
-      const taskPattern = /^- \[[ >]\] .+$/gm
-      const incomplete = today.content.match(taskPattern)
-      if (!incomplete || incomplete.length === 0) return ok('No incomplete tasks to carry over.')
-      const tomorrow = await memory.read('Tomorrow.md')
-      const tomorrowContent = tomorrow?.content ?? ''
-      const carryoverSection = `\n\n## Carried Over\n${incomplete.join('\n')}\n`
-      await memory.write('Tomorrow.md', tomorrowContent + carryoverSection)
-      let updatedToday = today.content
-      for (const task of incomplete) {
-        updatedToday = updatedToday.replace(task, task.replace('[ ]', '[>]'))
+  server.tool(
+    'secretary_carryover',
+    'Move incomplete tasks from Today.md → Tomorrow.md.',
+    {},
+    async () => {
+      try {
+        const today = await memory.read('Today.md')
+        if (!today || !today.content.trim()) return ok('Today.md is empty, nothing to carry over.')
+        const taskPattern = /^- \[[ >]\] .+$/gm
+        const incomplete = today.content.match(taskPattern)
+        if (!incomplete || incomplete.length === 0) return ok('No incomplete tasks to carry over.')
+        const tomorrow = await memory.read('Tomorrow.md')
+        const tomorrowContent = tomorrow?.content ?? ''
+        const carryoverSection = `\n\n## Carried Over\n${incomplete.join('\n')}\n`
+        await memory.write('Tomorrow.md', tomorrowContent + carryoverSection)
+        let updatedToday = today.content
+        for (const task of incomplete) {
+          updatedToday = updatedToday.replace(task, task.replace('[ ]', '[>]'))
+        }
+        await memory.write('Today.md', updatedToday)
+        return ok(`Carried over ${incomplete.length} tasks to Tomorrow.md`)
+      } catch (e) {
+        return err((e as Error).message)
       }
-      await memory.write('Today.md', updatedToday)
-      return ok(`Carried over ${incomplete.length} tasks to Tomorrow.md`)
-    } catch (e) {
-      return err((e as Error).message)
     }
-  })
+  )
 
   server.tool(
     'secretary_recurring_manage',
@@ -280,8 +303,12 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     async ({ entry }) => {
       try {
         const today = await memory.read('Today.md')
-        const content = today?.content ?? '# Today\'s Plan\n'
-        const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+        const content = today?.content ?? "# Today's Plan\n"
+        const timestamp = new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
         const logEntry = `\n- ${timestamp} — ${entry}`
         let updated: string
         if (content.includes('## Activity Log')) {
@@ -307,7 +334,9 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     'secretary_reflect',
     'Write end-of-day reflection to Today.md.',
     {
-      mood: z.enum(['great', 'good', 'okay', 'struggling', 'overwhelmed']).describe('How the day felt'),
+      mood: z
+        .enum(['great', 'good', 'okay', 'struggling', 'overwhelmed'])
+        .describe('How the day felt'),
       reflection: z.string().describe('Reflection text'),
       struggled_with: z.string().optional().describe('Topics that were difficult'),
       went_well: z.string().optional().describe('What went well'),
@@ -315,7 +344,7 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
     async ({ mood, reflection, struggled_with, went_well }) => {
       try {
         const today = await memory.read('Today.md')
-        const content = today?.content ?? '# Today\'s Plan\n'
+        const content = today?.content ?? "# Today's Plan\n"
         const parts: string[] = ['\n\n## End of Day']
         parts.push(`Mood: ${mood}`)
         parts.push(reflection)
@@ -342,7 +371,15 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
   server.tool(
     'secretary_analytics',
     'Compute analytics from History/*.md: completion rate, streaks, mood trends. Configurable range.',
-    { days: z.number().int().min(1).max(90).optional().describe('Number of days to analyze (default 7)') },
+    {
+      days: z
+        .number()
+        .int()
+        .min(1)
+        .max(90)
+        .optional()
+        .describe('Number of days to analyze (default 7)'),
+    },
     async ({ days }) => {
       try {
         const analytics = await memory.getHistoryAnalytics(days ?? 7)
@@ -356,21 +393,27 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
 
   server.tool(
     'secretary_plan_progress',
-    'Read or increment a plan\'s day counter in Plan.md.',
+    "Read or increment a plan's day counter in Plan.md.",
     {
       plan_id: z.string().describe('Plan ID (short code like "ALGO", "OPT")'),
-      action: z.enum(['read', 'increment']).describe('Read current progress or increment day counter'),
+      action: z
+        .enum(['read', 'increment'])
+        .describe('Read current progress or increment day counter'),
     },
     async ({ plan_id, action }) => {
       try {
         if (action === 'read') {
           const progress = await memory.getPlanProgress(plan_id)
           if (!progress) return err(`Plan [${plan_id}] not found in Plan.md`)
-          return ok(`Plan [${progress.plan_id}]: Day ${progress.current_day}/${progress.total_days} — ${progress.topic}`)
+          return ok(
+            `Plan [${progress.plan_id}]: Day ${progress.current_day}/${progress.total_days} — ${progress.topic}`
+          )
         } else {
           const progress = await memory.incrementPlanProgress(plan_id)
           if (!progress) return err(`Plan [${plan_id}] not found in Plan.md`)
-          return ok(`Plan [${progress.plan_id}] incremented: Day ${progress.current_day}/${progress.total_days} — ${progress.topic}`)
+          return ok(
+            `Plan [${progress.plan_id}] incremented: Day ${progress.current_day}/${progress.total_days} — ${progress.topic}`
+          )
         }
       } catch (e) {
         return err((e as Error).message)
@@ -381,12 +424,22 @@ export function registerSecretaryTools(server: McpServer, db: DbClient): void {
   server.tool(
     'secretary_history_bulk',
     'List recent History files WITH full content (avoids N+1 reads).',
-    { limit: z.number().int().min(1).max(30).optional().describe('Number of files to return (default 7)') },
+    {
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(30)
+        .optional()
+        .describe('Number of files to return (default 7)'),
+    },
     async ({ limit }) => {
       try {
         const files = await memory.getHistoryBulk(limit ?? 7)
         if (files.length === 0) return ok('No history files found.')
-        const parts = files.map((f) => `### ${f.filename}\n_Updated: ${f.updated_at}_\n\n${f.content}`)
+        const parts = files.map(
+          (f) => `### ${f.filename}\n_Updated: ${f.updated_at}_\n\n${f.content}`
+        )
         return ok(`## History (${files.length} files)\n\n${parts.join('\n\n---\n\n')}`)
       } catch (e) {
         return err((e as Error).message)

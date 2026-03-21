@@ -25,7 +25,12 @@ export function registerSearchTools(server: McpServer, db: DbClient): void {
         const hits = await search.searchNotes(query, { projectId: project_id, limit })
         if (hits.length === 0) return ok(`No notes found for "${query}"`)
         const header = `## Note Search: "${query}" (${hits.length} results)\n\n`
-        const rows = hits.map((h) => [h.title, h.id, h.snippet.slice(0, 60), relativeTime(h.updated_at)])
+        const rows = hits.map((h) => [
+          h.title,
+          h.id,
+          h.snippet.slice(0, 60),
+          relativeTime(h.updated_at),
+        ])
         return ok(header + markdownTable(['Title', 'ID', 'Snippet', 'Updated'], rows))
       } catch (e) {
         return err((e as Error).message)
@@ -45,7 +50,12 @@ export function registerSearchTools(server: McpServer, db: DbClient): void {
         const hits = await search.searchGlobal(query, { limit })
         if (hits.length === 0) return ok(`No results found for "${query}"`)
         const header = `## Global Search: "${query}" (${hits.length} results)\n\n`
-        const rows = hits.map((h) => [h.title, h.source, h.snippet.slice(0, 60), relativeTime(h.updated_at)])
+        const rows = hits.map((h) => [
+          h.title,
+          h.source,
+          h.snippet.slice(0, 60),
+          relativeTime(h.updated_at),
+        ])
         return ok(header + markdownTable(['Title', 'Source', 'Snippet', 'Updated'], rows))
       } catch (e) {
         return err((e as Error).message)

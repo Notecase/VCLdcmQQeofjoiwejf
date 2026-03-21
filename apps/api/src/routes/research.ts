@@ -139,6 +139,8 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
         threadId,
         outputPreference: body.outputPreference,
       })) {
+        if (c.req.raw.signal.aborted) break
+
         // Collect data for persistence
         if (event.event === 'text' && typeof event.data === 'string') {
           assistantContent += event.data

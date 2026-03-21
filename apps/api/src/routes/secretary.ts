@@ -168,6 +168,8 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
         message: body.message,
         threadId,
       })) {
+        if (c.req.raw.signal.aborted) break
+
         // Accumulate assistant response data for persistence
         if (event.event === 'text') {
           assistantContent += event.data

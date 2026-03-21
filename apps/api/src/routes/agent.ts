@@ -237,6 +237,8 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
             context: effectiveEditorContext,
             historyWindowTurns,
           })) {
+            if (c.req.raw.signal.aborted) break
+
             if (event.type === 'assistant-start') {
               assistantStartSeen = true
             }
@@ -295,36 +297,42 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
               'I need an open note to answer that. Please open a note or tell me which note to use.'
           }
 
-          if (!assistantFinalSeen) {
-            if (!assistantStartSeen) {
+          // Post-loop SSE writes: wrap in try/catch since the stream may
+          // already be closed if the client disconnected (abort signal).
+          try {
+            if (!assistantFinalSeen) {
+              if (!assistantStartSeen) {
+                await stream.writeSSE({
+                  data: JSON.stringify({
+                    type: 'assistant-start',
+                    data: { sourceNode: 'api-fallback' },
+                  }),
+                })
+              }
+
               await stream.writeSSE({
                 data: JSON.stringify({
-                  type: 'assistant-start',
-                  data: { sourceNode: 'api-fallback' },
+                  type: 'assistant-final',
+                  data: assistantContent,
+                }),
+              })
+              assistantFinalSeen = true
+            }
+
+            if (bufferedDoneEvent) {
+              await stream.writeSSE({
+                data: JSON.stringify(bufferedDoneEvent),
+              })
+            } else {
+              await stream.writeSSE({
+                data: JSON.stringify({
+                  type: 'done',
+                  data: { threadId },
                 }),
               })
             }
-
-            await stream.writeSSE({
-              data: JSON.stringify({
-                type: 'assistant-final',
-                data: assistantContent,
-              }),
-            })
-            assistantFinalSeen = true
-          }
-
-          if (bufferedDoneEvent) {
-            await stream.writeSSE({
-              data: JSON.stringify(bufferedDoneEvent),
-            })
-          } else {
-            await stream.writeSSE({
-              data: JSON.stringify({
-                type: 'done',
-                data: { threadId },
-              }),
-            })
+          } catch {
+            // Stream already closed — client disconnected, SSE writes are best-effort
           }
 
           await auth.supabase.from('editor_messages').insert({
@@ -552,6 +560,8 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
         })
 
         for await (const chunk of generator) {
+          if (c.req.raw.signal.aborted) break
+
           await stream.writeSSE({
             data: JSON.stringify(chunk),
           })
@@ -604,6 +614,8 @@ agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
         })
 
         for await (const chunk of generator) {
+          if (c.req.raw.signal.aborted) break
+
           await stream.writeSSE({
             data: JSON.stringify(chunk),
           })
@@ -656,6 +668,8 @@ agent.post('/planner/plan', zValidator('json', PlannerSchema), async (c) => {
         })
 
         for await (const chunk of generator) {
+          if (c.req.raw.signal.aborted) break
+
           await stream.writeSSE({
             data: JSON.stringify(chunk),
           })

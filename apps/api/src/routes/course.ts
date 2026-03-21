@@ -267,6 +267,16 @@ course.get('/generate/:threadId/stream', async (c) => {
         focusAreas: (thread.focus_areas as string[]) ?? [],
         courseId: thread.course_id as string,
       })) {
+        // Proactively detect client disconnect via abort signal.
+        // Unlike other routes, course generation must continue for DB consistency,
+        // so we set clientConnected=false instead of breaking.
+        if (c.req.raw.signal.aborted && clientConnected) {
+          clientConnected = false
+          console.warn(
+            `[Course SSE] Client abort signal detected for thread ${threadId}; continuing generation in background.`
+          )
+        }
+
         if (clientConnected) {
           try {
             await stream.writeSSE({

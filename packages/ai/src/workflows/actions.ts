@@ -20,9 +20,9 @@ import type {
   ActionProgress,
 } from './types'
 import { createSourceStorage } from '../sources/storage'
-import { selectModel } from '../providers/model-registry'
-import { createOpenAIClient } from '../providers/client-factory'
-import { trackOpenAIResponse } from '../providers/token-tracker'
+import { generateText } from 'ai'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 
 /**
  * Workflow Actions Executor
@@ -33,8 +33,9 @@ export class WorkflowActions {
   constructor(
     supabase: SupabaseClient,
     userId: string,
-    private openaiApiKey: string
+    _openaiApiKey?: string
   ) {
+    // API key no longer needed — AI SDK reads from env vars via model registry
     this.storage = createSourceStorage(supabase, userId)
   }
 
@@ -136,7 +137,7 @@ Create detailed, well-organized study notes in markdown format:`
       message: 'Generating study notes...',
     })
 
-    const result = await this.callOpenAI(prompt, false)
+    const result = await this.callAI(prompt, false)
 
     onProgress?.({
       actionType: 'generate_study_note',
@@ -199,7 +200,7 @@ KEY POINTS:
       message: 'Creating summary...',
     })
 
-    const result = await this.callOpenAI(prompt, false)
+    const result = await this.callAI(prompt, false)
 
     // Parse the result
     const summaryMatch = result.match(/SUMMARY:\s*([\s\S]*?)(?=KEY POINTS:|$)/i)
@@ -277,7 +278,7 @@ Provide your response as JSON in this format:
       message: 'Extracting key terms...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     // Parse JSON response
     let terms = []
@@ -390,7 +391,7 @@ Analyze these sources and provide your response as JSON:
       message: 'Analyzing differences and agreements...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     // Parse JSON response
     let comparison = { agreements: [], differences: [], uniqueInsights: [] }
@@ -467,7 +468,7 @@ Provide your response as JSON:
       message: 'Creating questions...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     let questions = []
     try {
@@ -553,7 +554,7 @@ If no conflicts are found, return: {"conflicts": []}`
       message: 'Checking for contradictions...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     let conflicts = []
     try {
@@ -633,7 +634,7 @@ Provide your response as JSON:
       message: 'Processing references...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     let citations = []
     try {
@@ -708,7 +709,7 @@ Provide your response as JSON with events sorted chronologically:
       message: 'Building timeline...',
     })
 
-    const result = await this.callOpenAI(prompt, true)
+    const result = await this.callAI(prompt, true)
 
     let events = []
     try {
@@ -735,31 +736,27 @@ Provide your response as JSON with events sorted chronologically:
   }
 
   /**
-   * Call OpenAI API
+   * Call AI model
    * @param prompt - The prompt to send
    * @param expectJson - If true, instructs the model to output valid JSON. If false, instructs for markdown output.
    */
-  private async callOpenAI(prompt: string, expectJson: boolean = false): Promise<string> {
+  private async callAI(prompt: string, expectJson: boolean = false): Promise<string> {
     const systemContent = expectJson
       ? 'You are a helpful assistant that analyzes source documents. When asked for JSON output, respond with valid JSON only.'
       : 'You are a helpful assistant that creates well-formatted markdown content. Always output in clean markdown format with proper headings, bullet points, and formatting. Never output JSON format unless explicitly asked.'
 
-    const model = selectModel('chat')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('research')
 
-    const startTime = Date.now()
-    const response = await client.chat.completions.create({
-      model: model.id,
-      messages: [
-        { role: 'system', content: systemContent },
-        { role: 'user', content: prompt },
-      ],
+    const { text } = await generateText({
+      model,
+      system: systemContent,
+      prompt,
       temperature: 0.3,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
     })
-    trackOpenAIResponse(response, { model: model.id, taskType: 'research', startTime })
 
-    return response.choices[0]?.message?.content || ''
+    return text
   }
 }
 

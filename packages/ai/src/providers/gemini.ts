@@ -6,13 +6,12 @@
  * Models: gemini-3.1-pro-preview (slides/images), deep-research-pro-preview-12-2025
  */
 
-import { GoogleGenerativeAI, GenerativeModel, Content } from '@google/generative-ai'
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai'
 import { stripJsonFences } from '../utils/stripJsonFences'
 import { GoogleGenAI } from '@google/genai'
-import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from './interface'
 import { buildSlidePrompt } from '../slides/prompts'
 import { getTheme, SlideType } from '../slides/themes'
-import { trackGeminiResponse, trackGeminiStream } from './token-tracker'
+import { trackGeminiResponse } from './token-tracker'
 
 // ============================================================================
 // Configuration
@@ -71,166 +70,24 @@ export interface SlideGenerationProgress {
 // Gemini Provider Implementation
 // ============================================================================
 
-export class GeminiProvider implements AIProvider {
+export class GeminiProvider {
   private client: GoogleGenerativeAI
   private imageClient: GoogleGenAI | null = null
-  private model: GenerativeModel
   private slidesModel: GenerativeModel
-  private researchModel: GenerativeModel
-  private lastUsage: AIUsage | null = null
-  private modelName: string
   private slidesModelName: string
-  private researchModelName: string
 
   constructor(config: GeminiProviderConfig) {
     this.client = new GoogleGenerativeAI(config.apiKey)
-    this.modelName = config.model ?? DEFAULT_MODEL
     this.slidesModelName = config.slidesModel ?? SLIDES_MODEL
-    this.researchModelName = config.researchModel ?? RESEARCH_MODEL
 
-    this.model = this.client.getGenerativeModel({ model: this.modelName })
     this.slidesModel = this.client.getGenerativeModel({ model: this.slidesModelName })
-    this.researchModel = this.client.getGenerativeModel({ model: this.researchModelName })
 
     // Initialize image generation client (uses @google/genai SDK)
     this.imageClient = new GoogleGenAI({ apiKey: config.apiKey })
   }
 
-  /**
-   * Stream completion
-   */
-  async *complete(
-    context: AIContext,
-    options?: AICompletionOptions
-  ): AsyncGenerator<string, void, unknown> {
-    const prompt = this.buildCompletionPrompt(context)
-
-    const result = await this.model.generateContentStream({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: options?.temperature ?? 0.7,
-        maxOutputTokens: options?.maxTokens ?? 1000,
-        stopSequences: options?.stopSequences,
-      },
-    })
-
-    for await (const chunk of trackGeminiStream(result, {
-      model: this.modelName,
-      taskType: 'completion',
-    })) {
-      const text = chunk.text()
-      if (text) {
-        yield text
-      }
-    }
-
-    this.lastUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      model: this.modelName,
-      actionType: 'complete',
-    }
-  }
-
-  /**
-   * Stream rewrite
-   */
-  async *rewrite(
-    text: string,
-    instruction: string,
-    _context?: AIContext
-  ): AsyncGenerator<string, void, unknown> {
-    const prompt = `Rewrite the following text according to the instruction.
-Only output the rewritten text, nothing else.
-
-Instruction: ${instruction}
-
-Text to rewrite:
-${text}`
-
-    const result = await this.model.generateContentStream({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7 },
-    })
-
-    for await (const chunk of trackGeminiStream(result, {
-      model: this.modelName,
-      taskType: 'rewrite',
-    })) {
-      const chunkText = chunk.text()
-      if (chunkText) {
-        yield chunkText
-      }
-    }
-
-    this.lastUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      model: this.modelName,
-      actionType: 'rewrite',
-    }
-  }
-
-  /**
-   * Stream chat
-   */
-  async *chat(messages: ChatMessage[], context?: AIContext): AsyncGenerator<string, void, unknown> {
-    const contents = this.buildChatContents(messages, context)
-
-    const result = await this.model.generateContentStream({
-      contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
-    })
-
-    for await (const chunk of trackGeminiStream(result, {
-      model: this.modelName,
-      taskType: 'chat',
-    })) {
-      const text = chunk.text()
-      if (text) {
-        yield text
-      }
-    }
-
-    this.lastUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      model: this.modelName,
-      actionType: 'chat',
-    }
-  }
-
-  /**
-   * Stream summarize
-   */
-  async *summarize(text: string): AsyncGenerator<string, void, unknown> {
-    const prompt = `Please summarize the following text clearly and concisely:\n\n${text}`
-
-    const result = await this.model.generateContentStream({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.5, maxOutputTokens: 1000 },
-    })
-
-    for await (const chunk of trackGeminiStream(result, {
-      model: this.modelName,
-      taskType: 'summarize',
-    })) {
-      const chunkText = chunk.text()
-      if (chunkText) {
-        yield chunkText
-      }
-    }
-
-    this.lastUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      model: this.modelName,
-      actionType: 'summarize',
-    }
-  }
-
   // =========================================================================
-  // Specialized Methods (from Note3)
+  // Specialized Methods (Slides)
   // =========================================================================
 
   /**
@@ -300,153 +157,6 @@ Only output valid JSON, no markdown code blocks or explanation.`
     }
   }
 
-  /**
-   * Deep research on a topic
-   * Uses Gemini's large context window and research capabilities
-   */
-  async *deepResearch(
-    query: string,
-    context?: {
-      existingNotes?: string
-      focusAreas?: string[]
-      maxDepth?: 'quick' | 'standard' | 'comprehensive'
-    }
-  ): AsyncGenerator<
-    {
-      type: 'progress' | 'source' | 'content'
-      data: string | { title: string; url?: string }
-    },
-    void,
-    unknown
-  > {
-    let prompt = `Conduct comprehensive research on the following topic:
-
-Topic: ${query}
-
-`
-
-    if (context?.existingNotes) {
-      prompt += `Existing knowledge to build upon:
-${context.existingNotes.slice(0, 10000)}
-
-`
-    }
-
-    if (context?.focusAreas?.length) {
-      prompt += `Focus areas: ${context.focusAreas.join(', ')}\n\n`
-    }
-
-    prompt += `Research depth: ${context?.maxDepth ?? 'standard'}
-
-Provide:
-1. Comprehensive overview
-2. Key concepts and definitions
-3. Current developments and trends
-4. Practical applications
-5. Recommended resources
-
-Format as clear, well-organized markdown.`
-
-    yield { type: 'progress', data: 'Starting research...' }
-
-    const result = await this.researchModel.generateContentStream({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8000,
-      },
-    })
-
-    yield { type: 'progress', data: 'Analyzing sources...' }
-
-    for await (const chunk of trackGeminiStream(result, {
-      model: this.researchModelName,
-      taskType: 'deep-research',
-    })) {
-      const text = chunk.text()
-      if (text) {
-        yield { type: 'content', data: text }
-      }
-    }
-
-    this.lastUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      model: this.researchModelName,
-      actionType: 'research',
-    }
-  }
-
-  /**
-   * Generate course curriculum from notes
-   */
-  async generateCourseCurriculum(
-    notes: { title: string; content: string }[],
-    options?: {
-      moduleCount?: number
-      difficulty?: 'beginner' | 'intermediate' | 'advanced'
-      format?: 'lessons' | 'modules' | 'chapters'
-    }
-  ): Promise<{
-    title: string
-    description: string
-    modules: {
-      index: number
-      title: string
-      description: string
-      lessons: { title: string; type: 'lecture' | 'video' | 'practice' | 'quiz' }[]
-    }[]
-  }> {
-    const moduleCount = options?.moduleCount ?? 5
-    const difficulty = options?.difficulty ?? 'intermediate'
-    const format = options?.format ?? 'modules'
-
-    const noteSummary = notes.map((n) => `- ${n.title}: ${n.content.slice(0, 500)}`).join('\n')
-
-    const prompt = `Create a ${difficulty} level course curriculum based on these notes:
-
-${noteSummary}
-
-Requirements:
-- ${moduleCount} ${format}
-- Each ${format.slice(0, -1)} should have 3-5 lessons
-- Include variety: lectures, videos, practice, quizzes
-- Logical progression from basics to advanced
-
-Return a JSON object with this structure:
-{
-  "title": "Course title",
-  "description": "Course description",
-  "modules": [
-    {
-      "index": 1,
-      "title": "Module title",
-      "description": "Module description",
-      "lessons": [
-        { "title": "Lesson title", "type": "lecture|video|practice|quiz" }
-      ]
-    }
-  ]
-}
-
-Only output valid JSON.`
-
-    const startTime = Date.now()
-    const result = await this.slidesModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 4000,
-        responseMimeType: 'application/json',
-      },
-    })
-
-    trackGeminiResponse(result, { model: this.slidesModelName, taskType: 'course', startTime })
-
-    const responseText = result.response.text()
-    const jsonStr = stripJsonFences(responseText)
-    return JSON.parse(jsonStr)
-  }
 
   /**
    * Generate slide images using Gemini Image model
@@ -641,69 +351,6 @@ Only output valid JSON.`
     }
   }
 
-  /**
-   * Get usage
-   */
-  getUsage(): AIUsage | null {
-    return this.lastUsage
-  }
-
-  // =========================================================================
-  // Private Methods
-  // =========================================================================
-
-  private buildCompletionPrompt(context: AIContext): string {
-    let prompt = context.systemPrompt || 'Continue the following text naturally:'
-    prompt += '\n\n'
-
-    if (context.textBeforeCursor) {
-      prompt += context.textBeforeCursor
-    }
-
-    if (context.selectedText) {
-      prompt += `\n[Selected: ${context.selectedText}]\n`
-    }
-
-    return prompt
-  }
-
-  private buildChatContents(messages: ChatMessage[], context?: AIContext): Content[] {
-    const contents: Content[] = []
-
-    // Add system context as first user message (Gemini doesn't have system role)
-    let systemContext =
-      context?.systemPrompt || 'You are a helpful AI assistant for note-taking and learning.'
-
-    if (context?.documentContent) {
-      systemContext += `\n\nContext:\n${context.documentContent.slice(0, 8000)}`
-    }
-
-    // Convert messages to Gemini format
-    for (const msg of messages) {
-      // Skip messages with null or empty content to avoid API errors
-      if (msg.content == null || msg.content === '') continue
-
-      const role = msg.role === 'assistant' ? 'model' : 'user'
-
-      // Prepend system context to first user message
-      let content = msg.content
-      if (contents.length === 0 && role === 'user') {
-        content = `${systemContext}\n\nUser: ${content}`
-      }
-
-      contents.push({
-        role,
-        parts: [{ text: content }],
-      })
-    }
-
-    // Validate that we have messages to send
-    if (contents.length === 0) {
-      throw new Error('No valid messages to send to API')
-    }
-
-    return contents
-  }
 }
 
 // ============================================================================

@@ -720,7 +720,6 @@ export class MissionOrchestratorService {
     return {
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       sharedContextService: this.sharedContextService,
       missionContext:
         missionId && stepId && stage

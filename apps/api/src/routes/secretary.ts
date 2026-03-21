@@ -152,7 +152,6 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const agent = new SecretaryAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     timezone,
     sharedContextService,
   })
@@ -494,7 +493,6 @@ secretary.post('/prepare-tomorrow', async (c) => {
   const agent = new SecretaryAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     timezone: tzHeader,
     sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })

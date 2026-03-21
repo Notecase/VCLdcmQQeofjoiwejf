@@ -279,13 +279,15 @@ export async function runDeepResearch(
   config: DeepResearchConfig
 ): Promise<DeepResearchResult> {
   const {
-    geminiApiKey,
+    geminiApiKey: _geminiApiKey,
     onProgress,
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
     maxPolls = DEFAULT_MAX_POLLS,
     requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     maxConsecutivePollErrors = DEFAULT_MAX_CONSECUTIVE_POLL_ERRORS,
   } = config
+
+  const geminiApiKey = _geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || ''
 
   // Notify: starting
   onProgress?.({

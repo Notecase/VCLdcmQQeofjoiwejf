@@ -17,10 +17,10 @@ describe('research todo tools', () => {
     }
 
     const tools = createResearchTools(ctx as any)
-    const writeTodos = tools.find((t) => t.name === 'write_todos')
+    const writeTodos = tools.write_todos
     expect(writeTodos).toBeDefined()
 
-    await writeTodos!.invoke({
+    await writeTodos.execute({
       todos: [{ content: 'Week 1: Basics' }, { content: 'Week 2: MDPs' }],
     })
 
@@ -29,7 +29,7 @@ describe('research todo tools', () => {
     expect(emitEvent).toHaveBeenCalled()
   })
 
-  it('rejects write_todos input above 7 items', async () => {
+  it('truncates write_todos input to 7 items max', async () => {
     const emitEvent = vi.fn()
     const ctx = {
       files: new Map(),
@@ -42,17 +42,16 @@ describe('research todo tools', () => {
     }
 
     const tools = createResearchTools(ctx as any)
-    const writeTodos = tools.find((t) => t.name === 'write_todos')
+    const writeTodos = tools.write_todos
     expect(writeTodos).toBeDefined()
 
-    await expect(
-      writeTodos!.invoke({
-        todos: Array.from({ length: 9 }, (_, i) => ({
-          content: `Task ${i + 1}`,
-        })),
-      })
-    ).rejects.toThrow()
-    expect(ctx.todos).toHaveLength(0)
-    expect(emitEvent).not.toHaveBeenCalled()
+    // AI SDK validates inputSchema at model level; execute() truncates via .slice(0, 7)
+    await writeTodos.execute({
+      todos: Array.from({ length: 9 }, (_, i) => ({
+        content: `Task ${i + 1}`,
+      })),
+    })
+    expect(ctx.todos).toHaveLength(7)
+    expect(emitEvent).toHaveBeenCalled()
   })
 })

@@ -30,7 +30,7 @@ This document describes the architecture of the Inkdown application. It is the s
 
 Inkdown is an AI-enhanced markdown editor built as a pnpm monorepo. It combines a rich WYSIWYG editor (Muya engine) with multi-provider AI capabilities (OpenAI, Anthropic, Google Gemini) for chat, content generation, learning resources, and autonomous agents.
 
-**Key technologies:** Vue 3, Hono, Supabase, Vercel AI SDK, LangChain, TypeScript.
+**Key technologies:** Vue 3, Hono, Supabase, Vercel AI SDK v6, TypeScript.
 
 ---
 
@@ -161,48 +161,50 @@ Central error handling with `AppError` class:
 
 **Peer dependency:** `@inkdown/shared`
 
-### Provider System (3 providers, task-based routing)
+### Provider System (AI SDK v6)
+
+All agents and services use AI SDK v6 (`streamText`, `generateText`, `embed`, `ToolLoopAgent`). The legacy OpenAI SDK has been removed.
 
 | Provider         | Models                                     | Routed Tasks                                                                    |
 | ---------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
 | **OpenAI**       | GPT-5.2 (chat), text-embedding-3-large     | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
-| **Gemini**       | gemini-2.0-flash-exp, gemini-3-pro-preview | slides, research, course, deep-research                                         |
+| **Gemini**       | gemini-3.1-pro-preview                     | slides (native SDK for image gen), artifacts                                    |
 | **Ollama Cloud** | kimi-k2.5:cloud                            | artifact, code, html, css, javascript                                           |
 
-`createProvider(taskType)` returns the optimal provider. Providers are cached as singletons.
+`resolveModel(taskType)` returns an AI SDK `LanguageModel` + `ModelEntry` for the optimal provider. Providers are lazy-initialized singletons via `@ai-sdk/openai` and `@ai-sdk/google`.
 
-All providers support streaming via `AsyncGenerator`.
+Gemini's native SDK (`@google/generative-ai`, `@google/genai`) is retained only for slide image generation, which requires features not available through AI SDK.
 
-### Agent System (6 LangGraph-based agents)
+### Agent System (AI SDK v6 — 8 agents)
 
-| Agent              | Purpose                           | Key Capability                                                                                                          |
-| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **SecretaryAgent** | Intent classification and routing | Routes to 8 intents: chat, edit_note, follow_up, open_note, create_artifact, database_action, read_memory, write_memory |
-| **ChatAgent**      | Conversational AI with RAG        | Document context, citations, session management                                                                         |
-| **NoteAgent**      | Note manipulation                 | create, update, organize, summarize, expand                                                                             |
-| **PlannerAgent**   | Goal decomposition                | Step-by-step plan generation                                                                                            |
-| **AgenticAgent**   | Autonomous task execution         | Research, extraction, creation, validation, reflection (max 20 steps)                                                   |
-| **DeepAgent**      | Compound request orchestration    | Task decomposition, subagent delegation, multi-output requests                                                          |
+| Agent                  | Purpose                           | AI SDK Pattern                                   |
+| ---------------------- | --------------------------------- | ------------------------------------------------ |
+| **SecretaryAgent**     | Intent classification and routing | `ToolLoopAgent` with 15 tools                    |
+| **EditorDeepAgent**    | Full editor AI with tool loop     | `ToolLoopAgent` with 12 tools + stream adapter   |
+| **ChatAgent**          | Conversational AI with RAG        | `streamText()` with document context             |
+| **NoteAgent**          | Note manipulation                 | `streamText()` / `generateText()`                |
+| **PlannerAgent**       | Goal decomposition                | `generateText()` with structured output          |
+| **ResearchAgent**      | Deep research workflow            | `ToolLoopAgent` for deep mode, `streamText()` for simple |
+| **ExplainAgent**       | Course AI tutor                   | `streamText()` with course context               |
+| **CourseOrchestrator** | AI course generation pipeline     | `ToolLoopAgent` with merged subagent tools       |
 
-### DeepAgent Architecture (Compound Requests)
+All agents use `resolveModel()` from `ai-sdk-factory.ts` and `trackAISDKUsage()` from `ai-sdk-usage.ts` for usage tracking.
 
-The `InkdownDeepAgent` handles requests with multiple intents (e.g., "make a note about X, add a table, and create a timer"):
+### EditorDeepAgent Architecture (Compound Requests)
+
+The `EditorDeepAgent` handles requests with multiple intents (e.g., "make a note about X, add a table, and create a timer"):
 
 ```
 User Request → isCompoundRequest() check
      |
      ├── Simple request → SecretaryAgent (existing flow)
      |
-     └── Compound request → DeepAgent
+     └── Compound request → EditorDeepAgent (ToolLoopAgent)
            |
-           ├── decomposeRequest() → SubTask[]
-           |     (LLM-based task identification)
+           ├── 12 tools for note/artifact/table/search operations
            |
-           └── For each SubTask:
-                 ├── edit_note → NoteSubagent
-                 ├── create_artifact → ArtifactSubagent
-                 ├── database_action → TableSubagent
-                 └── chat → Direct LLM call
+           └── Stream adapter normalizes ToolLoopAgent output
+                 to Inkdown's custom SSE event types
 ```
 
 **Subagents** (`packages/ai/src/agents/subagents/`):
@@ -211,12 +213,14 @@ User Request → isCompoundRequest() check
 - `ArtifactSubagent` - Creates interactive HTML/CSS/JS widgets
 - `TableSubagent` - Creates and populates database tables
 
-**Streaming Events** (new types for DeepAgent):
+**Streaming Events** (DeepAgent types):
 
 - `decomposition` - Task breakdown from orchestrator
 - `subtask-start` - Subagent beginning work
 - `subtask-progress` - Progress updates (0-100%)
 - `subtask-complete` - Subagent finished
+- `subagent-start/delta/complete` - Multi-mode streaming
+- `note-navigate` - Frontend should load a newly created note
 
 **Frontend Integration** (`apps/web/src/stores/ai.ts`):
 
@@ -398,7 +402,7 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 - **Framework:** Hono 4.6.0 with @hono/node-server
 - **Database:** Supabase (PostgreSQL with RLS)
 - **Validation:** Zod + @hono/zod-validator
-- **AI:** Vercel AI SDK + LangChain + direct provider SDKs
+- **AI:** Vercel AI SDK v6 (`streamText`, `generateText`, `embed`, `ToolLoopAgent`)
 
 ### Middleware Pipeline
 
@@ -512,7 +516,7 @@ Multiple endpoints support SSE (`text/event-stream`). Chunk types: `text-delta`,
 | **factory.ts**                   | Provider-agnostic initialization (Supabase or local adapters) |
 | **notes.service.ts**             | Note CRUD via database provider                               |
 | **projects.service.ts**          | Project/folder CRUD                                           |
-| **ai.service.ts**                | Agent communication with SSE streaming                        |
+| **ai.service.ts**                | Agent communication with SSE streaming (uses `parseSSEStream`) |
 | **learningResources.service.ts** | Learning resource persistence                                 |
 | **attachments.service.ts**       | File attachment management                                    |
 | **subscriptions.service.ts**     | Realtime database subscriptions                               |

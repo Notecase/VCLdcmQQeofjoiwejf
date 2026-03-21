@@ -112,42 +112,16 @@ export async function streamMission(
     throw new Error(body?.message || `Failed to connect mission stream (${response.status})`)
   }
 
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('Mission stream has no response body')
+  const { parseSSEStream } = await import('@/utils/sse-parser')
 
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let currentEventType: string | null = null
-  let currentEventId: string | null = null
-  let dataLines: string[] = []
+  await parseSSEStream(response, {
+    signal: callbacks.signal,
+    onEvent: (sseEvent) => {
+      const parsed = sseEvent.data as MissionEventEnvelope<unknown>
+      const resolvedType = sseEvent.event || parsed.type
+      if (resolvedType === 'heartbeat') return
 
-  function resetPendingEvent() {
-    currentEventType = null
-    currentEventId = null
-    dataLines = []
-  }
-
-  function flushPendingEvent() {
-    if (dataLines.length === 0) {
-      resetPendingEvent()
-      return
-    }
-
-    const rawData = dataLines.join('\n').trim()
-    if (!rawData || rawData === '[DONE]') {
-      resetPendingEvent()
-      return
-    }
-
-    try {
-      const parsed = JSON.parse(rawData) as MissionEventEnvelope<unknown>
-      const resolvedType = currentEventType || parsed.type
-      if (resolvedType === 'heartbeat') {
-        resetPendingEvent()
-        return
-      }
-
-      const parsedId = currentEventId ? Number.parseInt(currentEventId, 10) : NaN
+      const parsedId = sseEvent.id ? Number.parseInt(sseEvent.id, 10) : NaN
       const resolvedSeq =
         Number.isFinite(parsedId) && parsedId > 0
           ? parsedId
@@ -162,55 +136,14 @@ export async function streamMission(
       }
 
       callbacks.onEvent?.(event)
-    } catch (error) {
-      callbacks.onError?.(
-        error instanceof Error ? error.message : 'Failed to parse mission stream event'
-      )
-    } finally {
-      resetPendingEvent()
-    }
-  }
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.trim()) {
-          flushPendingEvent()
-          continue
-        }
-
-        if (line.startsWith(':')) continue
-        if (line.startsWith('event:')) {
-          currentEventType = line.slice(6).trim() || null
-          continue
-        }
-        if (line.startsWith('id:')) {
-          currentEventId = line.slice(3).trim() || null
-          continue
-        }
-        if (!line.startsWith('data:')) {
-          continue
-        }
-
-        dataLines.push(line.slice(5))
-      }
-    }
-
-    if (buffer.trim()) {
-      dataLines.push(buffer)
-      flushPendingEvent()
-    }
-  } finally {
-    reader.releaseLock()
-    callbacks.onDone?.()
-  }
+    },
+    onError: (error) => {
+      callbacks.onError?.(error.message)
+    },
+    onDone: () => {
+      callbacks.onDone?.()
+    },
+  })
 }
 
 export function readLastMissionId(): string | null {

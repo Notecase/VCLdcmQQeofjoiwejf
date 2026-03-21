@@ -33,30 +33,11 @@ const editorAgentMetrics = {
   toolErrorTotal: 0,
 }
 
-function readBooleanEnv(name: string, defaultValue = false): boolean {
-  const raw = process.env[name]
-  if (!raw) return defaultValue
-  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase())
-}
-
 function readIntegerEnv(name: string, defaultValue: number): number {
   const raw = process.env[name]
   if (!raw) return defaultValue
   const parsed = Number.parseInt(raw, 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue
-}
-
-function shouldUseEditorDeepRuntime(_userId: string, requestedRuntime?: 'legacy' | 'editor-deep') {
-  const killSwitch = readBooleanEnv('EDITOR_DEEP_AGENT_KILL_SWITCH', false)
-  if (killSwitch) return false
-
-  // Legacy path only if EXPLICITLY requested — EditorDeep is now the default for ALL users
-  if (requestedRuntime === 'legacy') {
-    console.warn('[agent] Legacy EditorAgent runtime is deprecated. Use editor-deep instead.')
-    return false
-  }
-
-  return true // Always use EditorDeep
 }
 
 function mergeEditorContext(input: {
@@ -106,7 +87,6 @@ function mergeEditorContext(input: {
  */
 const AgentRequestSchema = z.object({
   input: z.string().min(1).max(10000),
-  runtime: z.enum(['legacy', 'editor-deep']).optional(),
   threadId: z.string().uuid().optional(),
   context: z
     .object({
@@ -178,23 +158,17 @@ const PlannerSchema = z.object({
 // ============================================================================
 
 /**
- * Editor agent - intelligent routing
+ * Editor agent — EditorDeepAgent (AI SDK v6 ToolLoopAgent)
  * POST /api/agent/secretary
  *
- * Routes compound requests (multiple tasks) to DeepAgent for task decomposition.
- * Simple requests continue to use EditorAgent for faster processing.
+ * All requests use EditorDeepAgent which handles both simple and compound requests
+ * via AI SDK v6 ToolLoopAgent with 12 tools.
  */
 agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
 
   const startTime = Date.now()
-  const useEditorDeep = shouldUseEditorDeepRuntime(auth.userId, body.runtime)
   const historyWindowTurns = readIntegerEnv('EDITOR_DEEP_AGENT_HISTORY_WINDOW_TURNS', 12)
   const mergedEditorContext = mergeEditorContext({
     context: body.context as Record<string, unknown> | undefined,
@@ -202,7 +176,7 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   })
   const threadId = body.threadId || body.sessionId || crypto.randomUUID()
 
-  if (useEditorDeep) {
+  {
     const { EditorDeepAgent } = await import('@inkdown/ai/agents')
     const { SharedContextService } = await import('@inkdown/ai/services')
     const sharedContextService = new SharedContextService(auth.supabase, auth.userId)
@@ -537,121 +511,8 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
     })
   }
 
-  // Dynamically import to avoid bundling issues
-  const { EditorAgent, InkdownDeepAgent } = await import('@inkdown/ai/agents')
-
-  // Check if this is a compound request requiring task decomposition
-  const isCompound = InkdownDeepAgent.isCompoundRequest(body.input)
-
-  if (isCompound && body.stream) {
-    // Use DeepAgent for compound requests with streaming
-    const deepAgent = new InkdownDeepAgent({
-      supabase: auth.supabase,
-      userId: auth.userId,
-      openaiApiKey,
-    })
-
-    return streamSSE(c, async (stream) => {
-      try {
-        const generator = deepAgent.stream({
-          message: body.input,
-          context: mergedEditorContext,
-        })
-
-        for await (const event of generator) {
-          await stream.writeSSE({
-            data: JSON.stringify(event),
-          })
-        }
-      } catch (err) {
-        await stream.writeSSE({
-          data: JSON.stringify({ type: 'error', data: String(err) }),
-        })
-      }
-    })
-  }
-
-  // Look up plan instructions if the note belongs to a plan-linked folder
-  let planInstructions: string | undefined
-  const noteProjectId =
-    mergedEditorContext.workspaceId || mergedEditorContext.currentNoteId
-      ? await (async () => {
-          // Try to get the note's project_id
-          const noteId = mergedEditorContext.currentNoteId
-          if (!noteId) return null
-          const { data: note } = await auth.supabase
-            .from('notes')
-            .select('project_id')
-            .eq('id', noteId)
-            .maybeSingle()
-          return note?.project_id || null
-        })()
-      : null
-
-  if (noteProjectId) {
-    try {
-      const { data: link } = await auth.supabase
-        .from('plan_project_links')
-        .select('plan_id')
-        .eq('user_id', auth.userId)
-        .eq('project_id', noteProjectId)
-        .maybeSingle()
-
-      if (link?.plan_id) {
-        const { MemoryService } = await import('@inkdown/ai/agents')
-        const memService = new MemoryService(auth.supabase, auth.userId)
-        const instFile = await memService.readFile(
-          `Plans/${link.plan_id.toLowerCase()}-instructions.md`
-        )
-        if (instFile?.content) planInstructions = instFile.content
-      }
-    } catch {
-      // Non-critical
-    }
-  }
-
-  // Use EditorAgent for simple requests or non-streaming
-  const editorAgent = new EditorAgent({
-    supabase: auth.supabase,
-    userId: auth.userId,
-    openaiApiKey,
-    planInstructions,
-  })
-
-  // Load session if provided
-  if (body.sessionId) {
-    await editorAgent.loadSession(body.sessionId)
-  }
-
-  if (body.stream) {
-    return streamSSE(c, async (stream) => {
-      try {
-        const generator = editorAgent.stream({
-          message: body.input,
-          context: mergedEditorContext,
-          sessionId: body.sessionId,
-        })
-
-        for await (const chunk of generator) {
-          await stream.writeSSE({
-            data: JSON.stringify(chunk),
-          })
-        }
-      } catch (err) {
-        await stream.writeSSE({
-          data: JSON.stringify({ type: 'error', data: String(err) }),
-        })
-      }
-    })
-  }
-
-  const result = await editorAgent.run({
-    message: body.input,
-    context: mergedEditorContext,
-    sessionId: body.sessionId,
-  })
-
-  return c.json(result)
+  // EditorDeepAgent is now the only runtime — legacy paths removed
+  return c.json({ error: 'EditorDeepAgent is the only supported runtime' }, 500)
 })
 
 // ============================================================================
@@ -665,11 +526,6 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
 agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
 
   const { ChatAgent } = await import('@inkdown/ai/agents')
   const { SharedContextService: SharedCtxService } = await import('@inkdown/ai/services')
@@ -729,11 +585,6 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
 agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
 
   const { NoteAgent } = await import('@inkdown/ai/agents')
 
@@ -786,11 +637,6 @@ agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
 agent.post('/planner/plan', zValidator('json', PlannerSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
 
   const { PlannerAgent } = await import('@inkdown/ai/agents')
 
@@ -849,11 +695,6 @@ agent.post(
   async (c) => {
     const auth = requireAuth(c)
     const body = c.req.valid('json')
-    const openaiApiKey = process.env.OPENAI_API_KEY
-
-    if (!openaiApiKey) {
-      return c.json({ error: 'OpenAI API key not configured' }, 500)
-    }
 
     const { PlannerAgent } = await import('@inkdown/ai/agents')
 
@@ -922,202 +763,6 @@ agent.post('/course/generate', zValidator('json', CourseAgentSchema), async (c) 
   })
 })
 
-// ============================================================================
-// Agentic AI (Autonomous Task Execution)
-// ============================================================================
-
-/**
- * Agentic task schema
- */
-const AgenticTaskSchema = z.object({
-  task: z.string().min(1).max(5000),
-  noteId: z.string().uuid().optional(),
-  dryRun: z.boolean().optional().default(false),
-})
-
-/**
- * Execute autonomous task
- * POST /api/agent/agentic/task
- */
-agent.post('/agentic/task', zValidator('json', AgenticTaskSchema), async (c) => {
-  requireAuth(c)
-  const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
-
-  const { createAgenticAgent } = await import('@inkdown/ai')
-  const agenticAgent = createAgenticAgent(openaiApiKey)
-
-  // Check Accept header for SSE
-  const acceptSSE = c.req.header('Accept')?.includes('text/event-stream')
-
-  if (acceptSSE) {
-    return streamSSE(c, async (stream) => {
-      try {
-        const result = await agenticAgent.executeTask(
-          body.task,
-          body.noteId,
-          async (progress: {
-            taskId: string
-            status: string
-            currentStep?: string
-            currentStepIndex: number
-            totalSteps: number
-            message: string
-          }) => {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'progress', ...progress }),
-            })
-          }
-        )
-
-        await stream.writeSSE({
-          data: JSON.stringify({ type: 'complete', result }),
-        })
-      } catch (error) {
-        await stream.writeSSE({
-          data: JSON.stringify({ type: 'error', error: String(error) }),
-        })
-      }
-    })
-  }
-
-  try {
-    const result = await agenticAgent.executeTask(body.task, body.noteId)
-    return c.json(result)
-  } catch (error) {
-    return c.json({ error: String(error) }, 500)
-  }
-})
-
-/**
- * Preview task plan without executing
- * POST /api/agent/agentic/plan
- */
-agent.post(
-  '/agentic/plan',
-  zValidator(
-    'json',
-    z.object({
-      task: z.string().min(1).max(5000),
-    })
-  ),
-  async (c) => {
-    const body = c.req.valid('json')
-    const openaiApiKey = process.env.OPENAI_API_KEY
-
-    if (!openaiApiKey) {
-      return c.json({ error: 'OpenAI API key not configured' }, 500)
-    }
-
-    const { createAgenticAgent } = await import('@inkdown/ai')
-    const agenticAgent = createAgenticAgent(openaiApiKey)
-
-    try {
-      const steps = await agenticAgent.planTask(body.task)
-      return c.json({
-        task: body.task,
-        steps,
-        stepCount: steps.length,
-        formattedPlan: agenticAgent.formatPlan(steps),
-      })
-    } catch (error) {
-      return c.json({ error: String(error) }, 500)
-    }
-  }
-)
-
-/**
- * Get task status
- * GET /api/agent/agentic/task/:id
- */
-agent.get('/agentic/task/:id', async (c) => {
-  const taskId = c.req.param('id')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
-
-  const { createAgenticAgent } = await import('@inkdown/ai')
-  const agenticAgent = createAgenticAgent(openaiApiKey)
-
-  const task = agenticAgent.getTask(taskId)
-
-  if (!task) {
-    return c.json({ error: 'Task not found' }, 404)
-  }
-
-  return c.json({
-    taskId: task.id,
-    description: task.description,
-    status: task.status,
-    stepCount: task.steps.length,
-    completedSteps: task.steps.filter((s: { status: string }) => s.status === 'Completed').length,
-    failedSteps: task.steps.filter((s: { status: string }) => s.status === 'Failed').length,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-  })
-})
-
-/**
- * Cancel running task
- * POST /api/agent/agentic/task/:id/cancel
- */
-agent.post('/agentic/task/:id/cancel', async (c) => {
-  const taskId = c.req.param('id')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
-
-  const { createAgenticAgent } = await import('@inkdown/ai')
-  const agenticAgent = createAgenticAgent(openaiApiKey)
-
-  const cancelled = agenticAgent.cancelTask(taskId)
-
-  if (!cancelled) {
-    return c.json({ error: 'Task not found or already completed' }, 400)
-  }
-
-  return c.json({ success: true, message: 'Task cancelled' })
-})
-
-/**
- * Research a topic
- * POST /api/agent/agentic/research
- */
-agent.post(
-  '/agentic/research',
-  zValidator(
-    'json',
-    z.object({
-      query: z.string().min(1).max(1000),
-    })
-  ),
-  async (c) => {
-    const body = c.req.valid('json')
-    const openaiApiKey = process.env.OPENAI_API_KEY
-
-    if (!openaiApiKey) {
-      return c.json({ error: 'OpenAI API key not configured' }, 500)
-    }
-
-    const { createAgenticAgent } = await import('@inkdown/ai')
-    const agenticAgent = createAgenticAgent(openaiApiKey)
-
-    try {
-      const result = await agenticAgent.research(body.query)
-      return c.json(result)
-    } catch (error) {
-      return c.json({ error: String(error) }, 500)
-    }
-  }
-)
 
 // ============================================================================
 // Capabilities Endpoint

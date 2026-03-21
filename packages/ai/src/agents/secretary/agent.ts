@@ -2,23 +2,19 @@
  * Secretary Agent
  *
  * Main agent for the AI Secretary feature.
- * Uses the deepagents framework (LangGraph-based) with custom Supabase-backed memory tools.
+ * Uses AI SDK v6 ToolLoopAgent with 15 tools backed by Supabase memory.
  */
 
+import { ToolLoopAgent, stepCountIs } from 'ai'
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { SecretaryStreamEvent, RoadmapCandidate } from '@inkdown/shared/types'
 import { getTodayDate, getTomorrowDate, getDayOfWeek } from '@inkdown/shared/secretary'
 import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
-import {
-  getSecretarySystemPrompt,
-  PLANNER_SUBAGENT_PROMPT,
-  RESEARCHER_SUBAGENT_PROMPT,
-} from './prompts'
-import { SecretaryStreamNormalizer } from './stream-normalizer'
-import { selectModel } from '../../providers/model-registry'
-import { createLangChainModel } from '../../providers/client-factory'
-import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+import { getSecretarySystemPrompt } from './prompts'
+import { adaptSecretaryStream } from './ai-sdk-stream-adapter'
+import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import type { SharedContextService } from '../../services/shared-context.service'
 
 // ============================================================================
@@ -28,7 +24,6 @@ import type { SharedContextService } from '../../services/shared-context.service
 export interface SecretaryAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
   timezone?: string
   sharedContextService?: SharedContextService
@@ -48,7 +43,7 @@ export class SecretaryAgent {
   }
 
   /**
-   * Stream a chat interaction with the secretary using the deepagents framework
+   * Stream a chat interaction with the secretary using AI SDK v6 ToolLoopAgent
    */
   async *stream(input: {
     message: string
@@ -56,21 +51,11 @@ export class SecretaryAgent {
   }): AsyncGenerator<SecretaryStreamEvent> {
     yield { event: 'thinking', data: 'Loading context...' }
 
-    // Lazy import deepagents to avoid top-level module issues
-    const { createDeepAgent } = await import('deepagents')
-
-    const secretaryModel = selectModel('secretary')
-    const llm = await createLangChainModel(secretaryModel, {
-      temperature: 0.5,
-      callbacks: [new TokenTrackingCallback({ model: secretaryModel.id, taskType: 'secretary' })],
-    })
-
     // Resolve timezone: config (from API header) → preferences → default
     const context = await this.memoryService.getFullContext()
     const tz = this.config.timezone || context.preferences?.timezone || undefined
 
     const tools = createSecretaryTools(this.memoryService, {
-      openaiApiKey: this.config.openaiApiKey,
       userId: this.config.userId,
       supabase: this.config.supabase,
       model: this.config.model,
@@ -104,100 +89,63 @@ export class SecretaryAgent {
 
     const fullSystemPrompt = systemPrompt + '\n\n' + contextSummary + pendingInfo + sharedCtxSection
 
-    // Create the deepagents agent (returns a compiled ReactAgent)
-    const agent = createDeepAgent({
-      model: llm,
-      systemPrompt: fullSystemPrompt,
+    const threadId = input.threadId || crypto.randomUUID()
+    const pendingEvents: SecretaryStreamEvent[] = []
+
+    // Create AI SDK v6 ToolLoopAgent (replaces deepagents createDeepAgent)
+    const model = getModelForTask('secretary')
+    const agent = new ToolLoopAgent({
+      model,
+      instructions: fullSystemPrompt,
       tools,
-      subagents: [
-        {
-          name: 'planner',
-          description: 'Creates detailed learning roadmaps with day-by-day topic breakdowns',
-          systemPrompt: PLANNER_SUBAGENT_PROMPT,
-        },
-        {
-          name: 'researcher',
-          description:
-            'Researches a subject to create a curriculum outline with prerequisites and progression',
-          systemPrompt: RESEARCHER_SUBAGENT_PROMPT,
-        },
-      ],
+      stopWhen: stepCountIs(20),
+      onFinish: trackAISDKUsage({ model: 'secretary', taskType: 'secretary' }),
     })
 
-    const threadId = input.threadId || crypto.randomUUID()
-    const detectedContextWrites: Array<{
-      type: 'active_plan'
-      summary: string
-      payload: Record<string, unknown>
-    }> = []
-
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deepagents generic types are too deep for TS
-      // Use default stream mode (no streamMode/subgraphs options) for maximum compatibility.
-      // deepagents wraps LangGraph and the tuple format varies by version. The default
-      // format produces Record<string, { messages: [...] }> which our normalizer handles reliably.
-      const streamResult = (await (agent as any).stream(
-        { messages: [{ role: 'user', content: input.message }] },
-        { configurable: { thread_id: threadId } }
-      )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+      yield { event: 'thread-id', data: threadId }
 
-      const normalizer = new SecretaryStreamNormalizer()
+      const result = await agent.stream({
+        messages: [{ role: 'user', content: input.message }],
+      })
 
-      for await (const chunk of streamResult) {
-        for (const [nodeKey, nodeValue] of Object.entries(chunk)) {
-          const nodeData = nodeValue as { messages?: unknown[] }
-          if (!nodeData?.messages) continue
+      // Detect plan/roadmap tool calls for shared context writes
+      const detectedContextWrites: Array<{
+        type: 'active_plan'
+        summary: string
+        payload: Record<string, unknown>
+      }> = []
 
-          const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
-
-          for (const msg of messages) {
-            if (!msg || typeof msg !== 'object') continue
-
-            const msgObj = msg as {
-              id?: string
-              content?: string | unknown[]
-              tool_calls?: Array<{ name: string; args: Record<string, unknown> }>
-              name?: string
-              type?: string
+      for await (const event of adaptSecretaryStream(result.fullStream, pendingEvents)) {
+        // Track tool calls for shared context
+        if (
+          event.event === 'tool_call' &&
+          this.config.sharedContextService &&
+          typeof event.data === 'string'
+        ) {
+          try {
+            const tc = JSON.parse(event.data) as {
+              toolName: string
+              arguments: Record<string, unknown>
             }
-
-            if (nodeKey === 'tools' || msgObj.type === 'tool') {
-              const toolEvents = normalizer.normalizeToolResult(nodeKey, msgObj)
-              for (const event of toolEvents) {
-                yield event
-              }
-            } else {
-              // Detect plan/roadmap tool calls for shared context writes
-              if (msgObj.tool_calls && this.config.sharedContextService) {
-                for (const tc of msgObj.tool_calls) {
-                  if (
-                    tc.name === 'save_roadmap' ||
-                    tc.name === 'generate_daily_plan' ||
-                    tc.name === 'mark_day_complete'
-                  ) {
-                    detectedContextWrites.push({
-                      type: 'active_plan',
-                      summary: `Secretary: ${tc.name}`,
-                      payload: { threadId, tool: tc.name, args: tc.args },
-                    })
-                  }
-                }
-              }
-              const textEvents = normalizer.normalizeText(nodeKey, msgObj)
-              for (const event of textEvents) {
-                yield event
-              }
-
-              const toolCallEvents = normalizer.normalizeToolCalls(nodeKey, msgObj)
-              for (const event of toolCallEvents) {
-                yield event
-              }
+            if (
+              tc.toolName === 'save_roadmap' ||
+              tc.toolName === 'generate_daily_plan' ||
+              tc.toolName === 'mark_day_complete'
+            ) {
+              detectedContextWrites.push({
+                type: 'active_plan',
+                summary: `Secretary: ${tc.toolName}`,
+                payload: { threadId, tool: tc.toolName, args: tc.arguments },
+              })
             }
+          } catch {
+            // Ignore JSON parse errors
           }
         }
-      }
 
-      yield normalizer.done()
+        yield event
+      }
 
       // Write detected context entries to shared bus
       if (this.config.sharedContextService && detectedContextWrites.length > 0) {

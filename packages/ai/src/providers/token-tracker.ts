@@ -5,7 +5,6 @@
  * In-memory accumulator — database persistence comes in a later phase.
  */
 
-import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
 import type { ModelProvider, AITaskType } from './model-registry'
 import { MODEL_REGISTRY } from './model-registry'
 import { getCurrentUserId } from './request-context'
@@ -111,73 +110,6 @@ class TokenTracker {
 
 // Singleton instance
 export const tokenTracker = new TokenTracker()
-
-// ============================================================================
-// Stream Wrapper Utilities
-// ============================================================================
-
-/**
- * Wraps an OpenAI streaming response to capture token usage from the final chunk.
- * Usage info is on the last chunk when `stream_options: { include_usage: true }`.
- */
-export async function* trackOpenAIStream(
-  stream: AsyncIterable<ChatCompletionChunk>,
-  meta: {
-    model: string
-    taskType: AITaskType
-    userId?: string
-    sessionId?: string
-  }
-): AsyncGenerator<ChatCompletionChunk> {
-  let inputTokens = 0
-  let outputTokens = 0
-  const start = Date.now()
-
-  for await (const chunk of stream) {
-    if (chunk.usage) {
-      inputTokens = chunk.usage.prompt_tokens ?? 0
-      outputTokens = chunk.usage.completion_tokens ?? 0
-    }
-    yield chunk
-  }
-
-  tokenTracker.record({
-    ...meta,
-    inputTokens,
-    outputTokens,
-    costCents: computeCost(meta.model, { inputTokens, outputTokens }),
-    durationMs: Date.now() - start,
-    timestamp: Date.now(),
-    provider: MODEL_REGISTRY[meta.model]?.provider ?? 'gemini',
-  })
-}
-
-/**
- * Records token usage from a non-streaming OpenAI response.
- */
-export function trackOpenAIResponse(
-  response: { usage?: { prompt_tokens?: number; completion_tokens?: number } },
-  meta: {
-    model: string
-    taskType: AITaskType
-    userId?: string
-    sessionId?: string
-    startTime: number
-  }
-): void {
-  const inputTokens = response.usage?.prompt_tokens ?? 0
-  const outputTokens = response.usage?.completion_tokens ?? 0
-
-  tokenTracker.record({
-    ...meta,
-    inputTokens,
-    outputTokens,
-    costCents: computeCost(meta.model, { inputTokens, outputTokens }),
-    durationMs: Date.now() - meta.startTime,
-    timestamp: Date.now(),
-    provider: MODEL_REGISTRY[meta.model]?.provider ?? 'gemini',
-  })
-}
 
 // ============================================================================
 // Gemini Native SDK Helpers

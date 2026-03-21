@@ -520,35 +520,15 @@ async function processSSEResponse(
   response: Response,
   store: ReturnType<typeof useAIStore>
 ): Promise<string> {
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('No response body')
-  }
-
-  const decoder = new TextDecoder()
+  const { parseSSEStream } = await import('@/utils/sse-parser')
   let fullContent = ''
-  let buffer = ''
 
   try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+    await parseSSEStream(response, {
+      onEvent: async (sseEvent) => {
+        const chunk = sseEvent.data as StreamChunk
 
-      buffer += decoder.decode(value, { stream: true })
-
-      // Process complete SSE messages
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
-
-          try {
-            const chunk: StreamChunk = JSON.parse(data)
-
-            switch (chunk.type) {
+        switch (chunk.type) {
               case 'assistant-start':
                 store.setStatus('streaming')
                 break
@@ -966,20 +946,17 @@ async function processSSEResponse(
                 break
               }
             }
-          } catch (err) {
-            console.error('[AI Service] Failed to parse SSE chunk:', data, err)
-          }
-        }
-      }
-    }
+      },
+      onError: (err) => {
+        console.error('[AI Service] Failed to parse SSE chunk:', err)
+      },
+    })
     store.setStatus('idle')
     return fullContent
   } catch (error) {
     // Handle stream errors - ensure store state is updated
     store.setError(error instanceof Error ? error.message : 'Stream error')
     throw error
-  } finally {
-    reader.releaseLock()
   }
 }
 

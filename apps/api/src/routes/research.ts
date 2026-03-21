@@ -78,7 +78,6 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const agent = new ResearchAgentClass({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     model: researchModel,
     sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })

@@ -6,7 +6,6 @@ describe('ResearchAgent state hydration', () => {
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     agent.hydrateState({
@@ -38,7 +37,6 @@ describe('ResearchAgent state hydration', () => {
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     agent.hydrateState({

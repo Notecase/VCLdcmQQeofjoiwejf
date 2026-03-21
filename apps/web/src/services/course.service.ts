@@ -176,163 +176,123 @@ export async function streamGenerationProgress(
     throw new Error(`API error: ${response.status}`)
   }
 
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('No response body')
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let currentEventType = ''
+  const { parseSSEStream } = await import('@/utils/sse-parser')
   let receivedTerminalEvent = false
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+  await parseSSEStream(response, {
+    onEvent: (sseEvent) => {
+      const parsed = sseEvent.data as Record<string, unknown>
+      // Event type from SSE event: line, parsed envelope, or parsed.event
+      const eventType = sseEvent.event || (parsed.event as string) || ''
+      const eventData = (parsed.data as Record<string, unknown>) ?? parsed
 
-      buffer += decoder.decode(value, { stream: true })
+      switch (eventType) {
+        case 'progress':
+          callbacks.onProgress?.(eventData as CourseGenerationProgress)
+          break
 
-      // Process complete SSE messages
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep incomplete line in buffer
+        case 'research_progress':
+          callbacks.onResearchProgress?.(eventData as ResearchProgress)
+          break
 
-      for (const line of lines) {
-        // Handle SSE event type line (Hono streamSSE sends "event:" before "data:")
-        if (line.startsWith('event:')) {
-          currentEventType = line.slice(6).trim()
-          continue
-        }
+        case 'outline_ready':
+          callbacks.onOutlineReady?.(eventData as { outline: CourseOutline; thinking: string })
+          break
 
-        if (!line.startsWith('data:')) continue
-
-        const rawData = line.slice(5).trim()
-        if (rawData === '[DONE]') continue
-
-        // Skip empty data (heartbeat keepalives send `data: ''`)
-        if (!rawData || currentEventType === 'heartbeat') {
-          currentEventType = ''
-          continue
-        }
-
-        try {
-          const parsed = JSON.parse(rawData)
-          // Event type from parsed envelope or from SSE event: line
-          const eventType = parsed.event || currentEventType
-          const eventData = parsed.data ?? parsed
-
-          switch (eventType) {
-            case 'progress':
-              callbacks.onProgress?.(eventData as CourseGenerationProgress)
-              break
-
-            case 'research_progress':
-              callbacks.onResearchProgress?.(eventData as ResearchProgress)
-              break
-
-            case 'outline_ready':
-              callbacks.onOutlineReady?.(eventData as { outline: CourseOutline; thinking: string })
-              break
-
-            case 'interrupt':
-              // Orchestrator emits interrupts for outline approval
-              callbacks.onInterrupt?.(
-                eventData as { id: string; type: string; outline: CourseOutline; thinking: string }
-              )
-              // Backward compatibility: also trigger onOutlineReady for outline_approval interrupts
-              if (eventData.type === 'outline_approval') {
-                callbacks.onOutlineReady?.({
-                  outline: eventData.outline,
-                  thinking: eventData.thinking,
-                })
-              }
-              break
-
-            case 'content_progress':
-              callbacks.onContentProgress?.(
-                eventData as {
-                  moduleIndex: number
-                  lessonIndex: number
-                  totalModules: number
-                  totalLessons: number
-                }
-              )
-              break
-
-            case 'lesson_ready':
-              callbacks.onLessonReady?.(eventData as LessonReadyEvent)
-              break
-
-            case 'agent-step':
-              callbacks.onAgentStep?.(eventData as CourseAgentStep)
-              break
-
-            case 'todo-update':
-              callbacks.onTodoUpdate?.(eventData as { todos: CourseTodoItem[] })
-              break
-
-            case 'subagent-start':
-              callbacks.onSubAgentStart?.(
-                eventData as { id: string; name: string; status: string; startedAt: string }
-              )
-              break
-
-            case 'subagent-result':
-              callbacks.onSubAgentResult?.(
-                eventData as {
-                  id: string
-                  name: string
-                  status: string
-                  completedAt: string
-                  output?: string
-                }
-              )
-              break
-
-            case 'text':
-              callbacks.onText?.(typeof eventData === 'string' ? eventData : String(eventData))
-              break
-
-            case 'thinking':
-              callbacks.onThinking?.(typeof eventData === 'string' ? eventData : String(eventData))
-              break
-
-            case 'complete':
-              receivedTerminalEvent = true
-              callbacks.onComplete?.(eventData as { courseId: string })
-              break
-
-            case 'done':
-              receivedTerminalEvent = true
-              callbacks.onDone?.()
-              break
-
-            case 'error':
-              receivedTerminalEvent = true
-              callbacks.onError?.(eventData as { message: string; stage: GenerationStageType })
-              break
+        case 'interrupt':
+          // Orchestrator emits interrupts for outline approval
+          callbacks.onInterrupt?.(
+            eventData as { id: string; type: string; outline: CourseOutline; thinking: string }
+          )
+          // Backward compatibility: also trigger onOutlineReady for outline_approval interrupts
+          if ((eventData as { type?: string }).type === 'outline_approval') {
+            callbacks.onOutlineReady?.({
+              outline: (eventData as { outline: CourseOutline }).outline,
+              thinking: (eventData as { thinking: string }).thinking,
+            })
           }
+          break
 
-          // Reset after processing a data line
-          currentEventType = ''
-        } catch (err) {
-          console.error('[Course Service] Failed to parse SSE chunk:', rawData, err)
-        }
+        case 'content_progress':
+          callbacks.onContentProgress?.(
+            eventData as {
+              moduleIndex: number
+              lessonIndex: number
+              totalModules: number
+              totalLessons: number
+            }
+          )
+          break
+
+        case 'lesson_ready':
+          callbacks.onLessonReady?.(eventData as LessonReadyEvent)
+          break
+
+        case 'agent-step':
+          callbacks.onAgentStep?.(eventData as CourseAgentStep)
+          break
+
+        case 'todo-update':
+          callbacks.onTodoUpdate?.(eventData as { todos: CourseTodoItem[] })
+          break
+
+        case 'subagent-start':
+          callbacks.onSubAgentStart?.(
+            eventData as { id: string; name: string; status: string; startedAt: string }
+          )
+          break
+
+        case 'subagent-result':
+          callbacks.onSubAgentResult?.(
+            eventData as {
+              id: string
+              name: string
+              status: string
+              completedAt: string
+              output?: string
+            }
+          )
+          break
+
+        case 'text':
+          callbacks.onText?.(typeof eventData === 'string' ? eventData : String(eventData))
+          break
+
+        case 'thinking':
+          callbacks.onThinking?.(typeof eventData === 'string' ? eventData : String(eventData))
+          break
+
+        case 'complete':
+          receivedTerminalEvent = true
+          callbacks.onComplete?.(eventData as { courseId: string })
+          break
+
+        case 'done':
+          receivedTerminalEvent = true
+          callbacks.onDone?.()
+          break
+
+        case 'error':
+          receivedTerminalEvent = true
+          callbacks.onError?.(eventData as { message: string; stage: GenerationStageType })
+          break
       }
-    }
-
-    // If the stream ended without a terminal event, the connection dropped silently.
-    // Delegate recovery to onDone (do NOT call onError — it would set error state
-    // that onDone's recovery logic can't clear).
-    if (!receivedTerminalEvent) {
-      console.warn(
-        '[Course Service] SSE stream ended without terminal event — delegating to onDone'
-      )
-      callbacks.onDone?.()
-    }
-  } finally {
-    reader.releaseLock()
-  }
+    },
+    onError: (err) => {
+      console.error('[Course Service] Failed to parse SSE chunk:', err)
+    },
+    onDone: () => {
+      // If the stream ended without a terminal event, the connection dropped silently.
+      // Delegate recovery to onDone (do NOT call onError — it would set error state
+      // that onDone's recovery logic can't clear).
+      if (!receivedTerminalEvent) {
+        console.warn(
+          '[Course Service] SSE stream ended without terminal event — delegating to onDone'
+        )
+        callbacks.onDone?.()
+      }
+    },
+  })
 }
 
 /**

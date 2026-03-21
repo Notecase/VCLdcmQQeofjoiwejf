@@ -1,13 +1,13 @@
 // ============================================================
 // SLIDE GENERATOR — packages/ai/src/agents/course/slide-generator.ts
-// Gemini-powered slide deck generation
+// AI SDK v6 powered slide deck generation
 // ============================================================
 
+import { generateText } from 'ai'
 import type { SlideData } from '@inkdown/shared/types'
 import { sanitizeJSONString } from './tools'
-import { selectModel } from '../../providers/model-registry'
-import { createLangChainModel } from '../../providers/client-factory'
-import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 export async function generateSlidesWithModel(
   lessonTitle: string,
@@ -17,11 +17,7 @@ export async function generateSlidesWithModel(
   _modelName?: string,
   maxSlides: number = 15
 ): Promise<SlideData[]> {
-  const slidesModel = selectModel('slides')
-  const model = await createLangChainModel(slidesModel, {
-    temperature: 0.7,
-    callbacks: [new TokenTrackingCallback({ model: slidesModel.id, taskType: 'slides' })],
-  })
+  const { model, entry } = resolveModel('slides')
 
   const prompt = `Create a professional slide deck for the following lesson.
 
@@ -60,13 +56,14 @@ Return ONLY a JSON array of slide objects with this structure:
 
 Return ONLY the JSON array, no additional text.`
 
-  const response = await model.invoke(prompt)
-  const content =
-    typeof response.content === 'string'
-      ? response.content
-      : response.content.map((c) => ('text' in c ? c.text : '')).join('')
+  const { text } = await generateText({
+    model,
+    prompt,
+    temperature: 0.7,
+    onFinish: trackAISDKUsage({ model: entry.id, taskType: 'slides' }),
+  })
 
-  return parseSlidesJSON(content)
+  return parseSlidesJSON(text)
 }
 
 export async function generateSlides(

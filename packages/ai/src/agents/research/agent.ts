@@ -1,10 +1,11 @@
 /**
  * Research Agent
  *
- * Deep research agent using the deepagents framework (LangGraph-based).
+ * Deep research agent using AI SDK v6 ToolLoopAgent.
  * Supports virtual file system, todo tracking, web search, and human-in-the-loop interrupts.
  */
 
+import { ToolLoopAgent, stepCountIs, streamText, generateText } from 'ai'
 import { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ResearchStreamEvent,
@@ -20,7 +21,6 @@ import {
   WRITER_SUBAGENT_PROMPT,
 } from './prompts'
 import { createResearchTools, type ResearchToolContext } from './tools'
-import { ResearchStreamNormalizer } from './stream-normalizer'
 import {
   classifyResearchRequest,
   shouldEnableResearchFiles,
@@ -38,9 +38,8 @@ import {
   extractDraftTitle,
 } from './note-draft-artifacts'
 import { selectModel } from '../../providers/model-registry'
-import { createOpenAIClient, createLangChainModel } from '../../providers/client-factory'
-import { trackOpenAIStream, trackOpenAIResponse } from '../../providers/token-tracker'
-import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+import { resolveModel, getModelForTask } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // =============================================================================
 // Types
@@ -51,7 +50,6 @@ import type { SharedContextService } from '../../services/shared-context.service
 export interface ResearchAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
   noteDraftModel?: string
   artifactModel?: string
@@ -90,11 +88,8 @@ export class ResearchAgent {
     }
   }
 
-  // Model selection is now handled by the centralized model registry.
-  // Use selectModel('research') for research tasks, selectModel('artifact') for artifacts.
-
   /**
-   * Stream a research interaction via the deepagents framework
+   * Stream a research interaction via AI SDK v6
    */
   async *stream(input: {
     message: string
@@ -154,32 +149,19 @@ export class ResearchAgent {
   }
 
   private async *streamSimpleChat(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const model = selectModel('research')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('research')
 
-    const rawStream = await client.chat.completions.create({
-      model: model.id,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a concise and helpful assistant for note-taking and learning.',
-        },
-        { role: 'user', content: message },
-      ],
+    const result = streamText({
+      model,
+      system: 'You are a concise and helpful assistant for note-taking and learning.',
+      prompt: message,
       temperature: 0.5,
-      max_completion_tokens: 4000,
-      stream: true,
-      stream_options: { include_usage: true },
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
     })
 
-    for await (const chunk of trackOpenAIStream(rawStream, {
-      model: model.id,
-      taskType: 'research',
-    })) {
-      const delta = chunk.choices?.[0]?.delta?.content
-      if (delta) {
-        yield { event: 'text', data: delta, isDelta: true }
-      }
+    for await (const chunk of result.textStream) {
+      yield { event: 'text', data: chunk, isDelta: true }
     }
   }
 
@@ -222,8 +204,7 @@ export class ResearchAgent {
     message: string,
     threadId: string
   ): AsyncGenerator<ResearchStreamEvent> {
-    const model = selectModel('research')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('research')
 
     const existingDraft = this.state.noteDraft
     const originalContent = existingDraft?.currentContent || ''
@@ -239,27 +220,21 @@ export class ResearchAgent {
         ].join('\n\n')
       : message
 
-    const rawStream = await client.chat.completions.create({
-      model: model.id,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            'You are an expert note-writing assistant.',
-            'Return markdown only with a clear H1 title on the first line.',
-            'Include markdown tables when the user requests ranked/tabular data.',
-            'Use concise headings and actionable bullet points.',
-            includeStudyTimerArtifact
-              ? 'When a timer artifact is requested, keep timer description to at most 1-2 short lines.'
-              : '',
-          ].join(' '),
-        },
-        { role: 'user', content: prompt },
-      ],
+    const result = streamText({
+      model,
+      system: [
+        'You are an expert note-writing assistant.',
+        'Return markdown only with a clear H1 title on the first line.',
+        'Include markdown tables when the user requests ranked/tabular data.',
+        'Use concise headings and actionable bullet points.',
+        includeStudyTimerArtifact
+          ? 'When a timer artifact is requested, keep timer description to at most 1-2 short lines.'
+          : '',
+      ].join(' '),
+      prompt,
       temperature: 0.5,
-      max_completion_tokens: 4000,
-      stream: true,
-      stream_options: { include_usage: true },
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
     })
 
     let generated = ''
@@ -267,13 +242,8 @@ export class ResearchAgent {
     let lastSnapshotAt = 0
     const snapshotIntervalMs = 1500
 
-    for await (const chunk of trackOpenAIStream(rawStream, {
-      model: model.id,
-      taskType: 'research',
-    })) {
-      const delta = chunk.choices?.[0]?.delta?.content
-      if (!delta) continue
-      generated += delta
+    for await (const chunk of result.textStream) {
+      generated += chunk
       firstTitle = extractDraftTitle(generated, message)
       const now = Date.now()
       const includeSnapshot = lastSnapshotAt === 0 || now - lastSnapshotAt >= snapshotIntervalMs
@@ -285,7 +255,7 @@ export class ResearchAgent {
         draftId,
         title: firstTitle,
         originalContent,
-        delta,
+        delta: chunk,
         noteId: existingDraft?.noteId,
       }
       if (includeSnapshot) {
@@ -311,21 +281,21 @@ export class ResearchAgent {
           event: 'thinking',
           data: `Generating artifact with ${selectModel('artifact').displayName}...`,
         }
-        const payload = await this.generateStudyTimerArtifactWithOllama(artifactPrompt)
+        const payload = await this.generateStudyTimerArtifact(artifactPrompt, 'artifact')
         finalizedContent = appendArtifactToDraft(
           finalizedContent,
           payload,
           buildStudyTimerIntroLines()
         )
         artifactAdded = true
-      } catch (ollamaError) {
+      } catch (primaryError) {
         yield {
           event: 'thinking',
           data: `Artifact generation failed. Falling back to ${selectModel('research').displayName}...`,
         }
 
         try {
-          const payload = await this.generateStudyTimerArtifactWithOpenAI(artifactPrompt)
+          const payload = await this.generateStudyTimerArtifact(artifactPrompt, 'research')
           finalizedContent = appendArtifactToDraft(
             finalizedContent,
             payload,
@@ -333,13 +303,13 @@ export class ResearchAgent {
           )
           artifactAdded = true
         } catch (fallbackError) {
-          const ollamaMessage =
-            ollamaError instanceof Error ? ollamaError.message : String(ollamaError)
+          const primaryMessage =
+            primaryError instanceof Error ? primaryError.message : String(primaryError)
           const fallbackMessage =
             fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
           yield {
             event: 'error',
-            data: `Artifact generation failed (${selectModel('artifact').displayName} + ${selectModel('research').displayName}): ${ollamaMessage}; ${fallbackMessage}`,
+            data: `Artifact generation failed (${selectModel('artifact').displayName} + ${selectModel('research').displayName}): ${primaryMessage}; ${fallbackMessage}`,
           }
         }
       }
@@ -400,9 +370,15 @@ export class ResearchAgent {
     ].join('\n\n')
   }
 
-  private async generateStudyTimerArtifactWithOllama(prompt: string) {
-    const artifactModelEntry = selectModel('artifact')
-    const artifactClient = createOpenAIClient(artifactModelEntry)
+  /**
+   * Generate study timer artifact using AI SDK generateText
+   * Replaces both generateStudyTimerArtifactWithOllama and generateStudyTimerArtifactWithOpenAI
+   */
+  private async generateStudyTimerArtifact(
+    prompt: string,
+    taskType: string
+  ) {
+    const { model, entry } = resolveModel(taskType as any)
 
     const systemPrompt = `You are an interactive artifact generator. Create engaging, self-contained web components.
 
@@ -424,61 +400,18 @@ Guidelines:
 
 Create a complete, polished component with rich HTML structure, beautiful CSS styling, and interactive JavaScript.`
 
-    const rawStream = await artifactClient.chat.completions.create({
-      model: artifactModelEntry.id,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
+    const { text } = await generateText({
+      model,
+      system: systemPrompt,
+      prompt,
       temperature: 0.3,
-      max_completion_tokens: 20000,
-      stream: true,
-      stream_options: { include_usage: true },
+      maxOutputTokens: 20000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'artifact' }),
     })
 
-    let raw = ''
-    for await (const chunk of trackOpenAIStream(rawStream, {
-      model: artifactModelEntry.id,
-      taskType: 'artifact',
-    })) {
-      const delta = chunk.choices?.[0]?.delta?.content
-      if (delta) raw += delta
-    }
-
-    const parsed = parseArtifactPayload(raw, 'Study Timer')
+    const parsed = parseArtifactPayload(text, 'Study Timer')
     if (!parsed) {
-      throw new Error('Unable to parse Ollama artifact payload')
-    }
-    return parsed
-  }
-
-  private async generateStudyTimerArtifactWithOpenAI(prompt: string) {
-    const fallbackModel = selectModel('research')
-    const client = createOpenAIClient(fallbackModel)
-    const startTime = Date.now()
-    const completion = await client.chat.completions.create({
-      model: fallbackModel.id,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            'You generate web artifacts for markdown editors.',
-            'Return ONLY valid JSON with keys: title, html, css, javascript.',
-            'No markdown fences, no extra text.',
-          ].join(' '),
-        },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.3,
-      max_completion_tokens: 6000,
-      stream: false,
-    })
-    trackOpenAIResponse(completion, { model: fallbackModel.id, taskType: 'artifact', startTime })
-
-    const raw = completion.choices?.[0]?.message?.content ?? ''
-    const parsed = parseArtifactPayload(raw, 'Study Timer')
-    if (!parsed) {
-      throw new Error('Unable to parse fallback artifact payload')
+      throw new Error('Unable to parse artifact payload')
     }
     return parsed
   }
@@ -497,31 +430,22 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
   }
 
   private async *streamMarkdownFile(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const model = selectModel('research')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('research')
 
-    const startTime = Date.now()
-    const completion = await client.chat.completions.create({
-      model: model.id,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            'You write complete long-form markdown deliverables.',
-            'Return markdown only (no code fences, no prose outside markdown).',
-            'Use clear headings and actionable detail.',
-          ].join(' '),
-        },
-        { role: 'user', content: message },
-      ],
+    const { text } = await generateText({
+      model,
+      system: [
+        'You write complete long-form markdown deliverables.',
+        'Return markdown only (no code fences, no prose outside markdown).',
+        'Use clear headings and actionable detail.',
+      ].join(' '),
+      prompt: message,
       temperature: 0.4,
-      max_completion_tokens: 3000,
-      stream: false,
+      maxOutputTokens: 3000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
     })
-    trackOpenAIResponse(completion, { model: model.id, taskType: 'research', startTime })
 
-    const raw = completion.choices?.[0]?.message?.content ?? ''
-    const markdown = raw.trim() || '# Final Report\n\nUnable to generate report content.'
+    const markdown = text.trim() || '# Final Report\n\nUnable to generate report content.'
     const file = this.upsertVirtualFile('final_report.md', markdown)
 
     yield {
@@ -541,13 +465,6 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
     threadId: string,
     outputPreference?: ResearchOutputPreference
   ): AsyncGenerator<ResearchStreamEvent> {
-    const { createDeepAgent } = await import('deepagents')
-    const researchModel = selectModel('research')
-    const llm = await createLangChainModel(researchModel, {
-      temperature: 0.3,
-      callbacks: [new TokenTrackingCallback({ model: researchModel.id, taskType: 'research' })],
-    })
-
     const allowFileWrites = shouldEnableResearchFiles(message, outputPreference)
     const sharedCtx = this.config.sharedContextService
       ? await this.config.sharedContextService.read({
@@ -584,100 +501,95 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
 
     const tools = createResearchTools(toolContext, { includeFileTools: allowFileWrites })
 
-    const agent = createDeepAgent({
-      model: llm,
-      systemPrompt,
+    // Create AI SDK v6 ToolLoopAgent (replaces deepagents createDeepAgent)
+    const model = getModelForTask('research')
+    const agent = new ToolLoopAgent({
+      model,
+      instructions: systemPrompt,
       tools,
-      subagents: [
-        {
-          name: 'researcher',
-          description: 'Searches the web and gathers information on a specific sub-topic',
-          systemPrompt: RESEARCH_SUBAGENT_PROMPT,
-        },
-        {
-          name: 'writer',
-          description: 'Synthesizes research findings into well-structured prose',
-          systemPrompt: WRITER_SUBAGENT_PROMPT,
-        },
-      ],
+      stopWhen: stepCountIs(30),
+      onFinish: trackAISDKUsage({ model: 'research', taskType: 'research' }),
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // Use default stream mode (no streamMode/subgraphs options) for maximum compatibility.
-    // deepagents wraps LangGraph and the tuple format varies by version.
-    const streamResult = (await (agent as any).stream(
-      { messages: [{ role: 'user', content: message }] },
-      { configurable: { thread_id: threadId } }
-    )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+    const result = await agent.stream({
+      messages: [{ role: 'user', content: message }],
+    })
 
-    const normalizer = new ResearchStreamNormalizer()
     const subagentLifecycle = new SubagentLifecycle(['researcher', 'writer'])
     const subagentOutputs = new Map<string, string>()
+    let seq = 0
+    let fullText = ''
 
-    for await (const chunk of streamResult) {
+    for await (const part of result.fullStream) {
       // Drain any events emitted by tools during execution
       yield* this.drainPendingEvents()
 
-      for (const [nodeKey, nodeValue] of Object.entries(chunk)) {
-        const nodeData = nodeValue as { messages?: unknown[] }
-        if (!nodeData?.messages) continue
-
-        const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
-
-        for (const msg of messages) {
-          if (!msg || typeof msg !== 'object') continue
-
-          const msgObj = msg as {
-            id?: string
-            content?: string | unknown[]
-            tool_calls?: Array<{ name: string; args: Record<string, unknown> }>
-            name?: string
-            type?: string
-            role?: string
-          }
-
-          if (nodeKey === 'tools' || msgObj.type === 'tool') {
-            const toolEvents = normalizer.normalizeToolResult(nodeKey, msgObj)
-            for (const event of toolEvents) {
-              yield event
-            }
-          } else {
-            if (subagentLifecycle.isVisibleNode(nodeKey)) {
-              const startInfo = subagentLifecycle.start(nodeKey)
-              if (startInfo) {
-                yield {
-                  event: 'subagent-start',
-                  data: JSON.stringify(startInfo),
-                  seq: normalizer.getSeq(),
-                }
-              }
-            }
-
-            const textEvents = normalizer.normalizeText(nodeKey, msgObj)
-            for (const event of textEvents) {
-              yield event
-              if (subagentLifecycle.isVisibleNode(nodeKey) && typeof event.data === 'string') {
-                subagentOutputs.set(nodeKey, `${subagentOutputs.get(nodeKey) || ''}${event.data}`)
-              }
-            }
-
-            const toolCallEvents = normalizer.normalizeToolCalls(nodeKey, msgObj)
-            for (const event of toolCallEvents) {
-              yield event
-            }
-          }
-
-          // Drain tool-emitted events after processing each message
-          yield* this.drainPendingEvents()
+      switch (part.type) {
+        case 'text-delta': {
+          fullText += part.text
+          yield { event: 'text', data: part.text, isDelta: true, seq: seq++ }
+          break
         }
+
+        case 'tool-call': {
+          yield {
+            event: 'tool_call',
+            data: JSON.stringify({
+              id: part.toolCallId,
+              toolName: part.toolName,
+              arguments: part.input,
+            }),
+            seq: seq++,
+          }
+          break
+        }
+
+        case 'tool-result': {
+          yield {
+            event: 'tool_result',
+            data: JSON.stringify({
+              id: part.toolCallId,
+              toolName: part.toolName,
+              result: part.output,
+            }),
+            seq: seq++,
+          }
+
+          // Drain side-channel events from tool execution
+          yield* this.drainPendingEvents()
+          break
+        }
+
+        case 'tool-error': {
+          yield {
+            event: 'error',
+            data: `Tool "${part.toolName}" failed: ${part.error}`,
+            seq: seq++,
+          }
+          break
+        }
+
+        case 'reasoning-delta': {
+          yield {
+            event: 'thinking',
+            data: part.text,
+            isDelta: true,
+            seq: seq++,
+          }
+          break
+        }
+
+        default:
+          break
       }
     }
 
-    for (const result of subagentLifecycle.completeAll(subagentOutputs)) {
+    // Complete subagent lifecycle tracking
+    for (const lifecycleResult of subagentLifecycle.completeAll(subagentOutputs)) {
       yield {
         event: 'subagent-result',
-        data: JSON.stringify(result),
-        seq: normalizer.getSeq(),
+        data: JSON.stringify(lifecycleResult),
+        seq: seq++,
       }
     }
 
@@ -694,7 +606,7 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
       data: JSON.stringify({ threadId }),
     }
 
-    yield normalizer.done()
+    yield { event: 'done', data: '', seq: seq++ }
 
     // Write shared context entry for completed research
     if (this.config.sharedContextService) {

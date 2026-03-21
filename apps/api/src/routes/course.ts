@@ -176,8 +176,6 @@ course.post('/generate', zValidator('json', GenerateSchema), async (c) => {
   const orchestrator = new OrchestratorClass({
     supabase: getServiceClient(),
     userId: auth.userId,
-    openaiApiKey,
-    geminiApiKey,
     youtubeApiKey: process.env.YOUTUBE_API_KEY,
     sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })
@@ -214,20 +212,11 @@ course.get('/generate/:threadId/stream', async (c) => {
 
   // If no orchestrator registered, create one (handles reconnects)
   if (!orchestratorRegistry.has(threadId)) {
-    const openaiApiKey = process.env.OPENAI_API_KEY
-    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
-
-    if (!openaiApiKey || !geminiApiKey) {
-      return c.json({ error: 'AI API keys not configured' }, 500)
-    }
-
     const { CourseOrchestrator: OrchestratorClass } = await import('@inkdown/ai/agents')
     const { SharedContextService } = await import('@inkdown/ai/services')
     const orchestrator = new OrchestratorClass({
       supabase: getServiceClient(),
       userId: auth.userId,
-      openaiApiKey,
-      geminiApiKey,
       youtubeApiKey: process.env.YOUTUBE_API_KEY,
       sharedContextService: new SharedContextService(auth.supabase, auth.userId),
     })

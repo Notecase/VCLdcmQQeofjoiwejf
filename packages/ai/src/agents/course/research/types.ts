@@ -1,7 +1,8 @@
 import type { ResearchProgress, ResearchSource } from '@inkdown/shared/types'
 
 export interface DeepResearchConfig {
-  geminiApiKey: string
+  /** @deprecated AI SDK factory reads GOOGLE_AI_API_KEY from env. Falls back to env if not provided. */
+  geminiApiKey?: string
   onProgress?: (progress: ResearchProgress) => void
   /**
    * Poll interval for interaction status checks (defaults to 5000ms).

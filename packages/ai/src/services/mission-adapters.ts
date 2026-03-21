@@ -24,7 +24,6 @@ import type { SharedContextService } from './shared-context.service'
 export interface MissionAdapterDeps {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   sharedContextService?: SharedContextService
   missionContext?: MissionContext
   /** Optional event callback for progress streaming */
@@ -44,7 +43,6 @@ export async function runResearchAdapter(
   const agent = new ResearchAgent({
     supabase: deps.supabase,
     userId: deps.userId,
-    openaiApiKey: deps.openaiApiKey,
     sharedContextService: deps.sharedContextService,
     tavilyApiKey: process.env.TAVILY_API_KEY,
   })
@@ -204,7 +202,6 @@ export async function runDailyPlanAdapter(
   const agent = new SecretaryAgent({
     supabase: deps.supabase,
     userId: deps.userId,
-    openaiApiKey: deps.openaiApiKey,
     sharedContextService: deps.sharedContextService,
   })
 

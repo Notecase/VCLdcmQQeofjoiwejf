@@ -7,9 +7,9 @@
  * Ported from Note3's orchestration.ts
  */
 
-import { selectModel } from '../providers/model-registry'
-import { createOpenAIClient } from '../providers/client-factory'
-import { trackOpenAIResponse } from '../providers/token-tracker'
+import { generateText } from 'ai'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 
 // Simple UUID generator (avoids external dependency)
 function generateId(): string {
@@ -340,11 +340,10 @@ const TEMPLATES: WorkflowTemplate[] = [
 // ============================================================================
 
 export class OrchestrationService {
-  private _apiKey: string // Kept for backward compat; client-factory uses env vars
   private executions: Map<string, WorkflowExecution> = new Map()
 
-  constructor(apiKey: string) {
-    this._apiKey = apiKey
+  constructor(_apiKey?: string) {
+    // API key no longer needed — AI SDK reads from env vars via model registry
   }
 
   /**
@@ -595,9 +594,6 @@ export class OrchestrationService {
    * Generate a custom template using AI
    */
   private async generateCustomTemplate(prompt: string): Promise<WorkflowTemplate> {
-    const model = selectModel('chat')
-    const client = createOpenAIClient(model)
-
     const systemPrompt = `You are a workflow planner. Create a workflow template based on the user's request.
 
 Available step types:
@@ -625,20 +621,18 @@ Return a JSON object:
   "parameters": []
 }`
 
-    const startTime = Date.now()
-    const result = await client.chat.completions.create({
-      model: model.id,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      max_completion_tokens: 4000,
-    })
-    trackOpenAIResponse(result, { model: model.id, taskType: 'planner', startTime })
+    const { model, entry } = resolveModel('planner')
 
-    const response = result.choices[0]?.message?.content || ''
-    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    const { text } = await generateText({
+      model,
+      system: systemPrompt,
+      prompt,
+      temperature: 0.7,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'planner' }),
+    })
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('Failed to generate workflow template')
     }
@@ -756,20 +750,17 @@ Return a JSON object:
    * Generate content using AI
    */
   private async aiGenerate(config: { prompt: string }): Promise<{ content: string }> {
-    const model = selectModel('chat')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('chat')
 
-    const startTime = Date.now()
-    const result = await client.chat.completions.create({
-      model: model.id,
-      messages: [{ role: 'user', content: config.prompt }],
+    const { text } = await generateText({
+      model,
+      prompt: config.prompt,
       temperature: 0.7,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'chat' }),
     })
-    trackOpenAIResponse(result, { model: model.id, taskType: 'chat', startTime })
 
-    const content = result.choices[0]?.message?.content || ''
-    return { content }
+    return { content: text }
   }
 
   // =========================================================================

@@ -1,9 +1,7 @@
 import { AppError, ErrorCode } from '@inkdown/shared'
-import { selectModel } from '../../../providers/model-registry'
-import { createOpenAIClient } from '../../../providers/client-factory'
+import { embed } from 'ai'
+import { getEmbeddingModel } from '../../../providers/ai-sdk-factory'
 import type { RAGIndex } from './types'
-
-const EMBEDDING_MODEL = selectModel('embedding').id
 const CHUNK_SIZE = 512
 const CHUNK_OVERLAP = 50
 const DEFAULT_TOP_K = 3
@@ -23,21 +21,17 @@ function splitIntoChunks(text: string): string[] {
   return chunks
 }
 
-async function embedText(text: string, _openaiApiKey?: string): Promise<number[]> {
-  const embeddingModel = selectModel('embedding')
-  const client = createOpenAIClient(embeddingModel)
+async function embedText(text: string): Promise<number[]> {
   try {
-    const response = await client.embeddings.create({
-      model: EMBEDDING_MODEL,
-      input: text,
-    })
-    return response.data[0].embedding
+    const embeddingModel = getEmbeddingModel()
+    const { embedding } = await embed({ model: embeddingModel, value: text })
+    return embedding
   } catch (error) {
     throw new AppError(
       `Embedding request failed: ${error instanceof Error ? error.message : String(error)}`,
       ErrorCode.AI_PROVIDER_ERROR,
       'Failed to generate embeddings.',
-      { model: EMBEDDING_MODEL }
+      {}
     )
   }
 }
@@ -59,12 +53,12 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / denominator
 }
 
-export async function indexResearchReport(report: string, openaiApiKey: string): Promise<RAGIndex> {
+export async function indexResearchReport(report: string): Promise<RAGIndex> {
   const textChunks = splitIntoChunks(report)
   const chunks: RAGIndex['chunks'] = []
 
   for (const text of textChunks) {
-    const embedding = await embedText(text, openaiApiKey)
+    const embedding = await embedText(text)
     chunks.push({ text, embedding })
   }
 
@@ -74,12 +68,11 @@ export async function indexResearchReport(report: string, openaiApiKey: string):
 export async function queryRAG(
   index: RAGIndex,
   query: string,
-  openaiApiKey: string,
   topK: number = DEFAULT_TOP_K
 ): Promise<string> {
   if (index.chunks.length === 0) return ''
 
-  const queryEmbedding = await embedText(query, openaiApiKey)
+  const queryEmbedding = await embedText(query)
 
   const scored = index.chunks.map((chunk) => ({
     text: chunk.text,

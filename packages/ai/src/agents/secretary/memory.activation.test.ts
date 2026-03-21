@@ -138,10 +138,10 @@ class FakeMemoryService {
   }
 }
 
-function getToolByName(tools: unknown[], name: string): any {
-  const tool = (tools as any[]).find((t) => t?.name === name)
-  if (!tool) throw new Error(`Tool ${name} not found`)
-  return tool
+function getToolByName(tools: Record<string, any>, name: string): any {
+  const t = tools[name]
+  if (!t) throw new Error(`Tool ${name} not found`)
+  return t
 }
 
 describe('secretary roadmap activation tools', () => {
@@ -156,11 +156,10 @@ describe('secretary roadmap activation tools', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const activate = getToolByName(tools, 'activate_roadmap')
-    const result = await activate.invoke({})
+    const result = await activate.execute({})
 
     expect(String(result)).toContain('Activated roadmap [RL]')
     const plan = await mem.readFile('Plan.md')
@@ -175,11 +174,10 @@ describe('secretary roadmap activation tools', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const activate = getToolByName(tools, 'activate_roadmap')
-    const result = await activate.invoke({})
+    const result = await activate.execute({})
 
     expect(String(result)).toContain('Multiple roadmap candidates found')
   })
@@ -194,11 +192,10 @@ describe('secretary roadmap activation tools', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const activate = getToolByName(tools, 'activate_roadmap')
-    const result = await activate.invoke({})
+    const result = await activate.execute({})
 
     expect(String(result)).toContain('Activated roadmap [RL]')
     const plan = await mem.readFile('Plan.md')
@@ -221,11 +218,10 @@ describe('generate_daily_plan activation guard', () => {
     })
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const generate = getToolByName(tools, 'generate_daily_plan')
-    const result = await generate.invoke({ targetDate: '2026-02-07', isForTomorrow: false })
+    const result = await generate.execute({ targetDate: '2026-02-07', isForTomorrow: false })
 
     expect(String(result)).toContain('Call activate_roadmap with a roadmapId')
   })
@@ -238,12 +234,11 @@ describe('save_roadmap normalization', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const save = getToolByName(tools, 'save_roadmap')
 
-    await save.invoke({
+    await save.execute({
       planId: 'RL',
       planName: 'Reinforcement Learning',
       startDate: '2026-02-06',
@@ -275,12 +270,11 @@ describe('modify_plan behavior', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const modify = getToolByName(tools, 'modify_plan')
 
-    const result = await modify.invoke({
+    const result = await modify.execute({
       action: 'reschedule',
       taskTime: '10:00',
       newTime: '11:00',
@@ -307,12 +301,11 @@ describe('modify_plan behavior', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const modify = getToolByName(tools, 'modify_plan')
 
-    const result = await modify.invoke({
+    const result = await modify.execute({
       action: 'reschedule',
       taskTime: '10:00',
       newTime: '11:00',
@@ -338,12 +331,11 @@ describe('modify_plan behavior', () => {
     ])
 
     const tools = createSecretaryTools(mem as unknown as MemoryService, {
-      openaiApiKey: 'test',
       userId: 'user',
     })
     const modify = getToolByName(tools, 'modify_plan')
 
-    const result = await modify.invoke({
+    const result = await modify.execute({
       action: 'extend',
       taskTime: '10:45',
       duration: 15,

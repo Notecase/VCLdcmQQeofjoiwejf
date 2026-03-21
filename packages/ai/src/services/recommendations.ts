@@ -7,9 +7,9 @@
  * Ported from Note3's recommendationService.ts
  */
 
-import { selectModel } from '../providers/model-registry'
-import { createOpenAIClient } from '../providers/client-factory'
-import { trackOpenAIResponse } from '../providers/token-tracker'
+import { generateText } from 'ai'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 import { createGeminiProvider } from '../providers/gemini'
 import type {
   MindmapData,
@@ -260,28 +260,24 @@ function parseAIResponse<T>(response: string, fallback: T): T {
 async function chatWithAI(prompt: string, _apiKey?: string): Promise<string> {
   try {
     console.log('[RecommendationService] chatWithAI - prompt length:', prompt.length)
-    const model = selectModel('chat')
-    const client = createOpenAIClient(model)
+    const { model, entry } = resolveModel('chat')
 
-    const startTime = Date.now()
-    const response = await client.chat.completions.create({
-      model: model.id,
-      messages: [{ role: 'user', content: prompt }],
+    const { text } = await generateText({
+      model,
+      prompt,
       temperature: 0.7,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'chat' }),
     })
-    trackOpenAIResponse(response, { model: model.id, taskType: 'chat', startTime })
 
-    const result = response.choices[0]?.message?.content || ''
+    console.log('[RecommendationService] chatWithAI - response length:', text.length)
+    console.log('[RecommendationService] chatWithAI - response preview:', text.substring(0, 300))
 
-    console.log('[RecommendationService] chatWithAI - response length:', result.length)
-    console.log('[RecommendationService] chatWithAI - response preview:', result.substring(0, 300))
-
-    if (!result || result.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
       throw new Error('Empty response from AI')
     }
 
-    return result
+    return text
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('[RecommendationService] chatWithAI failed:', message)

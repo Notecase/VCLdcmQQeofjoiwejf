@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { parseSSEStream } from '@/utils/sse-parser'
 
 // ============================================================================
 // Types
@@ -298,42 +299,27 @@ export const useSourcesStore = defineStore('sources', () => {
           throw new Error(`HTTP ${response.status}: ${error}`)
         }
 
-        const reader = response.body?.getReader()
-        if (!reader) throw new Error('No response body')
-
-        const decoder = new TextDecoder()
         let source: Source | null = null
-        let buffer = ''
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        await parseSSEStream(response, {
+          onEvent: (sseEvent) => {
+            const data = sseEvent.data as Record<string, unknown>
 
-          buffer += decoder.decode(value, { stream: true })
-          const events = buffer.split('\n\n')
-          buffer = events.pop() || ''
-
-          for (const event of events) {
-            for (const line of event.split('\n')) {
-              if (line.startsWith('data: ')) {
-                const data = JSON.parse(line.slice(6))
-
-                if (data.type === 'progress') {
-                  uploadProgress.value = {
-                    sourceId: data.sourceId || '',
-                    status: data.status,
-                    progress: data.progress,
-                    message: data.message,
-                  }
-                } else if (data.type === 'complete') {
-                  source = data.source
-                } else if (data.type === 'error') {
-                  throw new Error(data.error)
-                }
+            if (data.type === 'progress') {
+              uploadProgress.value = {
+                sourceId: (data.sourceId as string) || '',
+                status: data.status as string,
+                progress: data.progress as number,
+                message: data.message as string,
               }
+            } else if (data.type === 'complete') {
+              source = data.source as Source
+            } else if (data.type === 'error') {
+              throw new Error(data.error as string)
             }
-          }
-        }
+          },
+          onError: (err) => console.warn('[Sources] uploadFile SSE parse error:', err),
+        })
 
         if (source) {
           addSource(noteId, source)
@@ -400,42 +386,27 @@ export const useSourcesStore = defineStore('sources', () => {
           throw new Error(`HTTP ${response.status}: ${error}`)
         }
 
-        const reader = response.body?.getReader()
-        if (!reader) throw new Error('No response body')
-
-        const decoder = new TextDecoder()
         let source: Source | null = null
-        let buffer = ''
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        await parseSSEStream(response, {
+          onEvent: (sseEvent) => {
+            const data = sseEvent.data as Record<string, unknown>
 
-          buffer += decoder.decode(value, { stream: true })
-          const events = buffer.split('\n\n')
-          buffer = events.pop() || ''
-
-          for (const event of events) {
-            for (const line of event.split('\n')) {
-              if (line.startsWith('data: ')) {
-                const data = JSON.parse(line.slice(6))
-
-                if (data.type === 'progress') {
-                  uploadProgress.value = {
-                    sourceId: data.sourceId || '',
-                    status: data.status,
-                    progress: data.progress,
-                    message: data.message,
-                  }
-                } else if (data.type === 'complete') {
-                  source = data.source
-                } else if (data.type === 'error') {
-                  throw new Error(data.error)
-                }
+            if (data.type === 'progress') {
+              uploadProgress.value = {
+                sourceId: (data.sourceId as string) || '',
+                status: data.status as string,
+                progress: data.progress as number,
+                message: data.message as string,
               }
+            } else if (data.type === 'complete') {
+              source = data.source as Source
+            } else if (data.type === 'error') {
+              throw new Error(data.error as string)
             }
-          }
-        }
+          },
+          onError: (err) => console.warn('[Sources] addLink SSE parse error:', err),
+        })
 
         if (source) {
           addSource(noteId, source)
@@ -603,42 +574,27 @@ export const useSourcesStore = defineStore('sources', () => {
         throw new Error(`HTTP ${response.status}: ${error}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response body')
-
-      const decoder = new TextDecoder()
       let result: unknown = null
-      let buffer = ''
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      await parseSSEStream(response, {
+        onEvent: (sseEvent) => {
+          const data = sseEvent.data as Record<string, unknown>
 
-        buffer += decoder.decode(value, { stream: true })
-        const events = buffer.split('\n\n')
-        buffer = events.pop() || ''
-
-        for (const event of events) {
-          for (const line of event.split('\n')) {
-            if (line.startsWith('data: ')) {
-              const data = JSON.parse(line.slice(6))
-
-              if (data.type === 'progress') {
-                actionProgress.value = {
-                  actionType,
-                  status: data.status,
-                  progress: data.progress,
-                  message: data.message,
-                }
-              } else if (data.type === 'complete') {
-                result = data.result
-              } else if (data.type === 'error') {
-                throw new Error(data.error)
-              }
+          if (data.type === 'progress') {
+            actionProgress.value = {
+              actionType,
+              status: data.status as ActionProgress['status'],
+              progress: data.progress as number,
+              message: data.message as string,
             }
+          } else if (data.type === 'complete') {
+            result = data.result
+          } else if (data.type === 'error') {
+            throw new Error(data.error as string)
           }
-        }
-      }
+        },
+        onError: (err) => console.warn('[Sources] executeAction SSE parse error:', err),
+      })
 
       if (result) {
         setActionResult(actionType, result)

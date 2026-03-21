@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { authFetchSSE } from '@/utils/api'
+import { parseSSEStream } from '@/utils/sse-parser'
 import type { ExplainLessonContext } from '@inkdown/shared/types'
 
 export interface ExplainMessage {
@@ -119,42 +120,23 @@ export const useCourseExplainStore = defineStore('courseExplain', () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response body')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue
-          const raw = line.slice(5).trim()
-          if (!raw) continue
-
-          try {
-            const event = JSON.parse(raw)
-            if (event.event === 'text') {
-              assistantMsg.content += event.data
-              // Trigger reactivity
-              const idx = messages.value.findIndex((m) => m.id === assistantMsg.id)
-              if (idx >= 0) {
-                messages.value[idx] = { ...assistantMsg }
-              }
-            } else if (event.event === 'error') {
-              error.value = event.data
+      await parseSSEStream(response, {
+        onEvent: (sseEvent) => {
+          const event = sseEvent.data as { event?: string; data?: string }
+          if (event.event === 'text') {
+            assistantMsg.content += event.data
+            // Trigger reactivity
+            const idx = messages.value.findIndex((m) => m.id === assistantMsg.id)
+            if (idx >= 0) {
+              messages.value[idx] = { ...assistantMsg }
             }
-          } catch {
-            // Skip malformed SSE lines
+          } else if (event.event === 'error') {
+            error.value = event.data ?? null
           }
-        }
-      }
+        },
+        onError: (err) => console.warn('[CourseExplain] SSE parse error:', err),
+        signal: abortController.signal,
+      })
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         error.value = err instanceof Error ? err.message : 'Failed to get response'

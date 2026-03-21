@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { parseSSEStream } from '@/utils/sse-parser'
 import { useNotificationsStore } from '@/stores/notifications'
 import { partitionMemoryFiles } from './secretary.file-grouping'
 import { getMissionState, startMission, writeLastMissionId } from '@/services/missions.service'
@@ -711,33 +712,15 @@ export const useSecretaryStore = defineStore('secretary', () => {
         throw new Error(errorText || `Request failed (${res.status})`)
       }
 
-      if (!res.body) throw new Error('No response body')
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            try {
-              const event = JSON.parse(line.slice(5).trim()) as SecretaryStreamEvent
-              if (event.event === 'error') {
-                notifications.error(event.data)
-              }
-            } catch {
-              // skip
-            }
+      await parseSSEStream(res, {
+        onEvent: (sseEvent) => {
+          const event = sseEvent.data as SecretaryStreamEvent
+          if (event.event === 'error') {
+            notifications.error(event.data)
           }
-        }
-      }
+        },
+        onError: (err) => console.warn('[Secretary] prepareTomorrow SSE parse error:', err),
+      })
 
       await refreshMemoryFiles()
       notifications.success('Tomorrow plan ready!')
@@ -895,31 +878,12 @@ export const useSecretaryStore = defineStore('secretary', () => {
             throw new Error(errorText || `Request failed (${res.status})`)
           }
 
-          if (!res.body) throw new Error('No response body')
-
-          const reader = res.body.getReader()
-          const decoder = new TextDecoder()
-          let buffer = ''
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
-
-            for (const line of lines) {
-              if (line.startsWith('data:')) {
-                try {
-                  const event = JSON.parse(line.slice(5).trim()) as SecretaryStreamEvent
-                  handleStreamEvent(event)
-                } catch {
-                  // skip malformed JSON
-                }
-              }
-            }
-          }
+          await parseSSEStream(res, {
+            onEvent: (sseEvent) => {
+              handleStreamEvent(sseEvent.data as SecretaryStreamEvent)
+            },
+            onError: (err) => console.warn('[Secretary] chat SSE parse error:', err),
+          })
 
           lastError = null
           break // Success

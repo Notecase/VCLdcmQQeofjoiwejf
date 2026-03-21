@@ -11,6 +11,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { parseSSEStream } from '@/utils/sse-parser'
 import { useNotificationsStore } from '@/stores/notifications'
 import {
   getAutoOutputDestinationForMessage,
@@ -386,31 +387,12 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
             throw new Error(errorText || `Request failed (${res.status})`)
           }
 
-          if (!res.body) throw new Error('No response body')
-
-          const reader = res.body.getReader()
-          const decoder = new TextDecoder()
-          let buffer = ''
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
-
-            for (const line of lines) {
-              if (line.startsWith('data:')) {
-                try {
-                  const event = JSON.parse(line.slice(5).trim()) as ResearchStreamEvent
-                  enqueueStreamEvent(event)
-                } catch {
-                  // skip malformed JSON
-                }
-              }
-            }
-          }
+          await parseSSEStream(res, {
+            onEvent: (sseEvent) => {
+              enqueueStreamEvent(sseEvent.data as ResearchStreamEvent)
+            },
+            onError: (err) => console.warn('[DeepAgent] SSE parse error:', err),
+          })
 
           flushStreamEventQueue()
 

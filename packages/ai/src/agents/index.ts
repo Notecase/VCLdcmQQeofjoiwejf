@@ -91,7 +91,7 @@ export {
   type ChatAgentConfig,
   type ChatAgentInput,
   type ChatAgentResponse,
-  type ChatMessage,
+  type ChatAgentMessage,
   type RetrievedChunk,
   type Citation,
 } from './chat.agent'
@@ -339,7 +339,7 @@ export function createAgent(
     case 'research':
       return new ResearchAgent(config)
     case 'explain':
-      return new ExplainAgent({ openaiApiKey: config.openaiApiKey, model: config.model })
+      return new ExplainAgent({ model: config.model })
     default:
       throw new Error(`Unknown agent type: ${type}`)
   }

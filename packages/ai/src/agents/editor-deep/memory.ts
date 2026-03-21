@@ -45,12 +45,19 @@ export class EditorLongTermMemory {
   ): Promise<EditorMemoryRow | null> {
     if (!key.trim()) return null
 
-    const memories = await this.list(80)
-    const matches = memories.filter((memory) => memory.key === key)
-    if (matches.length === 0) return null
+    // Query by key directly instead of fetching all memories
+    const { data: matches } = await this.supabase
+      .from('editor_memories')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('key', key)
+      .order('updated_at', { ascending: false })
+      .limit(10)
+    if (!matches || matches.length === 0) return null
+    const typedMatches = matches as EditorMemoryRow[]
 
     if (options?.scopeType && options.scopeId) {
-      const exact = matches.find(
+      const exact = typedMatches.find(
         (memory) => memory.scope_type === options.scopeType && memory.scope_id === options.scopeId
       )
       if (exact) {
@@ -59,7 +66,7 @@ export class EditorLongTermMemory {
       }
     }
 
-    const ranked = this.rankMemories(matches, {
+    const ranked = this.rankMemories(typedMatches, {
       currentNoteId: options?.currentNoteId,
       workspaceId: options?.workspaceId,
       query: key,

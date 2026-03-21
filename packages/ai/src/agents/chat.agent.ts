@@ -2,19 +2,15 @@
  * Chat Agent
  *
  * Conversational AI agent with RAG (Retrieval-Augmented Generation).
- * Uses GPT-5.2 via OpenAI provider with document context and citations.
- *
- * Compatible with:
- * - Vercel AI SDK for streaming
- * - Hono for API routing
- * - LangGraph for state management
+ * Uses AI SDK v6 with document context and citations.
  */
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { streamText, generateText, embed } from 'ai'
 import { selectModel } from '../providers/model-registry'
-import { createOpenAIClient } from '../providers/client-factory'
-import { trackOpenAIStream, trackOpenAIResponse } from '../providers/token-tracker'
+import { resolveModel, getEmbeddingModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
 // Types
@@ -25,12 +21,11 @@ import type { SharedContextService } from '../services/shared-context.service'
 export interface ChatAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
   sharedContextService?: SharedContextService
 }
 
-export interface ChatMessage {
+export interface ChatAgentMessage {
   id?: string
   role: 'user' | 'assistant' | 'system'
   content: string
@@ -52,7 +47,7 @@ export interface Citation {
 }
 
 export interface ChatAgentState {
-  messages: ChatMessage[]
+  messages: ChatAgentMessage[]
   context?: {
     documentContent?: string
     documentTitle?: string
@@ -99,18 +94,14 @@ export type ChatAgentInput = z.infer<typeof ChatAgentInputSchema>
 export class ChatAgent {
   private supabase: SupabaseClient
   private userId: string
-  private openaiApiKey: string
   private model: string
-  private client: import('openai').default
   private state: ChatAgentState
   private sharedContextService?: SharedContextService
 
   constructor(config: ChatAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
-    this.openaiApiKey = config.openaiApiKey
     this.model = config.model ?? selectModel('chat').id
-    this.client = createOpenAIClient(selectModel('chat'))
     this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
@@ -186,28 +177,23 @@ export class ChatAgent {
       })
       if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
     }
-    const messages = this.buildOpenAIMessages(systemPrompt)
 
-    const rawStream = await this.client.chat.completions.create({
-      model: this.model,
-      messages,
+    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
+    const chatMessages = this.buildChatMessages()
+    const result = streamText({
+      model: chatModel,
+      system: systemPrompt,
+      messages: chatMessages,
       temperature: 0.7,
-      max_completion_tokens: 4000,
-      stream: true,
-      stream_options: { include_usage: true },
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: chatEntry.id, taskType: 'chat' }),
     })
 
     let fullContent = ''
 
-    for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model,
-      taskType: 'chat',
-    })) {
-      const delta = chunk.choices[0]?.delta?.content
-      if (delta) {
-        fullContent += delta
-        yield { type: 'text-delta', data: delta }
-      }
+    for await (const chunk of result.textStream) {
+      fullContent += chunk
+      yield { type: 'text-delta', data: chunk }
     }
 
     // 5. Add assistant message to state
@@ -269,17 +255,11 @@ export class ChatAgent {
   // =========================================================================
 
   private async retrieveContext(query: string, noteIds?: string[], maxChunks = 5): Promise<void> {
-    // Generate embedding for query
-    const embeddingModel = selectModel('embedding')
-    const embeddingClient = createOpenAIClient(embeddingModel)
-
-    const embeddingResponse = await embeddingClient.embeddings.create({
-      model: embeddingModel.id,
-      input: query,
-      dimensions: 1536,
+    // Generate embedding for query using AI SDK
+    const { embedding: queryEmbedding } = await embed({
+      model: getEmbeddingModel(),
+      value: query,
     })
-
-    const queryEmbedding = embeddingResponse.data[0].embedding
 
     // Search for similar chunks
     const searchQuery = this.supabase.rpc('search_embeddings', {
@@ -344,24 +324,13 @@ cite it using [1], [2], etc. to reference the source.`
     return prompt
   }
 
-  private buildOpenAIMessages(systemPrompt: string): Array<{
-    role: 'system' | 'user' | 'assistant'
-    content: string
-  }> {
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemPrompt },
-    ]
-
-    for (const msg of this.state.messages) {
-      // Skip messages with null or empty content
-      if (msg.content == null || msg.content === '') continue
-      messages.push({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })
-    }
-
-    return messages
+  private buildChatMessages(): Array<{ role: 'user' | 'assistant'; content: string }> {
+    return this.state.messages
+      .filter((m) => m.role !== 'system' && m.content != null && m.content !== '')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }))
   }
 
   private async generateResponse(): Promise<ChatAgentResponse> {
@@ -372,25 +341,25 @@ cite it using [1], [2], etc. to reference the source.`
       })
       if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
     }
-    const messages = this.buildOpenAIMessages(systemPrompt)
 
     const startTime = Date.now()
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages,
+    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
+    const result = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      messages: this.buildChatMessages(),
       temperature: 0.7,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
     })
-
-    trackOpenAIResponse(response, { model: this.model, taskType: 'chat', startTime })
+    recordAISDKUsage(result.usage, { model: chatEntry.id, taskType: 'chat' }, startTime)
 
     return {
-      content: response.choices[0]?.message?.content || '',
+      content: result.text,
       citations: this.state.citations,
-      usage: response.usage
+      usage: result.usage
         ? {
-            inputTokens: response.usage.prompt_tokens,
-            outputTokens: response.usage.completion_tokens,
+            inputTokens: result.usage.inputTokens ?? 0,
+            outputTokens: result.usage.outputTokens ?? 0,
           }
         : undefined,
     }

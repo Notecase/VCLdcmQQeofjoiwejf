@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod'
+import { stripJsonFences } from '../utils/stripJsonFences'
 import type {
   ChatCompletion,
   ChatCompletionChunk,
@@ -454,7 +455,7 @@ export class EditorAgent {
     const content = response.choices[0]?.message?.content || '{}'
 
     try {
-      const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())
+      const parsed = JSON.parse(stripJsonFences(content))
       return {
         intent: parsed.intent || 'chat',
         confidence: parsed.confidence || 0.5,
@@ -945,7 +946,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const noteAgent = new NoteAgent({
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       model: this.model,
     })
 
@@ -1203,7 +1203,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const noteAgent = new NoteAgent({
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       model: this.model,
     })
 
@@ -1291,7 +1290,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const noteAgent = new NoteAgent({
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       model: this.model,
     })
 
@@ -1432,7 +1430,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     const noteAgent = new NoteAgent({
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       model: this.model,
     })
 
@@ -2166,7 +2163,7 @@ Rules:
     const content = response.choices[0]?.message?.content || '{}'
 
     try {
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+      const cleaned = stripJsonFences(content)
       const parsed = JSON.parse(cleaned)
 
       return {

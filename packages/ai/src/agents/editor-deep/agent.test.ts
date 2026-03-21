@@ -1,22 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const { createDeepAgentMock, executeToolMock } = vi.hoisted(() => ({
-  createDeepAgentMock: vi.fn(),
+const { executeToolMock, mockStream } = vi.hoisted(() => ({
   executeToolMock: vi.fn(),
-}))
-
-vi.mock('deepagents', () => ({
-  createDeepAgent: createDeepAgentMock,
-}))
-
-vi.mock('@langchain/google-genai', () => ({
-  ChatGoogleGenerativeAI: class ChatGoogleGenerativeAI {},
+  mockStream: vi.fn(),
 }))
 
 vi.mock('../../tools', () => ({
   executeTool: executeToolMock,
 }))
+
+// Mock the AI SDK ToolLoopAgent
+vi.mock('ai', async () => {
+  const actual = await vi.importActual<typeof import('ai')>('ai')
+  return {
+    ...actual,
+    ToolLoopAgent: class MockToolLoopAgent {
+      constructor() {}
+      async stream() {
+        return mockStream()
+      }
+    },
+  }
+})
 
 import { EditorDeepAgent } from './agent'
 
@@ -31,37 +37,27 @@ function createSupabaseStub(rows?: {
     update: () => QueryChain
     in: () => Promise<{ data: null; error: null }>
     upsert: () => Promise<{ data: null; error: null }>
+    maybeSingle: () => Promise<{ data: null; error: null }>
   }
 
   return {
-    from: vi.fn((table: string) => {
-      const state: Record<string, unknown> = {}
+    from: vi.fn((_table: string) => {
       const chain: QueryChain = {
         select: () => chain,
-        eq: (field: string, value: unknown) => {
-          state[field] = value
-          return chain
-        },
+        eq: () => chain,
         order: () => chain,
-        limit: async () => {
-          if (table === 'editor_messages') {
-            return { data: rows?.editorMessages || [], error: null }
-          }
-          if (table === 'editor_memories') {
-            return { data: [], error: null }
-          }
-          return { data: [], error: null }
-        },
+        limit: async () => ({ data: rows?.editorMessages || [], error: null }),
         update: () => chain,
         in: async () => ({ data: null, error: null }),
         upsert: async () => ({ data: null, error: null }),
+        maybeSingle: async () => ({ data: null, error: null }),
       }
       return chain
     }),
   } as unknown as SupabaseClient
 }
 
-async function collectStreamText(
+async function collectStreamEvents(
   agent: EditorDeepAgent,
   input: Parameters<EditorDeepAgent['stream']>[0]
 ) {
@@ -74,37 +70,37 @@ async function collectStreamText(
 
 describe('EditorDeepAgent', () => {
   beforeEach(() => {
-    createDeepAgentMock.mockReset()
     executeToolMock.mockReset()
+    mockStream.mockReset()
   })
 
-  it('does not pass boolean checkpointer for root graph deep agent', async () => {
-    createDeepAgentMock.mockReturnValue({
-      stream: async function* () {
-        yield {
-          agent: {
-            messages: [{ role: 'assistant', content: 'Deep response' }],
-          },
-        }
-      },
+  it('streams text through ToolLoopAgent and emits assistant-final + done', async () => {
+    // Mock ToolLoopAgent.stream() returning a fullStream with text events
+    mockStream.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'text-delta', id: '1', text: 'Hello ' }
+        yield { type: 'text-delta', id: '1', text: 'world!' }
+      })(),
     })
 
     const agent = new EditorDeepAgent({
       supabase: createSupabaseStub(),
       userId: 'u1',
-      openaiApiKey: 'test-key',
     })
 
-    const events = await collectStreamText(agent, {
+    const events = await collectStreamEvents(agent, {
       message: 'hello there',
       threadId: '11111111-1111-4111-8111-111111111111',
       context: {},
     })
 
-    expect(createDeepAgentMock).toHaveBeenCalledTimes(1)
-    const params = createDeepAgentMock.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(params.checkpointer).not.toBe(true)
+    expect(events.some((event) => event.type === 'assistant-start')).toBe(true)
+    expect(events.some((event) => event.type === 'assistant-delta')).toBe(true)
     expect(events.some((event) => event.type === 'assistant-final')).toBe(true)
+    expect(events.some((event) => event.type === 'done')).toBe(true)
+
+    const finalEvent = events.find((e) => e.type === 'assistant-final')
+    expect(finalEvent?.data).toBe('Hello world!')
   })
 
   it.each(["what's this note about", 'whats this note about', 'what is this note about'])(
@@ -121,10 +117,9 @@ describe('EditorDeepAgent', () => {
       const agent = new EditorDeepAgent({
         supabase: createSupabaseStub(),
         userId: 'u1',
-        openaiApiKey: 'test-key',
       })
 
-      const events = await collectStreamText(agent, {
+      const events = await collectStreamEvents(agent, {
         message,
         threadId: '22222222-2222-4222-8222-222222222222',
         context: {
@@ -132,27 +127,25 @@ describe('EditorDeepAgent', () => {
         },
       })
 
-      expect(createDeepAgentMock).not.toHaveBeenCalled()
+      // Should NOT have called ToolLoopAgent (fast path bypasses it)
+      expect(mockStream).not.toHaveBeenCalled()
       expect(events.some((event) => event.type === 'assistant-final')).toBe(true)
       const final = events.find((event) => event.type === 'assistant-final')
       expect(String(final?.data || '')).toContain('mainly about')
     }
   )
 
-  it('emits assistant-final before done when deep runtime throws', async () => {
-    createDeepAgentMock.mockReturnValue({
-      stream: async function* () {
-        throw new Error('synthetic deep failure')
-      },
+  it('emits assistant-final before done when ToolLoopAgent throws', async () => {
+    mockStream.mockImplementation(() => {
+      throw new Error('synthetic agent failure')
     })
 
     const agent = new EditorDeepAgent({
       supabase: createSupabaseStub(),
       userId: 'u1',
-      openaiApiKey: 'test-key',
     })
 
-    const events = await collectStreamText(agent, {
+    const events = await collectStreamEvents(agent, {
       message: 'explain this note',
       threadId: '44444444-4444-4444-8444-444444444444',
       context: {

@@ -43,7 +43,19 @@ export type { TokenUsageEvent, SessionUsage } from './providers/token-tracker'
 export { requestContext, getCurrentUserId } from './providers/request-context'
 export { initUsagePersister } from './providers/usage-persister'
 
-// Provider implementations
+// AI SDK v6 Provider Factory
+export {
+  createAIModel,
+  createAIEmbeddingModel,
+  getModelForTask,
+  getEmbeddingModel,
+  resolveModel,
+  resetAIProviders,
+} from './providers/ai-sdk-factory'
+export { trackAISDKUsage, recordAISDKUsage } from './providers/ai-sdk-usage'
+export type { AISDKTrackingMeta, AISDKUsage } from './providers/ai-sdk-usage'
+
+// Provider implementations (legacy)
 export { OpenAIProvider, createOpenAIProvider, getDefaultOpenAIProvider } from './providers/openai'
 
 export { GeminiProvider, createGeminiProvider } from './providers/gemini'

@@ -15,7 +15,3 @@ export { PROMPTS } from './prompts'
 export { matchVideosForLessons } from './video-matcher'
 export { generateSlides, generateSlidesWithModel } from './slide-generator'
 export { parseOutlineJSON, parseLessonContent, assembleCourse, saveCourseToSupabase } from './tools'
-
-// Legacy exports (deprecated)
-export { createCourseGenerationGraph, createContentGenerationGraph } from './agent.legacy'
-export type { CourseAgentConfig } from './agent.legacy'

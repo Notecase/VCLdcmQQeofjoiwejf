@@ -49,15 +49,10 @@ const ExplainChatSchema = z.object({
 explain.post('/chat', zValidator('json', ExplainChatSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
-  const openaiApiKey = process.env.OPENAI_API_KEY
-
-  if (!openaiApiKey) {
-    return c.json({ error: 'OpenAI API key not configured' }, 500)
-  }
 
   const { ExplainAgent } = await import('@inkdown/ai/agents')
 
-  const agent = new ExplainAgent({ openaiApiKey })
+  const agent = new ExplainAgent({})
 
   return streamSSE(c, async (stream) => {
     try {

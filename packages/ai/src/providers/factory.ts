@@ -1,15 +1,10 @@
 /**
  * Provider Factory
  *
+ * @deprecated Use createAIModel() from ai-sdk-factory.ts instead. Scheduled for removal in Phase 7.
+ *
  * Creates AI providers based on task type.
  * Delegates to model-registry for model selection and client-factory for instantiation.
- *
- * Model strategy:
- * - Chat/Agents: Gemini 3.1 Pro (via OpenAI-compat endpoint)
- * - Artifacts/Code: Kimi K2.5 (Ollama Cloud)
- * - Slides: Gemini 3 Pro (native SDK for image gen)
- * - Research: Gemini Deep Research
- * - Embeddings: OpenAI text-embedding-3-large
  */
 
 import { AIProvider } from './interface'

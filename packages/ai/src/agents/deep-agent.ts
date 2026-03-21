@@ -13,6 +13,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { stripJsonFences } from '../utils/stripJsonFences'
 import { NoteAgent } from './note.agent'
 import { isCreateOperation } from '../utils'
 import type { ToolContext } from '../tools'
@@ -445,7 +446,7 @@ export class InkdownDeepAgent {
 
     try {
       // Clean up potential markdown formatting
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+      const cleaned = stripJsonFences(content)
       const parsed = JSON.parse(cleaned)
 
       return {
@@ -524,7 +525,6 @@ export class InkdownDeepAgent {
     const noteAgent = new NoteAgent({
       supabase: this.supabase,
       userId: this.userId,
-      openaiApiKey: this.openaiApiKey,
       model: this.model,
     })
 
@@ -753,7 +753,7 @@ export class InkdownDeepAgent {
     const content = response.choices[0]?.message?.content || '{}'
 
     try {
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+      const cleaned = stripJsonFences(content)
       const tableData = JSON.parse(cleaned) as {
         title?: string
         headers?: string[]

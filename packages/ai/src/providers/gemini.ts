@@ -7,6 +7,7 @@
  */
 
 import { GoogleGenerativeAI, GenerativeModel, Content } from '@google/generative-ai'
+import { stripJsonFences } from '../utils/stripJsonFences'
 import { GoogleGenAI } from '@google/genai'
 import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from './interface'
 import { buildSlidePrompt } from '../slides/prompts'
@@ -288,7 +289,7 @@ Only output valid JSON, no markdown code blocks or explanation.`
       console.log('[GeminiProvider] Slide outline response length:', responseText.length)
 
       // Handle potential markdown code blocks
-      const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim()
+      const jsonStr = stripJsonFences(responseText)
       const outlines = JSON.parse(jsonStr) as SlideOutline[]
 
       console.log('[GeminiProvider] Parsed', outlines.length, 'slide outlines')
@@ -443,7 +444,7 @@ Only output valid JSON.`
     trackGeminiResponse(result, { model: this.slidesModelName, taskType: 'course', startTime })
 
     const responseText = result.response.text()
-    const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim()
+    const jsonStr = stripJsonFences(responseText)
     return JSON.parse(jsonStr)
   }
 

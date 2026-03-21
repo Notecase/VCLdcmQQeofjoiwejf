@@ -5,17 +5,18 @@
  * Used by the DeepAgent orchestrator for create_artifact tasks.
  */
 
-import type OpenAI from 'openai'
+import { streamText, generateText, Output } from 'ai'
+import { z } from 'zod'
+import { stripJsonFences } from '../../utils/stripJsonFences'
 import { selectModel } from '../../providers/model-registry'
-import { createOpenAIClient } from '../../providers/client-factory'
-import { trackOpenAIStream, trackOpenAIResponse } from '../../providers/token-tracker'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage, recordAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface ArtifactSubagentConfig {
-  openaiApiKey: string
   model?: string
 }
 
@@ -31,6 +32,17 @@ export interface ArtifactSubagentResult {
   artifact?: ArtifactData
   error?: string
 }
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+const ArtifactSchema = z.object({
+  title: z.string(),
+  html: z.string(),
+  css: z.string().default(''),
+  javascript: z.string().default(''),
+})
 
 // ============================================================================
 // System Prompt
@@ -69,14 +81,10 @@ Do NOT include:
 // ============================================================================
 
 export class ArtifactSubagent {
-  private openaiApiKey: string
   private model: string
-  private client: OpenAI
 
   constructor(config: ArtifactSubagentConfig) {
-    this.openaiApiKey = config.openaiApiKey
     this.model = config.model ?? selectModel('artifact').id
-    this.client = createOpenAIClient(selectModel('artifact'))
   }
 
   /**
@@ -88,135 +96,124 @@ export class ArtifactSubagent {
   }> {
     yield { type: 'thinking', data: 'Creating interactive artifact...' }
 
-    const rawStream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: ARTIFACT_SUBAGENT_PROMPT },
-        { role: 'user', content: taskDescription },
-      ],
+    const { model: artModel, entry: artEntry } = resolveModel('artifact', this.model)
+    const result = streamText({
+      model: artModel,
+      system: ARTIFACT_SUBAGENT_PROMPT,
+      messages: [{ role: 'user' as const, content: taskDescription }],
       temperature: 0.4,
-      max_completion_tokens: 8000,
-      response_format: { type: 'json_object' },
-      stream: true,
-      stream_options: { include_usage: true },
+      maxOutputTokens: 8000,
+      output: Output.object({ schema: ArtifactSchema }),
+      onFinish: trackAISDKUsage({ model: artEntry.id, taskType: 'artifact' }),
     })
 
+    // Stream text for progress tracking
     let fullContent = ''
     let lastProgressUpdate = 0
     const progressInterval = 500
 
-    for await (const chunk of trackOpenAIStream(rawStream, {
-      model: this.model,
-      taskType: 'artifact',
-    })) {
-      const delta = chunk.choices?.[0]?.delta?.content
-      if (delta) {
-        fullContent += delta
+    for await (const chunk of result.textStream) {
+      fullContent += chunk
 
-        const now = Date.now()
-        if (now - lastProgressUpdate > progressInterval) {
-          lastProgressUpdate = now
+      const now = Date.now()
+      if (now - lastProgressUpdate > progressInterval) {
+        lastProgressUpdate = now
 
-          // Detect current phase
-          const phase = this.detectPhase(fullContent)
-          const preview = this.extractPreview(fullContent)
+        const phase = this.detectPhase(fullContent)
+        const preview = this.extractPreview(fullContent)
 
-          yield {
-            type: 'code-preview',
-            data: { phase, preview, totalChars: fullContent.length },
-          }
+        yield {
+          type: 'code-preview',
+          data: { phase, preview, totalChars: fullContent.length },
+        }
 
-          yield {
-            type: 'progress',
-            data: {
-              progress: Math.min(90, fullContent.length / 50),
-              message: 'Generating artifact code...',
-            },
-          }
+        yield {
+          type: 'progress',
+          data: {
+            progress: Math.min(90, fullContent.length / 50),
+            message: 'Generating artifact code...',
+          },
         }
       }
     }
 
-    // Parse the artifact
-    let artifact = this.parseArtifactContent(fullContent, taskDescription)
+    // Try structured output first, then fallback to manual parse
+    let artifact: ArtifactData | null = null
 
-    // If parsing failed (all fields empty), retry with more explicit instructions
-    if (!artifact.html && !artifact.css && !artifact.javascript) {
-      console.warn(
-        '[ArtifactSubagent] First attempt returned empty content. Retrying with explicit JSON request...'
-      )
+    const structuredOutput = await result.output
+    if (structuredOutput && (structuredOutput.html || structuredOutput.css || structuredOutput.javascript)) {
+      artifact = {
+        title: structuredOutput.title || this.extractTitle(taskDescription),
+        html: structuredOutput.html || '',
+        css: structuredOutput.css || '',
+        javascript: structuredOutput.javascript || '',
+      }
+    } else {
+      // Fallback: manual JSON parse (for models that don't support Output.object well)
+      artifact = this.parseArtifactContent(fullContent, taskDescription)
+    }
+
+    // If still no content, retry with explicit instructions
+    if (!artifact || (!artifact.html && !artifact.css && !artifact.javascript)) {
+      console.warn('[ArtifactSubagent] First attempt returned empty content. Retrying...')
 
       try {
-        const retryStartTime = Date.now()
-        const retryResponse = await this.client.chat.completions.create({
-          model: this.model,
+        const retryStart = Date.now()
+        const { model: retryModel, entry: retryEntry } = resolveModel('artifact', this.model)
+        const retryResult = await generateText({
+          model: retryModel,
+          system: ARTIFACT_SUBAGENT_PROMPT,
           messages: [
-            { role: 'system', content: ARTIFACT_SUBAGENT_PROMPT },
-            { role: 'user', content: taskDescription },
-            { role: 'assistant', content: fullContent },
+            { role: 'user' as const, content: taskDescription },
+            { role: 'assistant' as const, content: fullContent },
             {
-              role: 'user',
+              role: 'user' as const,
               content:
                 'That response was not valid JSON with code content. Please output ONLY a JSON object with title, html, css, and javascript fields. The html field MUST contain the component markup. Start with { and end with }',
             },
           ],
-          temperature: 0.2, // Lower temperature for retry
-          max_completion_tokens: 8000,
-          response_format: { type: 'json_object' },
+          temperature: 0.2,
+          maxOutputTokens: 8000,
+          output: Output.object({ schema: ArtifactSchema }),
         })
-        trackOpenAIResponse(retryResponse, {
-          model: this.model,
-          taskType: 'artifact',
-          startTime: retryStartTime,
-        })
+        recordAISDKUsage(retryResult.usage, { model: retryEntry.id, taskType: 'artifact' }, retryStart)
 
-        const retryContent = retryResponse.choices[0]?.message?.content || ''
-        console.log(
-          '[ArtifactSubagent] Retry response (first 500 chars):',
-          retryContent.slice(0, 500)
-        )
-        artifact = this.parseArtifactContent(retryContent, taskDescription)
+        if (retryResult.output) {
+          artifact = {
+            title: retryResult.output.title || this.extractTitle(taskDescription),
+            html: retryResult.output.html || '',
+            css: retryResult.output.css || '',
+            javascript: retryResult.output.javascript || '',
+          }
+        } else {
+          artifact = this.parseArtifactContent(retryResult.text, taskDescription)
+        }
       } catch (retryError) {
         console.error('[ArtifactSubagent] Retry failed:', retryError)
       }
     }
 
-    // Validate the artifact has actual content after potential retry
-    const hasContent = Boolean(artifact.html || artifact.css || artifact.javascript)
+    // Validate the artifact has actual content
+    const hasContent = artifact && Boolean(artifact.html || artifact.css || artifact.javascript)
 
     if (!hasContent) {
-      console.error(
-        '[ArtifactSubagent] Artifact has no code content after parsing and retry. Task:',
-        taskDescription
-      )
       yield {
         type: 'complete',
         data: {
           success: false,
           artifact,
-          error:
-            'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
+          error: 'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
         },
       }
       return
     }
 
-    yield {
-      type: 'artifact',
-      data: artifact,
-    }
-
-    yield {
-      type: 'complete',
-      data: {
-        success: true,
-        artifact,
-      },
-    }
+    yield { type: 'artifact', data: artifact }
+    yield { type: 'complete', data: { success: true, artifact } }
   }
 
   /**
-   * Parse artifact content from LLM response
+   * Parse artifact content from LLM response (fallback for models without structured output)
    */
   private parseArtifactContent(content: string, description: string): ArtifactData {
     const defaultResult: ArtifactData = {
@@ -226,65 +223,27 @@ export class ArtifactSubagent {
       javascript: '',
     }
 
-    // Debug: Log raw LLM response (truncated)
-    console.log('[ArtifactSubagent] LLM response (first 500 chars):', content.slice(0, 500))
-
     try {
-      // Try JSON parsing first
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+      const cleaned = stripJsonFences(content)
       const parsed = JSON.parse(cleaned)
-
-      const result = {
+      return {
         title: parsed.title || defaultResult.title,
         html: parsed.html || '',
         css: parsed.css || '',
         javascript: parsed.javascript || '',
       }
-
-      console.log('[ArtifactSubagent] Parsed artifact JSON:', {
-        title: result.title,
-        hasHtml: !!result.html,
-        htmlLength: result.html.length,
-        hasCss: !!result.css,
-        cssLength: result.css.length,
-        hasJs: !!result.javascript,
-        jsLength: result.javascript.length,
-      })
-
-      return result
-    } catch (error) {
-      console.warn('[ArtifactSubagent] JSON parse failed, trying regex fallback. Error:', error)
-      console.log(
-        '[ArtifactSubagent] Raw content for regex (first 300 chars):',
-        content.slice(0, 300)
-      )
-
+    } catch {
       // Fallback: extract from markdown code blocks
       const htmlMatch = content.match(/```html\s*([\s\S]*?)```/i)
       const cssMatch = content.match(/```css\s*([\s\S]*?)```/i)
       const jsMatch = content.match(/```(?:javascript|js)\s*([\s\S]*?)```/i)
 
-      const result = {
+      return {
         title: defaultResult.title,
         html: htmlMatch?.[1]?.trim() || '',
         css: cssMatch?.[1]?.trim() || '',
         javascript: jsMatch?.[1]?.trim() || '',
       }
-
-      console.log('[ArtifactSubagent] Regex fallback result:', {
-        hasHtml: !!result.html,
-        hasCss: !!result.css,
-        hasJs: !!result.javascript,
-      })
-
-      if (!result.html && !result.css && !result.javascript) {
-        console.error(
-          '[ArtifactSubagent] PARSING FAILED - all code fields empty. Full content:',
-          content
-        )
-      }
-
-      return result
     }
   }
 
@@ -298,31 +257,8 @@ export class ArtifactSubagent {
       content.includes('```js')
     const hasCss = content.includes('"css"') || content.includes('```css')
 
-    if (hasJs) {
-      // Check if still writing JS
-      const jsStart = Math.max(
-        content.lastIndexOf('"javascript"'),
-        content.lastIndexOf('```javascript'),
-        content.lastIndexOf('```js')
-      )
-      if (jsStart >= 0) {
-        const afterJs = content.slice(jsStart + 12)
-        if (!afterJs.includes('```') && !afterJs.match(/",?\s*}/)) {
-          return 'javascript'
-        }
-      }
-    }
-
-    if (hasCss) {
-      const cssStart = Math.max(content.lastIndexOf('"css"'), content.lastIndexOf('```css'))
-      if (cssStart >= 0) {
-        const afterCss = content.slice(cssStart + 5)
-        if (!afterCss.includes('```') && !afterCss.match(/",?\s*}/)) {
-          return 'css'
-        }
-      }
-    }
-
+    if (hasJs) return 'javascript'
+    if (hasCss) return 'css'
     return 'html'
   }
 

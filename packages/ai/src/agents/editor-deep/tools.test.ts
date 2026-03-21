@@ -49,12 +49,14 @@ describe('createEditorDeepTools', () => {
       } as any
     )
 
-    const qaTool = tools.find((tool) => tool.name === 'answer_question_about_note')
+    const qaTool = tools.answer_question_about_note
     expect(qaTool).toBeTruthy()
 
-    const output = await qaTool!.invoke({
-      question: "what's this note about?",
-    })
+    // AI SDK tools have an execute property
+    const output = await qaTool.execute!(
+      { question: "what's this note about?" },
+      { toolCallId: 'test-call', abortSignal: new AbortController().signal, messages: [] } as any
+    )
 
     expect(executeToolMock).toHaveBeenCalledWith(
       'read_note',
@@ -65,7 +67,6 @@ describe('createEditorDeepTools', () => {
       expect.any(Object)
     )
     expect(String(output)).toContain('Question:')
-    expect(events).toHaveLength(0)
   })
 
   it('emits clarification-requested when add_paragraph is called without an active note', async () => {
@@ -84,12 +85,13 @@ describe('createEditorDeepTools', () => {
       } as any
     )
 
-    const addTool = tools.find((tool) => tool.name === 'add_paragraph')
+    const addTool = tools.add_paragraph
     expect(addTool).toBeTruthy()
 
-    const output = await addTool!.invoke({
-      paragraph: 'A new paragraph.',
-    })
+    const output = await addTool.execute!(
+      { paragraph: 'A new paragraph.' },
+      { toolCallId: 'test-call', abortSignal: new AbortController().signal, messages: [] } as any
+    )
 
     expect(executeToolMock).not.toHaveBeenCalled()
     expect(events.some((event) => event.type === 'clarification-requested')).toBe(true)

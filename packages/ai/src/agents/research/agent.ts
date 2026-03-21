@@ -189,7 +189,6 @@ export class ResearchAgent {
     const noteAgent = new NoteAgent({
       supabase: this.config.supabase,
       userId: this.config.userId,
-      openaiApiKey: this.config.openaiApiKey,
       model: selectModel('research').id,
     })
 

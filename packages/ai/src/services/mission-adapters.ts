@@ -292,7 +292,6 @@ export async function runNotePackAdapter(
   const noteAgent = new NoteAgent({
     supabase: deps.supabase,
     userId: deps.userId,
-    openaiApiKey: deps.openaiApiKey,
   })
 
   // Load plan instructions if we have a sourcePlanId

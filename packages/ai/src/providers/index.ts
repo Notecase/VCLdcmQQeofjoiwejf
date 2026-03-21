@@ -68,6 +68,20 @@ export { requestContext, getCurrentUserId } from './request-context'
 // Usage Persister (TokenTracker → DB bridge)
 export { initUsagePersister } from './usage-persister'
 
+// AI SDK v6 Factory (new — coexists with client-factory)
+export {
+  createAIModel,
+  createAIEmbeddingModel,
+  getModelForTask,
+  getEmbeddingModel,
+  resolveModel,
+  resetAIProviders,
+} from './ai-sdk-factory'
+
+// AI SDK v6 Usage Tracking
+export { trackAISDKUsage, recordAISDKUsage } from './ai-sdk-usage'
+export type { AISDKTrackingMeta, AISDKUsage } from './ai-sdk-usage'
+
 // Provider Factory (legacy — delegates to model-registry)
 export {
   createProvider,

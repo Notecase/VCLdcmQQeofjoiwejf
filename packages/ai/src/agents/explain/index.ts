@@ -6,15 +6,14 @@
  * Streams chat completion with lesson context in system prompt.
  */
 
-import type OpenAI from 'openai'
+import { streamText } from 'ai'
 import type { ExplainInput, ExplainStreamEvent } from '@inkdown/shared/types'
 import type { SharedContextService } from '../../services/shared-context.service'
 import { selectModel } from '../../providers/model-registry'
-import { createOpenAIClient } from '../../providers/client-factory'
-import { trackOpenAIStream } from '../../providers/token-tracker'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 export interface ExplainAgentConfig {
-  openaiApiKey: string
   model?: string
   sharedContextService?: SharedContextService
 }
@@ -98,15 +97,11 @@ function buildSystemPrompt(input: ExplainInput): string {
 }
 
 export class ExplainAgent {
-  private openaiApiKey: string
   private model: string
-  private client: OpenAI
   private sharedContextService?: SharedContextService
 
   constructor(config: ExplainAgentConfig) {
-    this.openaiApiKey = config.openaiApiKey
     this.model = config.model ?? selectModel('explain').id
-    this.client = createOpenAIClient(selectModel('explain'))
     this.sharedContextService = config.sharedContextService
   }
 
@@ -144,23 +139,22 @@ export class ExplainAgent {
     yield { event: 'thinking', data: 'Preparing explanation...' }
 
     try {
-      const rawStream = await this.client.chat.completions.create({
-        model: this.model,
-        messages,
+      const { model, entry } = resolveModel('explain', this.model)
+      const history = messages.filter((m) => m.role !== 'system')
+      const result = streamText({
+        model,
+        system: systemPrompt,
+        messages: history.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
         temperature: 0.7,
-        max_completion_tokens: 4000,
-        stream: true,
-        stream_options: { include_usage: true },
+        maxOutputTokens: 4000,
+        onFinish: trackAISDKUsage({ model: entry.id, taskType: 'explain' }),
       })
 
-      for await (const chunk of trackOpenAIStream(rawStream, {
-        model: this.model,
-        taskType: 'explain',
-      })) {
-        const delta = chunk.choices[0]?.delta?.content
-        if (delta) {
-          yield { event: 'text', data: delta }
-        }
+      for await (const chunk of result.textStream) {
+        yield { event: 'text', data: chunk }
       }
 
       yield { event: 'done' }

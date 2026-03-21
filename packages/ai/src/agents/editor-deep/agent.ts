@@ -1,21 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { ToolLoopAgent, stepCountIs } from 'ai'
 import { EDITOR_DEEP_SYSTEM_PROMPT } from './prompts'
 import { createEditorDeepTools } from './tools'
-import { createEditorSubagents } from './subagents'
-import { EditorDeepStreamNormalizer } from './stream-normalizer'
+import { adaptAISDKStream } from './ai-sdk-stream-adapter'
 import { EditorLongTermMemory } from './memory'
 import { EditorConversationHistoryService, type EditorThreadMessage } from './history'
 import type { EditorDeepAgentEvent, EditorDeepAgentRequest, EditorRunState } from './types'
 import { executeTool } from '../../tools'
 import { selectModel } from '../../providers/model-registry'
-import { createLangChainModel } from '../../providers/client-factory'
-import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import type { SharedContextService } from '../../services/shared-context.service'
 
 export interface EditorDeepAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
   sharedContextService?: SharedContextService
 }
@@ -69,6 +68,7 @@ export class EditorDeepAgent {
   }
 
   async *stream(input: EditorDeepAgentRequest): AsyncGenerator<EditorDeepAgentEvent> {
+    this.pendingEvents = []
     const threadId = input.threadId || crypto.randomUUID()
     this.state = {
       threadId,
@@ -88,23 +88,23 @@ export class EditorDeepAgent {
       return
     }
 
-    const { createDeepAgent } = await import('deepagents')
-
+    // Load conversation history, memory, and shared context in parallel
     const historyService = new EditorConversationHistoryService(
       this.config.supabase,
       this.config.userId
     )
 
-    const historyMessages = await historyService.loadThreadMessages({
-      threadId,
-      windowTurns: input.historyWindowTurns ?? 12,
-      maxChars: 12000,
-    })
-
-    const memorySummary = await memoryService.buildContextSummary(input.message, {
-      currentNoteId: input.context?.currentNoteId,
-      workspaceId: input.context?.workspaceId,
-    })
+    const [historyMessages, memorySummary] = await Promise.all([
+      historyService.loadThreadMessages({
+        threadId,
+        windowTurns: input.historyWindowTurns ?? 12,
+        maxChars: 12000,
+      }),
+      memoryService.buildContextSummary(input.message, {
+        currentNoteId: input.context?.currentNoteId,
+        workspaceId: input.context?.workspaceId,
+      }),
+    ])
     this.state.historyTurnsLoaded = historyMessages.length
     this.state.longTermMemoriesLoaded = memorySummary
       ? memorySummary.split('\n').filter(Boolean).length
@@ -116,6 +116,7 @@ export class EditorDeepAgent {
       longTermMemoriesLoaded: this.state.longTermMemoriesLoaded,
     })
 
+    // Build tools with editor context
     const tools = createEditorDeepTools(
       {
         userId: this.config.userId,
@@ -126,14 +127,8 @@ export class EditorDeepAgent {
       memoryService
     )
 
-    const editorDeepModel = selectModel('editor-deep')
-    const llm = await createLangChainModel(editorDeepModel, {
-      temperature: 0.3,
-      callbacks: [
-        new TokenTrackingCallback({ model: editorDeepModel.id, taskType: 'editor-deep' }),
-      ],
-    })
-
+    // Build system prompt with context, memory, and shared context
+    const selectedModel = selectModel('editor-deep')
     const contextSummary = this.buildContextSummary(input.context)
     const memorySection = memorySummary
       ? `\n\n### Long-term Memory\n${memorySummary}`
@@ -144,130 +139,51 @@ export class EditorDeepAgent {
         })
       : ''
     const sharedCtxSection = sharedCtx ? `\n\n${sharedCtx}` : ''
-    // History is passed as invocation messages, not duplicated in the system prompt
     const systemPrompt = `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
 
-    const agent = createDeepAgent({
-      model: llm,
-      systemPrompt,
+    // Create ToolLoopAgent with AI SDK v6
+    const agent = new ToolLoopAgent({
+      model: getModelForTask('editor-deep'),
+      instructions: systemPrompt,
       tools,
-      subagents: createEditorSubagents(),
+      temperature: 0.3,
+      stopWhen: stepCountIs(20),
+      onFinish: trackAISDKUsage({ model: selectedModel.id, taskType: 'editor-deep' }),
     })
 
-    const normalizer = new EditorDeepStreamNormalizer()
-    normalizer.seedHistoryTexts(
-      historyMessages.filter((m) => m.role === 'assistant').map((m) => m.content)
-    )
+    // Build messages from conversation history (structured, preserves turn roles)
+    const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deepagents stream type is deeply generic
-      const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
-      // Use 'updates' + 'custom'. 'custom' enables config.writer progress from tools.
-      // DO NOT include 'messages' — it delivers duplicate text/tool_calls.
-      const streamResult = (await (agent as any).stream(
-        { messages: invocationMessages },
-        {
-          configurable: { thread_id: threadId },
-          streamMode: ['updates', 'custom'],
-          subgraphs: true,
-        }
-      )) as AsyncIterable<unknown>
-
-      for await (const rawChunk of streamResult) {
-        yield* this.drainPendingEvents()
-
-        // Detect the stream format. deepagents/LangGraph can produce:
-        // 1. Plain object { nodeKey: { messages: [...] } } — default mode
-        // 2. 2-element array [mode, data] — streamMode array, no subgraphs
-        // 3. 3-element array [namespace, mode, data] — streamMode array + subgraphs
-
-        let mode: string | null = null
-        let namespace: string[] = []
-        let updateData: Record<string, { messages?: unknown[] }> | null = null
-        let customData: unknown = null
-
-        if (Array.isArray(rawChunk)) {
-          if (
-            rawChunk.length === 3 &&
-            Array.isArray(rawChunk[0]) &&
-            typeof rawChunk[1] === 'string'
-          ) {
-            // Format 3: [namespace, mode, data]
-            namespace = rawChunk[0] as string[]
-            mode = rawChunk[1] as string
-            if (mode === 'updates')
-              updateData = rawChunk[2] as Record<string, { messages?: unknown[] }>
-            else if (mode === 'custom') customData = rawChunk[2]
-          } else if (rawChunk.length === 2 && typeof rawChunk[0] === 'string') {
-            // Format 2: [mode, data]
-            mode = rawChunk[0] as string
-            if (mode === 'updates')
-              updateData = rawChunk[1] as Record<string, { messages?: unknown[] }>
-            else if (mode === 'custom') customData = rawChunk[1]
-          }
-          // If array but doesn't match either pattern, skip
-        } else if (rawChunk && typeof rawChunk === 'object') {
-          // Format 1: plain object — treat as updates data directly
-          mode = 'updates'
-          updateData = rawChunk as Record<string, { messages?: unknown[] }>
-        }
-
-        if (mode === 'updates' && updateData) {
-          for (const [nodeKey, nodeValue] of Object.entries(updateData)) {
-            const nodeData = nodeValue as { messages?: unknown[] }
-            if (!nodeData?.messages) continue
-            const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
-            for (const msg of messages) {
-              if (!msg || typeof msg !== 'object') continue
-              const message = msg as {
-                id?: string
-                content?: string | unknown[]
-                tool_calls?: Array<{ id?: string; name: string; args: Record<string, unknown> }>
-                name?: string
-                type?: string
-                role?: string
-              }
-              for (const event of normalizer.normalizeUpdates(namespace, nodeKey, message)) {
-                this.consumeEvent(event)
-                yield event
-              }
-              yield* this.drainPendingEvents()
-            }
-          }
-        } else if (mode === 'custom' && customData !== null) {
-          for (const event of normalizer.normalizeCustomEvent(namespace, customData)) {
-            this.consumeEvent(event)
-            yield event
-          }
-        }
-
-        yield* this.drainPendingEvents()
-      }
-
-      const fallbackText = await this.buildFallbackText(input.context, input.message)
-      for (const event of normalizer.finalize(fallbackText)) {
-        this.consumeEvent(event)
-        if (event.type === 'done') {
-          yield {
-            ...event,
-            data: { threadId },
-          }
-        } else {
-          yield event
-        }
-      }
-
-      this.state.assistantText = normalizer.getAssistantText() || fallbackText
-      this.state.updatedAt = new Date().toISOString()
-      await memoryService.distillAndStoreTurn({
-        threadId,
-        userMessage: input.message,
-        assistantMessage: this.state.assistantText,
-        context: {
-          currentNoteId: input.context?.currentNoteId,
-          workspaceId: input.context?.workspaceId,
-        },
+      const result = await agent.stream({
+        messages: invocationMessages,
       })
+
+      // Adapt AI SDK stream to our event format
+      for await (const event of adaptAISDKStream(
+        result.fullStream,
+        this.pendingEvents,
+        threadId
+      )) {
+        this.consumeEvent(event)
+        yield event
+      }
+
+      this.state.updatedAt = new Date().toISOString()
+
+      // Distill and store the conversation turn
+      const assistantText = this.state.assistantText.trim()
+      if (assistantText) {
+        await memoryService.distillAndStoreTurn({
+          threadId,
+          userMessage: input.message,
+          assistantMessage: assistantText,
+          context: {
+            currentNoteId: input.context?.currentNoteId,
+            workspaceId: input.context?.workspaceId,
+          },
+        })
+      }
 
       // Write shared context entry if note operations were detected
       if (this.config.sharedContextService && this.state.toolCalls.length > 0) {
@@ -456,7 +372,7 @@ export class EditorDeepAgent {
   private normalizeMessageForIntent(message: string): string {
     return message
       .toLowerCase()
-      .replace(/['’`]/g, '')
+      .replace(/[''`]/g, '')
       .replace(/[^a-z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
@@ -541,15 +457,12 @@ export class EditorDeepAgent {
         toolName?: unknown
         arguments?: unknown
       }
-      if (
-        typeof payload?.id === 'string' &&
-        typeof payload?.toolName === 'string' &&
-        payload.arguments &&
-        typeof payload.arguments === 'object'
-      ) {
+      const toolName = typeof payload?.toolName === 'string' ? payload.toolName : undefined
+      const id = typeof payload?.id === 'string' ? payload.id : crypto.randomUUID()
+      if (toolName && payload.arguments && typeof payload.arguments === 'object') {
         this.state.toolCalls.push({
-          id: payload.id,
-          toolName: payload.toolName,
+          id,
+          toolName,
           arguments: payload.arguments as Record<string, unknown>,
         })
       }
@@ -559,24 +472,23 @@ export class EditorDeepAgent {
     if (event.type === 'tool-result') {
       const payload = event.data as {
         id?: unknown
+        tool?: unknown
         toolName?: unknown
         result?: unknown
       }
-      if (typeof payload?.id === 'string' && typeof payload?.toolName === 'string') {
+      const toolName = typeof payload?.toolName === 'string'
+        ? payload.toolName
+        : typeof payload?.tool === 'string'
+          ? payload.tool
+          : undefined
+      const id = typeof payload?.id === 'string' ? payload.id : crypto.randomUUID()
+      if (toolName) {
         this.state.toolResults.push({
-          id: payload.id,
-          toolName: payload.toolName,
+          id,
+          toolName,
           result: payload.result,
         })
       }
-    }
-  }
-
-  private *drainPendingEvents(): Generator<EditorDeepAgentEvent> {
-    while (this.pendingEvents.length > 0) {
-      const event = this.pendingEvents.shift()!
-      this.consumeEvent(event)
-      yield event
     }
   }
 }

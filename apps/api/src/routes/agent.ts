@@ -209,7 +209,6 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
     const deepAgent = new EditorDeepAgent({
       supabase: auth.supabase,
       userId: auth.userId,
-      openaiApiKey,
       sharedContextService,
     })
 
@@ -678,7 +677,6 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
   const chatAgent = new ChatAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     sharedContextService: new SharedCtxService(auth.supabase, auth.userId),
   })
 
@@ -742,7 +740,6 @@ agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
   const noteAgent = new NoteAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
   })
 
   if (body.stream) {
@@ -800,7 +797,6 @@ agent.post('/planner/plan', zValidator('json', PlannerSchema), async (c) => {
   const plannerAgent = new PlannerAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
   })
 
   if (body.stream) {
@@ -864,7 +860,6 @@ agent.post(
     const plannerAgent = new PlannerAgent({
       supabase: auth.supabase,
       userId: auth.userId,
-      openaiApiKey,
     })
 
     const result = await plannerAgent.updatePlan(body)

@@ -6,11 +6,13 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import type OpenAI from 'openai'
+import { generateText, Output } from 'ai'
+import { z } from 'zod'
+import { stripJsonFences } from '../../utils/stripJsonFences'
 import { executeTool, type ToolContext } from '../../tools'
 import { selectModel } from '../../providers/model-registry'
-import { createOpenAIClient } from '../../providers/client-factory'
-import { trackOpenAIResponse } from '../../providers/token-tracker'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { recordAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // ============================================================================
 // Types
@@ -19,7 +21,6 @@ import { trackOpenAIResponse } from '../../providers/token-tracker'
 export interface TableSubagentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
 }
 
@@ -47,6 +48,21 @@ export interface TableSubagentResult {
 }
 
 // ============================================================================
+// Schemas
+// ============================================================================
+
+const TableColumnSchema = z.object({
+  name: z.string(),
+  type: z.enum(['text', 'number', 'date', 'boolean']),
+})
+
+const TableDataSchema = z.object({
+  tableName: z.string(),
+  columns: z.array(TableColumnSchema),
+  rows: z.array(z.record(z.unknown())),
+})
+
+// ============================================================================
 // System Prompt
 // ============================================================================
 
@@ -68,17 +84,13 @@ CRITICAL: Output ONLY valid JSON. No markdown, no explanations.`
 export class TableSubagent {
   private supabase: SupabaseClient
   private userId: string
-  private openaiApiKey: string
   private model: string
-  private client: OpenAI
   private context: TableSubagentContext = {}
 
   constructor(config: TableSubagentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
-    this.openaiApiKey = config.openaiApiKey
     this.model = config.model ?? selectModel('table').id
-    this.client = createOpenAIClient(selectModel('table'))
   }
 
   /**
@@ -98,94 +110,103 @@ export class TableSubagent {
     yield { type: 'thinking', data: 'Generating table data...' }
 
     const startTime = Date.now()
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: TABLE_SUBAGENT_PROMPT },
-        { role: 'user', content: taskDescription },
-      ],
-      temperature: 0.3,
-      max_completion_tokens: 2000,
-    })
-    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
-
-    const content = response.choices[0]?.message?.content || '{}'
+    const { model: tableModel, entry: tableEntry } = resolveModel('table', this.model)
 
     let tableData: TableData | null = null
     let result: TableSubagentResult = { success: false }
 
     try {
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
-      tableData = JSON.parse(cleaned) as TableData
+      const genResult = await generateText({
+        model: tableModel,
+        system: TABLE_SUBAGENT_PROMPT,
+        messages: [{ role: 'user' as const, content: taskDescription }],
+        temperature: 0.3,
+        maxOutputTokens: 2000,
+        output: Output.object({ schema: TableDataSchema }),
+      })
+      recordAISDKUsage(genResult.usage, { model: tableEntry.id, taskType: 'table' }, startTime)
 
-      yield {
-        type: 'data',
-        data: tableData,
+      tableData = genResult.output ?? null
+
+      if (!tableData) {
+        // Fallback: try parsing the raw text (in case Output.object fails with some providers)
+        try {
+          const cleaned = stripJsonFences(genResult.text)
+          tableData = JSON.parse(cleaned) as TableData
+        } catch {
+          // Parse failed entirely
+        }
       }
 
-      // Create table in note if we have a noteId
-      if (this.context.currentNoteId && tableData) {
-        yield { type: 'progress', data: { progress: 50, message: 'Creating table in note...' } }
+      if (tableData) {
+        yield { type: 'data', data: tableData }
 
-        const toolContext: ToolContext = {
-          userId: this.userId,
-          supabase: this.supabase,
-        }
+        // Create table in note if we have a noteId
+        if (this.context.currentNoteId) {
+          yield { type: 'progress', data: { progress: 50, message: 'Creating table in note...' } }
 
-        const createResult = await executeTool(
-          'create_database',
-          {
-            noteId: this.context.currentNoteId,
-            name: tableData.tableName || 'Table',
-            columns: tableData.columns || [],
-          },
-          toolContext
-        )
+          const toolContext: ToolContext = {
+            userId: this.userId,
+            supabase: this.supabase,
+          }
 
-        if (createResult.success && tableData.rows && tableData.rows.length > 0) {
-          yield { type: 'progress', data: { progress: 75, message: 'Populating table...' } }
+          const createResult = await executeTool(
+            'create_database',
+            {
+              noteId: this.context.currentNoteId,
+              name: tableData.tableName || 'Table',
+              columns: tableData.columns || [],
+            },
+            toolContext
+          )
 
-          const databaseId = (createResult.data as { databaseId: string })?.databaseId
+          if (createResult.success && tableData.rows && tableData.rows.length > 0) {
+            yield { type: 'progress', data: { progress: 75, message: 'Populating table...' } }
 
-          if (databaseId) {
-            await executeTool(
-              'db_insert_rows',
-              {
-                noteId: this.context.currentNoteId,
+            const databaseId = (createResult.data as { databaseId: string })?.databaseId
+
+            if (databaseId) {
+              await executeTool(
+                'db_insert_rows',
+                {
+                  noteId: this.context.currentNoteId,
+                  databaseId,
+                  rows: tableData.rows,
+                },
+                toolContext
+              )
+
+              result = {
+                success: true,
+                tableName: tableData.tableName,
+                rowCount: tableData.rows.length,
                 databaseId,
-                rows: tableData.rows,
-              },
-              toolContext
-            )
-
+              }
+            }
+          } else if (createResult.success) {
+            const databaseId = (createResult.data as { databaseId: string })?.databaseId
             result = {
               success: true,
               tableName: tableData.tableName,
-              rowCount: tableData.rows.length,
+              rowCount: 0,
               databaseId,
             }
+          } else {
+            result = {
+              success: false,
+              error: createResult.error || 'Failed to create table',
+            }
           }
-        } else if (createResult.success) {
-          const databaseId = (createResult.data as { databaseId: string })?.databaseId
+        } else {
+          // No noteId, just return the data
           result = {
             success: true,
             tableName: tableData.tableName,
-            rowCount: 0,
-            databaseId,
-          }
-        } else {
-          result = {
-            success: false,
-            error: createResult.error || 'Failed to create table',
+            rowCount: tableData.rows?.length || 0,
           }
         }
-      } else if (tableData) {
-        // No noteId, just return the data
-        result = {
-          success: true,
-          tableName: tableData.tableName,
-          rowCount: tableData.rows?.length || 0,
-        }
+      } else {
+        result = { success: false, error: 'Failed to generate table data' }
       }
     } catch (error) {
       result = {
@@ -202,21 +223,23 @@ export class TableSubagent {
    */
   async generateTableData(taskDescription: string): Promise<TableData | null> {
     const startTime = Date.now()
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: TABLE_SUBAGENT_PROMPT },
-        { role: 'user', content: taskDescription },
-      ],
+    const { model: tableModel, entry: tableEntry } = resolveModel('table', this.model)
+
+    const result = await generateText({
+      model: tableModel,
+      system: TABLE_SUBAGENT_PROMPT,
+      messages: [{ role: 'user' as const, content: taskDescription }],
       temperature: 0.3,
-      max_completion_tokens: 2000,
+      maxOutputTokens: 2000,
+      output: Output.object({ schema: TableDataSchema }),
     })
-    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
+    recordAISDKUsage(result.usage, { model: tableEntry.id, taskType: 'table' }, startTime)
 
-    const content = response.choices[0]?.message?.content || '{}'
+    if (result.output) return result.output
 
+    // Fallback: try parsing raw text
     try {
-      const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+      const cleaned = stripJsonFences(result.text)
       return JSON.parse(cleaned) as TableData
     } catch {
       return null

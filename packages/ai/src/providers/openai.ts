@@ -1,6 +1,8 @@
 /**
  * OpenAI Provider
  *
+ * @deprecated Use createAIModel() from ai-sdk-factory.ts instead. Scheduled for removal in Phase 7.
+ *
  * Provider for embeddings (text-embedding-3-large).
  * Also used as a base class for Gemini-via-OpenAI-compat endpoint.
  */

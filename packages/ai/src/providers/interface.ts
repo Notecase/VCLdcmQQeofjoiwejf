@@ -42,7 +42,7 @@ export interface AIUsage {
   costCents?: number
 }
 
-// Provider interface
+/** @deprecated Use AI SDK v6 streamText()/generateText() instead. Scheduled for removal in Phase 7. */
 export interface AIProvider {
   // Streaming completion
   complete(context: AIContext, options?: AICompletionOptions): AsyncGenerator<string, void, unknown>

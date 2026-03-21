@@ -35,9 +35,6 @@ import {
   Minimize2,
   Plus,
   Loader2,
-  Paperclip,
-  Globe,
-  AtSign,
   ArrowUp,
   FileText,
 } from 'lucide-vue-next'
@@ -97,8 +94,6 @@ onUnmounted(() => {
 
 // Local state
 const inputValue = ref('')
-const searchQuery = ref('')
-
 // Computed
 const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
@@ -281,7 +276,6 @@ function handleClarificationCancel() {
         <div class="search-input">
           <Search :size="14" />
           <input
-            v-model="searchQuery"
             type="text"
             placeholder="Search knowledge base..."
           />
@@ -419,22 +413,7 @@ function handleClarificationCancel() {
         </div>
 
         <div class="input-footer">
-          <div class="footer-left">
-            <button
-              class="footer-btn"
-              title="Attach"
-            >
-              <Paperclip :size="14" />
-            </button>
-            <button class="footer-btn labeled">
-              <Globe :size="14" />
-              <span>Search</span>
-            </button>
-            <button class="footer-btn labeled">
-              <AtSign :size="14" />
-              <span>Mention</span>
-            </button>
-          </div>
+          <div class="footer-left"></div>
 
           <button
             class="send-cirle-btn"
@@ -1062,30 +1041,6 @@ function handleClarificationCancel() {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.footer-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-color-secondary, #6e7681);
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.footer-btn:hover {
-  color: var(--primary-color, #58a6ff);
-  background: var(--hover-bg, rgba(33, 38, 45, 0.5));
-}
-
-.footer-btn.labeled {
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
 }
 
 /* Send Button - GREEN when active */

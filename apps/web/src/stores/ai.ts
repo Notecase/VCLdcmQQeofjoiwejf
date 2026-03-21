@@ -266,8 +266,6 @@ export const useAIStore = defineStore('ai', () => {
 
   // Current interaction state
   const status = ref<AIStatus>('idle')
-  const currentAgentType = ref<ChatSession['agentType']>(null)
-
   // Thinking steps (displayed during AI processing)
   const thinkingSteps = ref<ThinkingStep[]>([])
 
@@ -1278,7 +1276,6 @@ export const useAIStore = defineStore('ai', () => {
     }
     activeSessionId.value = null
     status.value = 'idle'
-    currentAgentType.value = null
     thinkingSteps.value = []
     citations.value = []
     pendingEdits.value = []
@@ -1305,7 +1302,6 @@ export const useAIStore = defineStore('ai', () => {
     sessions,
     activeSessionId,
     status,
-    currentAgentType,
     thinkingSteps,
     citations,
     pendingEdits,

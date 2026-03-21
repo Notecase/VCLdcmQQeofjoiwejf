@@ -20,6 +20,9 @@ import type {
   ActionProgress,
 } from './types'
 import { createSourceStorage } from '../sources/storage'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIResponse } from '../providers/token-tracker'
 
 /**
  * Workflow Actions Executor
@@ -741,36 +744,22 @@ Provide your response as JSON with events sorted chronologically:
       ? 'You are a helpful assistant that analyzes source documents. When asked for JSON output, respond with valid JSON only.'
       : 'You are a helpful assistant that creates well-formatted markdown content. Always output in clean markdown format with proper headings, bullet points, and formatting. Never output JSON format unless explicitly asked.'
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.openaiApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: systemContent,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
-        max_completion_tokens: 4000,
-      }),
+    const model = selectModel('chat')
+    const client = createOpenAIClient(model)
+
+    const startTime = Date.now()
+    const response = await client.chat.completions.create({
+      model: model.id,
+      messages: [
+        { role: 'system', content: systemContent },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_completion_tokens: 4000,
     })
+    trackOpenAIResponse(response, { model: model.id, taskType: 'research', startTime })
 
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`OpenAI API error: ${error}`)
-    }
-
-    const data = (await response.json()) as { choices: Array<{ message?: { content?: string } }> }
-    return data.choices[0]?.message?.content || ''
+    return response.choices[0]?.message?.content || ''
   }
 }
 

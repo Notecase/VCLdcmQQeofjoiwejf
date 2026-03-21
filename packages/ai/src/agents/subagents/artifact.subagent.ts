@@ -5,6 +5,11 @@
  * Used by the DeepAgent orchestrator for create_artifact tasks.
  */
 
+import type OpenAI from 'openai'
+import { selectModel } from '../../providers/model-registry'
+import { createOpenAIClient } from '../../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../../providers/token-tracker'
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -66,10 +71,12 @@ Do NOT include:
 export class ArtifactSubagent {
   private openaiApiKey: string
   private model: string
+  private client: OpenAI
 
   constructor(config: ArtifactSubagentConfig) {
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('artifact').id
+    this.client = createOpenAIClient(selectModel('artifact'))
   }
 
   /**
@@ -81,10 +88,7 @@ export class ArtifactSubagent {
   }> {
     yield { type: 'thinking', data: 'Creating interactive artifact...' }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const stream = await client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: ARTIFACT_SUBAGENT_PROMPT },
@@ -94,13 +98,14 @@ export class ArtifactSubagent {
       max_completion_tokens: 8000,
       response_format: { type: 'json_object' },
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let fullContent = ''
     let lastProgressUpdate = 0
     const progressInterval = 500
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, { model: this.model, taskType: 'artifact' })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {
         fullContent += delta
@@ -139,7 +144,8 @@ export class ArtifactSubagent {
       )
 
       try {
-        const retryResponse = await client.chat.completions.create({
+        const retryStartTime = Date.now()
+        const retryResponse = await this.client.chat.completions.create({
           model: this.model,
           messages: [
             { role: 'system', content: ARTIFACT_SUBAGENT_PROMPT },
@@ -155,6 +161,7 @@ export class ArtifactSubagent {
           max_completion_tokens: 8000,
           response_format: { type: 'json_object' },
         })
+        trackOpenAIResponse(retryResponse, { model: this.model, taskType: 'artifact', startTime: retryStartTime })
 
         const retryContent = retryResponse.choices[0]?.message?.content || ''
         console.log(

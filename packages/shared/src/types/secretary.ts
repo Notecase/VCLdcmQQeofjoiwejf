@@ -5,6 +5,35 @@
  */
 
 // =============================================================================
+// Calendar Event Types
+// =============================================================================
+
+/**
+ * A structured calendar event from an external source (Google Calendar, etc.)
+ */
+export interface CalendarEvent {
+  id: string
+  title: string
+  startTime: string // ISO datetime or YYYY-MM-DD for all-day
+  endTime: string
+  isAllDay: boolean
+  date: string // YYYY-MM-DD for grouping
+  location?: string
+  description?: string
+  source: 'gcal'
+}
+
+/**
+ * Cached calendar events stored in secretary_memory as JSON
+ */
+export interface CalendarEventsCache {
+  syncedAt: string
+  rangeStart: string // YYYY-MM-DD
+  rangeEnd: string // YYYY-MM-DD
+  events: CalendarEvent[]
+}
+
+// =============================================================================
 // Memory File Types
 // =============================================================================
 
@@ -49,6 +78,7 @@ export interface LearningRoadmap {
   }
   currentTopic: string // "Day 4: Lens combinations + magnification"
   archiveFilename: string // "Plans/optics-roadmap.md"
+  projectId?: string // UUID of linked editor project/folder
 }
 
 // =============================================================================
@@ -57,10 +87,26 @@ export interface LearningRoadmap {
 
 export type TaskType = 'learn' | 'practice' | 'review' | 'project' | 'break'
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+export type TaskSource = 'manual' | 'ai' | 'gcal' | 'notion' | 'notes' | 'obsidian'
 
 /**
  * A single scheduled task in a daily plan
  */
+export type TaskArtifactKind = 'note' | 'research' | 'course' | 'mission'
+export type TaskArtifactStatus = 'pending' | 'ready' | 'blocked'
+
+export interface TaskArtifactLink {
+  id: string
+  kind: TaskArtifactKind
+  status: TaskArtifactStatus
+  label: string
+  targetId?: string
+  href?: string
+  missionId?: string
+  createdByAgent: string
+  createdAt: string
+}
+
 export interface ScheduledTask {
   id: string
   title: string
@@ -70,6 +116,8 @@ export interface ScheduledTask {
   durationMinutes: number // 45, 60, 15, etc.
   planId?: string // Links to LearningRoadmap.id
   noteId?: string // Links to an Inkdown note for "Study Now" navigation
+  artifacts?: TaskArtifactLink[]
+  source?: TaskSource // Where this task originated (ai, gcal, notion, notes, obsidian, manual)
   aiGenerated: boolean
   aiReason?: string // Why AI scheduled this
 }
@@ -262,6 +310,36 @@ export interface SecretaryDashboardState {
   isGeneratingTomorrow: boolean
 }
 
+export type SecretaryAttentionStatus = 'pending' | 'ready' | 'blocked' | 'info'
+
+export interface SecretaryAttentionItem {
+  id: string
+  kind: 'artifact' | 'approval' | 'heartbeat' | 'workspace' | 'system'
+  title: string
+  summary: string
+  status: SecretaryAttentionStatus
+  href?: string
+  missionId?: string
+  targetId?: string
+  label?: string
+  createdAt: string
+}
+
+export interface SecretaryHeartbeatState {
+  enabled: boolean
+  config: {
+    timezone?: string
+    morning_hour?: number
+    evening_hour?: number
+  }
+  last_heartbeat_at: string | null
+  last_morning_at: string | null
+  last_evening_at: string | null
+  last_weekly_at: string | null
+  next_action?: string | null
+  next_action_at?: string | null
+}
+
 /**
  * A week's schedule extracted from Plan.md
  */
@@ -345,4 +423,44 @@ export interface SecretaryChatMessageRow {
   thinkingSteps: string[] | null
   model: string | null
   createdAt: string
+}
+
+// =============================================================================
+// Plan Workspace Types
+// =============================================================================
+
+/** Frequency for plan schedule automations */
+export type PlanScheduleFrequency = 'daily' | 'weekly' | 'custom'
+
+/** Workflow types available for plan schedule automations */
+export type PlanScheduleWorkflow = 'make_note_from_task' | 'research_topic_from_task' | 'make_course_from_plan'
+
+/** A recurring automation attached to a plan */
+export interface PlanScheduleItem {
+  id: string
+  planId: string
+  title: string
+  instructions?: string
+  workflow: PlanScheduleWorkflow
+  frequency: PlanScheduleFrequency
+  time: string // "HH:MM"
+  days?: string[] // For 'weekly': ['Mon', 'Fri'], for 'custom': specific days
+  enabled: boolean
+  lastRunAt?: string
+  nextRunAt?: string
+  runCount: number
+  lastRunStatus?: 'success' | 'error'
+  lastRunError?: string
+  createdAt: string
+}
+
+/** Aggregated workspace state for a single plan */
+export interface PlanWorkspaceState {
+  plan: LearningRoadmap
+  instructions: string
+  roadmapContent: string
+  schedules: PlanScheduleItem[]
+  artifacts: TaskArtifactLink[]
+  projectId?: string
+  projectNotes?: Array<{ id: string; title: string; updatedAt: string }>
 }

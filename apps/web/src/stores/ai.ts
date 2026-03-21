@@ -10,6 +10,7 @@ import { ref, computed, reactive } from 'vue'
 import {
   createArtifact,
   getPendingArtifacts,
+  getArtifacts as fetchAllArtifacts,
   markArtifactInserted as markArtifactInsertedDB,
   type Artifact,
 } from '../services/artifacts.service'
@@ -219,6 +220,21 @@ export interface CompletedArtifact {
 }
 
 /**
+ * SubagentTracker - Tracks a subagent's lifecycle from multi-mode streaming.
+ * Used for inline subagent progress cards and synthesis indicators.
+ */
+export interface SubagentTracker {
+  id: string
+  name: string
+  description: string
+  status: 'pending' | 'running' | 'complete' | 'error'
+  lastMessage: string
+  startedAt: number
+  completedAt?: number
+  elapsedMs?: number
+}
+
+/**
  * SubTask - Tracks individual tasks from DeepAgent decomposition
  * Used when processing compound requests with multiple outputs
  */
@@ -292,6 +308,10 @@ export const useAIStore = defineStore('ai', () => {
 
   // SubTasks from DeepAgent decomposition (for compound requests)
   const subTasks = ref<SubTask[]>([])
+
+  // Subagent trackers (multi-mode streaming)
+  const activeSubagents = ref<SubagentTracker[]>([])
+  const isSynthesizing = ref(false)
 
   // Note preview panel (AI Chat page - right panel showing note being edited)
   const previewNoteId = ref<string | null>(null)
@@ -821,6 +841,38 @@ export const useAIStore = defineStore('ai', () => {
   const hasPendingClarification = computed(() => pendingClarification.value !== null)
 
   // ---------------------------------------------------------------------------
+  // Pre-Action Question (HITL proactive AI questions)
+  // ---------------------------------------------------------------------------
+
+  const preActionQuestion = ref<{
+    id: string
+    question: string
+    options: Array<{ id: string; label: string; description?: string }>
+    allowFreeText?: boolean
+    context?: string
+  } | null>(null)
+
+  /**
+   * Set a pending pre-action question from the AI
+   */
+  function setPreActionQuestion(question: {
+    id: string
+    question: string
+    options: Array<{ id: string; label: string; description?: string }>
+    allowFreeText?: boolean
+    context?: string
+  }) {
+    preActionQuestion.value = question
+  }
+
+  /**
+   * Resolve the pre-action question (user selected an option or typed free text)
+   */
+  function resolvePreActionQuestion() {
+    preActionQuestion.value = null
+  }
+
+  // ---------------------------------------------------------------------------
   // SubTask Actions (DeepAgent compound request tracking)
   // ---------------------------------------------------------------------------
 
@@ -897,6 +949,65 @@ export const useAIStore = defineStore('ai', () => {
    */
   function clearSubTasks() {
     subTasks.value = []
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subagent Tracker Actions (multi-mode streaming)
+  // ---------------------------------------------------------------------------
+
+  const subagentProgress = computed(() => {
+    const total = activeSubagents.value.length
+    const completed = activeSubagents.value.filter((s) => s.status === 'complete').length
+    return {
+      total,
+      completed,
+      percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+    }
+  })
+
+  function startSubagentTracker(data: {
+    id: string
+    name: string
+    description?: string
+    startedAt?: number
+  }) {
+    // Avoid duplicates
+    if (activeSubagents.value.some((s) => s.id === data.id)) return
+
+    activeSubagents.value.push({
+      id: data.id,
+      name: data.name,
+      description: data.description || `Subagent ${data.name}`,
+      status: 'running',
+      lastMessage: '',
+      startedAt: data.startedAt || Date.now(),
+    })
+  }
+
+  function appendSubagentText(subagentId: string, text: string) {
+    const sub = activeSubagents.value.find((s) => s.id === subagentId)
+    if (sub) {
+      sub.lastMessage += text
+    }
+  }
+
+  function completeSubagentTracker(subagentId: string, result?: string) {
+    const sub = activeSubagents.value.find((s) => s.id === subagentId)
+    if (sub) {
+      sub.status = 'complete'
+      sub.completedAt = Date.now()
+      sub.elapsedMs = sub.completedAt - sub.startedAt
+      if (result) sub.lastMessage = result
+    }
+  }
+
+  function clearSubagents() {
+    activeSubagents.value = []
+    isSynthesizing.value = false
+  }
+
+  function setSynthesizing(value: boolean) {
+    isSynthesizing.value = value
   }
 
   // ---------------------------------------------------------------------------
@@ -1000,7 +1111,9 @@ export const useAIStore = defineStore('ai', () => {
    */
   async function loadPersistedArtifacts(userId: string, noteId?: string): Promise<void> {
     try {
-      const result = await getPendingArtifacts(userId, noteId)
+      const result = noteId
+        ? await fetchAllArtifacts(userId, { noteId, includeArchived: false })
+        : await getPendingArtifacts(userId, noteId)
 
       if (result.error) {
         console.warn('[AI Store] Failed to load persisted artifacts:', result.error)
@@ -1176,6 +1289,8 @@ export const useAIStore = defineStore('ai', () => {
     codePreview.value = { active: false, phase: 'html', preview: '', totalChars: 0 }
     pendingClarification.value = null
     subTasks.value = []
+    activeSubagents.value = []
+    isSynthesizing.value = false
     previewNoteId.value = null
     previewPanelVisible.value = false
     error.value = null
@@ -1270,6 +1385,11 @@ export const useAIStore = defineStore('ai', () => {
     resolveClarification,
     cancelClarification,
 
+    // Pre-action question (HITL)
+    preActionQuestion,
+    setPreActionQuestion,
+    resolvePreActionQuestion,
+
     // Note preview panel (AI Chat page)
     previewNoteId,
     previewPanelVisible,
@@ -1281,6 +1401,16 @@ export const useAIStore = defineStore('ai', () => {
     updateSubTask,
     updateSubTaskProgress,
     clearSubTasks,
+
+    // Subagent tracker actions (multi-mode streaming)
+    activeSubagents,
+    isSynthesizing,
+    subagentProgress,
+    startSubagentTracker,
+    appendSubagentText,
+    completeSubagentTracker,
+    clearSubagents,
+    setSynthesizing,
 
     // Pending artifact actions
     pendingArtifacts,

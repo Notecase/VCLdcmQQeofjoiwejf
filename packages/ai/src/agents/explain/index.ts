@@ -6,11 +6,17 @@
  * Streams chat completion with lesson context in system prompt.
  */
 
+import type OpenAI from 'openai'
 import type { ExplainInput, ExplainStreamEvent } from '@inkdown/shared/types'
+import type { SharedContextService } from '../../services/shared-context.service'
+import { selectModel } from '../../providers/model-registry'
+import { createOpenAIClient } from '../../providers/client-factory'
+import { trackOpenAIStream } from '../../providers/token-tracker'
 
 export interface ExplainAgentConfig {
   openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 function buildSystemPrompt(input: ExplainInput): string {
@@ -94,14 +100,32 @@ function buildSystemPrompt(input: ExplainInput): string {
 export class ExplainAgent {
   private openaiApiKey: string
   private model: string
+  private client: OpenAI
+  private sharedContextService?: SharedContextService
 
   constructor(config: ExplainAgentConfig) {
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('explain').id
+    this.client = createOpenAIClient(selectModel('explain'))
+    this.sharedContextService = config.sharedContextService
   }
 
   async *stream(input: ExplainInput): AsyncGenerator<ExplainStreamEvent> {
-    const systemPrompt = buildSystemPrompt(input)
+    let systemPrompt = buildSystemPrompt(input)
+
+    // Enrich system prompt with shared cross-agent context
+    if (this.sharedContextService) {
+      try {
+        const sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'course_saved'],
+        })
+        if (sharedCtx) {
+          systemPrompt += '\n\n' + sharedCtx
+        }
+      } catch {
+        // Graceful degradation
+      }
+    }
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: systemPrompt },
@@ -120,18 +144,16 @@ export class ExplainAgent {
     yield { event: 'thinking', data: 'Preparing explanation...' }
 
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-      const stream = await client.chat.completions.create({
+      const rawStream = await this.client.chat.completions.create({
         model: this.model,
         messages,
         temperature: 0.7,
         max_completion_tokens: 4000,
         stream: true,
+        stream_options: { include_usage: true },
       })
 
-      for await (const chunk of stream) {
+      for await (const chunk of trackOpenAIStream(rawStream, { model: this.model, taskType: 'explain' })) {
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
           yield { event: 'text', data: delta }

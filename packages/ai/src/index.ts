@@ -2,9 +2,11 @@
  * @inkdown/ai - AI Provider and Agent Abstraction
  *
  * This package provides:
- * - AI provider abstraction (OpenAI, Ollama Cloud, Gemini)
+ * - Centralized model registry and client factory
+ * - AI provider abstraction (Gemini, Ollama Cloud/Local, OpenAI for embeddings)
  * - LangGraph-based agents for various tasks
  * - Tool definitions for agent actions (30 tools)
+ * - Token usage tracking
  * - Recommendation system (mindmaps, flashcards, concepts, exercises, resources, slides)
  * - Agentic AI for autonomous task execution
  * - Workflow orchestration with pre-built templates
@@ -23,17 +25,36 @@ export type {
   AIProvider,
 } from './providers/interface'
 
+// Model Registry and Client Factory
+export {
+  MODEL_REGISTRY,
+  selectModel,
+  getModel,
+} from './providers/model-registry'
+export type { ModelEntry, ModelProvider, ModelCapability } from './providers/model-registry'
+
+export { createOpenAIClient, createLangChainModel } from './providers/client-factory'
+
+export {
+  tokenTracker,
+  trackOpenAIStream,
+  trackOpenAIResponse,
+  computeCost,
+} from './providers/token-tracker'
+export type { TokenUsageEvent, SessionUsage } from './providers/token-tracker'
+
+// Request Context & Usage Persistence
+export { requestContext, getCurrentUserId } from './providers/request-context'
+export { initUsagePersister } from './providers/usage-persister'
+
 // Provider implementations
 export { OpenAIProvider, createOpenAIProvider, getDefaultOpenAIProvider } from './providers/openai'
-
-export { OllamaCloudProvider, createOllamaCloudProvider } from './providers/ollama'
 
 export { GeminiProvider, createGeminiProvider } from './providers/gemini'
 
 export {
   createProvider,
   getOpenAI,
-  getOllamaCloud,
   getGemini,
   getProviderNameForTask,
   getModelNameForTask,

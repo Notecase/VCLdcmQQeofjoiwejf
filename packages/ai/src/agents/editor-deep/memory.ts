@@ -135,7 +135,12 @@ export class EditorLongTermMemory {
     const memories = await this.list(80)
     if (memories.length === 0) return ''
 
-    const ranked = this.rankMemories(memories, {
+    // Exclude note_summary memories — these store assistant responses from prior turns
+    // and cause the LLM to repeat old answers. Conversation history already carries this context.
+    const filteredMemories = memories.filter((m) => m.memory_type !== 'note_summary')
+    if (filteredMemories.length === 0) return ''
+
+    const ranked = this.rankMemories(filteredMemories, {
       query: message,
       currentNoteId: options?.currentNoteId,
       workspaceId: options?.workspaceId,

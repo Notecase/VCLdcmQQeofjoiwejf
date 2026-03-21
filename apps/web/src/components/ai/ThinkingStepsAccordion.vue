@@ -28,6 +28,9 @@ import {
   X,
 } from 'lucide-vue-next'
 import StreamingCodePreview from './StreamingCodePreview.vue'
+import SubagentProgressBar from './SubagentProgressBar.vue'
+import SubagentProgressCard from './SubagentProgressCard.vue'
+import SynthesisIndicator from './SynthesisIndicator.vue'
 
 const store = useAIStore()
 
@@ -41,6 +44,9 @@ const hasRunningStep = computed(() => steps.value.some((s) => s.status === 'runn
 const allComplete = computed(() => hasSteps.value && !hasRunningStep.value)
 const isProcessing = computed(() => store.isProcessing)
 const codePreview = computed(() => store.codePreview)
+const activeSubagents = computed(() => store.activeSubagents)
+const hasSubagents = computed(() => activeSubagents.value.length > 0)
+const isSynthesizing = computed(() => store.isSynthesizing)
 
 // Auto-expand when new step arrives
 watch(
@@ -245,6 +251,24 @@ function clearSteps() {
           :total-chars="codePreview.totalChars"
           class="artifact-preview"
         />
+
+        <!-- Subagent progress section (multi-mode streaming) -->
+        <div
+          v-if="hasSubagents"
+          class="subagent-section"
+        >
+          <SubagentProgressBar :subagents="activeSubagents" />
+          <SubagentProgressCard
+            v-for="sub in activeSubagents"
+            :key="sub.id"
+            :subagent="sub"
+            :auto-collapse="activeSubagents.length >= 5"
+          />
+          <SynthesisIndicator
+            v-if="isSynthesizing"
+            :count="activeSubagents.length"
+          />
+        </div>
       </div>
     </Transition>
   </div>
@@ -525,5 +549,16 @@ function clearSteps() {
   margin-top: 8px;
   margin-left: 12px; /* Align with step content after connector */
   margin-bottom: 4px;
+}
+
+/* ============================================
+ * SUBAGENT SECTION
+ * ============================================ */
+
+.subagent-section {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 </style>

@@ -12,16 +12,22 @@
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../providers/token-tracker'
 
 // ============================================================================
 // Types
 // ============================================================================
+
+import type { SharedContextService } from '../services/shared-context.service'
 
 export interface ChatAgentConfig {
   supabase: SupabaseClient
   userId: string
   openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface ChatMessage {
@@ -95,13 +101,17 @@ export class ChatAgent {
   private userId: string
   private openaiApiKey: string
   private model: string
+  private client: import('openai').default
   private state: ChatAgentState
+  private sharedContextService?: SharedContextService
 
   constructor(config: ChatAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('chat').id
+    this.client = createOpenAIClient(selectModel('chat'))
+    this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
       retrievedChunks: [],
@@ -169,23 +179,29 @@ export class ChatAgent {
     yield { type: 'thinking', data: 'Generating response...' }
 
     // 4. Stream response
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const systemPrompt = this.buildSystemPrompt()
+    let systemPrompt = this.buildSystemPrompt()
+    if (this.sharedContextService) {
+      const sharedCtx = await this.sharedContextService.read({
+        relevantTypes: ['active_plan', 'soul_updated', 'research_done'],
+      })
+      if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
+    }
     const messages = this.buildOpenAIMessages(systemPrompt)
 
-    const stream = await client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: 0.7,
       max_completion_tokens: 4000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let fullContent = ''
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'chat',
+    })) {
       const delta = chunk.choices[0]?.delta?.content
       if (delta) {
         fullContent += delta
@@ -253,11 +269,11 @@ export class ChatAgent {
 
   private async retrieveContext(query: string, noteIds?: string[], maxChunks = 5): Promise<void> {
     // Generate embedding for query
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
+    const embeddingModel = selectModel('embedding')
+    const embeddingClient = createOpenAIClient(embeddingModel)
 
-    const embeddingResponse = await client.embeddings.create({
-      model: 'text-embedding-3-large',
+    const embeddingResponse = await embeddingClient.embeddings.create({
+      model: embeddingModel.id,
       input: query,
       dimensions: 1536,
     })
@@ -348,18 +364,24 @@ cite it using [1], [2], etc. to reference the source.`
   }
 
   private async generateResponse(): Promise<ChatAgentResponse> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const systemPrompt = this.buildSystemPrompt()
+    let systemPrompt = this.buildSystemPrompt()
+    if (this.sharedContextService) {
+      const sharedCtx = await this.sharedContextService.read({
+        relevantTypes: ['active_plan', 'soul_updated', 'research_done'],
+      })
+      if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
+    }
     const messages = this.buildOpenAIMessages(systemPrompt)
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: 0.7,
       max_completion_tokens: 4000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'chat', startTime })
 
     return {
       content: response.choices[0]?.message?.content || '',

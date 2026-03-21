@@ -6,7 +6,11 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import type OpenAI from 'openai'
 import { executeTool, type ToolContext } from '../../tools'
+import { selectModel } from '../../providers/model-registry'
+import { createOpenAIClient } from '../../providers/client-factory'
+import { trackOpenAIResponse } from '../../providers/token-tracker'
 
 // ============================================================================
 // Types
@@ -66,13 +70,15 @@ export class TableSubagent {
   private userId: string
   private openaiApiKey: string
   private model: string
+  private client: OpenAI
   private context: TableSubagentContext = {}
 
   constructor(config: TableSubagentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('table').id
+    this.client = createOpenAIClient(selectModel('table'))
   }
 
   /**
@@ -91,10 +97,8 @@ export class TableSubagent {
   }> {
     yield { type: 'thinking', data: 'Generating table data...' }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: TABLE_SUBAGENT_PROMPT },
@@ -103,6 +107,7 @@ export class TableSubagent {
       temperature: 0.3,
       max_completion_tokens: 2000,
     })
+    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 
@@ -196,10 +201,8 @@ export class TableSubagent {
    * Generate table data without creating in database
    */
   async generateTableData(taskDescription: string): Promise<TableData | null> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: TABLE_SUBAGENT_PROMPT },
@@ -208,6 +211,7 @@ export class TableSubagent {
       temperature: 0.3,
       max_completion_tokens: 2000,
     })
+    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 

@@ -3,23 +3,24 @@
 // Gemini-powered slide deck generation
 // ============================================================
 
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
 import type { SlideData } from '@inkdown/shared/types'
 import { sanitizeJSONString } from './tools'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
 
 export async function generateSlidesWithModel(
   lessonTitle: string,
   keyTopics: string[],
   researchContext: string,
-  geminiApiKey: string,
-  modelName: string = 'gemini-3-flash-preview',
+  _geminiApiKey?: string,
+  _modelName?: string,
   maxSlides: number = 15
 ): Promise<SlideData[]> {
-  const model = new ChatGoogleGenerativeAI({
-    model: modelName,
-    apiKey: geminiApiKey,
+  const slidesModel = selectModel('slides')
+  const model = await createLangChainModel(slidesModel, {
     temperature: 0.7,
-    json: true,
+    callbacks: [new TokenTrackingCallback({ model: slidesModel.id, taskType: 'slides' })],
   })
 
   const prompt = `Create a professional slide deck for the following lesson.
@@ -72,15 +73,15 @@ export async function generateSlides(
   lessonTitle: string,
   keyTopics: string[],
   researchContext: string,
-  geminiApiKey: string,
+  _geminiApiKey?: string,
   maxSlides: number = 15
 ): Promise<SlideData[]> {
   return generateSlidesWithModel(
     lessonTitle,
     keyTopics,
     researchContext,
-    geminiApiKey,
-    'gemini-3-flash-preview',
+    undefined,
+    undefined,
     maxSlides
   )
 }

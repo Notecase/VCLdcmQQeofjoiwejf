@@ -10,6 +10,7 @@ import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
 import { useNotificationsStore } from '@/stores/notifications'
 import { partitionMemoryFiles } from './secretary.file-grouping'
+import { getMissionState, startMission, writeLastMissionId } from '@/services/missions.service'
 import {
   parseDailyPlanMarkdown,
   parsePlanMarkdown,
@@ -26,6 +27,14 @@ import type {
   SecretaryThread,
   ReflectionMood,
   ParserWarning,
+  SecretaryAttentionItem,
+  SecretaryHeartbeatState,
+  TaskArtifactLink,
+  WorkflowKey,
+  CalendarEvent,
+  PlanWorkspaceState,
+  PlanScheduleItem,
+  PlanScheduleWorkflow,
 } from '@inkdown/shared/types'
 import { isDemoMode } from '@/utils/demo'
 import {
@@ -34,9 +43,17 @@ import {
   DEMO_TODAY_PLAN,
   DEMO_TOMORROW_PLAN,
 } from '@/data/demo-secretary'
+import {
+  buildPendingWorkflowArtifact,
+  buildPlanWorkflowGoal,
+  buildTaskWorkflowGoal,
+  resolveWorkflowArtifactFromMission,
+} from './secretary.workflow'
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
 const SECRETARY_API = `${API_BASE}/api/secretary`
+const HEARTBEAT_API = `${API_BASE}/api/settings/heartbeat`
+const INTEGRATIONS_API = `${API_BASE}/api/integrations`
 const SECRETARY_HARDENING_ENABLED = !['0', 'false', 'off', 'no'].includes(
   String(import.meta.env.VITE_SECRETARY_PHASE5_HARDENING ?? 'true')
     .trim()
@@ -79,6 +96,7 @@ export interface SecretaryChatMessage {
 
 export const useSecretaryStore = defineStore('secretary', () => {
   const notifications = useNotificationsStore()
+  const workflowMonitors = new Map<string, ReturnType<typeof setTimeout>>()
 
   // ---- State ----
   const memoryFiles = ref<MemoryFile[]>([])
@@ -91,6 +109,11 @@ export const useSecretaryStore = defineStore('secretary', () => {
   const error = ref<string | null>(null)
   const parserWarnings = ref<ParserWarning[]>([])
 
+  // Calendar events state
+  const calendarEvents = ref<CalendarEvent[]>([])
+  const calendarSyncedAt = ref<string | null>(null)
+  const isLoadingCalendarEvents = ref(false)
+
   // Chat state
   const chatMessages = ref<SecretaryChatMessage[]>([])
   const isChatStreaming = ref(false)
@@ -101,6 +124,16 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
   // UI state
   const selectedFilename = ref<string | null>(null)
+  const heartbeatState = ref<SecretaryHeartbeatState | null>(null)
+  const planArtifacts = ref<Record<string, TaskArtifactLink[]>>({})
+
+  // Plan workspace state
+  const currentWorkspace = ref<PlanWorkspaceState | null>(null)
+  const isLoadingWorkspace = ref(false)
+
+  // Plan-project links (planId -> projectId, and reverse)
+  const planProjectLinks = ref<Map<string, string>>(new Map())
+  const projectPlanLinks = ref<Map<string, string>>(new Map())
 
   // Thread state
   const activeThreadId = ref<string | null>(null)
@@ -141,9 +174,110 @@ export const useSecretaryStore = defineStore('secretary', () => {
     return hour >= 20 || hour < 4
   })
 
+  const isTomorrowApproved = computed(() => {
+    const f = memoryFiles.value.find((f) => f.filename === 'Tomorrow.md')
+    return !!f && f.content.includes('**Status:** Approved')
+  })
+
   const selectedFile = computed(() => {
     if (!selectedFilename.value) return null
     return memoryFiles.value.find((f) => f.filename === selectedFilename.value) || null
+  })
+
+  const primaryPlan = computed(() => activePlans.value[0] || null)
+
+  const currentTopic = computed(
+    () => primaryPlan.value?.currentTopic || todayPlan.value?.tasks.find((task) => task.status !== 'completed')?.title || ''
+  )
+
+  const nextTask = computed(
+    () =>
+      todayPlan.value?.tasks.find(
+        (task) => task.status !== 'completed' && task.status !== 'skipped'
+      ) || null
+  )
+
+  const upcomingTasks = computed(() => {
+    if (!todayPlan.value) return []
+    return todayPlan.value.tasks.filter(
+      (task) => task.status !== 'completed' && task.status !== 'skipped'
+    )
+  })
+
+  const calendarEventsByDate = computed(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const event of calendarEvents.value) {
+      const existing = map.get(event.date)
+      if (existing) {
+        existing.push(event)
+      } else {
+        map.set(event.date, [event])
+      }
+    }
+    return map
+  })
+
+  const busyDates = computed(() => {
+    const dates = new Set<string>()
+    if (todayPlan.value) dates.add(todayPlan.value.date)
+    if (tomorrowPlan.value) dates.add(tomorrowPlan.value.date)
+    for (const date of calendarEventsByDate.value.keys()) {
+      dates.add(date)
+    }
+    return dates
+  })
+
+  const attentionItems = computed<SecretaryAttentionItem[]>(() => {
+    const items: SecretaryAttentionItem[] = []
+
+    if (todayPlan.value) {
+      for (const task of todayPlan.value.tasks) {
+        for (const artifact of task.artifacts || []) {
+          items.push({
+            id: `${task.id}:${artifact.id}`,
+            kind: 'artifact',
+            title: artifact.label,
+            summary: `${task.title}${task.planId ? ` · ${task.planId}` : ''}`,
+            status:
+              artifact.status === 'blocked'
+                ? 'blocked'
+                : artifact.status === 'ready'
+                  ? 'ready'
+                  : 'pending',
+            href: artifact.href,
+            missionId: artifact.missionId,
+            targetId: artifact.targetId,
+            label: task.title,
+            createdAt: artifact.createdAt,
+          })
+        }
+      }
+    }
+
+    for (const [planId, artifacts] of Object.entries(planArtifacts.value)) {
+      const plan = activePlans.value.find((item) => item.id === planId)
+      for (const artifact of artifacts) {
+        items.push({
+          id: `${planId}:${artifact.id}`,
+          kind: 'artifact',
+          title: artifact.label,
+          summary: plan ? `${plan.name}${plan.currentTopic ? ` · ${plan.currentTopic}` : ''}` : planId,
+          status:
+            artifact.status === 'blocked'
+              ? 'blocked'
+              : artifact.status === 'ready'
+                ? 'ready'
+                : 'pending',
+          href: artifact.href,
+          missionId: artifact.missionId,
+          targetId: artifact.targetId,
+          label: plan?.name || planId,
+          createdAt: artifact.createdAt,
+        })
+      }
+    }
+
+    return items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 8)
   })
 
   // ---- Actions ----
@@ -187,6 +321,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       }
 
       parsePlanData()
+      await loadHeartbeatState()
 
       await loadThreads()
       // Auto-load most recent thread
@@ -196,6 +331,11 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
       isInitialized.value = true
       startTaskNotifications()
+      // Load plan-project links in the background (non-blocking)
+      loadPlanProjectLinks()
+
+      // Load calendar events (non-blocking)
+      loadCalendarEvents().catch(() => {})
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to initialize secretary'
       error.value = msg
@@ -211,6 +351,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       const data = await res.json()
       memoryFiles.value = data.files || []
       parsePlanData()
+      await loadHeartbeatState()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to refresh memory files'
       notifications.error(msg)
@@ -262,7 +403,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }, 120)
   }
 
-  async function updateMemoryFile(filename: string, content: string) {
+  async function updateMemoryFile(filename: string, content: string, options?: { silent?: boolean }) {
     if (isDemoMode()) {
       const idx = memoryFiles.value.findIndex((f) => f.filename === filename)
       if (idx >= 0) {
@@ -273,7 +414,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
         }
       }
       parsePlanData()
-      notifications.success('File saved successfully')
+      if (!options?.silent) notifications.success('File saved successfully')
       return
     }
     try {
@@ -289,11 +430,224 @@ export const useSecretaryStore = defineStore('secretary', () => {
       }
 
       parsePlanData()
-      notifications.success('File saved successfully')
+      if (!options?.silent) notifications.success('File saved successfully')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update memory file'
       notifications.error(msg)
     }
+  }
+
+  async function persistTodayPlan(options?: { silent?: boolean }) {
+    if (!todayPlan.value) return
+    const markdown = dailyPlanToMarkdown(todayPlan.value)
+    await updateMemoryFile('Today.md', markdown, options)
+  }
+
+  function getPlanArtifacts(planId: string): TaskArtifactLink[] {
+    return planArtifacts.value[planId] || []
+  }
+
+  function openMemoryFile(filename: string) {
+    selectedFilename.value = filename
+  }
+
+  function upsertTaskArtifact(taskId: string, artifact: TaskArtifactLink) {
+    if (!todayPlan.value) return
+    const task = todayPlan.value.tasks.find((item) => item.id === taskId)
+    if (!task) return
+
+    const artifacts = [...(task.artifacts || [])]
+    const idx = artifacts.findIndex(
+      (item) => item.id === artifact.id || (item.kind === artifact.kind && item.missionId === artifact.missionId)
+    )
+
+    if (idx >= 0) {
+      artifacts[idx] = { ...artifacts[idx], ...artifact }
+    } else {
+      artifacts.push(artifact)
+    }
+
+    task.artifacts = artifacts
+    if (artifact.kind === 'note' && artifact.targetId) {
+      task.noteId = artifact.targetId
+    }
+
+    void persistTodayPlan({ silent: true })
+  }
+
+  function upsertPlanArtifact(planId: string, artifact: TaskArtifactLink) {
+    const current = [...(planArtifacts.value[planId] || [])]
+    const idx = current.findIndex(
+      (item) => item.id === artifact.id || (item.kind === artifact.kind && item.missionId === artifact.missionId)
+    )
+
+    if (idx >= 0) {
+      current[idx] = { ...current[idx], ...artifact }
+    } else {
+      current.push(artifact)
+    }
+
+    planArtifacts.value = {
+      ...planArtifacts.value,
+      [planId]: current,
+    }
+  }
+
+  async function loadHeartbeatState() {
+    if (isDemoMode()) {
+      heartbeatState.value = {
+        enabled: true,
+        config: { timezone: BROWSER_TIMEZONE, morning_hour: 8, evening_hour: 21 },
+        last_heartbeat_at: new Date().toISOString(),
+        last_morning_at: new Date().toISOString(),
+        last_evening_at: null,
+        last_weekly_at: null,
+        next_action: 'evening',
+        next_action_at: null,
+      }
+      return
+    }
+
+    try {
+      const res = await authFetch(HEARTBEAT_API)
+      if (!res.ok) return
+      const data = await res.json()
+      heartbeatState.value = data.state || null
+    } catch {
+      // Keep the cockpit usable if settings are unavailable.
+    }
+  }
+
+  async function loadCalendarEvents(from?: string, to?: string) {
+    if (isDemoMode()) return
+    isLoadingCalendarEvents.value = true
+    try {
+      const params = new URLSearchParams()
+      if (from) params.set('from', from)
+      if (to) params.set('to', to)
+      const qs = params.toString()
+      const url = `${INTEGRATIONS_API}/gcal/events${qs ? `?${qs}` : ''}`
+      const res = await authFetch(url)
+      if (!res.ok) return
+      const data = await res.json()
+      calendarEvents.value = data.events || []
+      calendarSyncedAt.value = data.syncedAt || null
+    } catch {
+      // Non-critical — calendar events are supplementary
+    } finally {
+      isLoadingCalendarEvents.value = false
+    }
+  }
+
+  function clearWorkflowMonitor(missionId: string) {
+    const timer = workflowMonitors.get(missionId)
+    if (timer) {
+      clearTimeout(timer)
+      workflowMonitors.delete(missionId)
+    }
+  }
+
+  function scheduleWorkflowMonitor(input: {
+    missionId: string
+    workflowKey: WorkflowKey
+    targetType: 'task' | 'plan'
+    targetId: string
+  }) {
+    clearWorkflowMonitor(input.missionId)
+    const timer = setTimeout(async () => {
+      try {
+        const state = await getMissionState(input.missionId)
+        const artifact = resolveWorkflowArtifactFromMission(state, input.workflowKey)
+
+        if (artifact) {
+          if (input.targetType === 'task') {
+            upsertTaskArtifact(input.targetId, artifact)
+          } else {
+            upsertPlanArtifact(input.targetId, artifact)
+          }
+        }
+
+        if (
+          state.mission.status === 'completed' ||
+          state.mission.status === 'blocked' ||
+          state.mission.status === 'error' ||
+          state.mission.status === 'cancelled'
+        ) {
+          clearWorkflowMonitor(input.missionId)
+          return
+        }
+
+        scheduleWorkflowMonitor(input)
+      } catch {
+        clearWorkflowMonitor(input.missionId)
+      }
+    }, 2_000)
+
+    workflowMonitors.set(input.missionId, timer)
+  }
+
+  async function launchTaskWorkflow(task: ScheduledTask, workflowKey: WorkflowKey) {
+    if (isDemoMode()) {
+      notifications.info('Autonomous mission actions are available in the full version')
+      return null
+    }
+
+    const plan = task.planId ? activePlans.value.find((item) => item.id === task.planId) : null
+    const goal = buildTaskWorkflowGoal(workflowKey, task.title, plan?.name)
+
+    const { missionId } = await startMission({
+      goal,
+      workflowKey,
+      triggerSource: 'user',
+      constraints: {
+        sourceTaskId: task.id,
+        sourceTaskTitle: task.title,
+        sourcePlanId: task.planId,
+        sourcePlanTitle: plan?.name,
+        sourceTopic: plan?.currentTopic,
+      },
+    })
+
+    writeLastMissionId(missionId)
+    upsertTaskArtifact(task.id, buildPendingWorkflowArtifact(workflowKey, missionId))
+    scheduleWorkflowMonitor({
+      missionId,
+      workflowKey,
+      targetType: 'task',
+      targetId: task.id,
+    })
+
+    return missionId
+  }
+
+  async function launchPlanWorkflow(plan: LearningRoadmap, workflowKey: WorkflowKey) {
+    if (isDemoMode()) {
+      notifications.info('Autonomous mission actions are available in the full version')
+      return null
+    }
+
+    const goal = buildPlanWorkflowGoal(workflowKey, plan.name, plan.currentTopic)
+    const { missionId } = await startMission({
+      goal,
+      workflowKey,
+      triggerSource: 'user',
+      constraints: {
+        sourcePlanId: plan.id,
+        sourcePlanTitle: plan.name,
+        sourceTopic: plan.currentTopic,
+      },
+    })
+
+    writeLastMissionId(missionId)
+    upsertPlanArtifact(plan.id, buildPendingWorkflowArtifact(workflowKey, missionId))
+    scheduleWorkflowMonitor({
+      missionId,
+      workflowKey,
+      targetType: 'plan',
+      targetId: plan.id,
+    })
+
+    return missionId
   }
 
   async function updateTaskStatus(taskId: string, status: ScheduledTask['status']) {
@@ -323,8 +677,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       }
     }
 
-    const markdown = dailyPlanToMarkdown(todayPlan.value)
-    await updateMemoryFile('Today.md', markdown)
+    await persistTodayPlan()
   }
 
   async function prepareTomorrow() {
@@ -395,7 +748,11 @@ export const useSecretaryStore = defineStore('secretary', () => {
         return
       }
       await refreshMemoryFiles()
-      notifications.success('Tomorrow plan approved and moved to Today')
+      if (tomorrowPlan.value) {
+        notifications.success('Tomorrow plan approved — will activate on its date')
+      } else {
+        notifications.success('Plan approved and moved to Today')
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to approve tomorrow plan'
       notifications.error(msg)
@@ -480,7 +837,9 @@ export const useSecretaryStore = defineStore('secretary', () => {
       _streaming: true,
     }
     chatMessages.value.push(assistantMsg)
-    liveAssistantMsg = assistantMsg
+    // Get the reactive proxy — Vue wraps objects pushed into ref arrays.
+    // Without this, mutations via liveAssistantMsg bypass reactivity.
+    liveAssistantMsg = chatMessages.value[chatMessages.value.length - 1]
 
     isChatStreaming.value = true
     streamingContent.value = ''
@@ -877,8 +1236,13 @@ export const useSecretaryStore = defineStore('secretary', () => {
   // ---------- Study Now (D1) ----------
 
   function studyNow(task: ScheduledTask) {
-    if (task.noteId) {
-      window.location.href = `/editor?noteId=${task.noteId}`
+    const readyNoteArtifact = (task.artifacts || []).find(
+      (artifact) => artifact.kind === 'note' && artifact.status === 'ready' && artifact.targetId
+    )
+    const noteId = readyNoteArtifact?.targetId || task.noteId
+
+    if (noteId) {
+      window.location.href = `/editor?noteId=${noteId}`
     }
     updateTaskStatus(task.id, 'in_progress')
   }
@@ -892,6 +1256,178 @@ export const useSecretaryStore = defineStore('secretary', () => {
     await refreshMemoryFiles()
   }
 
+  // ---- Plan-Project Link Actions ----
+
+  async function loadPlanProjectLinks() {
+    if (isDemoMode()) return
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan-links`)
+      if (!res.ok) return
+      const data = await res.json()
+      const links = data.links as Record<string, string>
+      planProjectLinks.value = new Map(Object.entries(links))
+      projectPlanLinks.value = new Map(Object.entries(links).map(([k, v]) => [v, k]))
+    } catch {
+      // Non-critical
+    }
+  }
+
+  async function linkPlanToProject(planId: string): Promise<string | undefined> {
+    if (isDemoMode()) return
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/link-project`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (data.projectId) {
+        planProjectLinks.value.set(planId, data.projectId)
+        projectPlanLinks.value.set(data.projectId, planId)
+        return data.projectId
+      }
+    } catch (err) {
+      console.warn('Failed to link plan to project', err)
+    }
+  }
+
+  function getPlanIdForProject(projectId: string): string | undefined {
+    return projectPlanLinks.value.get(projectId)
+  }
+
+  function getProjectIdForPlan(planId: string): string | undefined {
+    return planProjectLinks.value.get(planId)
+  }
+
+  // ---- Plan Workspace Actions ----
+
+  async function loadPlanWorkspace(planId: string) {
+    if (isDemoMode()) return
+    isLoadingWorkspace.value = true
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}`, {
+        headers: TIMEZONE_HEADERS,
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || `Failed to load plan workspace (${res.status})`)
+      }
+      const data = await res.json()
+
+      // Auto-link existing plans that don't have a project yet
+      let projectId = data.projectId
+      if (!projectId) {
+        projectId = await linkPlanToProject(planId)
+      } else {
+        planProjectLinks.value.set(planId, projectId)
+        projectPlanLinks.value.set(projectId, planId)
+      }
+
+      currentWorkspace.value = {
+        plan: data.plan,
+        instructions: data.instructions || '',
+        roadmapContent: data.roadmapContent || '',
+        schedules: data.schedules || [],
+        artifacts: getPlanArtifacts(planId),
+        projectId,
+        projectNotes: data.projectNotes || [],
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load plan workspace'
+      notifications.error(msg)
+      throw err
+    } finally {
+      isLoadingWorkspace.value = false
+    }
+  }
+
+  async function savePlanInstructions(planId: string, content: string) {
+    try {
+      await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/instructions`, {
+        method: 'PUT',
+        body: JSON.stringify({ content }),
+      })
+      if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
+        currentWorkspace.value.instructions = content
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save instructions'
+      notifications.error(msg)
+    }
+  }
+
+  async function createPlanSchedule(planId: string, schedule: Omit<PlanScheduleItem, 'id' | 'createdAt' | 'runCount' | 'planId'>) {
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules`, {
+        method: 'POST',
+        body: JSON.stringify(schedule),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
+        currentWorkspace.value.schedules.push(data.schedule)
+      }
+      notifications.success('Automation created')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create schedule'
+      notifications.error(msg)
+    }
+  }
+
+  async function updatePlanSchedule(planId: string, scheduleId: string, updates: Partial<PlanScheduleItem>) {
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
+        const idx = currentWorkspace.value.schedules.findIndex((s) => s.id === scheduleId)
+        if (idx >= 0) {
+          currentWorkspace.value.schedules[idx] = { ...currentWorkspace.value.schedules[idx], ...updates }
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update schedule'
+      notifications.error(msg)
+    }
+  }
+
+  async function deletePlanSchedule(planId: string, scheduleId: string) {
+    try {
+      const res = await authFetch(`${SECRETARY_API}/plan/${encodeURIComponent(planId)}/schedules/${scheduleId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      if (currentWorkspace.value && currentWorkspace.value.plan.id === planId) {
+        currentWorkspace.value.schedules = currentWorkspace.value.schedules.filter((s) => s.id !== scheduleId)
+      }
+      notifications.success('Automation deleted')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete schedule'
+      notifications.error(msg)
+    }
+  }
+
+  async function togglePlanSchedule(planId: string, scheduleId: string, enabled: boolean) {
+    await updatePlanSchedule(planId, scheduleId, { enabled })
+  }
+
+  async function runPlanNow(planId: string, workflow: PlanScheduleWorkflow = 'make_note_from_task') {
+    const plan = activePlans.value.find((p) => p.id === planId) || currentWorkspace.value?.plan
+    if (!plan) {
+      notifications.error('Plan not found')
+      return
+    }
+    try {
+      await launchPlanWorkflow(plan, workflow)
+      notifications.success('Mission started')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to start mission'
+      notifications.error(msg)
+    }
+  }
+
   return {
     memoryFiles,
     rootMemoryFiles,
@@ -900,6 +1436,11 @@ export const useSecretaryStore = defineStore('secretary', () => {
     activePlans,
     todayPlan,
     tomorrowPlan,
+    calendarEvents,
+    calendarSyncedAt,
+    isLoadingCalendarEvents,
+    calendarEventsByDate,
+    busyDates,
     isLoading,
     isGeneratingTomorrow,
     isInitialized,
@@ -913,10 +1454,20 @@ export const useSecretaryStore = defineStore('secretary', () => {
     selectedFilename,
     activeThreadId,
     threads,
+    heartbeatState,
+    planArtifacts,
+    currentWorkspace,
+    isLoadingWorkspace,
     todayProgress,
     showTomorrowSection,
     showReflectionSection,
+    isTomorrowApproved,
     selectedFile,
+    primaryPlan,
+    currentTopic,
+    nextTask,
+    upcomingTasks,
+    attentionItems,
     initialize,
     refreshMemoryFiles,
     updateMemoryFile,
@@ -930,9 +1481,27 @@ export const useSecretaryStore = defineStore('secretary', () => {
     deleteThread,
     submitReflection,
     studyNow,
+    loadCalendarEvents,
+    launchTaskWorkflow,
+    launchPlanWorkflow,
+    getPlanArtifacts,
+    openMemoryFile,
     startTaskNotifications,
     stopTaskNotifications,
     shouldAutoPrepareTomorrow,
     checkAndAutoPrepareTomorrow,
+    planProjectLinks,
+    projectPlanLinks,
+    loadPlanProjectLinks,
+    linkPlanToProject,
+    getPlanIdForProject,
+    getProjectIdForPlan,
+    loadPlanWorkspace,
+    savePlanInstructions,
+    createPlanSchedule,
+    updatePlanSchedule,
+    deletePlanSchedule,
+    togglePlanSchedule,
+    runPlanNow,
   }
 })

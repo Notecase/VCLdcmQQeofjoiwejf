@@ -1,5 +1,6 @@
 .mu-editor {
   outline: none;
+  caret-color: currentColor;
 }
 
 .mu-container {
@@ -20,7 +21,7 @@
 .mu-container table,
 .mu-container figure:not(.mu-table) {
   margin: 0;
-  padding: 0.5em 0;
+  padding: 0.25em 0;
 }
 
 .mu-container h1,
@@ -33,9 +34,9 @@
 
   margin-top: 0;
   margin-bottom: 0;
-  padding: 0.5em 0;
+  padding: 0.6em 0 0.2em;
 
-  color: var(--editor-color-80);
+  color: var(--editor-color);
   font-weight: bold;
   line-height: 1.4;
 
@@ -72,7 +73,7 @@
 
   margin-right: 0;
   margin-left: 0;
-  padding: 0 1em;
+  padding: 0.2em 1em;
 
   color: var(--editor-color-50);
 
@@ -81,14 +82,14 @@
 
 .mu-container blockquote::before {
   position: absolute;
-  top: 0.5em;
+  top: 0;
   left: 0;
 
   display: block;
   width: 3px;
-  height: calc(100% - 1em);
+  height: 100%;
 
-  background: var(--editor-color-30);
+  background: var(--theme-color);
 
   content: '';
 }
@@ -248,10 +249,15 @@ span.mu-language-input {
   padding: 0;
 }
 
+/* Compact list item paragraphs */
+.mu-container li > p {
+  padding: 0.15em 0;
+}
+
 /* order list and bullet list */
 ol.mu-order-list,
 ul.mu-bullet-list {
-  padding-left: 1em;
+  padding-left: 1.5em;
 }
 
 ol.mu-order-list {
@@ -383,9 +389,8 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 
   border-collapse: collapse;
 
-  /* Allow table to expand beyond container width */
-  width: max-content;
-  min-width: 100%;
+  /* Fill container; overflow-x on .mu-table handles truly wide tables */
+  width: 100%;
 }
 
 .mu-table-inner tr {
@@ -435,6 +440,17 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-inner tr th:last-child,
 .mu-table-inner tr td:last-child {
   margin-bottom: 0;
+}
+
+/* Prevent last column/row ::before from overflowing the table */
+.mu-table-inner tr th:last-child::before,
+.mu-table-inner tr td:last-child::before {
+  width: 100%;
+}
+
+.mu-table-inner tr:last-child th::before,
+.mu-table-inner tr:last-child td::before {
+  height: 100%;
 }
 
 .mu-table-inner td[data-align='left'],
@@ -543,8 +559,7 @@ figure.mu-math-block div.mu-math-preview > svg {
   width: 100%;
 }
 
-figure.mu-active.mu-math-block > div.mu-math-preview,
-figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
+figure.mu-active.mu-math-block > div.mu-math-preview {
   position: absolute;
   top: calc(100% + 20px);
   left: 50%;
@@ -674,12 +689,13 @@ pre.mu-active.mu-fenced-code::after {
 }
 
 .mu-table-cell-content {
-  min-width: 10em;
+  min-width: 4em;
 }
 
 /* Artifact Block */
 figure.mu-artifact-block {
   position: relative;
+  z-index: 10001;
 
   margin: 1em 0;
   padding: 0;

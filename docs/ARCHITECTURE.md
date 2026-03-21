@@ -20,8 +20,9 @@ This document describes the architecture of the Inkdown application. It is the s
 12. [Database Schema](#database-schema)
 13. [Authentication](#authentication)
 14. [AI Architecture](#ai-architecture)
-15. [Editor Architecture](#editor-architecture)
-16. [Environment Configuration](#environment-configuration)
+15. [Mission Hub](#mission-hub)
+16. [Editor Architecture](#editor-architecture)
+17. [Environment Configuration](#environment-configuration)
 
 ---
 
@@ -431,6 +432,26 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 | `POST /api/sources/action`             | Yes  | Execute workflow on sources - SSE                          |
 | `POST /api/learning-resources/save`    | Yes  | Save learning resource                                     |
 | `GET /api/learning-resources/note/:id` | Yes  | Get resources for note                                     |
+| `GET /api/settings/api-keys`           | Yes  | List BYOK API keys (hints only)                            |
+| `POST /api/settings/api-keys`          | Yes  | Add/update BYOK API key                                    |
+| `DELETE /api/settings/api-keys/:p`     | Yes  | Remove BYOK API key                                        |
+| `GET /api/settings/ai-preferences`     | Yes  | Get AI model preferences                                   |
+| `PUT /api/settings/ai-preferences`     | Yes  | Update AI model preferences                                |
+| `GET /api/settings/heartbeat`          | Yes  | Get heartbeat state/config                                 |
+| `PUT /api/settings/heartbeat`          | Yes  | Update heartbeat config                                    |
+| `GET /api/settings/heartbeat/logs`     | Yes  | Get heartbeat action logs                                  |
+| `POST /api/inbox/capture`              | Token| Quick capture via X-Capture-Token (Apple Shortcuts, PWA)   |
+| `GET /api/inbox`                       | Yes  | Read Inbox.md content                                      |
+| `DELETE /api/inbox`                    | Yes  | Clear Inbox.md                                             |
+| `POST /api/inbox/tokens`              | Yes  | Generate capture token (raw token returned once)           |
+| `GET /api/inbox/tokens`               | Yes  | List capture tokens (hints only)                           |
+| `DELETE /api/inbox/tokens/:id`        | Yes  | Revoke a capture token                                     |
+| `GET /api/integrations`               | Yes  | List connected integrations                                |
+| `POST /api/integrations/gcal/connect` | Yes  | Get Google OAuth authorization URL                         |
+| `GET /api/integrations/gcal/callback` | Yes  | Handle Google OAuth callback                               |
+| `POST /api/integrations/gcal/sync`    | Yes  | Manual Google Calendar sync → Calendar.md                  |
+| `DELETE /api/integrations/:provider`  | Yes  | Disconnect an integration                                  |
+| `POST /api/integrations/notion/connect`| Yes | Save Notion BYOK token                                     |
 
 ### Services
 
@@ -461,11 +482,13 @@ Multiple endpoints support SSE (`text/event-stream`). Chunk types: `text-delta`,
 
 ### Routes
 
-| Path    | View       | Purpose                                  |
-| ------- | ---------- | ---------------------------------------- |
-| `/`     | EditorView | Main editor with tabs, sidebar, AI panel |
-| `/auth` | AuthView   | Login/signup (email, OAuth, guest)       |
-| `/ai`   | AIChat     | Full-page AI chat interface              |
+| Path        | View            | Purpose                                    |
+| ----------- | --------------- | ------------------------------------------ |
+| `/`         | EditorView      | Main editor with tabs, sidebar, AI panel   |
+| `/auth`     | AuthView        | Login/signup (email, OAuth, guest)         |
+| `/ai`       | AIChat          | Full-page AI chat interface                |
+| `/capture`  | CaptureView     | PWA quick-capture page (mobile-friendly)   |
+| `/settings` | SettingsView    | Capture tokens, integrations management    |
 
 ### Pinia Stores
 
@@ -634,6 +657,12 @@ AI proposes edit via edit-proposal SSE chunk
 | `agent_sessions`          | LangGraph state persistence (thread_id, state, checkpoint_id)                    |
 | `ai_memory`               | AI memory storage (memory_type, content, metadata) - accessed via RPC            |
 | `user_profiles`           | User profile data (display_name, plan, storage_used)                             |
+| `user_context_entries`    | Shared context bus logbook (agent, type, summary, payload, expires_at)            |
+| `user_soul`               | User preferences/goals for cross-agent personalization (content text)             |
+| `user_api_keys`           | BYOK encrypted API keys (provider, encrypted_key, key_hint, is_valid)            |
+| `user_ai_preferences`     | AI model preferences (preferred_provider, preferred_model, max_daily_cost)       |
+| `agent_heartbeat_state`   | Per-user heartbeat config (enabled, timezone, last_morning/evening/weekly_at)    |
+| `agent_heartbeat_log`     | Audit trail for heartbeat actions (action, result, tokens_used, cost_usd)        |
 
 **Security:** Row-Level Security (RLS) enforced. User-scoped Supabase client created per request.
 
@@ -657,10 +686,11 @@ AI proposes edit via edit-proposal SSE chunk
 The `createProvider(taskType)` factory routes to the optimal provider:
 
 ```
-chat/note-agent/planner/secretary -> OpenAI (GPT-5.2)
-slides/research/course             -> Gemini (gemini-2.0-flash-exp)
-artifact/code/html/css/js          -> Ollama Cloud (kimi-k2.5:cloud)
+chat/note-agent/planner/secretary -> Gemini (gemini-3.1-pro-preview)
+slides/research/course             -> Gemini (gemini-2.0-flash-exp / deep-research-pro)
+artifact/code/html/css/js          -> Ollama Cloud (kimi-k2.5)
 embedding                          -> OpenAI (text-embedding-3-large, 1536 dims)
+heartbeat (BYOK)                   -> User's preferred provider via createBYOKProvider()
 ```
 
 ### Agent Execution Model
@@ -671,12 +701,134 @@ embedding                          -> OpenAI (text-embedding-3-large, 1536 dims)
 4. Tools execute against Supabase via `ToolContext` (userId + supabase client)
 5. All responses support SSE streaming
 
+### Shared Context Bus
+
+Cross-agent context sharing via a Supabase-backed logbook. Every agent reads recent entries at prompt-build time and writes entries after significant actions.
+
+**Tables:**
+- `user_context_entries` — Append-only logbook (agent, type, summary, payload, expires_at)
+- `user_soul` — User-authored preferences and goals (plain text)
+
+**Service:** `SharedContextService` (`packages/ai/src/services/shared-context.service.ts`)
+- `read(options?)` — Returns formatted markdown for prompt injection
+- `write(entry)` — Appends a context entry (best-effort, never blocks)
+- `readSoul()` / `writeSoul(content)` — User preference CRUD
+
+**Entry types:** `active_plan`, `research_done`, `course_saved`, `note_created`, `note_edited`, `goal_set`, `soul_updated`
+
+**Agent wiring:**
+| Agent | Reads | Writes |
+|-------|-------|--------|
+| EditorDeep | All types | `note_edited` (after tool calls) |
+| Secretary | `research_done`, `course_saved`, `note_created`, `goal_set` | `active_plan` (after roadmap/plan tools) |
+| Research | `active_plan`, `soul_updated` | `research_done` (after session) |
+| Course | `active_plan`, `soul_updated` | `course_saved` (after pipeline) |
+| Chat | `active_plan`, `soul_updated`, `research_done` | None (read-only) |
+| Heartbeat | All types | `active_plan` (after morning/evening/weekly routines) |
+
+### Autonomous Heartbeat System
+
+A Supabase Edge Function (`supabase/functions/heartbeat/`) invoked by pg_cron every 30 minutes. Processes users with heartbeat enabled using cheap-first checks:
+
+1. **Cheap checks** (zero LLM cost): timezone-aware time windows, date math, DB reads
+2. **Actions** (BYOK LLM cost): morning routine, evening reflection, weekly review
+3. **Deterministic** (zero cost): Today.md stale detection + auto-archive
+
+**Tables:** `agent_heartbeat_state` (config), `agent_heartbeat_log` (audit trail)
+**Cost model:** ~$0.02-0.04/user/month (user's own API key via BYOK)
+**BYOK:** Users bring own API keys (Google/OpenAI/Anthropic), stored encrypted in `user_api_keys`
+
+### MCP Skills (packages/mcp/skills/)
+
+Orchestrated workflows shipped with `@noteshell/mcp`:
+
+| Skill | File | Purpose |
+|-------|------|---------|
+| Morning Routine | `morning-routine.md` | Full daily planning: gather context, archive, focus, generate Today.md |
+| Evening Reflection | `evening-reflection.md` | End-of-day review, reflection, carry over, prepare tomorrow |
+| Weekly Review | `weekly-review.md` | Weekly analysis, patterns, plan progress, soul updates |
+| Study Planning | `study-planning.md` | Creating roadmaps, daily plans, progress tracking |
+| Note Organization | `note-organization.md` | Structuring projects, rich notes |
+| Research to Notes | `research-to-notes.md` | Capturing research as structured notes |
+| Daily Workflow | `daily-workflow.md` | Mid-day activity logging, quick task updates |
+
+**API routes:** `apps/api/src/routes/context.ts`
+- `GET /api/context/soul` — Read soul content
+- `PUT /api/context/soul` — Update soul content
+- `GET /api/context/entries` — List recent entries
+
+**Frontend:** `SoulEditor.vue` in Secretary panel — textarea for user goals/preferences with debounced auto-save.
+
 ### RAG (Retrieval-Augmented Generation)
 
 1. Notes are chunked and embedded (text-embedding-3-large)
 2. Chat queries trigger semantic search against embeddings
 3. Top-k chunks injected as context
 4. Citations tracked and returned to frontend
+
+---
+
+## Mission Hub
+
+The Mission Hub is an autonomous learning orchestration system. A user enters a high-level goal, and the system orchestrates multiple agents through a four-stage pipeline with approval gates.
+
+### Core Flow
+
+```
+User Goal → Research → Course Draft → Daily Plan → Note Pack → Done
+                 ↓            ↓              ↓            ↓
+            ResearchAgent  CourseOrch.   SecretaryAgent  NoteAgent
+                 ↓            ↓              ↓            ↓
+              Handoff      Approval       Approval      Approval
+                          Gate (UI)      Gate (UI)     Gate (UI)
+```
+
+### Key Components
+
+| Component | Location | Role |
+|-----------|----------|------|
+| Mission types | `packages/shared/src/types/mission.ts` | All mission types (Mission, MissionStep, MissionApproval, etc.) |
+| MissionOrchestrator | `packages/ai/src/services/mission-orchestrator.ts` | Core engine: stage execution, lock management, approval gates, event log |
+| Mission Adapters | `packages/ai/src/services/mission-adapters.ts` | Real agent wrappers that consume streaming output for structured results |
+| SharedContextService | `packages/ai/src/services/shared-context.service.ts` | Cross-agent context bus (logbook pattern) |
+| API Routes | `apps/api/src/routes/missions.ts` | REST + SSE endpoints for mission CRUD and streaming |
+| Mission Store | `apps/web/src/stores/missions.ts` | Pinia store: SSE streaming, dedup, reconnect, state replay |
+| MissionHubView | `apps/web/src/views/MissionHubView.vue` | Goal entry + mode selection |
+| MissionDetailView | `apps/web/src/views/MissionDetailView.vue` | 5-panel live dashboard |
+
+### Shared Context Bus
+
+Agents coordinate via a Supabase-backed logbook (`user_context_entries` table). Each agent reads relevant context types at prompt-build time and writes entries after significant actions.
+
+Context entry types: `active_plan`, `research_done`, `course_saved`, `note_created`, `note_edited`, `goal_set`, `soul_updated`.
+
+### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `missions` | Goal, mode, status, current stage |
+| `mission_steps` | Per-stage status, retry count, timing |
+| `mission_handoffs` | Inter-stage data transfer (research brief, course outline, etc.) |
+| `mission_approvals` | Approval gates with risk level, expiry, resolution |
+| `mission_events` | Sequenced event log for SSE streaming |
+| `mission_run_locks` | Distributed lock preventing concurrent execution |
+| `user_context_entries` | Cross-agent context bus |
+| `user_soul` | User learning preferences |
+
+### API Routes
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/missions/start` | Create mission + 4 steps, start background run |
+| GET | `/api/missions/:id/state` | Full state snapshot |
+| GET | `/api/missions/:id/stream` | SSE stream (supports `?afterSeq=n` for reconnect) |
+| POST | `/api/missions/:id/approvals/:approvalId/approve` | Approve gate |
+| POST | `/api/missions/:id/approvals/:approvalId/reject` | Reject gate |
+| POST | `/api/missions/:id/resume` | Resume blocked/errored mission |
+
+### Feature Flags
+
+Mission Hub is gated behind `VITE_MISSION_HUB_V1` (frontend) and `MISSION_HUB_V1` (API). All entry points and routes are hidden when disabled.
 
 ---
 
@@ -805,6 +957,12 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 | POST   | `/api/secretary/approve-tomorrow` | Move Tomorrow.md → Today.md        |
 | POST   | `/api/secretary/day-transition`   | Trigger day transition manually    |
 | GET    | `/api/secretary/history`          | List archived daily plans          |
+| GET    | `/api/secretary/plan-links`       | All plan-project links for user    |
+| POST   | `/api/secretary/plan/:id/link-project` | Create folder + link for plan |
+| DELETE | `/api/secretary/plan/:id/unlink-project` | Remove plan-project link    |
+| GET    | `/api/context/soul`               | Read user soul/preferences         |
+| PUT    | `/api/context/soul`               | Update user soul/preferences       |
+| GET    | `/api/context/entries`            | List recent context entries        |
 
 ### Frontend
 
@@ -822,6 +980,7 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 | `MemoryFileEditor.vue`     | Edit/preview toggle for memory files (raw markdown + rendered preview) |
 | `ActivePlans.vue`          | List of active learning roadmaps                                       |
 | `PlanCard.vue`             | Individual plan card with progress                                     |
+| `SoulEditor.vue`           | Textarea for user goals/preferences (auto-save to /api/context/soul)   |
 
 **Store:** `apps/web/src/stores/secretary.ts` — Pinia store managing memory files, daily plans, active roadmaps, and chat state. Handles full SSE event discrimination (`text`, `tool_call`, `tool_result`, `thinking`, `done`, `error`).
 
@@ -829,5 +988,9 @@ The Secretary is an AI daily planner, roadmap manager, and learning assistant bu
 
 | Table               | Purpose                                                        |
 | ------------------- | -------------------------------------------------------------- |
-| `secretary_memory`  | Markdown memory files per user (unique on `user_id, filename`) |
-| `secretary_threads` | Chat thread persistence for conversation continuity            |
+| `secretary_memory`      | Markdown memory files per user (unique on `user_id, filename`). Includes `Inbox.md` (captures) and `Calendar.md` (synced events) |
+| `secretary_threads`     | Chat thread persistence for conversation continuity            |
+| `plan_schedules`        | Recurring automations per plan (workflow, frequency, time, instructions) |
+| `plan_project_links`    | Junction table mapping plan IDs (text) to project/folder UUIDs. Enables "smart folders" — each plan auto-creates an editor folder, and generated notes land there |
+| `user_capture_tokens`   | Hashed capture tokens for mobile/shortcut inbox capture (token auth, not JWT) |
+| `user_integrations`     | Connected external services (Google Calendar, Notion) with OAuth tokens and sync state |

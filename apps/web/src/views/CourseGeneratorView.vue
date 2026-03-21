@@ -22,7 +22,6 @@ import LessonPreviewCard from '@/components/course/generator/LessonPreviewCard.v
 const router = useRouter()
 const courseStore = useCourseStore()
 const layoutStore = useLayoutStore()
-
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
@@ -422,6 +421,9 @@ onMounted(() => {
 
 .header-right {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .cancel-btn {

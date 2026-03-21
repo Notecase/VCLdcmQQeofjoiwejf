@@ -139,7 +139,16 @@ export class Muya {
 
   destroy() {
     this.eventCenter.detachAllDomEvents()
-    // this.domNode[BLOCK_DOM_PROPERTY] = null;
+
+    // Destroy all UI plugins (removes floatBox elements from DOM)
+    for (const pluginName of Object.keys(this._uiPlugins)) {
+      const plugin = this._uiPlugins[pluginName]
+      if (plugin && typeof plugin.destroy === 'function') {
+        plugin.destroy()
+      }
+    }
+    this._uiPlugins = {}
+
     if (this.domNode.remove) this.domNode.remove()
 
     // Hide all float tools.

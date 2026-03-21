@@ -12,6 +12,10 @@
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import type { SharedContextService } from '../services/shared-context.service'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../providers/token-tracker'
 import {
   EDIT_START_MARKER,
   EDIT_END_MARKER,
@@ -31,6 +35,7 @@ export interface NoteAgentConfig {
   userId: string
   openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export type NoteAction = 'create' | 'update' | 'organize' | 'summarize' | 'expand'
@@ -213,13 +218,17 @@ export class NoteAgent {
   private userId: string
   private openaiApiKey: string
   private model: string
+  private sharedContextService?: SharedContextService
   private state: NoteAgentState
+  private client: import('openai').default
 
   constructor(config: NoteAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('note-agent').id
+    this.sharedContextService = config.sharedContextService
+    this.client = createOpenAIClient(selectModel('note-agent'))
     this.state = {
       messages: [],
       action: 'create',
@@ -309,7 +318,7 @@ export class NoteAgent {
     }
 
     // Build prompt with EXPLICIT null checks
-    const systemPrompt: string = ACTION_PROMPTS[action] ?? ACTION_PROMPTS.update
+    let systemPrompt: string = ACTION_PROMPTS[action] ?? ACTION_PROMPTS.update
 
     // Ensure input.input is a string (not null/undefined)
     const inputText = input.input
@@ -324,6 +333,20 @@ export class NoteAgent {
       userContent = existingContent
     } else {
       userContent = safeInput
+    }
+
+    // Enrich system prompt with shared cross-agent context
+    if (this.sharedContextService) {
+      try {
+        const sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'note_created'],
+        })
+        if (sharedCtx) {
+          systemPrompt += '\n\n' + sharedCtx
+        }
+      } catch {
+        // Graceful degradation
+      }
     }
 
     // Final validation - explicit string check with strict null coalescing
@@ -353,14 +376,11 @@ export class NoteAgent {
     })
 
     // Stream response with try-catch for error handling
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     yield { type: 'thinking', data: 'Generating content...' }
 
     let stream
     try {
-      stream = await client.chat.completions.create({
+      stream = await this.client.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: validatedSystemPrompt },
@@ -369,6 +389,7 @@ export class NoteAgent {
         temperature: 0.7,
         max_completion_tokens: 4000,
         stream: true,
+        stream_options: { include_usage: true },
       })
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
@@ -381,7 +402,9 @@ export class NoteAgent {
     let fullContent = ''
     let extractedTitle = ''
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(stream, {
+      model: this.model, taskType: 'note-agent',
+    })) {
       // Log chunk structure for debugging GPT-5.2 format
       console.log('[NoteAgent.stream] Chunk:', JSON.stringify(chunk).slice(0, 200))
 
@@ -446,6 +469,29 @@ export class NoteAgent {
         .eq('user_id', this.userId)
     }
 
+    // Write shared context entry for significant actions
+    if (this.sharedContextService) {
+      try {
+        if (action === 'create') {
+          await this.sharedContextService.write({
+            agent: 'note',
+            type: 'note_created',
+            summary: `Created note: ${title}`,
+            payload: { noteId, title },
+          })
+        } else if (['update', 'organize', 'expand'].includes(action)) {
+          await this.sharedContextService.write({
+            agent: 'note',
+            type: 'note_edited',
+            summary: `${action.charAt(0).toUpperCase() + action.slice(1)}d note: ${title}`,
+            payload: { noteId, title, action },
+          })
+        }
+      } catch {
+        // Best-effort — swallow errors
+      }
+    }
+
     yield { type: 'finish', data: { success: true, noteId, title } }
   }
 
@@ -477,14 +523,11 @@ export class NoteAgent {
       systemPrompt = buildSurgicalEditPrompt(config.instruction)
     }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     yield { type: 'thinking', data: 'Generating targeted changes...' }
 
     let stream
     try {
-      stream = await client.chat.completions.create({
+      stream = await this.client.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -493,6 +536,7 @@ export class NoteAgent {
         temperature: 0.7,
         max_completion_tokens: 4000,
         stream: true,
+        stream_options: { include_usage: true },
       })
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
@@ -503,7 +547,9 @@ export class NoteAgent {
 
     let fullContent = ''
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(stream, {
+      model: this.model, taskType: 'note-agent',
+    })) {
       // Log chunk structure for debugging GPT-5.2 format
       console.log('[NoteAgent.streamSurgicalEdit] Chunk:', JSON.stringify(chunk).slice(0, 200))
 
@@ -709,14 +755,12 @@ export class NoteAgent {
   // =========================================================================
 
   private async generateContent(systemPrompt: string, userInput: string): Promise<string> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     // Ensure inputs are valid strings
     const validSystemPrompt = systemPrompt || 'You are a helpful assistant.'
     const validUserInput = userInput || 'Please help with this note.'
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: validSystemPrompt },
@@ -725,6 +769,8 @@ export class NoteAgent {
       temperature: 0.7,
       max_completion_tokens: 4000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'note-agent', startTime })
 
     return response.choices[0]?.message?.content || ''
   }

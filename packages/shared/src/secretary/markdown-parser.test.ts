@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseDailyPlanMarkdown, parsePlanMarkdown } from './markdown-parser'
+import { renderDailyPlanMarkdown } from './markdown-renderer'
 
 describe('parsePlanMarkdown', () => {
   it('parses canonical active plans and this-week section', () => {
@@ -87,5 +88,54 @@ describe('parseDailyPlanMarkdown', () => {
     expect(result.plan?.tasks).toHaveLength(2)
     expect(result.plan?.tasks[0].durationMinutes).toBe(45)
     expect(result.plan?.tasks[1].durationMinutes).toBe(15)
+  })
+
+  it('round-trips task artifacts through markdown rendering', () => {
+    const markdown = renderDailyPlanMarkdown({
+      id: 'plan-2026-02-06',
+      date: '2026-02-06',
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Study Bellman equations',
+          type: 'learn',
+          status: 'pending',
+          scheduledTime: '09:00',
+          durationMinutes: 45,
+          planId: 'RL',
+          noteId: '123e4567-e89b-12d3-a456-426614174000',
+          artifacts: [
+            {
+              id: 'artifact-1',
+              kind: 'note',
+              status: 'ready',
+              label: 'Note ready',
+              targetId: '123e4567-e89b-12d3-a456-426614174000',
+              href: '/editor?noteId=123e4567-e89b-12d3-a456-426614174000',
+              missionId: 'mission-1',
+              createdByAgent: 'editor',
+              createdAt: '2026-02-06T09:15:00.000Z',
+            },
+          ],
+          aiGenerated: true,
+        },
+      ],
+      createdAt: '2026-02-06T08:00:00.000Z',
+      updatedAt: '2026-02-06T08:00:00.000Z',
+      isApproved: true,
+      userModified: false,
+      totalMinutes: 45,
+      completedMinutes: 0,
+    })
+
+    const result = parseDailyPlanMarkdown(markdown, '2026-02-06', 'Today.md')
+    const artifact = result.plan?.tasks[0].artifacts?.[0]
+
+    expect(artifact).toBeDefined()
+    expect(artifact?.kind).toBe('note')
+    expect(artifact?.status).toBe('ready')
+    expect(artifact?.label).toBe('Note ready')
+    expect(artifact?.href).toBe('/editor?noteId=123e4567-e89b-12d3-a456-426614174000')
+    expect(artifact?.missionId).toBe('mission-1')
   })
 })

@@ -7,6 +7,7 @@
 
 import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LearningRoadmap, RoadmapCandidate } from '@inkdown/shared/types'
 import {
   parsePlanMarkdown,
@@ -19,6 +20,9 @@ import {
 import { MemoryService } from './memory'
 import { runPlannerSubagent, type RoadmapPreview } from './subagents'
 import { parseRoadmapCandidatesFromFiles, type ParsedRoadmapCandidate } from './roadmap-candidates'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
 
 // ============================================================================
 // Pending Roadmap Cache (module-level, keyed by userId)
@@ -148,6 +152,7 @@ function buildPlanEntryFromRoadmap(
 export interface SecretaryToolsConfig {
   openaiApiKey: string
   userId: string
+  supabase?: SupabaseClient
   model?: string
   timezone?: string
 }
@@ -308,6 +313,34 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
       // Clear pending roadmap
       clearPendingRoadmap(config.userId)
 
+      // Auto-create linked project folder if supabase is available
+      if (config.supabase) {
+        try {
+          const { data: existingLink } = await config.supabase
+            .from('plan_project_links')
+            .select('project_id')
+            .eq('user_id', config.userId)
+            .eq('plan_id', planId)
+            .maybeSingle()
+
+          if (!existingLink) {
+            const { data: project } = await config.supabase
+              .from('projects')
+              .insert({ name: planName, icon: '📋', color: '#10b981', user_id: config.userId })
+              .select('id')
+              .single()
+
+            if (project) {
+              await config.supabase
+                .from('plan_project_links')
+                .insert({ user_id: config.userId, plan_id: planId, project_id: project.id })
+            }
+          }
+        } catch (err) {
+          console.warn('secretary.save_roadmap.auto_link_failed', { planId, error: err instanceof Error ? err.message : String(err) })
+        }
+      }
+
       return `Roadmap saved: ${archiveFilename} and Plan.md updated with [${planId}] ${planName}`
     },
     {
@@ -439,14 +472,12 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
       }
 
       // Use the planner subagent to generate the schedule
-      const { ChatOpenAI } = await import('@langchain/openai')
       const { HumanMessage, SystemMessage } = await import('@langchain/core/messages')
 
-      const llm = new ChatOpenAI({
-        openAIApiKey: config.openaiApiKey,
-        modelName: config.model ?? 'gpt-4o-mini',
+      const scheduleModel = selectModel('secretary')
+      const llm = await createLangChainModel(scheduleModel, {
         temperature: 0.4,
-        maxTokens: 2000,
+        callbacks: [new TokenTrackingCallback({ model: scheduleModel.id, taskType: 'secretary' })],
       })
 
       const dayName = getDayNameForDate(targetDate)

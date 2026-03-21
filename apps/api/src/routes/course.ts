@@ -25,6 +25,7 @@ import { zValidator } from '@hono/zod-validator'
 import { handleError, ErrorCode } from '@inkdown/shared'
 import type { CourseOrchestrator } from '@inkdown/ai/agents'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 import { getServiceClient } from '../lib/supabase'
 import type { CourseOutline, CourseSettings } from '@inkdown/shared/types'
 import {
@@ -36,6 +37,8 @@ const course = new Hono()
 
 // Apply auth middleware
 course.use('*', authMiddleware)
+course.use('*', creditGuard)
+course.use('*', requestContextMiddleware)
 
 // ============================================================================
 // Orchestrator Registry (like research.ts agentRegistry)
@@ -169,12 +172,14 @@ course.post('/generate', zValidator('json', GenerateSchema), async (c) => {
 
   // Create orchestrator and register for interrupt resolution (10 min TTL)
   const { CourseOrchestrator: OrchestratorClass } = await import('@inkdown/ai/agents')
+  const { SharedContextService } = await import('@inkdown/ai/services')
   const orchestrator = new OrchestratorClass({
     supabase: getServiceClient(),
     userId: auth.userId,
     openaiApiKey,
     geminiApiKey,
     youtubeApiKey: process.env.YOUTUBE_API_KEY,
+    sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })
 
   orchestratorRegistry.set(threadId, {
@@ -217,12 +222,14 @@ course.get('/generate/:threadId/stream', async (c) => {
     }
 
     const { CourseOrchestrator: OrchestratorClass } = await import('@inkdown/ai/agents')
+    const { SharedContextService } = await import('@inkdown/ai/services')
     const orchestrator = new OrchestratorClass({
       supabase: getServiceClient(),
       userId: auth.userId,
       openaiApiKey,
       geminiApiKey,
       youtubeApiKey: process.env.YOUTUBE_API_KEY,
+      sharedContextService: new SharedContextService(auth.supabase, auth.userId),
     })
 
     orchestratorRegistry.set(threadId, {

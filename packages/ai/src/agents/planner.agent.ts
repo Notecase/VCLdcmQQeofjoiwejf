@@ -12,6 +12,11 @@
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import type OpenAI from 'openai'
+import type { SharedContextService } from '../services/shared-context.service'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIResponse } from '../providers/token-tracker'
 
 // ============================================================================
 // Types
@@ -22,6 +27,7 @@ export interface PlannerAgentConfig {
   userId: string
   openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface PlanStep {
@@ -126,13 +132,17 @@ export class PlannerAgent {
   private userId: string
   private openaiApiKey: string
   private model: string
+  private client: OpenAI
+  private sharedContextService?: SharedContextService
   private state: PlannerAgentState
 
   constructor(config: PlannerAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('planner').id
+    this.client = createOpenAIClient(selectModel('planner'))
+    this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
       previousPlans: [],
@@ -144,9 +154,6 @@ export class PlannerAgent {
    */
   async createPlan(input: CreatePlanInput): Promise<PlannerAgentResponse> {
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
       let userContent = `Goal: ${input.goal}`
       if (input.context) {
         userContent += `\n\nContext: ${input.context}`
@@ -156,7 +163,22 @@ export class PlannerAgent {
       }
       userContent += `\n\nMaximum steps: ${input.maxSteps}`
 
-      const response = await client.chat.completions.create({
+      // Enrich with shared cross-agent context
+      if (this.sharedContextService) {
+        try {
+          const sharedCtx = await this.sharedContextService.read({
+            relevantTypes: ['research_done', 'note_created', 'note_edited', 'course_saved'],
+          })
+          if (sharedCtx) {
+            userContent += '\n\n' + sharedCtx
+          }
+        } catch {
+          // Graceful degradation
+        }
+      }
+
+      const startTime = Date.now()
+      const response = await this.client.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: PLANNING_PROMPT },
@@ -165,6 +187,7 @@ export class PlannerAgent {
         temperature: 0.7,
         max_completion_tokens: 2000,
       })
+      trackOpenAIResponse(response, { model: this.model, taskType: 'planner', startTime })
 
       const content = response.choices[0]?.message?.content || '{}'
       const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())
@@ -193,6 +216,24 @@ export class PlannerAgent {
       this.state.currentPlan = plan
       await this.savePlanToMemory(plan)
 
+      // Write shared context entry for the new plan
+      if (this.sharedContextService) {
+        try {
+          await this.sharedContextService.write({
+            agent: 'planner',
+            type: 'active_plan',
+            summary: `Plan: ${plan.summary}`,
+            payload: {
+              planId: plan.id,
+              goal: plan.goal,
+              stepCount: plan.steps.length,
+            },
+          })
+        } catch {
+          // Best-effort — swallow errors
+        }
+      }
+
       return {
         success: true,
         plan,
@@ -217,9 +258,6 @@ export class PlannerAgent {
     yield { type: 'thinking', data: 'Analyzing your goal...' }
 
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
       let userContent = `Goal: ${input.goal}`
       if (input.context) {
         userContent += `\n\nContext: ${input.context}`
@@ -229,9 +267,24 @@ export class PlannerAgent {
       }
       userContent += `\n\nMaximum steps: ${input.maxSteps}`
 
+      // Enrich with shared cross-agent context
+      if (this.sharedContextService) {
+        try {
+          const sharedCtx = await this.sharedContextService.read({
+            relevantTypes: ['research_done', 'note_created', 'note_edited', 'course_saved'],
+          })
+          if (sharedCtx) {
+            userContent += '\n\n' + sharedCtx
+          }
+        } catch {
+          // Graceful degradation
+        }
+      }
+
       yield { type: 'thinking', data: 'Creating action plan...' }
 
-      const response = await client.chat.completions.create({
+      const startTime2 = Date.now()
+      const response = await this.client.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: PLANNING_PROMPT },
@@ -240,6 +293,7 @@ export class PlannerAgent {
         temperature: 0.7,
         max_completion_tokens: 2000,
       })
+      trackOpenAIResponse(response, { model: this.model, taskType: 'planner', startTime: startTime2 })
 
       const content = response.choices[0]?.message?.content || '{}'
       const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())
@@ -272,6 +326,24 @@ export class PlannerAgent {
 
       this.state.currentPlan = plan
       await this.savePlanToMemory(plan)
+
+      // Write shared context entry for the new plan
+      if (this.sharedContextService) {
+        try {
+          await this.sharedContextService.write({
+            agent: 'planner',
+            type: 'active_plan',
+            summary: `Plan: ${plan.summary}`,
+            payload: {
+              planId: plan.id,
+              goal: plan.goal,
+              stepCount: plan.steps.length,
+            },
+          })
+        } catch {
+          // Best-effort — swallow errors
+        }
+      }
 
       yield { type: 'finish', data: plan }
     } catch (err) {
@@ -356,10 +428,8 @@ export class PlannerAgent {
     }
 
     // Get AI guidance
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const response = await client.chat.completions.create({
+    const startTime3 = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         {
@@ -375,6 +445,7 @@ export class PlannerAgent {
       temperature: 0.7,
       max_completion_tokens: 500,
     })
+    trackOpenAIResponse(response, { model: this.model, taskType: 'planner', startTime: startTime3 })
 
     return {
       success: true,

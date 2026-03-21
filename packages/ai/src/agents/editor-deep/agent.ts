@@ -7,12 +7,17 @@ import { EditorLongTermMemory } from './memory'
 import { EditorConversationHistoryService, type EditorThreadMessage } from './history'
 import type { EditorDeepAgentEvent, EditorDeepAgentRequest, EditorRunState } from './types'
 import { executeTool } from '../../tools'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+import type { SharedContextService } from '../../services/shared-context.service'
 
 export interface EditorDeepAgentConfig {
   supabase: SupabaseClient
   userId: string
   openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export class EditorDeepAgent {
@@ -84,7 +89,6 @@ export class EditorDeepAgent {
     }
 
     const { createDeepAgent } = await import('deepagents')
-    const { ChatOpenAI } = await import('@langchain/openai')
 
     const historyService = new EditorConversationHistoryService(this.config.supabase, this.config.userId)
 
@@ -119,21 +123,24 @@ export class EditorDeepAgent {
       memoryService
     )
 
-    const llm = new ChatOpenAI({
-      openAIApiKey: this.config.openaiApiKey,
-      modelName: this.config.model ?? 'gpt-5.2',
+    const editorDeepModel = selectModel('editor-deep')
+    const llm = await createLangChainModel(editorDeepModel, {
       temperature: 0.3,
+      callbacks: [new TokenTrackingCallback({ model: editorDeepModel.id, taskType: 'editor-deep' })],
     })
 
     const contextSummary = this.buildContextSummary(input.context)
-    const historySummary = this.buildHistorySummary(historyMessages)
     const memorySection = memorySummary
       ? `\n\n### Long-term Memory\n${memorySummary}`
       : '\n\n### Long-term Memory\n(no stored memory yet)'
-    const historySection = historySummary
-      ? `\n\n### Conversation History\n${historySummary}`
-      : '\n\n### Conversation History\n(no previous thread messages)'
-    const systemPrompt = `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${historySection}${memorySection}`
+    const sharedCtx = this.config.sharedContextService
+      ? await this.config.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'course_saved', 'note_created'],
+        })
+      : ''
+    const sharedCtxSection = sharedCtx ? `\n\n${sharedCtx}` : ''
+    // History is passed as invocation messages, not duplicated in the system prompt
+    const systemPrompt = `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
 
     const agent = createDeepAgent({
       model: llm,
@@ -143,55 +150,87 @@ export class EditorDeepAgent {
     })
 
     const normalizer = new EditorDeepStreamNormalizer()
+    normalizer.seedHistoryTexts(
+      historyMessages.filter((m) => m.role === 'assistant').map((m) => m.content)
+    )
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deepagents stream type is deeply generic
       const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
+      // Use 'updates' + 'custom'. 'custom' enables config.writer progress from tools.
+      // DO NOT include 'messages' — it delivers duplicate text/tool_calls.
       const streamResult = (await (agent as any).stream(
         { messages: invocationMessages },
-        { configurable: { thread_id: threadId } }
-      )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+        {
+          configurable: { thread_id: threadId },
+          streamMode: ['updates', 'custom'],
+          subgraphs: true,
+        }
+      )) as AsyncIterable<unknown>
 
-      for await (const chunk of streamResult) {
+      for await (const rawChunk of streamResult) {
         yield* this.drainPendingEvents()
 
-        for (const [nodeKey, nodeValue] of Object.entries(chunk)) {
-          const nodeData = nodeValue as { messages?: unknown[] }
-          if (!nodeData?.messages) continue
+        // Detect the stream format. deepagents/LangGraph can produce:
+        // 1. Plain object { nodeKey: { messages: [...] } } — default mode
+        // 2. 2-element array [mode, data] — streamMode array, no subgraphs
+        // 3. 3-element array [namespace, mode, data] — streamMode array + subgraphs
 
-          const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
+        let mode: string | null = null
+        let namespace: string[] = []
+        let updateData: Record<string, { messages?: unknown[] }> | null = null
+        let customData: unknown = null
 
-          for (const msg of messages) {
-            if (!msg || typeof msg !== 'object') continue
+        if (Array.isArray(rawChunk)) {
+          if (rawChunk.length === 3 && Array.isArray(rawChunk[0]) && typeof rawChunk[1] === 'string') {
+            // Format 3: [namespace, mode, data]
+            namespace = rawChunk[0] as string[]
+            mode = rawChunk[1] as string
+            if (mode === 'updates') updateData = rawChunk[2] as Record<string, { messages?: unknown[] }>
+            else if (mode === 'custom') customData = rawChunk[2]
+          } else if (rawChunk.length === 2 && typeof rawChunk[0] === 'string') {
+            // Format 2: [mode, data]
+            mode = rawChunk[0] as string
+            if (mode === 'updates') updateData = rawChunk[1] as Record<string, { messages?: unknown[] }>
+            else if (mode === 'custom') customData = rawChunk[1]
+          }
+          // If array but doesn't match either pattern, skip
+        } else if (rawChunk && typeof rawChunk === 'object') {
+          // Format 1: plain object — treat as updates data directly
+          mode = 'updates'
+          updateData = rawChunk as Record<string, { messages?: unknown[] }>
+        }
 
-            const message = msg as {
-              id?: string
-              content?: string | unknown[]
-              tool_calls?: Array<{ id?: string; name: string; args: Record<string, unknown> }>
-              name?: string
-              type?: string
-              role?: string
+        if (mode === 'updates' && updateData) {
+          for (const [nodeKey, nodeValue] of Object.entries(updateData)) {
+            const nodeData = nodeValue as { messages?: unknown[] }
+            if (!nodeData?.messages) continue
+            const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
+            for (const msg of messages) {
+              if (!msg || typeof msg !== 'object') continue
+              const message = msg as {
+                id?: string
+                content?: string | unknown[]
+                tool_calls?: Array<{ id?: string; name: string; args: Record<string, unknown> }>
+                name?: string
+                type?: string
+                role?: string
+              }
+              for (const event of normalizer.normalizeUpdates(namespace, nodeKey, message)) {
+                this.consumeEvent(event)
+                yield event
+              }
+              yield* this.drainPendingEvents()
             }
-
-            if (nodeKey === 'tools' || message.type === 'tool') {
-              for (const event of normalizer.normalizeToolResult(nodeKey, message)) {
-                this.consumeEvent(event)
-                yield event
-              }
-            } else {
-              for (const event of normalizer.normalizeText(nodeKey, message)) {
-                this.consumeEvent(event)
-                yield event
-              }
-              for (const event of normalizer.normalizeToolCalls(nodeKey, message)) {
-                this.consumeEvent(event)
-                yield event
-              }
-            }
-
-            yield* this.drainPendingEvents()
+          }
+        } else if (mode === 'custom' && customData !== null) {
+          for (const event of normalizer.normalizeCustomEvent(namespace, customData)) {
+            this.consumeEvent(event)
+            yield event
           }
         }
+
+        yield* this.drainPendingEvents()
       }
 
       const fallbackText = await this.buildFallbackText(input.context, input.message)
@@ -218,6 +257,30 @@ export class EditorDeepAgent {
           workspaceId: input.context?.workspaceId,
         },
       })
+
+      // Write shared context entry if note operations were detected
+      if (this.config.sharedContextService && this.state.toolCalls.length > 0) {
+        const noteTools = this.state.toolCalls.filter(
+          (tc) =>
+            tc.toolName.includes('note') ||
+            tc.toolName.includes('write') ||
+            tc.toolName.includes('create') ||
+            tc.toolName.includes('update')
+        )
+        if (noteTools.length > 0) {
+          const action = noteTools.map((tc) => tc.toolName).join(', ')
+          await this.config.sharedContextService.write({
+            agent: 'editor',
+            type: 'note_edited',
+            summary: `Editor used ${action}`,
+            payload: {
+              threadId,
+              noteId: input.context?.currentNoteId,
+              toolNames: noteTools.map((tc) => tc.toolName),
+            },
+          })
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       const fallbackText =
@@ -255,19 +318,6 @@ export class EditorDeepAgent {
       lines.push(`- Selected blocks: ${context.selectedBlockIds.join(', ')}`)
     }
     return lines.join('\n')
-  }
-
-  private buildHistorySummary(messages: EditorThreadMessage[]): string {
-    if (messages.length === 0) return ''
-    const tail = messages.slice(-6)
-    return tail
-      .map((message, index) => {
-        const marker = message.role === 'user' ? 'User' : 'Assistant'
-        const content =
-          message.content.length > 180 ? `${message.content.slice(0, 180).trim()}...` : message.content
-        return `${index + 1}. ${marker}: ${content}`
-      })
-      .join('\n')
   }
 
   private buildInvocationMessages(

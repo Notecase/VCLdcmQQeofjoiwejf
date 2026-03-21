@@ -27,6 +27,7 @@ import {
   MessageCircle,
   ChevronUp,
   CornerDownRight,
+  Calendar,
 } from 'lucide-vue-next'
 import {
   useEditorStore,
@@ -36,6 +37,8 @@ import {
   usePreferencesStore,
 } from '@/stores'
 import { useAIStore } from '@/stores/ai'
+import { useCreditsStore } from '@/stores/credits'
+import { useSecretaryStore } from '@/stores/secretary'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import TableOfContents from './TableOfContents.vue'
@@ -53,6 +56,8 @@ const projectStore = useProjectStore()
 const authStore = useAuthStore()
 const preferencesStore = usePreferencesStore()
 const aiStore = useAIStore()
+const creditsStore = useCreditsStore()
+const secretaryStore = useSecretaryStore()
 
 // Check if a note is highlighted — route-aware to avoid dual highlights
 function isNoteActive(noteId: string) {
@@ -112,6 +117,7 @@ function handleClickOutside(e: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  creditsStore.fetchCredits()
 })
 
 onUnmounted(() => {
@@ -120,7 +126,7 @@ onUnmounted(() => {
 
 function goToSettings() {
   closeUserMenu()
-  // TODO: Open settings modal
+  router.push('/settings')
 }
 
 function goToAuth() {
@@ -560,6 +566,11 @@ function handleContextMenuAction(action: string) {
       case 'newSubproject':
         createProject(targetId)
         break
+      case 'openPlan': {
+        const planId = secretaryStore.getPlanIdForProject(targetId)
+        if (planId) router.push(`/calendar/plan/${planId}`)
+        break
+      }
       case 'delete':
         deleteProject(targetId, project.name)
         break
@@ -746,6 +757,13 @@ const tabs = [
                 </template>
                 <template v-else>
                   <span class="item-name">{{ project.name }}</span>
+                  <span
+                    v-if="secretaryStore.projectPlanLinks.has(project.id)"
+                    class="plan-badge"
+                    title="Linked to a plan"
+                  >
+                    <Calendar :size="12" />
+                  </span>
                   <span class="item-count">{{ getProjectDocuments(project.id).length }}</span>
                 </template>
 
@@ -1236,7 +1254,8 @@ const tabs = [
             <span
               v-else
               class="user-badge"
-              >Free</span
+              :class="{ studious: creditsStore.isActive }"
+              >{{ creditsStore.planLabel }}</span
             >
           </div>
           <ChevronUp
@@ -1346,6 +1365,13 @@ const tabs = [
           <button @click="handleContextMenuAction('newSubproject')">
             <FolderPlus :size="14" />
             <span>New Subproject</span>
+          </button>
+          <button
+            v-if="secretaryStore.projectPlanLinks.has(contextMenu.targetId)"
+            @click="handleContextMenuAction('openPlan')"
+          >
+            <Calendar :size="14" />
+            <span>Open Plan Dashboard</span>
           </button>
           <div class="menu-divider"></div>
           <button @click="handleContextMenuAction('rename')">
@@ -1686,6 +1712,18 @@ const tabs = [
   flex-shrink: 0;
 }
 
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--sec-primary, #10b981);
+  opacity: 0.7;
+}
+
+.tree-item:hover .plan-badge {
+  opacity: 1;
+}
+
 .item-meta {
   font-size: 10px;
   color: var(--text-color-secondary, #666);
@@ -1998,6 +2036,11 @@ const tabs = [
 
 .user-badge.guest {
   color: var(--text-color-secondary, #888);
+}
+
+.user-badge.studious {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .expand-icon {

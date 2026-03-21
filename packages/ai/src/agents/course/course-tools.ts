@@ -25,6 +25,9 @@ import type {
   LessonContent,
 } from '@inkdown/shared/types'
 import type { RAGIndex } from './research'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
 
 // =============================================================================
 // Tool Context
@@ -281,11 +284,10 @@ export function createOrchestratorTools(ctx: CourseToolContext): StructuredToolI
           .replace(/{FEEDBACK_SECTION}/g, feedbackSection ?? '')
           .replace(/{SIZE_INSTRUCTIONS}/g, sizeInstructions)
 
-        const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
-        const model = new ChatGoogleGenerativeAI({
-          model: 'gemini-3-flash-preview',
-          apiKey: ctx.geminiApiKey,
+        const outlineModel = selectModel('course')
+        const model = await createLangChainModel(outlineModel, {
           temperature: 0.4,
+          callbacks: [new TokenTrackingCallback({ model: outlineModel.id, taskType: 'course' })],
         })
 
         const response = await model.invoke(prompt)
@@ -724,7 +726,6 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
 
         const { PROMPTS } = await import('./prompts')
         const { parseLessonContent, extractMarkdownFallback } = await import('./tools')
-        const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
         const { queryRAG } = await import('./research/rag-indexer')
 
         // Filter lessons that are NOT quiz and NOT slides
@@ -741,11 +742,10 @@ export function createLessonWriterTools(ctx: CourseToolContext): StructuredToolI
 
         if (allLessons.length === 0) return 'No lecture/video/practice lessons found in outline.'
 
-        const model = new ChatGoogleGenerativeAI({
-          model: 'gemini-3-flash-preview',
-          apiKey: ctx.geminiApiKey,
+        const contentModel = selectModel('course')
+        const model = await createLangChainModel(contentModel, {
           temperature: 0.7,
-          json: true,
+          callbacks: [new TokenTrackingCallback({ model: contentModel.id, taskType: 'course' })],
         })
 
         let generated = 0
@@ -941,7 +941,6 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
 
         const { PROMPTS } = await import('./prompts')
         const { parseLessonContent, extractMarkdownFallback } = await import('./tools')
-        const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
         const { queryRAG } = await import('./research/rag-indexer')
 
         const quizLessons = outline.modules.flatMap((mod: CourseOutlineModule) =>
@@ -957,11 +956,10 @@ export function createQuizWriterTools(ctx: CourseToolContext): StructuredToolInt
 
         if (quizLessons.length === 0) return 'No quiz lessons found in outline.'
 
-        const model = new ChatGoogleGenerativeAI({
-          model: 'gemini-3-flash-preview',
-          apiKey: ctx.geminiApiKey,
+        const quizModel = selectModel('course')
+        const model = await createLangChainModel(quizModel, {
           temperature: 0.7,
-          json: true,
+          callbacks: [new TokenTrackingCallback({ model: quizModel.id, taskType: 'course' })],
         })
 
         let generated = 0
@@ -1155,7 +1153,6 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
 
         const { PROMPTS } = await import('./prompts')
         const { parseLessonContent, extractMarkdownFallback } = await import('./tools')
-        const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
         const { queryRAG } = await import('./research/rag-indexer')
         const { generateSlidesWithModel } = await import('./slide-generator')
 
@@ -1172,11 +1169,10 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
 
         if (slideLessons.length === 0) return 'No slide lessons found in outline.'
 
-        const model = new ChatGoogleGenerativeAI({
-          model: 'gemini-3-pro-preview',
-          apiKey: ctx.geminiApiKey,
+        const slidesModel = selectModel('slides')
+        const model = await createLangChainModel(slidesModel, {
           temperature: 0.7,
-          json: true,
+          callbacks: [new TokenTrackingCallback({ model: slidesModel.id, taskType: 'slides' })],
         })
 
         let generated = 0
@@ -1204,13 +1200,13 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
                 researchContext = ctx.researchReport.value.slice(0, 2000)
               }
 
-              // Generate slide deck using gemini-3-pro-preview
+              // Generate slide deck using slides model from registry
               const slides = await generateSlidesWithModel(
                 lesson.title,
                 lesson.keyTopics,
                 researchContext,
-                ctx.geminiApiKey,
-                'gemini-3-pro-preview',
+                undefined,
+                undefined,
                 ctx.settings.maxSlidesPerLesson
               )
 
@@ -1355,7 +1351,7 @@ export function createSlidesWriterTools(ctx: CourseToolContext): StructuredToolI
       {
         name: 'batch_generate_slides',
         description:
-          'Generate slide decks and content for ALL slide-type lessons in the approved outline. Uses gemini-3-pro-preview for higher quality. Reads from stored state — no arguments needed. Call exactly ONCE.',
+          'Generate slide decks and content for ALL slide-type lessons in the approved outline. Uses the slides model from the model registry for higher quality. Reads from stored state — no arguments needed. Call exactly ONCE.',
         schema: z.object({}),
       }
     ),

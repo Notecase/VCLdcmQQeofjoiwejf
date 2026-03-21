@@ -113,8 +113,9 @@ export class ResearchStreamNormalizer {
     for (const call of calls) {
       const callId = call.id || ''
       const argsSignature = this.stableStringify(call.args || {})
-      const semanticSignature = `${nodeKey}:semantic:${call.name}:${argsSignature}`
-      const idSignature = callId ? `${nodeKey}:id:${callId}` : ''
+      // Global dedup (no nodeKey) — catches duplicates across subgraph namespace levels
+      const semanticSignature = `semantic:${call.name}:${argsSignature}`
+      const idSignature = callId ? `id:${callId}` : ''
 
       if (
         this.emittedToolCallSignatures.has(semanticSignature) ||
@@ -152,7 +153,8 @@ export class ResearchStreamNormalizer {
     const toolName = message.name || 'unknown_tool'
     if (!content) return []
 
-    const signature = `${nodeKey}:${toolName}:${content}`
+    // Global dedup (no nodeKey) — catches duplicates across subgraph namespace levels
+    const signature = `${toolName}:${content}`
     if (this.emittedToolResultSignatures.has(signature)) return []
     this.emittedToolResultSignatures.add(signature)
 

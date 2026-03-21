@@ -6,9 +6,11 @@
  * - Researcher: Researches subjects for curriculum design
  */
 
-import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage, SystemMessage } from '@langchain/core/messages'
 import { PLANNER_SUBAGENT_PROMPT, RESEARCHER_SUBAGENT_PROMPT } from './prompts'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
 
 // ============================================================================
 // Types
@@ -44,11 +46,10 @@ export async function runPlannerSubagent(
   subject: string,
   options?: { durationDays?: number; hoursPerDay?: number }
 ): Promise<RoadmapPreview> {
-  const llm = new ChatOpenAI({
-    openAIApiKey: config.openaiApiKey,
-    modelName: config.model ?? 'gpt-4o-mini',
+  const plannerModel = selectModel('secretary')
+  const llm = await createLangChainModel(plannerModel, {
     temperature: 0.4,
-    maxTokens: 3000,
+    callbacks: [new TokenTrackingCallback({ model: plannerModel.id, taskType: 'secretary' })],
   })
 
   const userPrompt = `Create a detailed learning roadmap for: "${subject}"
@@ -85,11 +86,10 @@ export async function runResearcherSubagent(
   config: SubagentConfig,
   subject: string
 ): Promise<ResearchResult> {
-  const llm = new ChatOpenAI({
-    openAIApiKey: config.openaiApiKey,
-    modelName: config.model ?? 'gpt-4o-mini',
+  const researcherModel = selectModel('secretary')
+  const llm = await createLangChainModel(researcherModel, {
     temperature: 0.3,
-    maxTokens: 2000,
+    callbacks: [new TokenTrackingCallback({ model: researcherModel.id, taskType: 'secretary' })],
   })
 
   const response = await llm.invoke([

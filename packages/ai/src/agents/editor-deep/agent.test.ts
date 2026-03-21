@@ -10,8 +10,8 @@ vi.mock('deepagents', () => ({
   createDeepAgent: createDeepAgentMock,
 }))
 
-vi.mock('@langchain/openai', () => ({
-  ChatOpenAI: class ChatOpenAI {},
+vi.mock('@langchain/google-genai', () => ({
+  ChatGoogleGenerativeAI: class ChatGoogleGenerativeAI {},
 }))
 
 vi.mock('../../tools', () => ({

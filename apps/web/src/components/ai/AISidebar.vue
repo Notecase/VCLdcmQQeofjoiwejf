@@ -20,6 +20,7 @@ import RecommendTab from './RecommendTab.vue'
 import WorkflowsTab from './WorkflowsTab.vue'
 import LearningResourcesTab from './LearningResourcesTab.vue'
 import ClarificationDialog from './ClarificationDialog.vue'
+import PreActionQuestionCard from './PreActionQuestionCard.vue'
 
 // Modal components
 import MindmapModal from './modals/MindmapModal.vue'
@@ -144,6 +145,26 @@ function handleKeydown(e: globalThis.KeyboardEvent) {
     e.preventDefault()
     handleSubmit()
   }
+}
+
+// Handle pre-action question responses
+function handleQuestionSelect(optionLabel: string) {
+  store.resolvePreActionQuestion()
+  // Send the user's selection as a follow-up message to continue the AI flow
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage(optionLabel, 'secretary', context)
+}
+
+function handleQuestionFreeText(text: string) {
+  store.resolvePreActionQuestion()
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage(text, 'secretary', context)
+}
+
+function handleQuestionSkip() {
+  store.resolvePreActionQuestion()
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage('Skip — proceed with your best judgment', 'secretary', context)
 }
 
 // Close sidebar
@@ -322,6 +343,15 @@ function handleClarificationCancel() {
             :message="msg"
           />
         </template>
+
+        <!-- Pre-action question card (HITL) -->
+        <PreActionQuestionCard
+          v-if="store.preActionQuestion"
+          :question="store.preActionQuestion"
+          @select="handleQuestionSelect"
+          @free-text="handleQuestionFreeText"
+          @skip="handleQuestionSkip"
+        />
 
         <!-- Loading -->
         <div

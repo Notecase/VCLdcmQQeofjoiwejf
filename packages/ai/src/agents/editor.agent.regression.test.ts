@@ -1,5 +1,27 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Mock client-factory to avoid real OpenAI client creation
+vi.mock('../providers/client-factory', () => ({
+  createOpenAIClient: () => ({
+    chat: { completions: { create: vi.fn() } },
+  }),
+}))
+
+vi.mock('../providers/model-registry', () => ({
+  selectModel: () => ({
+    id: 'gemini-3.1-pro-preview',
+    provider: 'gemini',
+    displayName: 'Gemini 3.1 Pro',
+    contextWindow: 2000000,
+    capabilities: ['chat'],
+    costPer1kInput: 0.125,
+    costPer1kOutput: 1.0,
+    maxOutputTokens: 65536,
+    supportsToolChoice: true,
+  }),
+}))
+
 import { EditorAgent, type IntentClassification } from './editor.agent'
 
 function createSupabaseStub(): SupabaseClient {

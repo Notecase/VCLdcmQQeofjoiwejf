@@ -2,9 +2,11 @@
  * AI Provider exports
  *
  * Provider implementations for the AI system:
- * - OpenAI (GPT-5.2): Chat, agents, embeddings
- * - Ollama Cloud (GLM-4.6): Artifacts, code generation
- * - Gemini: Slides, deep research, courses
+ * - Model Registry: Central catalog of all models + selectModel()
+ * - Client Factory: Creates OpenAI SDK / LangChain clients per provider
+ * - Token Tracker: Captures real token usage from LLM calls
+ * - OpenAI Provider: Embeddings (text-embedding-3-large)
+ * - Gemini Provider: Slides (image gen), deep research, courses (native SDK)
  */
 
 // Types
@@ -17,7 +19,40 @@ export type {
   AIProvider,
 } from './interface'
 
-// OpenAI Provider
+// Model Registry (new — central source of truth)
+export {
+  MODEL_REGISTRY,
+  selectModel,
+  getModel,
+} from './model-registry'
+export type {
+  AITaskType,
+  ModelEntry,
+  ModelProvider,
+  ModelCapability,
+} from './model-registry'
+
+// Client Factory (new — creates configured LLM clients)
+export {
+  createOpenAIClient,
+  createLangChainModel,
+} from './client-factory'
+
+// Token Tracker (new — usage tracking)
+export {
+  tokenTracker,
+  trackOpenAIStream,
+  trackOpenAIResponse,
+  trackGeminiResponse,
+  trackGeminiStream,
+  computeCost,
+} from './token-tracker'
+export type { TokenUsageEvent, SessionUsage } from './token-tracker'
+
+// LangChain Token Callback
+export { TokenTrackingCallback } from './langchain-token-callback'
+
+// OpenAI Provider (embeddings)
 export {
   OpenAIProvider,
   createOpenAIProvider,
@@ -28,16 +63,7 @@ export {
 } from './openai'
 export type { OpenAIProviderConfig } from './openai'
 
-// Ollama Cloud Provider (GLM-4.6)
-export {
-  OllamaCloudProvider,
-  createOllamaCloudProvider,
-  getDefaultOllamaCloudProvider,
-  OLLAMA_CLOUD_URL,
-} from './ollama'
-export type { OllamaCloudConfig } from './ollama'
-
-// Gemini Provider
+// Gemini Provider (slides, research, courses — native SDK)
 export {
   GeminiProvider,
   createGeminiProvider,
@@ -48,14 +74,20 @@ export {
 } from './gemini'
 export type { GeminiProviderConfig, SlideOutline, GeneratedSlide } from './gemini'
 
-// Provider Factory
+// Request Context (AsyncLocalStorage userId propagation)
+export { requestContext, getCurrentUserId } from './request-context'
+
+// Usage Persister (TokenTracker → DB bridge)
+export { initUsagePersister } from './usage-persister'
+
+// Provider Factory (legacy — delegates to model-registry)
 export {
   createProvider,
   getOpenAI,
-  getOllamaCloud,
   getGemini,
   clearProviderCache,
   getProviderNameForTask,
   getModelNameForTask,
+  createBYOKProvider,
 } from './factory'
-export type { AITaskType, ProviderFactoryConfig } from './factory'
+export type { ProviderFactoryConfig, BYOKConfig } from './factory'

@@ -215,8 +215,19 @@ export function useDiffBlocks(
     for (const hunk of edit.diffHunks) {
       if (hunk.status !== 'pending') continue
 
+      // Skip whitespace-only addition hunks — they produce blank green blocks
+      if (!hunk.newContent.trim() && hunk.type === 'add') {
+        console.debug('[useDiffBlocks] Skipping whitespace-only addition hunk')
+        continue
+      }
+
       // Parse markdown to get proper block states (tables, headings, code, etc.)
-      const states = parseMarkdownToStates(muya, hunk.newContent)
+      const rawStates = parseMarkdownToStates(muya, hunk.newContent)
+      // Filter out empty paragraph states that would render as blank green blocks
+      const states = rawStates.filter((s) => {
+        if (s.name === 'paragraph' && (!s.text || !s.text.trim())) return false
+        return true
+      })
 
       if (states.length === 0) {
         console.warn('[useDiffBlocks] No blocks parsed from hunk content')
@@ -307,16 +318,12 @@ export function useDiffBlocks(
         const isPureAddition = hunk.type === 'add' && !hunk.oldContent.trim()
 
         if (isPureAddition) {
-          // ADDITION ONLY: Insert new blocks at the end without styling any original as deletion
-          // When previous edits have already injected green diff blocks, the DOM block indices
-          // are shifted. Use tail for reliable insertion of appended content in incremental mode.
-          let insertAfterBlock: MuyaBlock | null | undefined = null
-          if (appliedEditIds.value.size > 0) {
-            insertAfterBlock = scrollPage.children?.tail
-          } else {
-            const blockIndex = mapLineToBlockIndex(edit.originalContent, hunk.oldStart)
-            insertAfterBlock = scrollPage.find(blockIndex) || scrollPage.children?.tail
-          }
+          // ADDITION ONLY: Insert new blocks without styling any original as deletion.
+          // Always attempt positional insertion first; fall back to tail only when
+          // the target block can't be found (e.g. DOM shifted from prior edits).
+          const blockIndex = mapLineToBlockIndex(edit.originalContent, hunk.oldStart)
+          let insertAfterBlock: MuyaBlock | null | undefined =
+            scrollPage.find(blockIndex) || scrollPage.children?.tail
 
           if (!insertAfterBlock) {
             console.warn(`[useDiffBlocks] No insertion point found for addition hunk`)

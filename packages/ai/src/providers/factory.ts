@@ -2,18 +2,18 @@
  * Provider Factory
  *
  * Creates AI providers based on task type.
- * Routes to the optimal model for each task.
+ * Delegates to model-registry for model selection and client-factory for instantiation.
  *
  * Model strategy:
- * - Chat/Agents: GPT-5.2 (OpenAI)
- * - Artifacts/Code: kimi-k2.5 (Ollama Cloud)
- * - Slides: Gemini 3 Pro
+ * - Chat/Agents: Gemini 3.1 Pro (via OpenAI-compat endpoint)
+ * - Artifacts/Code: Kimi K2.5 (Ollama Cloud)
+ * - Slides: Gemini 3 Pro (native SDK for image gen)
  * - Research: Gemini Deep Research
+ * - Embeddings: OpenAI text-embedding-3-large
  */
 
 import { AIProvider } from './interface'
-import { OpenAIProvider, OpenAIProviderConfig, DEFAULT_CHAT_MODEL } from './openai'
-import { OllamaCloudProvider, OllamaCloudConfig, DEFAULT_MODEL as OLLAMA_DEFAULT } from './ollama'
+import { OpenAIProvider, OpenAIProviderConfig } from './openai'
 import {
   GeminiProvider,
   GeminiProviderConfig,
@@ -21,32 +21,14 @@ import {
   SLIDES_MODEL,
   RESEARCH_MODEL,
 } from './gemini'
+import {
+  selectModel,
+  type AITaskType,
+  type ModelProvider,
+} from './model-registry'
 
-// ============================================================================
-// Task Types
-// ============================================================================
-
-export type AITaskType =
-  // OpenAI GPT-5.2 tasks
-  | 'chat'
-  | 'note-agent'
-  | 'planner'
-  | 'secretary'
-  | 'completion'
-  | 'rewrite'
-  | 'summarize'
-  | 'embedding'
-  // Ollama Cloud GLM-4.6 tasks
-  | 'artifact'
-  | 'code'
-  | 'html'
-  | 'css'
-  | 'javascript'
-  // Gemini tasks
-  | 'slides'
-  | 'research'
-  | 'course'
-  | 'deep-research'
+// Re-export AITaskType from model-registry (was previously defined here)
+export type { AITaskType } from './model-registry'
 
 // ============================================================================
 // Provider Configuration
@@ -54,7 +36,6 @@ export type AITaskType =
 
 export interface ProviderFactoryConfig {
   openai?: Partial<OpenAIProviderConfig>
-  ollamaCloud?: Partial<OllamaCloudConfig>
   gemini?: Partial<GeminiProviderConfig>
 }
 
@@ -64,7 +45,6 @@ export interface ProviderFactoryConfig {
 
 const providerCache: {
   openai?: OpenAIProvider
-  ollamaCloud?: OllamaCloudProvider
   gemini?: GeminiProvider
 } = {}
 
@@ -73,7 +53,7 @@ const providerCache: {
 // ============================================================================
 
 /**
- * Get or create OpenAI provider
+ * Get or create OpenAI provider (used for embeddings)
  */
 function getOpenAIProvider(config?: Partial<OpenAIProviderConfig>): OpenAIProvider {
   if (!providerCache.openai) {
@@ -83,7 +63,7 @@ function getOpenAIProvider(config?: Partial<OpenAIProviderConfig>): OpenAIProvid
     }
     providerCache.openai = new OpenAIProvider({
       apiKey,
-      model: config?.model || DEFAULT_CHAT_MODEL,
+      model: config?.model || selectModel('chat').id,
       ...config,
     })
   }
@@ -91,26 +71,7 @@ function getOpenAIProvider(config?: Partial<OpenAIProviderConfig>): OpenAIProvid
 }
 
 /**
- * Get or create Ollama Cloud provider
- */
-function getOllamaCloudProvider(config?: Partial<OllamaCloudConfig>): OllamaCloudProvider {
-  // Always read from env first, then fall back to config
-  const baseURL = config?.baseURL || process.env.OLLAMA_CLOUD_URL || 'https://ollama.com'
-  const apiKey = config?.apiKey || process.env.OLLAMA_API_KEY
-
-  // Create new provider if cache is empty or if apiKey changed
-  if (!providerCache.ollamaCloud) {
-    providerCache.ollamaCloud = new OllamaCloudProvider({
-      baseURL,
-      apiKey,
-      model: config?.model || OLLAMA_DEFAULT,
-    })
-  }
-  return providerCache.ollamaCloud
-}
-
-/**
- * Get or create Gemini provider
+ * Get or create Gemini provider (used for slides, research, courses via native SDK)
  */
 function getGeminiProvider(config?: Partial<GeminiProviderConfig>): GeminiProvider {
   if (!providerCache.gemini) {
@@ -134,41 +95,31 @@ function getGeminiProvider(config?: Partial<GeminiProviderConfig>): GeminiProvid
 // ============================================================================
 
 /**
- * Create a provider for a specific task type
- * Automatically routes to the optimal model
+ * Create a provider for a specific task type.
+ * Uses the model registry to determine the right provider.
+ *
+ * Note: Most agents now use createOpenAIClient/createLangChainModel from client-factory
+ * directly. This factory is primarily used by the AIProvider interface consumers
+ * (slides, research, embeddings, and legacy code paths).
  */
 export function createProvider(taskType: AITaskType, config?: ProviderFactoryConfig): AIProvider {
-  switch (taskType) {
-    // OpenAI GPT-5.2 for chat and agents
-    case 'chat':
-    case 'note-agent':
-    case 'planner':
-    case 'secretary':
-    case 'completion':
-    case 'rewrite':
-    case 'summarize':
-    case 'embedding':
+  const model = selectModel(taskType)
+
+  switch (model.provider) {
+    case 'openai':
       return getOpenAIProvider(config?.openai)
 
-    // Ollama Cloud GLM-4.6 for artifacts and code
-    case 'artifact':
-    case 'code':
-    case 'html':
-    case 'css':
-    case 'javascript':
-      return getOllamaCloudProvider(config?.ollamaCloud)
+    case 'gemini':
+      return getGeminiProvider(config?.gemini)
 
-    // Gemini for slides, research, and courses
-    case 'slides':
-    case 'research':
-    case 'course':
-    case 'deep-research':
+    // Ollama models via AIProvider interface fall back to Gemini
+    // (agents that need Ollama use createOpenAIClient directly)
+    case 'ollama-cloud':
+    case 'ollama-local':
       return getGeminiProvider(config?.gemini)
 
     default:
-      // Default to OpenAI for unknown tasks
-      console.warn(`Unknown task type: ${taskType}, defaulting to OpenAI`)
-      return getOpenAIProvider(config?.openai)
+      return getGeminiProvider(config?.gemini)
   }
 }
 
@@ -177,10 +128,6 @@ export function createProvider(taskType: AITaskType, config?: ProviderFactoryCon
  */
 export function getOpenAI(config?: Partial<OpenAIProviderConfig>): OpenAIProvider {
   return getOpenAIProvider(config)
-}
-
-export function getOllamaCloud(config?: Partial<OllamaCloudConfig>): OllamaCloudProvider {
-  return getOllamaCloudProvider(config)
 }
 
 export function getGemini(config?: Partial<GeminiProviderConfig>): GeminiProvider {
@@ -192,82 +139,61 @@ export function getGemini(config?: Partial<GeminiProviderConfig>): GeminiProvide
  */
 export function clearProviderCache(): void {
   delete providerCache.openai
-  delete providerCache.ollamaCloud
   delete providerCache.gemini
 }
 
 // ============================================================================
-// Task Type Helpers
+// BYOK Key Resolution
 // ============================================================================
+
+/**
+ * User API key configuration for BYOK (Bring Your Own Key).
+ * Used by heartbeat and other autonomous features.
+ */
+export interface BYOKConfig {
+  provider: 'google' | 'openai' | 'anthropic'
+  model: string
+  apiKey: string
+}
+
+/**
+ * Create a provider using a user's BYOK API key.
+ * Falls back to the default provider if the BYOK provider is not available.
+ */
+export function createBYOKProvider(byok: BYOKConfig): AIProvider {
+  switch (byok.provider) {
+    case 'google':
+      return getGeminiProvider({ apiKey: byok.apiKey, model: byok.model })
+    case 'openai':
+      return getOpenAIProvider({ apiKey: byok.apiKey, model: byok.model })
+    default:
+      console.warn(`BYOK provider "${byok.provider}" not fully supported, falling back to default`)
+      return getGeminiProvider()
+  }
+}
+
+// ============================================================================
+// Task Type Helpers (delegate to model-registry)
+// ============================================================================
+
+const PROVIDER_MAP: Record<ModelProvider, 'openai' | 'ollama' | 'gemini'> = {
+  'openai': 'openai',
+  'gemini': 'gemini',
+  'ollama-cloud': 'ollama',
+  'ollama-local': 'ollama',
+}
 
 /**
  * Get the provider name for a task type
  */
 export function getProviderNameForTask(taskType: AITaskType): 'openai' | 'ollama' | 'gemini' {
-  switch (taskType) {
-    case 'chat':
-    case 'note-agent':
-    case 'planner':
-    case 'secretary':
-    case 'completion':
-    case 'rewrite':
-    case 'summarize':
-    case 'embedding':
-      return 'openai'
-
-    case 'artifact':
-    case 'code':
-    case 'html':
-    case 'css':
-    case 'javascript':
-      return 'ollama'
-
-    case 'slides':
-    case 'research':
-    case 'course':
-    case 'deep-research':
-      return 'gemini'
-
-    default:
-      return 'openai'
-  }
+  const model = selectModel(taskType)
+  return PROVIDER_MAP[model.provider] ?? 'gemini'
 }
 
 /**
  * Get the model name for a task type
  */
 export function getModelNameForTask(taskType: AITaskType): string {
-  switch (taskType) {
-    case 'chat':
-    case 'note-agent':
-    case 'planner':
-    case 'secretary':
-    case 'completion':
-    case 'rewrite':
-    case 'summarize':
-      return 'gpt-5.2'
-
-    case 'embedding':
-      return 'text-embedding-3-large'
-
-    case 'artifact':
-    case 'code':
-    case 'html':
-    case 'css':
-    case 'javascript':
-      return 'kimi-k2.5'
-
-    case 'slides':
-      return 'gemini-3-pro-preview'
-
-    case 'research':
-    case 'deep-research':
-      return 'deep-research-pro-preview-12-2025'
-
-    case 'course':
-      return 'gemini-2.0-flash-exp'
-
-    default:
-      return 'gpt-5.2'
-  }
+  return selectModel(taskType).id
 }

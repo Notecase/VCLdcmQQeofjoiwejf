@@ -26,11 +26,29 @@ export type EditorDeepAgentEventType =
   | 'tool-result'
   | 'thinking'
   | 'clarification-requested'
+  | 'pre-action-question'
   | 'edit-proposal'
   | 'note-navigate'
   | 'artifact'
   | 'error'
   | 'done'
+  | 'subagent-start'
+  | 'subagent-delta'
+  | 'subagent-complete'
+  | 'custom-progress'
+  | 'synthesis-start'
+
+export interface SubagentEventData {
+  id: string
+  name: string
+  description: string
+  status: 'pending' | 'running' | 'complete' | 'error'
+  startedAt?: number
+  completedAt?: number
+  elapsedMs?: number
+  lastMessage?: string
+  result?: string
+}
 
 export interface EditorDeepAgentEvent {
   type: EditorDeepAgentEventType

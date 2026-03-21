@@ -22,7 +22,6 @@ const router = useRouter()
 const store = useCourseStore()
 const layoutStore = useLayoutStore()
 const explainStore = useCourseExplainStore()
-
 const contentAreaRef = ref<HTMLElement>()
 const { selection } = useTextSelection(contentAreaRef)
 

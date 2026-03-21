@@ -1,12 +1,13 @@
 /**
  * OpenAI Provider
  *
- * Primary provider for chat, agents, and embeddings.
- * Uses GPT-5.2 for agents and chat operations.
+ * Provider for embeddings (text-embedding-3-large).
+ * Also used as a base class for Gemini-via-OpenAI-compat endpoint.
  */
 
 import OpenAI from 'openai'
 import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from './interface'
+import { trackOpenAIStream, trackOpenAIResponse } from './token-tracker'
 
 // ============================================================================
 // Configuration
@@ -14,15 +15,15 @@ import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from
 
 export interface OpenAIProviderConfig {
   apiKey: string
-  model?: string // Default: gpt-5.2
+  model?: string // Default: gemini-3.1-pro-preview (via compat endpoint)
   embeddingModel?: string // Default: text-embedding-3-large
   baseURL?: string
   organization?: string
   maxRetries?: number
 }
 
-// Default models - using GPT-5.2 (released December 2025)
-export const DEFAULT_CHAT_MODEL = 'gpt-5.2'
+// Default models - migrated to Gemini 3.1 Pro Preview
+export const DEFAULT_CHAT_MODEL = 'gemini-3.1-pro-preview'
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-large'
 export const EMBEDDING_DIMENSIONS = 1536 // Reduced from 3072 for Supabase pgvector
 
@@ -63,19 +64,22 @@ export class OpenAIProvider implements AIProvider {
   ): AsyncGenerator<string, void, unknown> {
     const messages = this.buildCompletionMessages(context)
 
-    const stream = await this.client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: options?.temperature ?? 0.7,
       max_completion_tokens: options?.maxTokens ?? 1000,
       stop: options?.stopSequences,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let inputTokens = 0
     let outputTokens = 0
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'completion',
+    })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
@@ -116,15 +120,18 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       },
     ]
 
-    const stream = await this.client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: 0.7,
       max_completion_tokens: 2000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'rewrite',
+    })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
@@ -145,18 +152,21 @@ Only output the rewritten text, nothing else. Maintain the original format and s
   async *chat(messages: ChatMessage[], context?: AIContext): AsyncGenerator<string, void, unknown> {
     const openAIMessages = this.buildChatMessages(messages, context)
 
-    const stream = await this.client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages: openAIMessages,
       temperature: 0.7,
       max_completion_tokens: 16000, // Increased for longer recommendation outputs
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let inputTokens = 0
     let outputTokens = 0
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'chat',
+    })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
@@ -193,15 +203,18 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       },
     ]
 
-    const stream = await this.client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages,
       temperature: 0.5,
       max_completion_tokens: 1000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'summarize',
+    })) {
       const content = chunk.choices[0]?.delta?.content
       if (content) {
         yield content
@@ -228,6 +241,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       toolChoice?: OpenAI.ChatCompletionToolChoiceOption
     }
   ): Promise<OpenAI.ChatCompletion> {
+    const startTime = Date.now()
     const response = await this.client.chat.completions.create({
       model: this.model,
       messages,
@@ -236,6 +250,8 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       temperature: options?.temperature ?? 0.7,
       max_completion_tokens: options?.maxTokens ?? 16000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'chat', startTime })
 
     this.lastUsage = {
       inputTokens: response.usage?.prompt_tokens ?? 0,
@@ -258,7 +274,7 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       maxTokens?: number
     }
   ): AsyncGenerator<OpenAI.ChatCompletionChunk, void, unknown> {
-    const stream = await this.client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages,
       tools: tools.length > 0 ? tools : undefined,
@@ -266,9 +282,12 @@ Only output the rewritten text, nothing else. Maintain the original format and s
       temperature: options?.temperature ?? 0.7,
       max_completion_tokens: options?.maxTokens ?? 16000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'chat',
+    })) {
       yield chunk
     }
   }

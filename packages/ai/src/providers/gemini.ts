@@ -1,12 +1,9 @@
 /**
  * Gemini Provider
  *
- * Provider for Google's Gemini models.
- * Used for slides generation, deep research, and course generation.
- *
- * From Note3:
- * - Slides: Gemini 3 Pro (gemini-3-pro-preview)
- * - Deep Research: deep-research-pro-preview-12-2025
+ * Provider for Google's Gemini models via native SDK.
+ * Used for slides generation (image gen), deep research, and course curriculum.
+ * Models: gemini-3.1-pro-preview (slides/images), deep-research-pro-preview-12-2025
  */
 
 import { GoogleGenerativeAI, GenerativeModel, Content } from '@google/generative-ai'
@@ -14,6 +11,7 @@ import { GoogleGenAI } from '@google/genai'
 import { AIProvider, AIContext, AICompletionOptions, ChatMessage, AIUsage } from './interface'
 import { buildSlidePrompt } from '../slides/prompts'
 import { getTheme, SlideType } from '../slides/themes'
+import { trackGeminiResponse, trackGeminiStream } from './token-tracker'
 
 // ============================================================================
 // Configuration
@@ -21,16 +19,16 @@ import { getTheme, SlideType } from '../slides/themes'
 
 export interface GeminiProviderConfig {
   apiKey: string
-  model?: string // Default: gemini-2.0-flash-exp
-  slidesModel?: string // Default: gemini-3-pro-preview
+  model?: string // Default: gemini-3.1-pro-preview
+  slidesModel?: string // Default: gemini-3.1-pro-preview
   researchModel?: string // Default: deep-research-pro-preview-12-2025
 }
 
-// Models from Note3 analysis
-export const DEFAULT_MODEL = 'gemini-2.0-flash-exp'
-export const SLIDES_MODEL = 'gemini-3-pro-preview'
+// Model constants (referenced by model-registry.ts)
+export const DEFAULT_MODEL = 'gemini-3.1-pro-preview'
+export const SLIDES_MODEL = 'gemini-3.1-pro-preview'
 export const RESEARCH_MODEL = 'deep-research-pro-preview-12-2025'
-export const IMAGE_MODEL = 'gemini-3-pro-image-preview'
+export const IMAGE_MODEL = 'gemini-3.1-pro-preview'
 
 // ============================================================================
 // Slide Types from Note3
@@ -115,7 +113,7 @@ export class GeminiProvider implements AIProvider {
       },
     })
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'completion' })) {
       const text = chunk.text()
       if (text) {
         yield text
@@ -151,7 +149,7 @@ ${text}`
       generationConfig: { temperature: 0.7 },
     })
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'rewrite' })) {
       const chunkText = chunk.text()
       if (chunkText) {
         yield chunkText
@@ -177,7 +175,7 @@ ${text}`
       generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
     })
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'chat' })) {
       const text = chunk.text()
       if (text) {
         yield text
@@ -203,7 +201,7 @@ ${text}`
       generationConfig: { temperature: 0.5, maxOutputTokens: 1000 },
     })
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of trackGeminiStream(result, { model: this.modelName, taskType: 'summarize' })) {
       const chunkText = chunk.text()
       if (chunkText) {
         yield chunkText
@@ -261,6 +259,7 @@ Only output valid JSON, no markdown code blocks or explanation.`
 
     try {
       console.log('[GeminiProvider] Generating slide outline with model:', this.slidesModelName)
+      const startTime = Date.now()
 
       const result = await this.slidesModel.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -270,6 +269,8 @@ Only output valid JSON, no markdown code blocks or explanation.`
           responseMimeType: 'application/json',
         },
       })
+
+      trackGeminiResponse(result, { model: this.slidesModelName, taskType: 'slides', startTime })
 
       const responseText = result.response.text()
       console.log('[GeminiProvider] Slide outline response length:', responseText.length)
@@ -345,7 +346,7 @@ Format as clear, well-organized markdown.`
 
     yield { type: 'progress', data: 'Analyzing sources...' }
 
-    for await (const chunk of result.stream) {
+    for await (const chunk of trackGeminiStream(result, { model: this.researchModelName, taskType: 'deep-research' })) {
       const text = chunk.text()
       if (text) {
         yield { type: 'content', data: text }
@@ -414,6 +415,7 @@ Return a JSON object with this structure:
 
 Only output valid JSON.`
 
+    const startTime = Date.now()
     const result = await this.slidesModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
@@ -422,6 +424,8 @@ Only output valid JSON.`
         responseMimeType: 'application/json',
       },
     })
+
+    trackGeminiResponse(result, { model: this.slidesModelName, taskType: 'course', startTime })
 
     const responseText = result.response.text()
     const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim()

@@ -10,11 +10,14 @@ import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const agent = new Hono()
 
 // Apply auth middleware
 agent.use('*', authMiddleware)
+agent.use('*', creditGuard)
+agent.use('*', requestContextMiddleware)
 
 // ============================================================================
 // Editor-Deep Runtime Controls
@@ -199,10 +202,13 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
 
   if (useEditorDeep) {
     const { EditorDeepAgent } = await import('@inkdown/ai/agents')
+    const { SharedContextService } = await import('@inkdown/ai/services')
+    const sharedContextService = new SharedContextService(auth.supabase, auth.userId)
     const deepAgent = new EditorDeepAgent({
       supabase: auth.supabase,
       userId: auth.userId,
       openaiApiKey,
+      sharedContextService,
     })
 
     const { data: persistedState } = await auth.supabase
@@ -542,7 +548,6 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
       supabase: auth.supabase,
       userId: auth.userId,
       openaiApiKey,
-      ollamaApiKey: process.env.OLLAMA_API_KEY,
     })
 
     return streamSSE(c, async (stream) => {
@@ -565,11 +570,48 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
     })
   }
 
+  // Look up plan instructions if the note belongs to a plan-linked folder
+  let planInstructions: string | undefined
+  const noteProjectId = mergedEditorContext.workspaceId || mergedEditorContext.currentNoteId
+    ? (await (async () => {
+        // Try to get the note's project_id
+        const noteId = mergedEditorContext.currentNoteId
+        if (!noteId) return null
+        const { data: note } = await auth.supabase
+          .from('notes')
+          .select('project_id')
+          .eq('id', noteId)
+          .maybeSingle()
+        return note?.project_id || null
+      })())
+    : null
+
+  if (noteProjectId) {
+    try {
+      const { data: link } = await auth.supabase
+        .from('plan_project_links')
+        .select('plan_id')
+        .eq('user_id', auth.userId)
+        .eq('project_id', noteProjectId)
+        .maybeSingle()
+
+      if (link?.plan_id) {
+        const { MemoryService } = await import('@inkdown/ai/agents')
+        const memService = new MemoryService(auth.supabase, auth.userId)
+        const instFile = await memService.readFile(`Plans/${link.plan_id.toLowerCase()}-instructions.md`)
+        if (instFile?.content) planInstructions = instFile.content
+      }
+    } catch {
+      // Non-critical
+    }
+  }
+
   // Use EditorAgent for simple requests or non-streaming
   const editorAgent = new EditorAgent({
     supabase: auth.supabase,
     userId: auth.userId,
     openaiApiKey,
+    planInstructions,
   })
 
   // Load session if provided
@@ -626,11 +668,13 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
   }
 
   const { ChatAgent } = await import('@inkdown/ai/agents')
+  const { SharedContextService: SharedCtxService } = await import('@inkdown/ai/services')
 
   const chatAgent = new ChatAgent({
     supabase: auth.supabase,
     userId: auth.userId,
     openaiApiKey,
+    sharedContextService: new SharedCtxService(auth.supabase, auth.userId),
   })
 
   // Load session if provided

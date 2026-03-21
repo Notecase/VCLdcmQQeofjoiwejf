@@ -1,8 +1,9 @@
-import OpenAI from 'openai'
 import { AppError, ErrorCode } from '@inkdown/shared'
+import { selectModel } from '../../../providers/model-registry'
+import { createOpenAIClient } from '../../../providers/client-factory'
 import type { RAGIndex } from './types'
 
-const EMBEDDING_MODEL = 'text-embedding-3-small'
+const EMBEDDING_MODEL = selectModel('embedding').id
 const CHUNK_SIZE = 512
 const CHUNK_OVERLAP = 50
 const DEFAULT_TOP_K = 3
@@ -22,8 +23,9 @@ function splitIntoChunks(text: string): string[] {
   return chunks
 }
 
-async function embedText(text: string, openaiApiKey: string): Promise<number[]> {
-  const client = new OpenAI({ apiKey: openaiApiKey })
+async function embedText(text: string, _openaiApiKey?: string): Promise<number[]> {
+  const embeddingModel = selectModel('embedding')
+  const client = createOpenAIClient(embeddingModel)
   try {
     const response = await client.embeddings.create({
       model: EMBEDDING_MODEL,

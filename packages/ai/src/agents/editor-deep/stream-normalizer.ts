@@ -1,4 +1,4 @@
-import type { EditorDeepAgentEvent } from './types'
+import type { EditorDeepAgentEvent, SubagentEventData } from './types'
 
 interface StreamMessage {
   id?: string
@@ -18,6 +18,22 @@ export class EditorDeepStreamNormalizer {
   private assistantStarted = false
   private assistantFinalized = false
   private assistantText = ''
+  private historyAssistantTexts = new Set<string>()
+
+  // Multi-mode subagent tracking
+  private activeSubagents = new Map<string, { name: string; startedAt: number; lastOutput: string }>()
+  private completedSubagentIds = new Set<string>()
+
+  /**
+   * Seed the normalizer with known history assistant texts so that
+   * replayed messages from LangGraph are skipped instead of re-emitted.
+   */
+  seedHistoryTexts(texts: string[]): void {
+    for (const text of texts) {
+      const trimmed = text.trim()
+      if (trimmed) this.historyAssistantTexts.add(trimmed)
+    }
+  }
 
   private stableStringify(value: unknown): string {
     if (value === null || typeof value !== 'object') {
@@ -68,12 +84,223 @@ export class EditorDeepStreamNormalizer {
     return `node:${nodeKey}:${role}${name}`
   }
 
+  // ---------------------------------------------------------------------------
+  // Namespace parsing for multi-mode streams
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Parse a namespace array to determine if it's a subagent and extract the name.
+   * LangGraph subgraph namespace format: ['tools:subagent_name', ...] or ['subagent_name:uuid', ...]
+   */
+  parseNamespace(namespace: string[]): { isSubagent: boolean; subagentId: string | null; subagentName: string | null } {
+    if (!namespace || namespace.length === 0) {
+      return { isSubagent: false, subagentId: null, subagentName: null }
+    }
+
+    // Look for a namespace segment that indicates a subagent (tools:name or name:uuid pattern)
+    for (const segment of namespace) {
+      if (segment.startsWith('tools:')) {
+        const name = segment.split(':')[1]
+        return { isSubagent: true, subagentId: name, subagentName: name }
+      }
+    }
+
+    // Check for subgraph namespace patterns (non-root namespace = subagent)
+    if (namespace.length > 0 && namespace[0] !== '') {
+      const name = namespace[0].split(':')[0]
+      if (name && name !== 'agent' && name !== 'tools') {
+        return { isSubagent: true, subagentId: name, subagentName: name }
+      }
+    }
+
+    return { isSubagent: false, subagentId: null, subagentName: null }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Multi-mode: updates (node completion events)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle 'updates' mode data from a [namespace, 'updates', data] tuple.
+   * This is the same structure as the legacy format — each key is a node with messages.
+   */
+  normalizeUpdates(namespace: string[], nodeKey: string, message: StreamMessage): EditorDeepAgentEvent[] {
+    const events: EditorDeepAgentEvent[] = []
+    const { isSubagent, subagentId, subagentName } = this.parseNamespace(namespace)
+
+    // Emit subagent lifecycle events
+    if (isSubagent && subagentId && !this.activeSubagents.has(subagentId) && !this.completedSubagentIds.has(subagentId)) {
+      this.activeSubagents.set(subagentId, {
+        name: subagentName || subagentId,
+        startedAt: Date.now(),
+        lastOutput: '',
+      })
+      const subagentData: SubagentEventData = {
+        id: subagentId,
+        name: subagentName || subagentId,
+        description: `Subagent ${subagentName || subagentId} started`,
+        status: 'running',
+        startedAt: Date.now(),
+      }
+      events.push({
+        type: 'subagent-start',
+        data: subagentData,
+        seq: this.nextSeq(),
+        sourceNode: nodeKey,
+      })
+    }
+
+    // Process the message normally based on type
+    if (nodeKey === 'tools' || message.type === 'tool') {
+      events.push(...this.normalizeToolResult(nodeKey, message))
+    } else {
+      events.push(...this.normalizeText(nodeKey, message))
+      events.push(...this.normalizeToolCalls(nodeKey, message))
+    }
+
+    return events
+  }
+
+  // ---------------------------------------------------------------------------
+  // Multi-mode: messages (token-level LLM streaming)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle 'messages' mode chunk from a [namespace, 'messages', [message, metadata]] tuple.
+   * These are token-level deltas — bypass snapshot dedup as they're always new content.
+   */
+  normalizeMessageChunk(namespace: string[], chunk: { text?: string; tool_call_chunks?: unknown[] }): EditorDeepAgentEvent[] {
+    if (!chunk?.text) return []
+
+    const events: EditorDeepAgentEvent[] = []
+    const { isSubagent, subagentId } = this.parseNamespace(namespace)
+
+    if (isSubagent && subagentId) {
+      // Update subagent's lastOutput
+      const sub = this.activeSubagents.get(subagentId)
+      if (sub) {
+        sub.lastOutput += chunk.text
+      }
+
+      events.push({
+        type: 'subagent-delta',
+        data: { id: subagentId, text: chunk.text },
+        seq: this.nextSeq(),
+        isDelta: true,
+      })
+    } else {
+      // Main agent token — emit as assistant-delta, skip dedup
+      if (!this.assistantStarted) {
+        this.assistantStarted = true
+        events.push({
+          type: 'assistant-start',
+          data: { sourceNode: 'agent' },
+          seq: this.nextSeq(),
+          sourceNode: 'agent',
+        })
+      }
+
+      this.assistantText += chunk.text
+      events.push({
+        type: 'assistant-delta',
+        data: chunk.text,
+        seq: this.nextSeq(),
+        sourceNode: 'agent',
+        isDelta: true,
+      })
+    }
+
+    return events
+  }
+
+  // ---------------------------------------------------------------------------
+  // Multi-mode: custom (config.writer events from tools)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle 'custom' mode data from a [namespace, 'custom', data] tuple.
+   * These are progress events emitted by tools via config.writer?.()
+   */
+  normalizeCustomEvent(_namespace: string[], data: unknown): EditorDeepAgentEvent[] {
+    return [
+      {
+        type: 'custom-progress',
+        data,
+        seq: this.nextSeq(),
+      },
+    ]
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subagent lifecycle completion
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Complete a subagent and emit the completion event.
+   * Called when no more events arrive from a subagent namespace.
+   */
+  completeSubagent(subagentId: string): EditorDeepAgentEvent[] {
+    const sub = this.activeSubagents.get(subagentId)
+    if (!sub) return []
+
+    const now = Date.now()
+    const subagentData: SubagentEventData = {
+      id: subagentId,
+      name: sub.name,
+      description: `Subagent ${sub.name} completed`,
+      status: 'complete',
+      startedAt: sub.startedAt,
+      completedAt: now,
+      elapsedMs: now - sub.startedAt,
+      result: sub.lastOutput.slice(0, 500),
+    }
+
+    this.activeSubagents.delete(subagentId)
+    this.completedSubagentIds.add(subagentId)
+
+    return [
+      {
+        type: 'subagent-complete',
+        data: subagentData,
+        seq: this.nextSeq(),
+      },
+    ]
+  }
+
+  /**
+   * Complete all active subagents. Called before finalization.
+   */
+  completeAllSubagents(): EditorDeepAgentEvent[] {
+    const events: EditorDeepAgentEvent[] = []
+    for (const id of this.activeSubagents.keys()) {
+      events.push(...this.completeSubagent(id))
+    }
+    return events
+  }
+
+  /**
+   * Get active subagent IDs for lifecycle tracking.
+   */
+  getActiveSubagentIds(): string[] {
+    return Array.from(this.activeSubagents.keys())
+  }
+
+  // ---------------------------------------------------------------------------
+  // Legacy normalizers (unchanged — used for both legacy and updates mode)
+  // ---------------------------------------------------------------------------
+
   normalizeText(nodeKey: string, message: StreamMessage): EditorDeepAgentEvent[] {
     const content = this.extractTextContent(message.content)
     if (!content) return []
 
     const role = this.getRole(message)
     if (role === 'human' || role === 'user' || role === 'system' || role === 'tool') return []
+
+    // Skip replayed history messages that LangGraph re-emits through the stream
+    const trimmedContent = content.trim()
+    if (this.historyAssistantTexts.has(trimmedContent)) {
+      return []
+    }
 
     const sourceKey = this.getTextSourceKey(nodeKey, message)
     const hasSnapshot = this.textSnapshots.has(sourceKey)
@@ -134,8 +361,9 @@ export class EditorDeepStreamNormalizer {
     for (const call of calls) {
       const callId = call.id || ''
       const argsSignature = this.stableStringify(call.args || {})
-      const semanticSignature = `${nodeKey}:semantic:${call.name}:${argsSignature}`
-      const idSignature = callId ? `${nodeKey}:id:${callId}` : ''
+      // Global dedup (no nodeKey) — catches duplicates across subgraph namespace levels
+      const semanticSignature = `semantic:${call.name}:${argsSignature}`
+      const idSignature = callId ? `id:${callId}` : ''
 
       if (
         this.emittedToolCallSignatures.has(semanticSignature) ||
@@ -173,7 +401,8 @@ export class EditorDeepStreamNormalizer {
     const toolName = message.name || 'unknown_tool'
     if (!content) return []
 
-    const signature = `${nodeKey}:${toolName}:${content}`
+    // Global dedup (no nodeKey) — catches duplicates across subgraph namespace levels
+    const signature = `${toolName}:${content}`
     if (this.emittedToolResultSignatures.has(signature)) return []
     this.emittedToolResultSignatures.add(signature)
 
@@ -199,6 +428,19 @@ export class EditorDeepStreamNormalizer {
 
   finalize(fallbackText?: string): EditorDeepAgentEvent[] {
     const events: EditorDeepAgentEvent[] = []
+
+    // Complete any remaining active subagents
+    events.push(...this.completeAllSubagents())
+
+    // Emit synthesis-start if there were subagents and we have assistant text pending
+    if (this.completedSubagentIds.size > 0 && !this.assistantFinalized) {
+      events.push({
+        type: 'synthesis-start',
+        data: { subagentCount: this.completedSubagentIds.size },
+        seq: this.nextSeq(),
+      })
+    }
+
     if (!this.assistantFinalized) {
       const finalText = this.assistantText || fallbackText || ''
       if (finalText) {

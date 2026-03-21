@@ -18,11 +18,14 @@ import { zValidator } from '@hono/zod-validator'
 import { handleError, ErrorCode } from '@inkdown/shared'
 import type { ResearchAgent } from '@inkdown/ai/agents'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const research = new Hono()
 
 // Apply auth middleware
 research.use('*', authMiddleware)
+research.use('*', creditGuard)
+research.use('*', requestContextMiddleware)
 
 // =============================================================================
 // In-Memory Agent Registry (for interrupt resolution)
@@ -70,12 +73,14 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
   }
 
   const { ResearchAgent: ResearchAgentClass } = await import('@inkdown/ai/agents')
+  const { SharedContextService } = await import('@inkdown/ai/services')
 
   const agent = new ResearchAgentClass({
     supabase: auth.supabase,
     userId: auth.userId,
     openaiApiKey,
     model: researchModel,
+    sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })
 
   const threadId = body.threadId || crypto.randomUUID()

@@ -10,11 +10,14 @@ import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const slides = new Hono()
 
 // Apply auth middleware
 slides.use('*', authMiddleware)
+slides.use('*', creditGuard)
+slides.use('*', requestContextMiddleware)
 
 // ============================================================================
 // Request Schemas

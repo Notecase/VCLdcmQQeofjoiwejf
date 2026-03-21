@@ -48,6 +48,10 @@ export class TableColumnToolbar extends BaseFloat {
       if (!isMouseEvent(event)) return
 
       const { x, y } = event
+
+      // If mouse is over the toolbar itself, keep it stable — don't re-detect column
+      if (this.floatBox && this.floatBox.contains(event.target as Node)) return
+
       const eles = [...document.elementsFromPoint(x, y)]
       const bellowEles = [...document.elementsFromPoint(x, y + OFFSET)]
       const hasTableCell = (eles: Element[]) => {

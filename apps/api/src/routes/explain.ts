@@ -9,10 +9,13 @@ import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const explain = new Hono()
 
 explain.use('*', authMiddleware)
+explain.use('*', creditGuard)
+explain.use('*', requestContextMiddleware)
 
 const ExplainChatSchema = z.object({
   message: z.string().min(1).max(10000),

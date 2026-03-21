@@ -1,6 +1,8 @@
 import { tool, type StructuredToolInterface } from '@langchain/core/tools'
+import type { RunnableConfig } from '@langchain/core/runnables'
 import { z } from 'zod'
 import { executeTool, type ToolContext } from '../../tools'
+import { parseMarkdownStructure, findBlocksByHeading } from '../../utils/structureParser'
 import type { EditorToolContext } from './types'
 import type { EditorLongTermMemory } from './memory'
 
@@ -54,11 +56,69 @@ function emitClarification(ctx: EditorToolContext, reason: string): void {
   })
 }
 
-function splitParagraphs(content: string): string[] {
-  return content
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
+/**
+ * Splice content at a specific block index using character offsets from the parser.
+ * This preserves original whitespace (unlike the old splitToStructuralBlocks + join approach
+ * which normalized all inter-block spacing to \n\n, causing diff mismatches).
+ */
+function spliceAtBlockIndex(
+  original: string,
+  blockIndex: number | undefined,
+  operation: 'insert-after' | 'replace' | 'remove',
+  newContent?: string
+): string {
+  if (!original.trim()) {
+    return newContent?.trim() || ''
+  }
+  const parsed = parseMarkdownStructure(original)
+  const blocks = parsed.blocks
+
+  if (operation === 'insert-after') {
+    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) {
+      // Append at end
+      const suffix = original.endsWith('\n') ? '\n' : '\n\n'
+      return original + suffix + (newContent?.trim() || '')
+    }
+    const target = blocks[blockIndex]
+    const insertPos = target.endChar
+    return (
+      original.slice(0, insertPos) +
+      '\n\n' +
+      (newContent?.trim() || '') +
+      (insertPos < original.length ? original.slice(insertPos) : '')
+    )
+  }
+
+  if (operation === 'replace') {
+    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) return original
+    const target = blocks[blockIndex]
+    return (
+      original.slice(0, target.startChar) +
+      (newContent?.trim() || '') +
+      original.slice(target.endChar)
+    )
+  }
+
+  if (operation === 'remove') {
+    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) return original
+    const target = blocks[blockIndex]
+    let removeEnd = target.endChar
+    // Consume trailing newlines so we don't leave double blank lines
+    while (removeEnd < original.length && original[removeEnd] === '\n') removeEnd++
+    return original.slice(0, target.startChar) + original.slice(removeEnd)
+  }
+
+  return original
+}
+
+/**
+ * Resolve afterHeading to a block index for insertion.
+ */
+function resolveAfterHeadingIndex(content: string, afterHeading: string): number | undefined {
+  const parsed = parseMarkdownStructure(content)
+  const matches = findBlocksByHeading(parsed, afterHeading)
+  if (matches.length > 0) return parsed.blocks.indexOf(matches[0])
+  return undefined
 }
 
 async function proposeNoteEdit(
@@ -79,6 +139,12 @@ async function proposeNoteEdit(
       noteId,
       original,
       proposed: proposedContent,
+      structure: parseMarkdownStructure(original).blocks.map((b) => ({
+        type: b.type,
+        startLine: b.startLine,
+        endLine: b.endLine,
+        heading: b.metadata?.heading,
+      })),
     },
   })
 
@@ -110,12 +176,16 @@ export function createEditorDeepTools(
   const baseCtx = toToolContext(ctx)
 
   const answerQuestionAboutNote = tool(
-    async ({ question, noteId, blockIndex }) => {
+    async ({ question, noteId, blockIndex }, config: RunnableConfig) => {
       const effectiveNoteId = resolveNoteId(ctx, noteId)
       if (!effectiveNoteId) {
         emitClarification(ctx, 'Please open a note first so I can answer this question.')
         return 'No note selected. Ask the user to open or specify a note.'
       }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- config.writer is available when streamMode includes 'custom'
+      const writer = (config as any)?.writer as ((data: unknown) => void) | undefined
+      writer?.({ step: 'reading', noteId: effectiveNoteId })
 
       const readResult =
         blockIndex !== undefined
@@ -145,6 +215,8 @@ export function createEditorDeepTools(
       const content = typeof payload.content === 'string' ? payload.content : ''
       const truncated = content.length > 8000 ? `${content.slice(0, 8000)}\n...[truncated]` : content
 
+      writer?.({ step: 'analyzing', chars: content.length })
+
       return [
         `Question: ${question}`,
         `Note title: ${title}`,
@@ -158,22 +230,70 @@ export function createEditorDeepTools(
         'Read the active note and provide context to answer a question. USE THIS for Q&A, summarization, and understanding note content. Do NOT use this for editing — use add_paragraph, edit_paragraph, or remove_paragraph instead.',
       schema: z.object({
         question: z.string().min(1).describe('The specific question the user is asking about the note content'),
-        noteId: z.string().uuid().nullish().describe('UUID of a specific note to read. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).nullish().describe('Specific paragraph index to read. Omit to read the full note'),
+        noteId: z.string().uuid().optional().describe('UUID of a specific note to read. Omit to use the currently open note'),
+        blockIndex: z.number().int().min(0).optional().describe('Specific paragraph index to read. Omit to read the full note'),
+      }),
+    }
+  )
+
+  const readNoteStructure = tool(
+    async ({ noteId }) => {
+      const effectiveNoteId = resolveNoteId(ctx, noteId)
+      if (!effectiveNoteId) {
+        return 'No note selected.'
+      }
+
+      const readResult = await executeTool(
+        'read_note',
+        { noteId: effectiveNoteId, includeMetadata: false },
+        baseCtx
+      )
+      if (!readResult.success || !readResult.data) {
+        return 'Failed to read note.'
+      }
+
+      const content = ((readResult.data as { content?: string }).content) || ''
+      if (!content.trim()) return 'Note is empty.'
+
+      const parsed = parseMarkdownStructure(content)
+      return parsed.blocks
+        .map(
+          (b, i) =>
+            `[${i}] ${b.type}${b.metadata?.heading ? `: ${b.metadata.heading}` : ''} (lines ${b.startLine}-${b.endLine})`
+        )
+        .join('\n')
+    },
+    {
+      name: 'read_note_structure',
+      description:
+        'Get the numbered block structure of the note with block indices. Call BEFORE editing to find correct afterBlockIndex values.',
+      schema: z.object({
+        noteId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Note to analyze. Omit for current note'),
       }),
     }
   )
 
   const createNote = tool(
-    async ({ title, content, projectId }) => {
+    async ({ title, content, projectId }, config: RunnableConfig) => {
       const effectiveProjectId = projectId || ctx.editorContext.projectId
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- config.writer is available when streamMode includes 'custom'
+      const writer = (config as any)?.writer as ((data: unknown) => void) | undefined
+      writer?.({ step: 'saving', title })
+
+      // Save the note WITH content directly — avoids the race condition between
+      // note-navigate (loads empty doc) and edit-proposal (injects diff blocks).
+      // For brand-new notes there's no "original" to diff against, so just save content.
       const { data: newNote, error } = await ctx.supabase
         .from('notes')
         .insert({
           user_id: ctx.userId,
           title: title || 'Untitled',
-          content: '',
+          content,
           project_id: effectiveProjectId || null,
         })
         .select('id')
@@ -190,16 +310,7 @@ export function createEditorDeepTools(
         data: { noteId },
       })
 
-      ctx.emitEvent({
-        type: 'edit-proposal',
-        data: {
-          noteId,
-          original: '',
-          proposed: content,
-        },
-      })
-
-      return `Note "${title}" created (ID: ${noteId}). Content proposed for review.`
+      return `Note "${title}" created (ID: ${noteId}). The note has been saved and opened.`
     },
     {
       name: 'create_note',
@@ -207,13 +318,15 @@ export function createEditorDeepTools(
       schema: z.object({
         title: z.string().min(1).describe('Title for the new note'),
         content: z.string().min(1).describe('Full markdown content for the note'),
-        projectId: z.string().uuid().nullish().describe('Project to create the note in'),
+        projectId: z.string().uuid().optional().describe('Project to create the note in'),
       }),
     }
   )
 
   const addParagraph = tool(
-    async ({ noteId, paragraph, afterBlockIndex }) => {
+    async ({ noteId, paragraph, afterBlockIndex, afterHeading }, config: RunnableConfig) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const writer = (config as any)?.writer as ((data: unknown) => void) | undefined
       const effectiveNoteId = resolveNoteId(ctx, noteId)
       if (!effectiveNoteId) {
         emitClarification(ctx, 'Please open a note before adding a paragraph.')
@@ -230,25 +343,24 @@ export function createEditorDeepTools(
       }
 
       const current = (readResult.data as { content?: string }).content || ''
-      const blocks = splitParagraphs(current)
-      const targetIndex = afterBlockIndex ?? getContextBlockIndex(ctx)
+      let targetIndex: number | undefined = afterBlockIndex ?? getContextBlockIndex(ctx)
 
-      if (targetIndex === undefined) {
-        blocks.push(paragraph.trim())
-      } else {
-        const safeIndex = Math.min(Math.max(targetIndex + 1, 0), blocks.length)
-        blocks.splice(safeIndex, 0, paragraph.trim())
+      if (afterHeading && targetIndex === undefined) {
+        targetIndex = resolveAfterHeadingIndex(current, afterHeading)
       }
 
-      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
+      writer?.({ step: 'computing-diff', noteId: effectiveNoteId })
+      const proposed = spliceAtBlockIndex(current, targetIndex, 'insert-after', paragraph.trim())
+      return proposeNoteEdit(ctx, effectiveNoteId, proposed)
     },
     {
       name: 'add_paragraph',
       description: 'Add NEW content as a paragraph to the current note. Use this for inserting new paragraphs, sections, or content that doesn\'t exist yet. To modify existing text, use edit_paragraph. To delete, use remove_paragraph.',
       schema: z.object({
-        noteId: z.string().uuid().nullish().describe('UUID of the target note. Omit to use the currently open note'),
+        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
         paragraph: z.string().min(1).describe('Full markdown content of the new paragraph to insert'),
-        afterBlockIndex: z.number().int().min(0).nullish().describe('Insert after this paragraph index (0-based). Omit to append at end'),
+        afterBlockIndex: z.number().int().min(0).optional().describe('Insert after this paragraph index (0-based). Omit to append at end'),
+        afterHeading: z.string().optional().describe('Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'),
       }),
     }
   )
@@ -281,26 +393,28 @@ export function createEditorDeepTools(
       }
 
       const current = (readResult.data as { content?: string }).content || ''
-      const blocks = splitParagraphs(current)
-      if (effectiveBlockIndex < 0 || effectiveBlockIndex >= blocks.length) {
-        return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(blocks.length - 1, 0)}).`
+      const parsed = parseMarkdownStructure(current)
+      if (effectiveBlockIndex < 0 || effectiveBlockIndex >= parsed.blocks.length) {
+        return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(parsed.blocks.length - 1, 0)}).`
       }
 
-      blocks.splice(effectiveBlockIndex, 1)
-      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
+      const proposed = spliceAtBlockIndex(current, effectiveBlockIndex, 'remove')
+      return proposeNoteEdit(ctx, effectiveNoteId, proposed)
     },
     {
       name: 'remove_paragraph',
       description: 'Remove an existing paragraph from the note by its index. ONLY use when the user explicitly asks to delete or remove content. Do not use for rewriting — use edit_paragraph for that.',
       schema: z.object({
-        noteId: z.string().uuid().nullish().describe('UUID of the target note. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).nullish().describe('Index of the paragraph to remove (0-based)'),
+        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
+        blockIndex: z.number().int().min(0).optional().describe('Index of the paragraph to remove (0-based)'),
       }),
     }
   )
 
   const editParagraph = tool(
-    async ({ noteId, blockIndex, newContent }) => {
+    async ({ noteId, blockIndex, newContent }, config: RunnableConfig) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const writer = (config as any)?.writer as ((data: unknown) => void) | undefined
       const effectiveNoteId = resolveNoteId(ctx, noteId)
       if (!effectiveNoteId) {
         emitClarification(ctx, 'Please open a note before editing a paragraph.')
@@ -317,25 +431,29 @@ export function createEditorDeepTools(
       }
 
       const current = (readResult.data as { content?: string }).content || ''
-      const blocks = splitParagraphs(current)
       const effectiveBlockIndex = blockIndex ?? getContextBlockIndex(ctx)
 
       if (effectiveBlockIndex === undefined) {
-        blocks.push(newContent.trim())
-      } else if (effectiveBlockIndex < 0 || effectiveBlockIndex >= blocks.length) {
-        return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(blocks.length - 1, 0)}).`
-      } else {
-        blocks[effectiveBlockIndex] = newContent.trim()
+        writer?.({ step: 'computing-diff', noteId: effectiveNoteId })
+        const proposed = spliceAtBlockIndex(current, undefined, 'insert-after', newContent.trim())
+        return proposeNoteEdit(ctx, effectiveNoteId, proposed)
       }
 
-      return proposeNoteEdit(ctx, effectiveNoteId, blocks.join('\n\n'))
+      const parsed = parseMarkdownStructure(current)
+      if (effectiveBlockIndex < 0 || effectiveBlockIndex >= parsed.blocks.length) {
+        return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(parsed.blocks.length - 1, 0)}).`
+      }
+
+      writer?.({ step: 'computing-diff', noteId: effectiveNoteId })
+      const proposed = spliceAtBlockIndex(current, effectiveBlockIndex, 'replace', newContent.trim())
+      return proposeNoteEdit(ctx, effectiveNoteId, proposed)
     },
     {
       name: 'edit_paragraph',
       description: 'Replace or rewrite an existing paragraph in the note by its index. Use this when the user wants to modify, rewrite, improve, or change existing content. For adding new content, use add_paragraph instead.',
       schema: z.object({
-        noteId: z.string().uuid().nullish().describe('UUID of the target note. Omit to use the currently open note'),
-        blockIndex: z.number().int().min(0).nullish().describe('Index of the paragraph to replace (0-based). Omit to append'),
+        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
+        blockIndex: z.number().int().min(0).optional().describe('Index of the paragraph to replace (0-based). Omit to append'),
         newContent: z.string().min(1).describe('New markdown content to replace the existing paragraph'),
       }),
     }
@@ -376,7 +494,7 @@ export function createEditorDeepTools(
       name: 'create_artifact_from_note',
       description: 'Create an interactive HTML/CSS/JavaScript widget embedded in the note. ONLY for content that requires interactivity: timers, calculators, games, quizzes, interactive visualizations, animations. For static data tables, use insert_table instead.',
       schema: z.object({
-        noteId: z.string().uuid().nullish().describe('UUID of the note to attach the artifact to. Omit to use the currently open note'),
+        noteId: z.string().uuid().optional().describe('UUID of the note to attach the artifact to. Omit to use the currently open note'),
         title: z.string().min(1).describe('Human-readable title for the artifact widget'),
         html: z.string().describe('Inner HTML markup only (no html/head/body tags). Rendered in a sandboxed iframe'),
         css: z.string().describe('CSS styles as a string. Applied within the sandboxed iframe'),
@@ -386,7 +504,7 @@ export function createEditorDeepTools(
   )
 
   const insertTable = tool(
-    async ({ noteId, title, headers, rows, position }) => {
+    async ({ noteId, title, headers, rows, position, afterBlockIndex, afterHeading }) => {
       const effectiveNoteId = resolveNoteId(ctx, noteId)
       if (!effectiveNoteId) {
         emitClarification(ctx, 'Please open a note before inserting a table.')
@@ -402,11 +520,36 @@ export function createEditorDeepTools(
         return `Failed to read note: ${readResult.error || 'unknown error'}`
       }
 
+      // Parse rows from JSON string (flattened for Gemini schema compat)
+      let parsedRows: string[][] = []
+      try {
+        if (rows) parsedRows = JSON.parse(rows)
+      } catch {
+        parsedRows = []
+      }
+
       const current = (readResult.data as { content?: string }).content || ''
-      const tableMarkdown = buildMarkdownTable(headers, rows, title)
-      const proposedContent = position === 'start'
-        ? (current ? `${tableMarkdown}\n\n${current}` : tableMarkdown)
-        : (current ? `${current}\n\n${tableMarkdown}` : tableMarkdown)
+      const tableMarkdown = buildMarkdownTable(headers, parsedRows, title)
+
+      // Resolve target index: explicit afterBlockIndex > afterHeading > position
+      let targetIndex: number | undefined = afterBlockIndex
+
+      if (afterHeading && targetIndex === undefined) {
+        const parsed = parseMarkdownStructure(current)
+        const matches = findBlocksByHeading(parsed, afterHeading)
+        if (matches.length > 0) {
+          targetIndex = parsed.blocks.indexOf(matches[0])
+        }
+      }
+
+      let proposedContent: string
+      if (targetIndex !== undefined) {
+        proposedContent = spliceAtBlockIndex(current, targetIndex, 'insert-after', tableMarkdown)
+      } else {
+        proposedContent = position === 'start'
+          ? (current ? `${tableMarkdown}\n\n${current}` : tableMarkdown)
+          : (current ? `${current}\n\n${tableMarkdown}` : tableMarkdown)
+      }
 
       return proposeNoteEdit(ctx, effectiveNoteId, proposedContent)
     },
@@ -414,11 +557,13 @@ export function createEditorDeepTools(
       name: 'insert_table',
       description: 'Insert a static markdown data table into the note. Use for structured data: lists, rankings, comparisons, statistics. For INTERACTIVE content (calculators, timers, quizzes, games) use create_artifact_from_note instead.',
       schema: z.object({
-        noteId: z.string().uuid().nullish().describe('UUID of the target note. Omit to use the currently open note'),
-        title: z.string().nullish().describe('Optional title heading for the table (rendered as ### heading)'),
+        noteId: z.string().uuid().optional().describe('UUID of the target note. Omit to use the currently open note'),
+        title: z.string().optional().describe('Optional title heading for the table (rendered as ### heading)'),
         headers: z.array(z.string()).min(1).describe("Column header names, e.g. ['Name', 'Speed', 'Habitat']"),
-        rows: z.array(z.array(z.string())).default([]).describe('Table data rows. Each row is an array of cell values matching the headers'),
+        rows: z.string().default('').describe('Table data rows as JSON array of arrays, e.g. [["Alice","25"],["Bob","30"]]. Each inner array is one row matching the headers'),
         position: z.enum(['start', 'end']).default('end').describe("Where to insert: 'start' for beginning of note, 'end' for after existing content"),
+        afterBlockIndex: z.number().int().min(0).optional().describe('Insert after this block index (0-based). More precise than position. Call read_note_structure first to find the correct index'),
+        afterHeading: z.string().optional().describe('Insert after the section with this heading text. More reliable than afterBlockIndex for section-level insertion'),
       }),
     }
   )
@@ -447,8 +592,16 @@ export function createEditorDeepTools(
         return 'No note selected.'
       }
 
+      // Parse args from JSON string (flattened for Gemini schema compat)
+      let parsedArgs: Record<string, unknown> = {}
+      try {
+        parsedArgs = JSON.parse(args)
+      } catch {
+        parsedArgs = {}
+      }
+
       const toolArgs: Record<string, unknown> = {
-        ...args,
+        ...parsedArgs,
         noteId: effectiveNoteId,
       }
 
@@ -478,9 +631,9 @@ export function createEditorDeepTools(
           'get_schema',
           'create_chart_data',
         ]).describe('The database operation to perform'),
-        noteId: z.string().uuid().nullish().describe('UUID of the note containing the database. Omit to use the currently open note'),
-        databaseId: z.string().uuid().nullish().describe('UUID of the specific database within the note'),
-        args: z.record(z.unknown()).default({}).describe('Operation-specific arguments (e.g. row data, query filters)'),
+        noteId: z.string().uuid().optional().describe('UUID of the note containing the database. Omit to use the currently open note'),
+        databaseId: z.string().uuid().optional().describe('UUID of the specific database within the note'),
+        args: z.string().default('{}').describe('JSON-serialized operation arguments (e.g. row data, query filters)'),
       }),
     }
   )
@@ -519,7 +672,7 @@ export function createEditorDeepTools(
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences')
           .describe('Category of memory to read: preferences, plan_index, daily, today, tomorrow, or context'),
-        key: z.string().nullish().describe('Specific memory key to look up. Omit to read the full memory file'),
+        key: z.string().optional().describe('Specific memory key to look up. Omit to read the full memory file'),
       }),
     }
   )
@@ -559,14 +712,63 @@ export function createEditorDeepTools(
           .enum(['preferences', 'plan_index', 'daily', 'today', 'tomorrow', 'context'])
           .default('preferences')
           .describe('Category of memory to write to'),
-        key: z.string().nullish().describe('Memory key identifier. Omit for default key based on memoryType'),
+        key: z.string().optional().describe('Memory key identifier. Omit for default key based on memoryType'),
         content: z.string().min(1).describe('The content to store. Keep concise — max 2000 chars'),
+      }),
+    }
+  )
+
+  const askUserPreference = tool(
+    async ({ question, options, context }) => {
+      ctx.emitEvent({
+        type: 'pre-action-question',
+        data: {
+          id: crypto.randomUUID(),
+          question,
+          options: options.map((opt, i) => ({
+            id: `opt-${i}`,
+            label: opt.label,
+            description: opt.description || '',
+          })),
+          allowFreeText: true,
+          context: context || '',
+        },
+      })
+      return 'Question sent to user. Wait for their response before proceeding.'
+    },
+    {
+      name: 'ask_user_preference',
+      description:
+        'Ask the user a clarifying question BEFORE creating a note or making a major edit. Use when the topic is broad and the user\'s preference would significantly affect the output. DO NOT overuse — simple or specific requests should proceed directly without asking.',
+      schema: z.object({
+        question: z
+          .string()
+          .min(1)
+          .describe('The question to ask the user (e.g. "How detailed should this note be?")'),
+        options: z
+          .array(
+            z.object({
+              label: z.string().describe('Short label for this option (e.g. "Concise overview")'),
+              description: z
+                .string()
+                .optional()
+                .describe('Optional longer description of what this option means'),
+            })
+          )
+          .min(2)
+          .max(6)
+          .describe('2-6 options for the user to choose from'),
+        context: z
+          .string()
+          .optional()
+          .describe('Brief context about why this question matters for the output'),
       }),
     }
   )
 
   return [
     answerQuestionAboutNote,
+    readNoteStructure,
     createNote,
     addParagraph,
     removeParagraph,
@@ -576,5 +778,6 @@ export function createEditorDeepTools(
     databaseAction,
     readMemory,
     writeMemory,
+    askUserPreference,
   ]
 }

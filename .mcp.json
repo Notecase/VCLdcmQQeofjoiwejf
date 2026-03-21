@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "noteshell": {
+      "command": "node",
+      "args": ["/Users/quangnguyen/CodingPRJ/inkdown/packages/mcp/dist/index.js"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
  * Course Orchestrator — packages/ai/src/agents/course/orchestrator.ts
  *
  * Deep agent orchestrator for end-to-end course generation.
- * Uses the same deepagents + ChatOpenAI pattern as ResearchAgent.
+ * Uses deepagents framework with centralized model registry + client factory.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -80,6 +80,11 @@ class AsyncEventQueue<T> {
 // Types
 // =============================================================================
 
+import type { SharedContextService } from '../../services/shared-context.service'
+import { selectModel } from '../../providers/model-registry'
+import { createLangChainModel } from '../../providers/client-factory'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
+
 export interface CourseOrchestratorConfig {
   supabase: SupabaseClient
   userId: string
@@ -87,6 +92,7 @@ export interface CourseOrchestratorConfig {
   geminiApiKey: string
   youtubeApiKey?: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface CourseThreadState {
@@ -211,15 +217,20 @@ export class CourseOrchestrator {
     })
 
     const { createDeepAgent } = await import('deepagents')
-    const { ChatOpenAI } = await import('@langchain/openai')
 
-    const llm = new ChatOpenAI({
-      openAIApiKey: this.config.openaiApiKey,
-      modelName: this.config.model ?? 'gpt-5.2',
+    const courseModel = selectModel('course')
+    const llm = await createLangChainModel(courseModel, {
       temperature: 0.3,
+      callbacks: [new TokenTrackingCallback({ model: courseModel.id, taskType: 'course' })],
     })
 
-    const systemPrompt = getCourseOrchestratorPrompt()
+    const sharedCtx = this.config.sharedContextService
+      ? await this.config.sharedContextService.read({
+          relevantTypes: ['active_plan', 'soul_updated'],
+        })
+      : ''
+    const basePrompt = getCourseOrchestratorPrompt()
+    const systemPrompt = sharedCtx ? `${basePrompt}\n\n${sharedCtx}` : basePrompt
 
     // Mutable containers for tool state
     const researchReport: { value: string | null } = { value: null }
@@ -277,16 +288,15 @@ export class CourseOrchestrator {
       },
     }
 
-    const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
-    const geminiFlash = new ChatGoogleGenerativeAI({
-      model: 'gemini-3-flash-preview',
-      apiKey: this.config.geminiApiKey,
+    const courseFlashModel = selectModel('course')
+    const geminiFlash = await createLangChainModel(courseFlashModel, {
       temperature: 0.7,
+      callbacks: [new TokenTrackingCallback({ model: courseFlashModel.id, taskType: 'course' })],
     })
-    const geminiPro = new ChatGoogleGenerativeAI({
-      model: 'gemini-3-pro-preview',
-      apiKey: this.config.geminiApiKey,
+    const slidesProModel = selectModel('slides')
+    const geminiPro = await createLangChainModel(slidesProModel, {
       temperature: 0.7,
+      callbacks: [new TokenTrackingCallback({ model: slidesProModel.id, taskType: 'slides' })],
     })
 
     const orchestratorTools = createOrchestratorTools(toolContext)
@@ -315,7 +325,7 @@ export class CourseOrchestrator {
         {
           name: 'slides-writer',
           description:
-            'Generates all slide decks in a single batch call using higher-quality gemini-3-pro-preview. Delegate to this subagent after quiz-writer completes.',
+            'Generates all slide decks in a single batch call using higher-quality model. Delegate to this subagent after quiz-writer completes.',
           systemPrompt: SLIDES_WRITER_SUBAGENT_PROMPT,
           tools: createSlidesWriterTools(toolContext) as any,
           model: geminiPro,
@@ -446,6 +456,16 @@ Please proceed through the full pipeline: research → index → outline → app
               }
             }
           }
+        }
+
+        // Write shared context entry for completed course
+        if (this.config.sharedContextService) {
+          await this.config.sharedContextService.write({
+            agent: 'course',
+            type: 'course_saved',
+            summary: `Course generated: ${input.topic}`,
+            payload: { courseId: input.courseId, topic: input.topic },
+          })
         }
 
         eventQueue.push({ event: 'done' })

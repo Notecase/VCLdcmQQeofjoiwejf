@@ -7,6 +7,7 @@
 
 import { useAIStore, type DiffHunk, type ThinkingStep } from '@/stores/ai'
 import { useAuthStore } from '@/stores/auth'
+import { useCreditsStore } from '@/stores/credits'
 import { authFetch, authFetchSSE } from '@/utils/api'
 import { buildEmptyAssistantFallback } from './ai.fallback'
 import { isDemoMode } from '@/utils/demo'
@@ -63,6 +64,7 @@ export interface StreamChunk {
     | 'clarification-requested'
     | 'artifact'
     | 'code-preview'
+    | 'pre-action-question'
     | 'finish'
     | 'error'
     // DeepAgent events for compound request handling
@@ -71,6 +73,12 @@ export interface StreamChunk {
     | 'subtask-progress'
     | 'subtask-complete'
     | 'note-navigate'
+    // Multi-mode streaming events (subagent lifecycle + custom progress)
+    | 'subagent-start'
+    | 'subagent-delta'
+    | 'subagent-complete'
+    | 'custom-progress'
+    | 'synthesis-start'
   data: unknown
 }
 
@@ -494,6 +502,11 @@ async function streamFromAgent(agentType: string, options: AgentRequestOptions):
   })
 
   if (!response.ok) {
+    if (response.status === 402) {
+      const creditsStore = useCreditsStore()
+      creditsStore.markExhausted()
+      throw new Error('CREDITS_EXHAUSTED')
+    }
     throw new Error(`API error: ${response.status}`)
   }
 
@@ -725,6 +738,24 @@ async function processSSEResponse(
                 break
               }
 
+              case 'pre-action-question': {
+                // Handle proactive AI question before creating notes or major edits
+                const questionData = chunk.data as {
+                  id: string
+                  question: string
+                  options: Array<{ id: string; label: string; description?: string }>
+                  allowFreeText?: boolean
+                  context?: string
+                }
+                store.setPreActionQuestion(questionData)
+                // Complete any running thinking steps
+                const runningSteps2 = store.thinkingSteps.filter(
+                  (step) => step.status === 'running'
+                )
+                runningSteps2.forEach((step) => store.completeThinkingStep(step.id))
+                break
+              }
+
               case 'artifact': {
                 // Handle artifact creation - add to pending artifacts for insertion into editor
                 const artifactData = chunk.data as ArtifactData
@@ -833,6 +864,93 @@ async function processSSEResponse(
                 }
 
                 store.setStatus('streaming')
+                break
+              }
+
+              // ===== Multi-Mode Streaming Events =====
+
+              case 'subagent-start': {
+                const subagentData = chunk.data as {
+                  id: string
+                  name: string
+                  description: string
+                  status: string
+                  startedAt?: number
+                }
+                store.startSubagentTracker(subagentData)
+
+                // Add as thinking step
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+                store.addThinkingStep({
+                  type: 'create',
+                  description: `Subagent: ${subagentData.name}`,
+                  status: 'running',
+                  messageId,
+                })
+                break
+              }
+
+              case 'subagent-delta': {
+                const deltaData = chunk.data as { id: string; text: string }
+                store.appendSubagentText(deltaData.id, deltaData.text)
+                break
+              }
+
+              case 'subagent-complete': {
+                const completeData = chunk.data as {
+                  id: string
+                  name: string
+                  status: string
+                  elapsedMs?: number
+                  result?: string
+                }
+                store.completeSubagentTracker(completeData.id, completeData.result)
+
+                // Complete the matching thinking step
+                const runningSteps = store.thinkingSteps.filter(
+                  (step) =>
+                    step.status === 'running' &&
+                    step.description.includes(completeData.name || completeData.id)
+                )
+                const lastRunning = runningSteps[runningSteps.length - 1]
+                if (lastRunning) {
+                  store.completeThinkingStep(lastRunning.id)
+                }
+                break
+              }
+
+              case 'custom-progress': {
+                // Render as a thinking step
+                const progressData = chunk.data as { step?: string; [key: string]: unknown }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+                // Complete previous non-tool running steps
+                const runningThoughts = store.thinkingSteps.filter(
+                  (step) => step.status === 'running' && step.type !== 'tool'
+                )
+                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+                if (lastRunningThought) {
+                  store.completeThinkingStep(lastRunningThought.id)
+                }
+
+                store.addThinkingStep({
+                  type: 'thought',
+                  description: progressData.step || 'Processing...',
+                  status: 'running',
+                  messageId,
+                })
+                break
+              }
+
+              case 'synthesis-start': {
+                store.setSynthesizing(true)
                 break
               }
 

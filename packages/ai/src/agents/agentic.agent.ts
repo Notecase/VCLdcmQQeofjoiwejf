@@ -7,7 +7,10 @@
  * Ported from Note3's agenticAI.ts
  */
 
-import { createOpenAIProvider } from '../providers/openai'
+import OpenAI from 'openai'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIResponse } from '../providers/token-tracker'
 
 // Simple UUID generator (avoids external dependency)
 function generateId(): string {
@@ -81,27 +84,27 @@ Return ONLY a JSON array of steps:
 // ============================================================================
 
 export class AgenticAgent {
-  private apiKey: string
+  private _apiKey: string // Kept for backward compat; client-factory uses env vars
+  private client: OpenAI
+  private model: string
   private tasks: Map<string, AgenticTask> = new Map()
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey
+    this._apiKey = apiKey
+    const modelEntry = selectModel('chat')
+    this.model = modelEntry.id
+    this.client = createOpenAIClient(modelEntry)
   }
 
   /**
    * Plan a task without executing (for preview)
    */
   async planTask(task: string): Promise<AgentStep[]> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const prompt = `${PLANNING_PROMPT}
 
 User request: ${task}`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     // Parse response
     const jsonMatch = response.match(/\[[\s\S]*\]/)
@@ -354,8 +357,6 @@ User request: ${task}`
    * Verify data accuracy
    */
   async verifyData(data: Record<string, unknown>[]): Promise<ValidationResult> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const prompt = `Verify the accuracy and quality of this data:
 
 ${JSON.stringify(data, null, 2)}
@@ -375,10 +376,7 @@ Return a JSON object:
   "score": 0-100
 }`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
@@ -397,8 +395,6 @@ Return a JSON object:
   // =========================================================================
 
   private async executeResearch(query: string, purpose: string): Promise<ResearchResult> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const prompt = `Research the following topic and provide a comprehensive summary:
 
 Query: ${query}
@@ -419,10 +415,7 @@ Return a JSON object:
   "data": [{ "key": "value" }]  // Optional structured data
 }`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
@@ -438,8 +431,6 @@ Return a JSON object:
     count: number,
     stepResults: Map<string, unknown>
   ): Promise<{ data: Record<string, unknown>[] }> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     // Get research context if available
     let researchContext = ''
     for (const [_key, value] of stepResults) {
@@ -466,10 +457,7 @@ Extract ${count} records and return ONLY a JSON array:
   { ${schema.columns.map((c) => `"${c.name}": ...`).join(', ')} }
 ]`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     const jsonMatch = response.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
@@ -504,8 +492,6 @@ Extract ${count} records and return ONLY a JSON array:
     contentPrompt: string,
     _noteId?: string
   ): Promise<{ blockId: string; title: string; type: string }> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const prompt = `Create an HTML artifact:
 
 Title: ${title}
@@ -515,10 +501,7 @@ Requirements: ${contentPrompt}
 Return ONLY the HTML code, no explanation.`
 
     // Generate HTML content (stored for future use when actual artifact creation is implemented)
-    let _html = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      _html += chunk
-    }
+    await this.chatCompletion(prompt)
 
     const blockId = generateId()
     return { blockId, title, type: artifactType }
@@ -530,8 +513,6 @@ Return ONLY the HTML code, no explanation.`
     prompt: string,
     stepResults: Map<string, unknown>
   ): Promise<{ blockId: string; content: string }> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     // Build context from previous steps
     let context = ''
     for (const [_key, value] of stepResults) {
@@ -554,10 +535,7 @@ Instructions: ${prompt}
 
 Generate clear, well-structured content.`
 
-    let content = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: fullPrompt }])) {
-      content += chunk
-    }
+    const content = await this.chatCompletion(fullPrompt)
 
     return { blockId, content }
   }
@@ -578,12 +556,7 @@ Generate clear, well-structured content.`
         }
       }
     } else if (dataSource.type === 'AIGenerated' && dataSource.prompt) {
-      const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
-      let response = ''
-      for await (const chunk of provider.chat([{ role: 'user', content: dataSource.prompt }])) {
-        response += chunk
-      }
+      const response = await this.chatCompletion(dataSource.prompt)
 
       const jsonMatch = response.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
@@ -599,8 +572,6 @@ Generate clear, well-structured content.`
     criteria: string[],
     stepResults: Map<string, unknown>
   ): Promise<ValidationResult> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     // Get target data
     const targetData = stepResults.get(target)
 
@@ -618,10 +589,7 @@ Return a JSON object:
   "score": 0-100
 }`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
@@ -636,8 +604,6 @@ Return a JSON object:
     improve: boolean,
     stepResults: Map<string, unknown>
   ): Promise<{ reflection: string; improvements?: string[] }> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const targetData = stepResults.get(on)
 
     const prompt = `Reflect on the following work:
@@ -652,10 +618,7 @@ Return a JSON object:
   ${improve ? '"improvements": ["..."]' : ''}
 }`
 
-    let response = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      response += chunk
-    }
+    const response = await this.chatCompletion(prompt)
 
     const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
@@ -668,6 +631,21 @@ Return a JSON object:
   // =========================================================================
   // Helper Methods
   // =========================================================================
+
+  /**
+   * Send a chat completion request via the centralized client.
+   */
+  private async chatCompletion(prompt: string): Promise<string> {
+    const startTime = Date.now()
+    const result = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_completion_tokens: 4000,
+    })
+    trackOpenAIResponse(result, { model: this.model, taskType: 'chat', startTime })
+    return result.choices[0]?.message?.content || ''
+  }
 
   private getStepTitle(stepType: AgentStepType): string {
     switch (stepType.type) {

@@ -16,6 +16,8 @@ import explain from './explain'
 import context from './context'
 import missions from './missions'
 import settings from './settings'
+import inbox from './inbox'
+import integrations from './integrations'
 import cliAuth from './cli-auth'
 import { config } from '../config'
 
@@ -39,6 +41,8 @@ import { config } from '../config'
  * - /api/context/*             - Shared context bus (soul + entries) (auth required)
  * - /api/settings/*            - BYOK keys, AI preferences, heartbeat config (auth required)
  * - /api/missions/*            - Mission Hub orchestration (auth required)
+ * - /api/inbox/*                 - Quick capture inbox (capture uses token auth, rest JWT)
+ * - /api/integrations/*          - External integrations (Google Calendar, Notion)
  * - /api/cli/auth/*              - CLI device auth flow (start/poll public, approve/deny auth required)
  */
 
@@ -63,6 +67,10 @@ routes.route('/api/course', course)
 routes.route('/api/explain', explain)
 routes.route('/api/context', context)
 routes.route('/api/settings', settings)
+// Quick capture inbox (token-auth capture + JWT-auth management)
+routes.route('/api/inbox', inbox)
+// External integrations (Google Calendar, Notion, etc.)
+routes.route('/api/integrations', integrations)
 // CLI device auth (public start/poll + auth-gated approve/deny)
 routes.route('/api/cli/auth', cliAuth)
 if (config.flags.missionHubV1) {

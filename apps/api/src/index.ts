@@ -8,6 +8,7 @@ import { secureHeaders } from 'hono/secure-headers'
 import { config, validateConfig, getAvailableProviders } from './config'
 import { errorHandler, notFoundHandler } from './middleware/error'
 import routes from './routes'
+import { getServiceClient } from './lib/supabase'
 
 // Create Hono app
 const app = new Hono()
@@ -76,7 +77,7 @@ app.notFound(notFoundHandler)
 // Server Startup
 // =============================================================================
 
-function startServer() {
+async function startServer() {
   // Validate configuration
   const validation = validateConfig()
 
@@ -104,6 +105,14 @@ function startServer() {
   console.log(`   Environment: ${config.nodeEnv}`)
   console.log(`   CORS Origin: ${config.cors.origin}`)
   console.log(`   Supabase: ${config.supabase.url ? '✅ Configured' : '❌ Not configured'}`)
+
+  // Initialize usage persister (TokenTracker → DB writes + credit deduction)
+  try {
+    const { initUsagePersister } = await import('@inkdown/ai')
+    initUsagePersister(getServiceClient())
+  } catch (err) {
+    console.warn('⚠️  Usage persister init failed:', err)
+  }
 
   console.log('\n' + '='.repeat(60))
 

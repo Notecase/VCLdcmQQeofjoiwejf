@@ -50,7 +50,6 @@ const showComposerTop = computed(() =>
     deepAgent.pendingInterrupt || deepAgent.pendingOutputClarification || showInlinePanel.value
   )
 )
-
 // CSS variable for sidebar width (matches EditorView)
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,

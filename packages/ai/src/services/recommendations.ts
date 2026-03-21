@@ -7,7 +7,9 @@
  * Ported from Note3's recommendationService.ts
  */
 
-import { createOpenAIProvider } from '../providers/openai'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIResponse } from '../providers/token-tracker'
 import { createGeminiProvider } from '../providers/gemini'
 import type {
   MindmapData,
@@ -255,15 +257,22 @@ function parseAIResponse<T>(response: string, fallback: T): T {
 // Chat Helper
 // ============================================================================
 
-async function chatWithAI(prompt: string, apiKey: string): Promise<string> {
+async function chatWithAI(prompt: string, _apiKey?: string): Promise<string> {
   try {
     console.log('[RecommendationService] chatWithAI - prompt length:', prompt.length)
-    const provider = createOpenAIProvider({ apiKey })
-    let result = ''
+    const model = selectModel('chat')
+    const client = createOpenAIClient(model)
 
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      result += chunk
-    }
+    const startTime = Date.now()
+    const response = await client.chat.completions.create({
+      model: model.id,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_completion_tokens: 4000,
+    })
+    trackOpenAIResponse(response, { model: model.id, taskType: 'chat', startTime })
+
+    const result = response.choices[0]?.message?.content || ''
 
     console.log('[RecommendationService] chatWithAI - response length:', result.length)
     console.log('[RecommendationService] chatWithAI - response preview:', result.substring(0, 300))
@@ -627,7 +636,7 @@ Generate exactly 6-10 resources now:`
 
 /**
  * Generate educational slides from note content using Gemini
- * Uses two-stage generation: outline (gemini-3-pro-preview) + images (gemini-3-pro-image-preview)
+ * Uses two-stage generation: outline + images via Gemini native SDK
  */
 export async function generateSlides(
   noteId: string,
@@ -649,7 +658,7 @@ export async function generateSlides(
     const geminiProvider = createGeminiProvider({ apiKey: geminiApiKey })
 
     // Call the FULL generateSlideImages() which does:
-    // 1. Generate outline (Stage 1 - gemini-3-pro-preview)
+    // 1. Generate outline (Stage 1)
     // 2. Generate actual images via Gemini Image API (Stage 2 - gemini-3-pro-image-preview)
     const generatedSlides = await geminiProvider.generateSlideImages(
       noteContent,

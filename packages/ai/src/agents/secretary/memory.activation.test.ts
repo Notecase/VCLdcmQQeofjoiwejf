@@ -36,6 +36,8 @@ class FakeMemoryService {
       activationSuggestion: defaultSuggestion,
       recurringBlocks: '',
       carryoverTasks: '',
+      inboxContent: '',
+      calendarContent: '',
       ...context,
     }
   }

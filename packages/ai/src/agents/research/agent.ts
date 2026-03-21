@@ -37,10 +37,16 @@ import {
   ensureHeading,
   extractDraftTitle,
 } from './note-draft-artifacts'
+import { selectModel } from '../../providers/model-registry'
+import { createOpenAIClient, createLangChainModel } from '../../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../../providers/token-tracker'
+import { TokenTrackingCallback } from '../../providers/langchain-token-callback'
 
 // =============================================================================
 // Types
 // =============================================================================
+
+import type { SharedContextService } from '../../services/shared-context.service'
 
 export interface ResearchAgentConfig {
   supabase: SupabaseClient
@@ -53,6 +59,7 @@ export interface ResearchAgentConfig {
   ollamaBaseUrl?: string
   ollamaApiKey?: string
   tavilyApiKey?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface ResearchThreadState {
@@ -83,23 +90,8 @@ export class ResearchAgent {
     }
   }
 
-  private get defaultModel(): string {
-    return this.config.model ?? process.env.RESEARCH_MODEL ?? 'gpt-4o-mini'
-  }
-
-  private get noteDraftModel(): string {
-    return this.config.noteDraftModel ?? process.env.RESEARCH_NOTE_DRAFT_MODEL ?? 'gpt-5.2'
-  }
-
-  private get artifactModel(): string {
-    return this.config.artifactModel ?? process.env.RESEARCH_ARTIFACT_MODEL ?? 'kimi-k2.5'
-  }
-
-  private get artifactFallbackModel(): string {
-    return (
-      this.config.artifactFallbackModel ?? process.env.RESEARCH_ARTIFACT_FALLBACK_MODEL ?? 'gpt-5.2'
-    )
-  }
+  // Model selection is now handled by the centralized model registry.
+  // Use selectModel('research') for research tasks, selectModel('artifact') for artifacts.
 
   /**
    * Stream a research interaction via the deepagents framework
@@ -162,11 +154,11 @@ export class ResearchAgent {
   }
 
   private async *streamSimpleChat(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const model = selectModel('research')
+    const client = createOpenAIClient(model)
 
-    const stream = await client.chat.completions.create({
-      model: this.defaultModel,
+    const rawStream = await client.chat.completions.create({
+      model: model.id,
       messages: [
         {
           role: 'system',
@@ -177,9 +169,10 @@ export class ResearchAgent {
       temperature: 0.5,
       max_completion_tokens: 4000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, { model: model.id, taskType: 'research' })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {
         yield { event: 'text', data: delta, isDelta: true }
@@ -194,7 +187,7 @@ export class ResearchAgent {
       supabase: this.config.supabase,
       userId: this.config.userId,
       openaiApiKey: this.config.openaiApiKey,
-      model: this.defaultModel,
+      model: selectModel('research').id,
     })
 
     let createdNoteId: string | undefined
@@ -227,8 +220,8 @@ export class ResearchAgent {
     message: string,
     threadId: string
   ): AsyncGenerator<ResearchStreamEvent> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const model = selectModel('research')
+    const client = createOpenAIClient(model)
 
     const existingDraft = this.state.noteDraft
     const originalContent = existingDraft?.currentContent || ''
@@ -244,8 +237,8 @@ export class ResearchAgent {
         ].join('\n\n')
       : message
 
-    const stream = await client.chat.completions.create({
-      model: this.noteDraftModel,
+    const rawStream = await client.chat.completions.create({
+      model: model.id,
       messages: [
         {
           role: 'system',
@@ -264,6 +257,7 @@ export class ResearchAgent {
       temperature: 0.5,
       max_completion_tokens: 4000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let generated = ''
@@ -271,7 +265,7 @@ export class ResearchAgent {
     let lastSnapshotAt = 0
     const snapshotIntervalMs = 1500
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, { model: model.id, taskType: 'research' })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (!delta) continue
       generated += delta
@@ -310,7 +304,7 @@ export class ResearchAgent {
       try {
         yield {
           event: 'thinking',
-          data: `Generating artifact with Ollama ${this.artifactModel}...`,
+          data: `Generating artifact with ${selectModel('artifact').displayName}...`,
         }
         const payload = await this.generateStudyTimerArtifactWithOllama(artifactPrompt)
         finalizedContent = appendArtifactToDraft(
@@ -322,7 +316,7 @@ export class ResearchAgent {
       } catch (ollamaError) {
         yield {
           event: 'thinking',
-          data: `Ollama artifact generation failed. Falling back to ${this.artifactFallbackModel}...`,
+          data: `Artifact generation failed. Falling back to ${selectModel('research').displayName}...`,
         }
 
         try {
@@ -340,7 +334,7 @@ export class ResearchAgent {
             fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
           yield {
             event: 'error',
-            data: `Artifact generation failed (Ollama + ${this.artifactFallbackModel}): ${ollamaMessage}; ${fallbackMessage}`,
+            data: `Artifact generation failed (${selectModel('artifact').displayName} + ${selectModel('research').displayName}): ${ollamaMessage}; ${fallbackMessage}`,
           }
         }
       }
@@ -402,16 +396,45 @@ export class ResearchAgent {
   }
 
   private async generateStudyTimerArtifactWithOllama(prompt: string) {
-    const { getOllamaCloud } = await import('../../providers/factory')
-    const provider = getOllamaCloud({
-      baseURL: this.config.ollamaBaseUrl || process.env.OLLAMA_CLOUD_URL || 'https://ollama.com',
-      apiKey: this.config.ollamaApiKey || process.env.OLLAMA_API_KEY,
-      model: this.artifactModel,
+    const artifactModelEntry = selectModel('artifact')
+    const artifactClient = createOpenAIClient(artifactModelEntry)
+
+    const systemPrompt = `You are an interactive artifact generator. Create engaging, self-contained web components.
+
+IMPORTANT: Your response MUST be valid JSON with this exact structure:
+{
+  "title": "Short descriptive title for the artifact",
+  "html": "HTML content (without doctype, html, head, body tags - just the inner content)",
+  "css": "CSS styles (will be placed in a style tag)",
+  "javascript": "JavaScript code (React and ReactDOM are available, use JSX syntax)"
+}
+
+Guidelines:
+- Use Tailwind CSS classes for styling (available via CDN)
+- React 18 and ReactDOM are available globally
+- Use Babel for JSX transformation (available)
+- Keep code clean, well-organized, and self-contained
+- The artifact should be interactive and visually appealing
+- Handle errors gracefully in JavaScript
+
+Create a complete, polished component with rich HTML structure, beautiful CSS styling, and interactive JavaScript.`
+
+    const rawStream = await artifactClient.chat.completions.create({
+      model: artifactModelEntry.id,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_completion_tokens: 20000,
+      stream: true,
+      stream_options: { include_usage: true },
     })
 
     let raw = ''
-    for await (const chunk of provider.generateArtifact(prompt, 'full')) {
-      raw += chunk
+    for await (const chunk of trackOpenAIStream(rawStream, { model: artifactModelEntry.id, taskType: 'artifact' })) {
+      const delta = chunk.choices?.[0]?.delta?.content
+      if (delta) raw += delta
     }
 
     const parsed = parseArtifactPayload(raw, 'Study Timer')
@@ -422,10 +445,11 @@ export class ResearchAgent {
   }
 
   private async generateStudyTimerArtifactWithOpenAI(prompt: string) {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const fallbackModel = selectModel('research')
+    const client = createOpenAIClient(fallbackModel)
+    const startTime = Date.now()
     const completion = await client.chat.completions.create({
-      model: this.artifactFallbackModel,
+      model: fallbackModel.id,
       messages: [
         {
           role: 'system',
@@ -441,6 +465,7 @@ export class ResearchAgent {
       max_completion_tokens: 6000,
       stream: false,
     })
+    trackOpenAIResponse(completion, { model: fallbackModel.id, taskType: 'artifact', startTime })
 
     const raw = completion.choices?.[0]?.message?.content ?? ''
     const parsed = parseArtifactPayload(raw, 'Study Timer')
@@ -464,11 +489,12 @@ export class ResearchAgent {
   }
 
   private async *streamMarkdownFile(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const model = selectModel('research')
+    const client = createOpenAIClient(model)
 
+    const startTime = Date.now()
     const completion = await client.chat.completions.create({
-      model: this.defaultModel,
+      model: model.id,
       messages: [
         {
           role: 'system',
@@ -484,6 +510,7 @@ export class ResearchAgent {
       max_completion_tokens: 3000,
       stream: false,
     })
+    trackOpenAIResponse(completion, { model: model.id, taskType: 'research', startTime })
 
     const raw = completion.choices?.[0]?.message?.content ?? ''
     const markdown = raw.trim() || '# Final Report\n\nUnable to generate report content.'
@@ -507,16 +534,20 @@ export class ResearchAgent {
     outputPreference?: ResearchOutputPreference
   ): AsyncGenerator<ResearchStreamEvent> {
     const { createDeepAgent } = await import('deepagents')
-    const { ChatOpenAI } = await import('@langchain/openai')
-
-    const llm = new ChatOpenAI({
-      openAIApiKey: this.config.openaiApiKey,
-      modelName: this.defaultModel,
+    const researchModel = selectModel('research')
+    const llm = await createLangChainModel(researchModel, {
       temperature: 0.3,
+      callbacks: [new TokenTrackingCallback({ model: researchModel.id, taskType: 'research' })],
     })
 
     const allowFileWrites = shouldEnableResearchFiles(message, outputPreference)
-    const systemPrompt = getResearchSystemPrompt({ allowFileWrites })
+    const sharedCtx = this.config.sharedContextService
+      ? await this.config.sharedContextService.read({
+          relevantTypes: ['active_plan', 'soul_updated'],
+        })
+      : ''
+    const basePrompt = getResearchSystemPrompt({ allowFileWrites })
+    const systemPrompt = sharedCtx ? `${basePrompt}\n\n${sharedCtx}` : basePrompt
 
     // Create tool context that lets tools emit events back to the stream
     const toolContext: ResearchToolContext = {
@@ -564,6 +595,8 @@ export class ResearchAgent {
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Use default stream mode (no streamMode/subgraphs options) for maximum compatibility.
+    // deepagents wraps LangGraph and the tuple format varies by version.
     const streamResult = (await (agent as any).stream(
       { messages: [{ role: 'user', content: message }] },
       { configurable: { thread_id: threadId } }
@@ -654,6 +687,16 @@ export class ResearchAgent {
     }
 
     yield normalizer.done()
+
+    // Write shared context entry for completed research
+    if (this.config.sharedContextService) {
+      await this.config.sharedContextService.write({
+        agent: 'research',
+        type: 'research_done',
+        summary: `Researched: ${message.slice(0, 80)}`,
+        payload: { threadId, message: message.slice(0, 200) },
+      })
+    }
   }
 
   /**

@@ -153,7 +153,7 @@ OpenClaw uses a JSON5 configuration file (\`~/.openclaw/openclaw.json\`) in the 
   providers: {
     openai: {
       apiKey: "\${OPENAI_API_KEY}",
-      models: ["openai/gpt-5.2"],
+      models: ["google/gemini-3.1-pro-preview"],
     },
     anthropic: {
       apiKey: "\${ANTHROPIC_API_KEY}",
@@ -620,10 +620,10 @@ OpenClaw supports multiple AI providers out of the box. Each provider is configu
 
 | Provider | Models | Streaming | Function Calling |
 |----------|--------|-----------|------------------|
-| OpenAI | GPT-5.2 (\`openai/gpt-5.2\`) | Yes | Yes |
+| Google | Gemini 3.1 Pro (\`google/gemini-3.1-pro-preview\`) | Yes | Yes |
 | Anthropic | Claude Opus 4.5 (\`anthropic/claude-opus-4-5\`), Sonnet 4.5 (\`anthropic/claude-sonnet-4-5\`), Haiku 4.5 (\`anthropic/claude-haiku-4-5\`) | Yes | Yes |
 | Ollama | Any local model | Yes | Partial |
-| Azure OpenAI | GPT-5.2 (via Azure) | Yes | Yes |
+| Azure OpenAI | Gemini 3.1 Pro (via Azure) | Yes | Yes |
 
 ## Configuration
 
@@ -635,7 +635,7 @@ Add providers to your \`~/.openclaw/openclaw.json\`:
     openai: {
       apiKey: "\${OPENAI_API_KEY}",
       organization: "\${OPENAI_ORG_ID}",  // Optional
-      models: ["openai/gpt-5.2"],
+      models: ["google/gemini-3.1-pro-preview"],
       defaults: {
         temperature: 0.7,
         maxTokens: 2048,
@@ -669,7 +669,7 @@ OpenClaw periodically checks provider availability. If a provider goes down, req
   routes: [
     {
       name: "resilient",
-      model: "openai/gpt-5.2",
+      model: "google/gemini-3.1-pro-preview",
       fallback: "anthropic/claude-sonnet-4-5",
     },
   ],
@@ -734,7 +734,7 @@ Each route has these components:
 | Header match | \`header: "x-tier=premium"\` | Tier-based routing |
 | Path match | \`path: "/v1/code/*"\` | Endpoint-based routing |
 | Content match | \`contains: "translate"\` | Intent-based routing |
-| Model match | \`model: "openai/gpt-5.2"\` | Model preference routing |
+| Model match | \`model: "google/gemini-3.1-pro-preview"\` | Model preference routing |
 | Random | \`weight: 0.3\` | A/B testing, load distribution |
 | Time-based | \`schedule: "9-17 EST"\` | Cost optimization |
 

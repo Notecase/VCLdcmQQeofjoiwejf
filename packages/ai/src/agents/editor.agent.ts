@@ -34,6 +34,9 @@ import {
   type ParsedNote,
 } from '../utils'
 import { buildInsertionPrompt } from './note.agent'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../providers/token-tracker'
 
 // ============================================================================
 // Types
@@ -44,6 +47,7 @@ export interface EditorAgentConfig {
   userId: string
   openaiApiKey: string
   model?: string
+  planInstructions?: string
 }
 
 /**
@@ -205,17 +209,21 @@ export class EditorAgent {
   private userId: string
   private openaiApiKey: string
   private model: string
+  private planInstructions?: string
   private state: EditorAgentState
+  private llmClient: import('openai').default
 
   constructor(config: EditorAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('editor').id
+    this.planInstructions = config.planInstructions
     this.state = {
       messages: [],
       toolHistory: [],
     }
+    this.llmClient = createOpenAIClient(selectModel('editor'))
   }
 
   /**
@@ -407,9 +415,6 @@ export class EditorAgent {
   }
 
   private async classifyIntent(message: string): Promise<IntentClassification> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     let contextInfo = ''
 
     // Fetch note content if currentNoteId is provided
@@ -433,7 +438,8 @@ export class EditorAgent {
       contextInfo += `\nRecent conversation:\n${historySnippet}`
     }
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.llmClient.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: INTENT_CLASSIFICATION_PROMPT },
@@ -442,6 +448,8 @@ export class EditorAgent {
       temperature: 0.3,
       max_completion_tokens: 500,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'editor', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 
@@ -823,9 +831,6 @@ export class EditorAgent {
   }
 
   private async handleChat(message: string): Promise<EditorAgentResponse> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     // Build system prompt with note context if available
     let systemPrompt = `You are a helpful AI assistant for note-taking and learning.
 
@@ -838,6 +843,10 @@ $$
 
 IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $$ delimiters.`
 
+    if (this.planInstructions) {
+      systemPrompt += `\n\nFollow these plan-specific instructions:\n${this.planInstructions}`
+    }
+
     if (this.state.context?.currentNoteId) {
       const noteContext = await this.fetchNoteContent(this.state.context.currentNoteId)
       if (noteContext) {
@@ -845,7 +854,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       }
     }
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.llmClient.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -861,6 +871,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       max_completion_tokens: 2000,
     })
 
+    trackOpenAIResponse(response, { model: this.model, taskType: 'chat', startTime })
+
     return {
       intent: this.state.lastIntent!,
       response:
@@ -872,9 +884,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     type: 'text-delta' | 'thinking'
     data: string
   }> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     // Build system prompt with note context if available
     let systemPrompt = `You are a helpful AI assistant for note-taking and learning.
 
@@ -895,7 +904,7 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       }
     }
 
-    const stream = await client.chat.completions.create({
+    const rawStream = await this.llmClient.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -910,9 +919,12 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       temperature: 0.7,
       max_completion_tokens: 2000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'chat',
+    })) {
       const delta = this.extractStreamDelta(chunk)
 
       if (delta) {
@@ -1351,9 +1363,6 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
     // 3. Generate ONLY the new content using the insertion prompt
     yield { type: 'thinking', data: 'Generating new content...' }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     // Build the system prompt for insertion
     const systemPrompt = buildInsertionPrompt(
       instruction,
@@ -1361,7 +1370,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       position === 'end' ? 'end of document' : 'beginning of document'
     )
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.llmClient.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -1370,6 +1380,8 @@ IMPORTANT: Do NOT use \\[...\\] or [...] brackets for display math. Always use $
       temperature: 0.7,
       max_completion_tokens: 2000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'editor', startTime })
 
     const newContent = response.choices[0]?.message?.content || ''
 
@@ -2034,9 +2046,6 @@ ${artifact.javascript || ''}
   ): Promise<Stream<ChatCompletionChunk>>
   private async createArtifactCompletion(message: string, stream?: false): Promise<ChatCompletion>
   private async createArtifactCompletion(message: string, stream = false) {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: this.buildArtifactSystemPrompt() },
       { role: 'user', content: message },
@@ -2051,32 +2060,39 @@ ${artifact.javascript || ''}
 
     if (stream) {
       try {
-        return await client.chat.completions.create({
+        return await this.llmClient.chat.completions.create({
           ...basePayload,
           stream: true,
+          stream_options: { include_usage: true },
           response_format: { type: 'json_object' },
         })
       } catch (err) {
         console.warn('[artifact] JSON response_format not supported, retrying without it:', err)
-        return await client.chat.completions.create({
+        return await this.llmClient.chat.completions.create({
           ...basePayload,
           stream: true,
+          stream_options: { include_usage: true },
         })
       }
     }
 
+    const startTime = Date.now()
     try {
-      return await client.chat.completions.create({
+      const response = await this.llmClient.chat.completions.create({
         ...basePayload,
         stream: false,
         response_format: { type: 'json_object' },
       })
+      trackOpenAIResponse(response, { model: this.model, taskType: 'artifact', startTime })
+      return response
     } catch (err) {
       console.warn('[artifact] JSON response_format not supported, retrying without it:', err)
-      return await client.chat.completions.create({
+      const response = await this.llmClient.chat.completions.create({
         ...basePayload,
         stream: false,
       })
+      trackOpenAIResponse(response, { model: this.model, taskType: 'artifact', startTime })
+      return response
     }
   }
 
@@ -2115,9 +2131,6 @@ ${artifact.javascript || ''}
   private async generateTableData(
     message: string
   ): Promise<{ title: string; headers: string[]; rows: string[][] }> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     const TABLE_GENERATION_PROMPT = `You are a data structuring specialist. Generate accurate, well-researched table data based on the user's request.
 
 Output ONLY valid JSON in this exact format:
@@ -2137,7 +2150,8 @@ Rules:
 - Sort data appropriately (e.g., fastest first, largest first)
 - No markdown, no explanations, ONLY the JSON object`
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.llmClient.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: TABLE_GENERATION_PROMPT },
@@ -2146,6 +2160,7 @@ Rules:
       temperature: 0.3,
       max_completion_tokens: 2000,
     })
+    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 

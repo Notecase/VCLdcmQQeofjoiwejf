@@ -1,6 +1,8 @@
 /*
  * ------------------------------------
  * Prism.js light theme
+ * Scoped under .mu-code-block for higher specificity than prismjs/themes/prism.css
+ * (which Vite auto-imports via the package's "style" field)
  */
 
 /* Inline Code */
@@ -16,93 +18,95 @@ pre.mu-code-block code,
 pre.mu-code-block {
   white-space: pre;
 
-  /* font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; */
+  color: inherit;
   text-align: left;
   word-wrap: normal;
   word-break: normal;
   word-spacing: normal;
   tab-size: 4;
   hyphens: none;
+  caret-color: var(--text-color, currentColor);
+  text-shadow: none;
+  background: none;
 }
 
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
+.mu-code-block .token.comment,
+.mu-code-block .token.prolog,
+.mu-code-block .token.doctype,
+.mu-code-block .token.cdata {
   color: slategray;
 }
 
-.token.punctuation {
+.mu-code-block .token.punctuation {
   color: #999;
 }
 
-.namespace {
+.mu-code-block .namespace {
   opacity: 0.7;
 }
 
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol {
+.mu-code-block .token.property,
+.mu-code-block .token.tag,
+.mu-code-block .token.boolean,
+.mu-code-block .token.number,
+.mu-code-block .token.constant,
+.mu-code-block .token.symbol {
   color: #905;
 }
 
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin {
+.mu-code-block .token.selector,
+.mu-code-block .token.attr-name,
+.mu-code-block .token.string,
+.mu-code-block .token.char,
+.mu-code-block .token.builtin {
   color: #690;
 }
 
-.token.inserted {
+.mu-code-block .token.inserted {
   color: #22863a;
-
   background: #f0fff4;
 }
 
-.token.deleted {
+.mu-code-block .token.deleted {
   color: #b31d28;
-
   background: #ffeef0;
 }
 
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
+.mu-code-block .token.operator,
+.mu-code-block .token.entity,
+.mu-code-block .token.url,
+.mu-code-block .language-css .token.string,
+.mu-code-block .style .token.string {
   color: #9a6e3a;
+  background: none;
 }
 
-.token.atrule,
-.token.attr-value,
-.token.keyword {
+.mu-code-block .token.atrule,
+.mu-code-block .token.attr-value,
+.mu-code-block .token.keyword {
   color: #07a;
 }
 
-.token.function,
-.token.class-name {
+.mu-code-block .token.function,
+.mu-code-block .token.class-name {
   color: #dd4a68;
 }
 
-.token.regex,
-.token.important,
-.token.variable {
+.mu-code-block .token.regex,
+.mu-code-block .token.important,
+.mu-code-block .token.variable {
   color: #e90;
 }
 
-.token.important,
-.token.bold {
+.mu-code-block .token.important,
+.mu-code-block .token.bold {
   font-weight: bold;
 }
 
-.token.italic {
+.mu-code-block .token.italic {
   font-style: italic;
 }
 
-.token.entity {
+.mu-code-block .token.entity {
   cursor: help;
 }

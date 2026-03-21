@@ -16,8 +16,10 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { NoteAgent } from './note.agent'
 import { isCreateOperation } from '../utils'
 import type { ToolContext } from '../tools'
-import { getOllamaCloud } from '../providers/factory'
-import type { OllamaCloudProvider } from '../providers/ollama'
+import { selectModel } from '../providers/model-registry'
+import { createOpenAIClient } from '../providers/client-factory'
+import { trackOpenAIStream, trackOpenAIResponse } from '../providers/token-tracker'
+import type { SharedContextService } from '../services/shared-context.service'
 
 // ============================================================================
 // Types
@@ -28,8 +30,7 @@ export interface DeepAgentConfig {
   userId: string
   openaiApiKey: string
   model?: string
-  ollamaBaseUrl?: string // Ollama Cloud API URL (defaults to env OLLAMA_CLOUD_URL)
-  ollamaApiKey?: string // Ollama Cloud API key (defaults to env OLLAMA_API_KEY)
+  sharedContextService?: SharedContextService
 }
 
 export interface SubTask {
@@ -159,6 +160,30 @@ Rules:
 CRITICAL: Output ONLY valid JSON. No markdown, no explanations.`
 
 // ============================================================================
+// Artifact System Prompt (extracted from OllamaCloudProvider.generateArtifact)
+// ============================================================================
+
+const ARTIFACT_SYSTEM_PROMPT = `You are an interactive artifact generator. Create engaging, self-contained web components.
+
+IMPORTANT: Your response MUST be valid JSON with this exact structure:
+{
+  "title": "Short descriptive title for the artifact",
+  "html": "HTML content (without doctype, html, head, body tags - just the inner content)",
+  "css": "CSS styles (will be placed in a style tag)",
+  "javascript": "JavaScript code (React and ReactDOM are available, use JSX syntax)"
+}
+
+Guidelines:
+- Use Tailwind CSS classes for styling (available via CDN)
+- React 18 and ReactDOM are available globally
+- Use Babel for JSX transformation (available)
+- Keep code clean, well-organized, and self-contained
+- The artifact should be interactive and visually appealing
+- Handle errors gracefully in JavaScript
+
+Create a complete, polished component with rich HTML structure, beautiful CSS styling, and interactive JavaScript.`
+
+// ============================================================================
 // Deep Agent Class
 // ============================================================================
 
@@ -167,8 +192,9 @@ export class InkdownDeepAgent {
   private userId: string
   private openaiApiKey: string
   private model: string
-  private ollamaConfig: { baseURL?: string; apiKey?: string } // Lazy-init config
-  private _ollamaProvider: OllamaCloudProvider | null = null // Lazy initialization
+  private client: import('openai').default // Shared OpenAI client for Gemini tasks
+  private artifactClient: import('openai').default // OpenAI client for Ollama artifact tasks
+  private sharedContextService?: SharedContextService
   private context: {
     currentNoteId?: string
     projectId?: string
@@ -179,23 +205,12 @@ export class InkdownDeepAgent {
     this.supabase = config.supabase
     this.userId = config.userId
     this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('chat').id
+    this.sharedContextService = config.sharedContextService
 
-    // Store config for lazy Ollama provider initialization
-    this.ollamaConfig = {
-      baseURL: config.ollamaBaseUrl,
-      apiKey: config.ollamaApiKey,
-    }
-  }
-
-  /**
-   * Get Ollama provider (lazy initialization)
-   */
-  private get ollamaProvider(): OllamaCloudProvider {
-    if (!this._ollamaProvider) {
-      this._ollamaProvider = getOllamaCloud(this.ollamaConfig)
-    }
-    return this._ollamaProvider
+    // Initialize clients via centralized model registry + client factory
+    this.client = createOpenAIClient(selectModel('chat'))
+    this.artifactClient = createOpenAIClient(selectModel('artifact'))
   }
 
   /**
@@ -245,8 +260,20 @@ export class InkdownDeepAgent {
 
     yield { type: 'thinking', data: 'Analyzing your request...' }
 
+    // Read shared context to enrich decomposition
+    let sharedCtx = ''
+    if (this.sharedContextService) {
+      try {
+        sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'note_created', 'note_edited'],
+        })
+      } catch {
+        // Graceful degradation
+      }
+    }
+
     // Step 1: Decompose the request into sub-tasks
-    const decomposition = await this.decomposeRequest(input.message)
+    const decomposition = await this.decomposeRequest(input.message, sharedCtx)
 
     yield {
       type: 'decomposition',
@@ -354,6 +381,28 @@ export class InkdownDeepAgent {
       }
     }
 
+    // Write shared context entry after all subtasks complete
+    if (this.sharedContextService) {
+      const completedTasks = decomposition.tasks.filter((t) => t.status === 'completed')
+      if (completedTasks.length > 0) {
+        const hasCreate = completedTasks.some((t) => t.type === 'edit_note' && !this.context.currentNoteId)
+        try {
+          await this.sharedContextService.write({
+            agent: 'deep',
+            type: hasCreate ? 'note_created' : 'note_edited',
+            summary: `Deep agent completed ${completedTasks.length} task(s): ${input.message.slice(0, 80)}`,
+            payload: {
+              taskCount: completedTasks.length,
+              taskTypes: completedTasks.map((t) => t.type),
+              noteId: this.context.currentNoteId,
+            },
+          })
+        } catch {
+          // Best-effort — swallow errors
+        }
+      }
+    }
+
     // Step 4: Generate summary
     const completedCount = decomposition.tasks.filter((t) => t.status === 'completed').length
 
@@ -371,19 +420,21 @@ export class InkdownDeepAgent {
   /**
    * Decompose a request into sub-tasks using LLM
    */
-  private async decomposeRequest(message: string): Promise<DecompositionResult> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
+  private async decomposeRequest(message: string, sharedCtx?: string): Promise<DecompositionResult> {
+    const userContent = sharedCtx ? `${message}\n\n${sharedCtx}` : message
 
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: DECOMPOSITION_PROMPT },
-        { role: 'user', content: message },
+        { role: 'user', content: userContent },
       ],
       temperature: 0.3,
       max_completion_tokens: 1000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'planner', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 
@@ -515,13 +566,13 @@ export class InkdownDeepAgent {
 
   /**
    * Execute an artifact creation task
-   * Uses Ollama Cloud with kimi-k2.5:cloud for artifact generation
+   * Uses artifact model from model registry for artifact generation
    */
   private async *executeArtifactTask(
     task: SubTask,
     originalMessage: string
   ): AsyncGenerator<DeepAgentEvent> {
-    yield { type: 'thinking', data: 'Creating interactive artifact with Ollama Cloud...' }
+    yield { type: 'thinking', data: 'Creating interactive artifact...' }
 
     // Enrich task description with original context for better understanding
     const enrichedDescription = `${task.description}\n\nOriginal user request context: "${originalMessage}"`
@@ -529,49 +580,64 @@ export class InkdownDeepAgent {
     let fullContent = ''
     let lastProgressUpdate = 0
     const progressInterval = 500 // Update progress every 500ms
+    const artifactModel = selectModel('artifact')
 
     try {
-      // Use Ollama provider's generateArtifact method (uses kimi-k2.5:cloud)
-      const stream = this.ollamaProvider.generateArtifact(enrichedDescription, 'full')
+      const rawStream = await this.artifactClient.chat.completions.create({
+        model: artifactModel.id,
+        messages: [
+          { role: 'system', content: ARTIFACT_SYSTEM_PROMPT },
+          { role: 'user', content: enrichedDescription },
+        ],
+        temperature: 0.3,
+        max_completion_tokens: 20000,
+        stream: true,
+        stream_options: { include_usage: true },
+      })
 
-      for await (const chunk of stream) {
-        fullContent += chunk
+      for await (const chunk of trackOpenAIStream(rawStream, {
+        model: artifactModel.id, taskType: 'artifact',
+      })) {
+        const delta = chunk.choices[0]?.delta?.content
+        if (delta) {
+          fullContent += delta
 
-        // Emit progress updates at intervals
-        const now = Date.now()
-        if (now - lastProgressUpdate > progressInterval) {
-          lastProgressUpdate = now
+          // Emit progress updates at intervals
+          const now = Date.now()
+          if (now - lastProgressUpdate > progressInterval) {
+            lastProgressUpdate = now
 
-          // Detect current generation phase based on content markers
-          const phase = this.detectArtifactPhase(fullContent)
+            // Detect current generation phase based on content markers
+            const phase = this.detectArtifactPhase(fullContent)
 
-          // Emit code-preview for streaming visualization in UI
-          yield {
-            type: 'code-preview' as DeepAgentEventType,
-            data: {
-              phase,
-              preview: fullContent.slice(-200), // Last 200 chars as preview
-              totalChars: fullContent.length,
-            },
-          }
+            // Emit code-preview for streaming visualization in UI
+            yield {
+              type: 'code-preview' as DeepAgentEventType,
+              data: {
+                phase,
+                preview: fullContent.slice(-200), // Last 200 chars as preview
+                totalChars: fullContent.length,
+              },
+            }
 
-          yield {
-            type: 'subtask-progress',
-            data: {
-              taskId: task.id,
-              progress: Math.min(90, fullContent.length / 50),
-              message: `Generating ${phase.toUpperCase()} code...`,
-            },
+            yield {
+              type: 'subtask-progress',
+              data: {
+                taskId: task.id,
+                progress: Math.min(90, fullContent.length / 50),
+                message: `Generating ${phase.toUpperCase()} code...`,
+              },
+            }
           }
         }
       }
     } catch (error) {
-      console.error('[DeepAgent] Ollama artifact generation failed:', error)
+      console.error('[DeepAgent] Artifact generation failed:', error)
       yield {
         type: 'error',
         data: {
           taskId: task.id,
-          error: `Ollama artifact generation failed: ${error}. Make sure OLLAMA_API_KEY is configured.`,
+          error: `Artifact generation failed: ${error}`,
         },
       }
       task.status = 'failed'
@@ -584,24 +650,40 @@ export class InkdownDeepAgent {
 
     // If parsing failed (all fields empty), retry with more explicit instructions
     if (!artifact.html && !artifact.css && !artifact.javascript) {
-      console.warn('[DeepAgent] First Ollama attempt returned empty content. Retrying...')
+      console.warn('[DeepAgent] First artifact attempt returned empty content. Retrying...')
 
       try {
         let retryContent = ''
         const retryPrompt = `${enrichedDescription}\n\nIMPORTANT: Your response MUST be a valid JSON object with title, html, css, and javascript fields. The html field MUST contain component markup. Start with { and end with }`
 
-        const retryStream = this.ollamaProvider.generateArtifact(retryPrompt, 'full')
-        for await (const chunk of retryStream) {
-          retryContent += chunk
+        const retryRawStream = await this.artifactClient.chat.completions.create({
+          model: artifactModel.id,
+          messages: [
+            { role: 'system', content: ARTIFACT_SYSTEM_PROMPT },
+            { role: 'user', content: retryPrompt },
+          ],
+          temperature: 0.3,
+          max_completion_tokens: 20000,
+          stream: true,
+          stream_options: { include_usage: true },
+        })
+
+        for await (const chunk of trackOpenAIStream(retryRawStream, {
+          model: artifactModel.id, taskType: 'artifact',
+        })) {
+          const delta = chunk.choices[0]?.delta?.content
+          if (delta) {
+            retryContent += delta
+          }
         }
 
         console.log(
-          '[DeepAgent] Ollama retry response (first 500 chars):',
+          '[DeepAgent] Artifact retry response (first 500 chars):',
           retryContent.slice(0, 500)
         )
         artifact = this.parseArtifactContent(retryContent, task.description)
       } catch (retryError) {
-        console.error('[DeepAgent] Ollama retry failed:', retryError)
+        console.error('[DeepAgent] Artifact retry failed:', retryError)
       }
     }
 
@@ -648,10 +730,8 @@ export class InkdownDeepAgent {
   ): AsyncGenerator<DeepAgentEvent> {
     yield { type: 'thinking', data: 'Creating table data...' }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const response = await client.chat.completions.create({
+    const startTime = Date.now()
+    const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: TABLE_SUBAGENT_PROMPT },
@@ -660,6 +740,8 @@ export class InkdownDeepAgent {
       temperature: 0.3,
       max_completion_tokens: 2000,
     })
+
+    trackOpenAIResponse(response, { model: this.model, taskType: 'table', startTime })
 
     const content = response.choices[0]?.message?.content || '{}'
 
@@ -752,10 +834,7 @@ export class InkdownDeepAgent {
   private async *executeChatTask(task: SubTask): AsyncGenerator<DeepAgentEvent> {
     yield { type: 'thinking', data: 'Processing...' }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const stream = await client.chat.completions.create({
+    const rawStream = await this.client.chat.completions.create({
       model: this.model,
       messages: [
         { role: 'system', content: 'You are a helpful AI assistant for note-taking and learning.' },
@@ -764,11 +843,14 @@ export class InkdownDeepAgent {
       temperature: 0.7,
       max_completion_tokens: 2000,
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     let fullContent = ''
 
-    for await (const chunk of stream) {
+    for await (const chunk of trackOpenAIStream(rawStream, {
+      model: this.model, taskType: 'chat',
+    })) {
       const delta = chunk.choices?.[0]?.delta?.content
       if (delta) {
         fullContent += delta

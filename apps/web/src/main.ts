@@ -51,6 +51,21 @@ const router = createRouter({
       component: () => import('./views/SecretaryView.vue'),
     },
     {
+      path: '/calendar/view',
+      name: 'secretary-calendar',
+      component: () => import('./views/SecretaryView.vue'),
+    },
+    {
+      path: '/calendar/plan/new',
+      name: 'plan-create',
+      component: () => import('./views/PlanCreateView.vue'),
+    },
+    {
+      path: '/calendar/plan/:planId',
+      name: 'plan-workspace',
+      component: () => import('./views/PlanWorkspaceView.vue'),
+    },
+    {
       path: '/courses',
       name: 'courseList',
       component: () => import('./views/CourseListView.vue'),
@@ -71,6 +86,16 @@ const router = createRouter({
       component: () => import('./views/DemoGateView.vue'),
     },
     {
+      path: '/capture',
+      name: 'capture',
+      component: () => import('./views/CaptureView.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('./views/SettingsView.vue'),
+    },
+    {
       path: '/cli',
       name: 'cli-auth',
       component: () => import('./views/CliAuthView.vue'),
@@ -82,7 +107,7 @@ const router = createRouter({
 const isProductionDemo = !import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URL === ''
 router.beforeEach((to) => {
   const inDemoMode = sessionStorage.getItem('demoMode') === 'true'
-  if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth') {
+  if (isProductionDemo && !inDemoMode && to.name !== 'demo' && to.name !== 'cli-auth' && to.name !== 'capture' && to.name !== 'settings') {
     return { name: 'demo' }
   }
 })

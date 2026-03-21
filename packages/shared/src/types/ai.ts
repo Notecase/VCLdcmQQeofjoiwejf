@@ -318,44 +318,34 @@ export interface EmbeddingModelConfig {
  */
 export const CHAT_MODELS: ChatModelConfig[] = [
   {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514',
-    displayName: 'Claude Sonnet 4',
-    contextWindow: 200000,
+    provider: 'google',
+    model: 'gemini-3.1-pro-preview',
+    displayName: 'Gemini 3.1 Pro',
+    contextWindow: 2000000,
     supportsStreaming: true,
     supportsTools: true,
-    costPer1kInput: 0.3,
-    costPer1kOutput: 1.5,
-  },
-  {
-    provider: 'openai',
-    model: 'gpt-4o',
-    displayName: 'GPT-4o',
-    contextWindow: 128000,
-    supportsStreaming: true,
-    supportsTools: true,
-    costPer1kInput: 0.5,
-    costPer1kOutput: 1.5,
-  },
-  {
-    provider: 'openai',
-    model: 'gpt-4o-mini',
-    displayName: 'GPT-4o Mini',
-    contextWindow: 128000,
-    supportsStreaming: true,
-    supportsTools: true,
-    costPer1kInput: 0.015,
-    costPer1kOutput: 0.06,
+    costPer1kInput: 0.125,
+    costPer1kOutput: 1.0,
   },
   {
     provider: 'google',
-    model: 'gemini-2.0-flash',
-    displayName: 'Gemini 2.0 Flash',
+    model: 'gemini-3-flash-preview',
+    displayName: 'Gemini 3 Flash',
     contextWindow: 1000000,
     supportsStreaming: true,
     supportsTools: true,
-    costPer1kInput: 0.01,
-    costPer1kOutput: 0.04,
+    costPer1kInput: 0.03,
+    costPer1kOutput: 0.25,
+  },
+  {
+    provider: 'ollama',
+    model: 'kimi-k2.5',
+    displayName: 'Kimi K2.5 (Ollama)',
+    contextWindow: 131072,
+    supportsStreaming: true,
+    supportsTools: true,
+    costPer1kInput: 0,
+    costPer1kOutput: 0,
   },
 ]
 
@@ -384,6 +374,53 @@ export const EMBEDDING_MODELS: EmbeddingModelConfig[] = [
 /**
  * Default models
  */
-export const DEFAULT_CHAT_MODEL = 'claude-sonnet-4-20250514'
+export const DEFAULT_CHAT_MODEL = 'gemini-3.1-pro-preview'
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-large'
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1536
+
+// =============================================================================
+// HITL Pre-Action Question Types
+// =============================================================================
+
+/**
+ * A proactive question the AI asks the user before taking action.
+ * Displayed as a rounded inline card in the chat stream.
+ */
+export interface PreActionQuestion {
+  id: string
+  question: string
+  options: Array<{
+    id: string
+    label: string
+    description?: string
+  }>
+  allowFreeText?: boolean
+  context?: string
+}
+
+// =============================================================================
+// Shared Context Bus Types
+// =============================================================================
+
+/**
+ * Types of context entries that agents can write to the shared logbook
+ */
+export type ContextEntryType =
+  | 'active_plan'
+  | 'research_done'
+  | 'course_saved'
+  | 'note_created'
+  | 'note_edited'
+  | 'goal_set'
+  | 'soul_updated'
+
+/**
+ * A context entry written by an agent to the shared logbook
+ */
+export interface ContextEntry {
+  agent: string
+  type: ContextEntryType
+  summary: string
+  payload: Record<string, unknown>
+  expiresAt?: string
+}

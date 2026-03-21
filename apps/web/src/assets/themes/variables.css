@@ -236,6 +236,56 @@
   --sec-drawer-handle: rgba(255, 255, 255, 0.2);
   --sec-drawer-backdrop: rgba(0, 0, 0, 0.5);
 
+  /* Secretary Layout — Surface Levels */
+  --sec-surface-0: #0d1117;
+  --sec-surface-1: rgba(18, 22, 28, 0.6);
+  --sec-surface-2: rgba(20, 25, 32, 0.85);
+  --sec-surface-card: rgba(255, 255, 255, 0.025);
+  --sec-surface-card-hover: rgba(255, 255, 255, 0.045);
+
+  /* Glass treatment */
+  --sec-glass-blur: 16px;
+  --sec-glass-blur-heavy: 24px;
+  --sec-glass-border: rgba(255, 255, 255, 0.08);
+  --sec-glass-border-hover: rgba(255, 255, 255, 0.14);
+  --sec-glass-inset: rgba(255, 255, 255, 0.04);
+
+  /* Consistent radius */
+  --sec-radius-sm: 8px;
+  --sec-radius-md: 12px;
+  --sec-radius-lg: 20px;
+  --sec-radius-pill: 999px;
+
+  /* Motion */
+  --sec-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sec-ease-decel: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --sec-transition-micro: 120ms;
+  --sec-transition-fast: 180ms;
+  --sec-transition-normal: 250ms;
+  --sec-transition-slow: 350ms;
+
+  /* Ticker Bar */
+  --sec-ticker-height: 34px;
+  --sec-ticker-bg: rgba(30, 30, 35, 0.6);
+  --sec-ticker-border: rgba(255, 255, 255, 0.05);
+  --sec-ticker-blur: 12px;
+  --sec-ticker-speed: 28s;
+  --sec-ticker-fade: rgba(13, 17, 23, 0.9);
+  --sec-ticker-item-hover: rgba(255, 255, 255, 0.04);
+  --sec-ticker-divider: rgba(255, 255, 255, 0.05);
+  --sec-ticker-live-bg: rgba(16, 185, 129, 0.18);
+  --sec-ticker-live-color: #34d399;
+  --sec-ticker-next-bg: rgba(245, 158, 11, 0.14);
+  --sec-ticker-next-color: #fbbf24;
+
+  /* Plan Workspace (Dark) */
+  --pw-max-width: 800px;
+  --pw-title-size: 28px;
+  --pw-section-gap: 40px;
+  --pw-label-size: 12px;
+  --pw-instructions-bg: var(--sec-surface-1);
+  --pw-instructions-border: var(--sec-glass-border);
+
   /* Chat popup — darker surface hierarchy */
   --chat-popup-bg: #080b10;
   --chat-composer-bg: #13161b;
@@ -496,6 +546,54 @@
   --sec-drawer-bg: #ffffff;
   --sec-drawer-handle: rgba(0, 0, 0, 0.15);
   --sec-drawer-backdrop: rgba(0, 0, 0, 0.3);
+
+  /* Secretary Layout — Surface Levels (Light) */
+  --sec-surface-0: #f8fafc;
+  --sec-surface-1: rgba(255, 255, 255, 0.7);
+  --sec-surface-2: rgba(255, 255, 255, 0.9);
+  --sec-surface-card: rgba(0, 0, 0, 0.02);
+  --sec-surface-card-hover: rgba(0, 0, 0, 0.04);
+
+  /* Glass treatment (Light) */
+  --sec-glass-blur: 16px;
+  --sec-glass-blur-heavy: 24px;
+  --sec-glass-border: rgba(0, 0, 0, 0.06);
+  --sec-glass-border-hover: rgba(0, 0, 0, 0.12);
+  --sec-glass-inset: rgba(255, 255, 255, 0.6);
+
+  /* Radius + Motion — same as dark (shared) */
+  --sec-radius-sm: 8px;
+  --sec-radius-md: 12px;
+  --sec-radius-lg: 20px;
+  --sec-radius-pill: 999px;
+  --sec-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sec-ease-decel: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --sec-transition-micro: 120ms;
+  --sec-transition-fast: 180ms;
+  --sec-transition-normal: 250ms;
+  --sec-transition-slow: 350ms;
+
+  /* Ticker Bar (Light) */
+  --sec-ticker-height: 34px;
+  --sec-ticker-bg: rgba(255, 255, 255, 0.7);
+  --sec-ticker-border: rgba(0, 0, 0, 0.06);
+  --sec-ticker-blur: 12px;
+  --sec-ticker-speed: 28s;
+  --sec-ticker-fade: rgba(248, 250, 252, 0.9);
+  --sec-ticker-item-hover: rgba(0, 0, 0, 0.03);
+  --sec-ticker-divider: rgba(0, 0, 0, 0.06);
+  --sec-ticker-live-bg: rgba(5, 150, 105, 0.12);
+  --sec-ticker-live-color: #059669;
+  --sec-ticker-next-bg: rgba(217, 119, 6, 0.1);
+  --sec-ticker-next-color: #d97706;
+
+  /* Plan Workspace (Light) */
+  --pw-max-width: 800px;
+  --pw-title-size: 28px;
+  --pw-section-gap: 40px;
+  --pw-label-size: 12px;
+  --pw-instructions-bg: var(--sec-surface-1);
+  --pw-instructions-border: var(--sec-glass-border);
 
   /* Chat popup — lighter surface hierarchy */
   --chat-popup-bg: #f5f5f5;

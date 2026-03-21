@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchAgent } from './agent'
 
-const { createMock, getOllamaCloudMock, ollamaGenerateArtifactMock } = vi.hoisted(() => ({
+const { createMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
-  getOllamaCloudMock: vi.fn(),
-  ollamaGenerateArtifactMock: vi.fn(),
 }))
 
 vi.mock('openai', () => ({
@@ -17,8 +15,30 @@ vi.mock('openai', () => ({
   },
 }))
 
-vi.mock('../../providers/factory', () => ({
-  getOllamaCloud: getOllamaCloudMock,
+// Mock the client factory to return our mocked OpenAI client
+vi.mock('../../providers/client-factory', () => ({
+  createOpenAIClient: () => ({
+    chat: {
+      completions: {
+        create: createMock,
+      },
+    },
+  }),
+  createLangChainModel: vi.fn(),
+}))
+
+vi.mock('../../providers/model-registry', () => ({
+  selectModel: (taskType: string) => ({
+    id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-3.1-pro-preview',
+    provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
+    displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 3.1 Pro',
+    contextWindow: 131072,
+    capabilities: ['chat'],
+    costPer1kInput: 0,
+    costPer1kOutput: 0,
+    maxOutputTokens: 32768,
+    supportsToolChoice: false,
+  }),
 }))
 
 function createTextStream(chunks: string[]) {
@@ -55,11 +75,6 @@ describe('ResearchAgent note draft mode', () => {
   beforeEach(() => {
     process.env.RESEARCH_NOTE_DRAFT_ENABLED = 'true'
     createMock.mockReset()
-    getOllamaCloudMock.mockReset()
-    ollamaGenerateArtifactMock.mockReset()
-    getOllamaCloudMock.mockReturnValue({
-      generateArtifact: ollamaGenerateArtifactMock,
-    })
 
     createMock.mockImplementation(async (params: { stream?: boolean }) => {
       if (params.stream) {
@@ -69,10 +84,6 @@ describe('ResearchAgent note draft mode', () => {
       return {
         choices: [{ message: { content: createArtifactPayload() } }],
       }
-    })
-
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      yield createArtifactPayload()
     })
   })
 
@@ -143,15 +154,16 @@ describe('ResearchAgent note draft mode', () => {
     expect(payloads.slice(1).some((p) => p.currentContent === undefined)).toBe(true)
   })
 
-  it('falls back to GPT-5.2 artifact generation when Ollama fails', async () => {
-    // eslint-disable-next-line require-yield
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      throw new Error('ollama unavailable')
-    })
-
-    createMock.mockImplementation(async (params: { stream?: boolean }) => {
+  it('falls back to Gemini artifact generation when Ollama client fails', async () => {
+    let callCount = 0
+    createMock.mockImplementation(async (params: { stream?: boolean; model?: string }) => {
       if (params.stream) {
         return createTextStream(['# Study Note\n\nKey points.'])
+      }
+      callCount++
+      // First non-streaming call (artifact via Ollama) fails
+      if (callCount === 1 && params.model === 'kimi-k2.5') {
+        throw new Error('ollama unavailable')
       }
       return {
         choices: [{ message: { content: createArtifactPayload({ title: 'Fallback Timer' }) } }],
@@ -176,25 +188,16 @@ describe('ResearchAgent note draft mode', () => {
     const payload =
       typeof draftEvent?.data === 'string' ? JSON.parse(draftEvent.data) : draftEvent?.data
 
-    const fallbackCalls = createMock.mock.calls.filter(([arg]) => arg && arg.stream === false)
-
-    expect(getOllamaCloudMock).toHaveBeenCalledTimes(1)
-    expect(fallbackCalls.length).toBeGreaterThan(0)
     expect(payload.proposedContent).toContain('```artifact')
     expect(events.some((e) => e.event === 'error')).toBe(false)
   })
 
   it('emits an artifact error and skips artifact block when primary and fallback generation both fail', async () => {
-    // eslint-disable-next-line require-yield
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      throw new Error('ollama unavailable')
-    })
-
     createMock.mockImplementation(async (params: { stream?: boolean }) => {
       if (params.stream) {
         return createTextStream(['# Study Note\n\nKey points.'])
       }
-      throw new Error('openai fallback unavailable')
+      throw new Error('all artifact generation failed')
     })
 
     const agent = new ResearchAgent({

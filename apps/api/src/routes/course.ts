@@ -59,8 +59,19 @@ function cleanupRegistry() {
   }
 }
 
-// Periodic cleanup every 5 minutes
-setInterval(cleanupRegistry, 300_000)
+// Cleanup on each request (lightweight — only iterates expired entries)
+let lastCleanup = 0
+function maybeCleanup() {
+  const now = Date.now()
+  if (now - lastCleanup > 300_000) {
+    lastCleanup = now
+    cleanupRegistry()
+  }
+}
+course.use('*', async (_c, next) => {
+  maybeCleanup()
+  await next()
+})
 
 // ============================================================================
 // Default Settings

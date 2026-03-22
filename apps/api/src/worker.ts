@@ -32,12 +32,15 @@ app.use('*', logger())
 // Request timing
 app.use('*', timing())
 
-// CORS configuration
+// CORS configuration — read origin from CF Workers env binding at request time
 app.use(
   '*',
   cors({
-    origin: config.cors.origin,
-    credentials: config.cors.credentials,
+    origin: (origin, c) => {
+      const allowed = (c.env as Record<string, string>)?.CORS_ORIGIN || config.cors.origin
+      return origin === allowed ? allowed : null
+    },
+    credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposeHeaders: ['X-Response-Time'],

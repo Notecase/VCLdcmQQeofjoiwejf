@@ -132,7 +132,10 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const auth = getAuthService()
-        const result = await auth.signInWithOAuth({ provider })
+        const result = await auth.signInWithOAuth({
+          provider,
+          redirectTo: window.location.origin,
+        })
 
         if (result.error) {
           throw new Error(result.error.message)

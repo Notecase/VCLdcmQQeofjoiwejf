@@ -46,6 +46,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': resolve(__dirname, 'apps/web/src'),
+      vue: resolve(__dirname, 'apps/web/node_modules/vue/dist/vue.runtime.esm-bundler.js'),
       '@inkdown/shared': resolve(__dirname, 'packages/shared/src'),
       '@inkdown/ai': resolve(__dirname, 'packages/ai/src'),
       '@inkdown/editor': resolve(__dirname, 'packages/editor/src'),

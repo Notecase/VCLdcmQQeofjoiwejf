@@ -6,11 +6,16 @@
  * Streams chat completion with lesson context in system prompt.
  */
 
+import { streamText } from 'ai'
 import type { ExplainInput, ExplainStreamEvent } from '@inkdown/shared/types'
+import type { SharedContextService } from '../../services/shared-context.service'
+import { selectModel } from '../../providers/model-registry'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 export interface ExplainAgentConfig {
-  openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 function buildSystemPrompt(input: ExplainInput): string {
@@ -92,16 +97,30 @@ function buildSystemPrompt(input: ExplainInput): string {
 }
 
 export class ExplainAgent {
-  private openaiApiKey: string
   private model: string
+  private sharedContextService?: SharedContextService
 
   constructor(config: ExplainAgentConfig) {
-    this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('explain').id
+    this.sharedContextService = config.sharedContextService
   }
 
   async *stream(input: ExplainInput): AsyncGenerator<ExplainStreamEvent> {
-    const systemPrompt = buildSystemPrompt(input)
+    let systemPrompt = buildSystemPrompt(input)
+
+    // Enrich system prompt with shared cross-agent context
+    if (this.sharedContextService) {
+      try {
+        const sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'course_saved'],
+        })
+        if (sharedCtx) {
+          systemPrompt += '\n\n' + sharedCtx
+        }
+      } catch {
+        // Graceful degradation
+      }
+    }
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: systemPrompt },
@@ -120,22 +139,22 @@ export class ExplainAgent {
     yield { event: 'thinking', data: 'Preparing explanation...' }
 
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-      const stream = await client.chat.completions.create({
-        model: this.model,
-        messages,
+      const { model, entry } = resolveModel('explain', this.model)
+      const history = messages.filter((m) => m.role !== 'system')
+      const result = streamText({
+        model,
+        system: systemPrompt,
+        messages: history.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
         temperature: 0.7,
-        max_completion_tokens: 4000,
-        stream: true,
+        maxOutputTokens: 4000,
+        onFinish: trackAISDKUsage({ model: entry.id, taskType: 'explain' }),
       })
 
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content
-        if (delta) {
-          yield { event: 'text', data: delta }
-        }
+      for await (const chunk of result.textStream) {
+        yield { event: 'text', data: chunk }
       }
 
       yield { event: 'done' }

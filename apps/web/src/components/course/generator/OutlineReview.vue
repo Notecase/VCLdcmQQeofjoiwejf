@@ -105,7 +105,7 @@ function handleReject() {
             v-else
             :size="16"
           />
-          <span class="module-title">{{ mod.order + 1 }}. {{ mod.title }}</span>
+          <span class="module-title">{{ mod.order }}. {{ mod.title }}</span>
           <span class="module-lesson-count">{{ mod.lessons.length }} lessons</span>
         </button>
 

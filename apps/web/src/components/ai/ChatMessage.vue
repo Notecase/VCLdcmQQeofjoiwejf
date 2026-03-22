@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * ChatMessage - Minimal Flow Design
+ * ChatMessage - Generative UI Design
  *
  * Features:
  * - Borderless layout with spacing-based separation
@@ -8,18 +8,20 @@
  * - Model chip next to role
  * - Timestamp on far right (subtle)
  * - Hover actions slide in from right
- * - Streaming state with subtle glow
- * - Inline tool call cards
+ * - Streaming state with left-border accent + glow cursor
+ * - ActivityStream: unified timeline (thinking steps + tool calls)
+ * - TaskChecklist: DeepAgent decomposition todo list
+ * - SubagentPanel: specialist agent streaming cards
+ * - EditProposalCard: inline diff card with accept/reject
  */
 import { computed, ref } from 'vue'
 import type { ChatMessage, CompletedArtifact } from '@/stores/ai'
 import { useAIStore } from '@/stores/ai'
-import { renderMathContent } from '@/utils/mathRenderer'
+import { renderMathMarkdown } from '@/utils/mathRenderer'
 import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
 import StreamingCursor from './shared/StreamingCursor.vue'
-import ToolCallCard from './ToolCallCard.vue'
 import ArtifactSummaryCard from './ArtifactSummaryCard.vue'
-import MessageThinkingSteps from './MessageThinkingSteps.vue'
+import { ActivityStream, EditProposalCard, SourceChips, ActionSummaryCard } from './activity'
 
 const props = defineProps<{
   message: ChatMessage
@@ -35,7 +37,9 @@ const store = useAIStore()
 const isUser = computed(() => props.message.role === 'user')
 const isAssistant = computed(() => props.message.role === 'assistant')
 const displayContent = computed(() => props.message.content || '')
-const renderedContent = computed(() => renderMathContent(displayContent.value))
+const renderedContent = computed(() =>
+  isAssistant.value ? renderMathMarkdown(displayContent.value) : ''
+)
 
 // Check if this message is currently streaming
 const isStreaming = computed(() => {
@@ -53,10 +57,24 @@ const toolCalls = computed(() => props.message.toolCalls || [])
 // Completed artifacts linked to this message
 const completedArtifacts = computed(() => store.getCompletedArtifactsForMessage(props.message.id))
 
-// Check if there are thinking steps for this message
-const hasThinkingSteps = computed(
-  () => store.getThinkingStepsForMessage(props.message.id).length > 0
-)
+// Pending edits linked to this message
+const pendingEdits = computed(() => store.getPendingEditsForMessage(props.message.id))
+
+// Citations linked to this message (RAG source attribution)
+const messageCitations = computed(() => store.getCitationsForMessage(props.message.id))
+
+// Completed actions linked to this message (note creation, edits)
+const messageActions = computed(() => store.getCompletedActionsForMessage(props.message.id))
+
+// Check if there is activity content (thinking steps, tool calls, subtasks, subagents)
+const hasActivityContent = computed(() => {
+  const hasSteps = store.getThinkingStepsForMessage(props.message.id).length > 0
+  const hasTools = toolCalls.value.length > 0
+  // SubTasks and subagents are shown in ActivityStream only for streaming message
+  const hasSubTasks = isStreaming.value && store.subTasks.length > 0
+  const hasSubagents = isStreaming.value && store.activeSubagents.length > 0
+  return hasSteps || hasTools || hasSubTasks || hasSubagents
+})
 
 // Format timestamp
 const formattedTime = computed(() => {
@@ -91,22 +109,18 @@ function handleRetry() {
 // Feedback (placeholder for future implementation)
 function handleFeedback(type: 'up' | 'down') {
   console.log('Feedback:', type, props.message.id)
-  // TODO: Implement feedback functionality
 }
 
 // Artifact action handlers
 function handleScrollToArtifact(artifact: CompletedArtifact) {
-  // TODO: Implement scroll to artifact in editor
   console.log('Scroll to artifact:', artifact.title, 'in note:', artifact.noteId)
 }
 
 function handleEditArtifact(artifact: CompletedArtifact) {
-  // TODO: Implement edit artifact
   console.log('Edit artifact:', artifact.title)
 }
 
 function handleDeleteArtifact(artifact: CompletedArtifact) {
-  // TODO: Implement delete artifact
   console.log('Delete artifact:', artifact.title)
 }
 </script>
@@ -128,44 +142,61 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
         <span
           class="role-label"
           :class="roleClass"
-          >{{ roleLabel }}</span
-        >
+        >{{ roleLabel }}</span>
         <span
           v-if="message.model"
           class="model-chip"
-          >{{ message.model }}</span
-        >
+        >{{ message.model }}</span>
       </div>
       <span
         v-if="formattedTime"
         class="timestamp"
-        >{{ formattedTime }}</span
-      >
+      >{{ formattedTime }}</span>
     </div>
 
-    <!-- Thinking steps for this message (assistant only) -->
-    <MessageThinkingSteps
-      v-if="isAssistant && hasThinkingSteps"
+    <!-- Activity Stream (replaces MessageThinkingSteps + ToolCallCard) -->
+    <ActivityStream
+      v-if="isAssistant && hasActivityContent"
       :message-id="message.id"
-      class="message-thinking"
+      :tool-calls="toolCalls"
+      :is-streaming="isStreaming"
     />
 
-    <!-- Inline tool calls -->
-    <ToolCallCard
-      v-for="tool in toolCalls"
-      :key="tool.id"
-      :tool="tool"
-      class="embedded-tool"
+    <!-- Source chips (RAG citation attribution) -->
+    <SourceChips
+      v-if="isAssistant && messageCitations.length > 0"
+      :citations="messageCitations"
     />
 
     <!-- Content -->
     <div class="message-body">
       <div
+        v-if="isAssistant"
         class="prose"
         v-html="renderedContent"
       />
+      <div
+        v-else
+        class="user-text"
+      >
+        {{ displayContent }}
+      </div>
       <StreamingCursor v-if="isStreaming" />
     </div>
+
+    <!-- Edit proposal cards (inline in chat) -->
+    <EditProposalCard
+      v-for="edit in pendingEdits"
+      :key="edit.id"
+      :edit="edit"
+    />
+
+    <!-- Action summary cards (note creation, edits) -->
+    <ActionSummaryCard
+      v-for="action in messageActions"
+      :key="action.id"
+      :action="action"
+    />
 
     <!-- Completed artifact cards -->
     <ArtifactSummaryCard
@@ -226,7 +257,7 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
 <style scoped>
 /* ============================================
- * MESSAGE CARD - Minimal Flow Design
+ * MESSAGE CARD - Generative UI Design
  * ============================================ */
 
 .message-card {
@@ -236,7 +267,7 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
   padding: 16px 0;
   margin-bottom: 0;
   border-bottom: 1px solid var(--chat-separator);
-  transition: background var(--transition-normal) ease;
+  transition: background var(--transition-normal) ease, border-color var(--transition-normal) ease;
   position: relative;
 }
 
@@ -250,6 +281,8 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
 .message-card.streaming {
   background: var(--chat-message-streaming);
+  border-left: 2px solid var(--stream-cursor);
+  padding-left: 14px;
 }
 
 /* ============================================
@@ -306,14 +339,6 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 }
 
 /* ============================================
- * EMBEDDED TOOL CALLS
- * ============================================ */
-
-.embedded-tool {
-  margin-bottom: 12px;
-}
-
-/* ============================================
  * MESSAGE BODY
  * ============================================ */
 
@@ -326,6 +351,11 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
 
 .message-card.user .message-body {
   color: var(--text-secondary);
+}
+
+.user-text {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Prose styling */

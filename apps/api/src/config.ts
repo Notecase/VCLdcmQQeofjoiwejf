@@ -31,11 +31,16 @@ export const config = {
     google: {
       apiKey: process.env.GOOGLE_AI_API_KEY || '',
     },
+    ollama: {
+      cloudUrl: process.env.OLLAMA_CLOUD_URL || 'https://ollama.com',
+      apiKey: process.env.OLLAMA_API_KEY || '',
+      localUrl: process.env.OLLAMA_LOCAL_URL || 'http://localhost:11434',
+    },
   },
 
   // Model Defaults
   models: {
-    defaultChat: process.env.DEFAULT_CHAT_MODEL || 'claude-sonnet-4-20250514',
+    defaultChat: process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro',
     defaultEmbedding: process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large',
     embeddingDimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
   },
@@ -50,6 +55,20 @@ export const config = {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
+  },
+
+  // Base URL for building verification URIs in CLI auth flow
+  baseUrl: process.env.BASE_URL || 'https://app.noteshell.io',
+
+  // Feature flags
+  flags: {
+    missionHubV1: !['0', 'false', 'off', 'no'].includes(
+      String(
+        process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true')
+      )
+        .trim()
+        .toLowerCase()
+    ),
   },
 } as const
 

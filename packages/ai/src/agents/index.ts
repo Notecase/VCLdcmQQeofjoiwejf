@@ -1,11 +1,17 @@
 /**
- * LangGraph Agent exports
+ * AI Agent exports — Inkdown AI SDK v6
  *
- * AI agents for Inkdown:
+ * Active agents (all on AI SDK v6):
+ * - EditorDeepAgent: Production editor AI with 12 tools (ToolLoopAgent)
  * - ChatAgent: Conversational AI with RAG and citations
  * - NoteAgent: Note manipulation (create, update, organize, summarize, expand)
- * - EditorAgent: Intent classification and task routing (8 intents)
  * - PlannerAgent: Goal decomposition and task planning
+ * - SecretaryAgent: AI planner / roadmap manager
+ * - ResearchAgent: Deep research workflow
+ * - ExplainAgent: Course AI tutor
+ * - CourseOrchestrator: AI course generation
+ *
+ * @deprecated EditorAgent, InkdownDeepAgent, AgenticAgent — scheduled for removal
  */
 
 // ============================================================================
@@ -91,7 +97,7 @@ export {
   type ChatAgentConfig,
   type ChatAgentInput,
   type ChatAgentResponse,
-  type ChatMessage,
+  type ChatAgentMessage,
   type RetrievedChunk,
   type Citation,
 } from './chat.agent'
@@ -111,19 +117,20 @@ export {
 } from './note.agent'
 
 // ============================================================================
-// Editor Agent
+// Editor Deep Agent (AI SDK v6 ToolLoopAgent)
 // ============================================================================
 
 export {
-  EditorAgent,
-  createEditorAgent,
-  EditorAgentInputSchema,
-  type EditorAgentConfig,
-  type EditorAgentInput,
-  type EditorAgentResponse,
-  type IntentType,
-  type IntentClassification,
-} from './editor.agent'
+  EditorDeepAgent,
+  createEditorDeepAgent,
+  EditorConversationHistoryService,
+  EditorLongTermMemory,
+  type EditorDeepAgentConfig,
+  type EditorDeepAgentRequest,
+  type EditorDeepAgentEvent,
+  type EditorDeepAgentEventType,
+  type EditorRunState,
+} from './editor-deep'
 
 // ============================================================================
 // Planner Agent
@@ -143,26 +150,6 @@ export {
   type Plan,
   type PlanStep,
 } from './planner.agent'
-
-// ============================================================================
-// Agentic Agent (Autonomous Task Execution)
-// ============================================================================
-
-export { AgenticAgent, createAgenticAgent } from './agentic.agent'
-
-// ============================================================================
-// Deep Agent (Compound Request Orchestration)
-// ============================================================================
-
-export {
-  InkdownDeepAgent,
-  createInkdownDeepAgent,
-  type DeepAgentConfig,
-  type DeepAgentEvent,
-  type DeepAgentEventType,
-  type SubTask,
-  type DecompositionResult,
-} from './deep-agent'
 
 // ============================================================================
 // Secretary Agent (AI Planner / Roadmap Manager)
@@ -234,30 +221,6 @@ export {
   type TableSubagentResult,
 } from './subagents'
 
-export type {
-  AgentStep,
-  AgentStepType,
-  AgenticResult,
-  AgenticStatus,
-  AgenticProgress,
-  AgenticTask,
-  ResearchResult,
-  ValidationResult,
-  DataSchema,
-  DatabaseColumn,
-  ColumnSpec,
-  Constraint,
-  ConstraintType,
-  DataSource,
-  StepStatus,
-  StepResult,
-  Source,
-  ValidationIssue,
-  IssueSeverity,
-  BlockInfo,
-  PlanTaskRequest,
-  ExecuteTaskRequest,
-} from './agentic.types'
 
 // ============================================================================
 // Agent Factory
@@ -266,21 +229,15 @@ export type {
 import { SupabaseClient } from '@supabase/supabase-js'
 import { ChatAgent } from './chat.agent'
 import { NoteAgent } from './note.agent'
-import { EditorAgent } from './editor.agent'
 import { PlannerAgent } from './planner.agent'
-import { InkdownDeepAgent } from './deep-agent'
 import { SecretaryAgent } from './secretary'
 import { ResearchAgent } from './research'
 import { ExplainAgent } from './explain'
-// AgenticAgent is exported above but not used in factory (standalone usage)
 
 export type AgentType =
   | 'chat'
   | 'note'
-  | 'editor'
   | 'planner'
-  | 'agentic'
-  | 'deep'
   | 'secretary'
   | 'research'
   | 'explain'
@@ -288,8 +245,9 @@ export type AgentType =
 export interface AgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
+  /** @deprecated Only needed by Secretary/Research until Phase B migration completes */
+  openaiApiKey?: string
 }
 
 /**
@@ -298,32 +256,20 @@ export interface AgentConfig {
 export function createAgent(
   type: AgentType,
   config: AgentConfig
-):
-  | ChatAgent
-  | NoteAgent
-  | EditorAgent
-  | PlannerAgent
-  | InkdownDeepAgent
-  | SecretaryAgent
-  | ResearchAgent
-  | ExplainAgent {
+): ChatAgent | NoteAgent | PlannerAgent | SecretaryAgent | ResearchAgent | ExplainAgent {
   switch (type) {
     case 'chat':
       return new ChatAgent(config)
     case 'note':
       return new NoteAgent(config)
-    case 'editor':
-      return new EditorAgent(config)
     case 'planner':
       return new PlannerAgent(config)
-    case 'deep':
-      return new InkdownDeepAgent(config)
     case 'secretary':
       return new SecretaryAgent(config)
     case 'research':
       return new ResearchAgent(config)
     case 'explain':
-      return new ExplainAgent({ openaiApiKey: config.openaiApiKey, model: config.model })
+      return new ExplainAgent({ model: config.model })
     default:
       throw new Error(`Unknown agent type: ${type}`)
   }
@@ -350,25 +296,10 @@ export const AGENT_METADATA: Record<
     description: 'Create, update, and organize notes',
     capabilities: ['create', 'update', 'organize', 'summarize', 'expand'],
   },
-  editor: {
-    name: 'Editor Agent',
-    description: 'Intent classification and task routing',
-    capabilities: ['classify', 'route', 'tools', 'memory'],
-  },
   planner: {
     name: 'Planner Agent',
     description: 'Goal decomposition and task planning',
     capabilities: ['plan', 'decompose', 'track', 'guide'],
-  },
-  agentic: {
-    name: 'Agentic Agent',
-    description: 'Autonomous task execution with research and creation',
-    capabilities: ['research', 'extract', 'create', 'populate', 'validate'],
-  },
-  deep: {
-    name: 'Deep Agent',
-    description: 'Compound request orchestration with task decomposition',
-    capabilities: ['decompose', 'delegate', 'orchestrate', 'artifacts', 'tables'],
   },
   secretary: {
     name: 'Secretary Agent',

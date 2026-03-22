@@ -255,6 +255,14 @@ watch(
       // Switch to new document content, restoring cursor position if available
       muyaInstance.value.setMarkdown(newDoc.content, newDoc.editor_state?.cursor)
 
+      // Focus editor when no saved cursor (e.g. newly created notes).
+      // Without this, keyboard events are dropped and ghost icons appear.
+      if (!newDoc.editor_state?.cursor) {
+        nextTick(() => {
+          muyaInstance.value?.focus()
+        })
+      }
+
       // Update TOC after document switch
       nextTick(() => {
         const state = muyaInstance.value?.getState() || []
@@ -299,6 +307,23 @@ function insertArtifactBlock(artifact: PendingArtifact) {
   const scrollPage = muya.editor.scrollPage
   const ScrollPageClass = (scrollPage as any).constructor
 
+  // Dedup: skip if this artifact is already in the Muya state (from saved note content)
+  if (artifact.artifactId) {
+    const currentState = muya.getState() as Array<{ name: string; text?: string }>
+    const alreadyPresent = currentState.some((block) => {
+      if (block.name !== 'artifact') return false
+      try {
+        return JSON.parse(block.text || '{}')._artifactId === artifact.artifactId
+      } catch {
+        return false
+      }
+    })
+    if (alreadyPresent) {
+      aiStore.markArtifactInserted(artifact.id)
+      return
+    }
+  }
+
   // Create artifact state with JSON-serialized content
   // IMPORTANT: Use nullish coalescing (??) to ensure data fields are never undefined
   // JSON.stringify silently OMITS keys with undefined values, causing content loss
@@ -306,6 +331,7 @@ function insertArtifactBlock(artifact: PendingArtifact) {
     name: 'artifact' as const,
     meta: { title: artifact.data.title || 'Untitled Artifact', customHeight: 300 },
     text: JSON.stringify({
+      _artifactId: artifact.artifactId,
       html: artifact.data.html ?? '',
       css: artifact.data.css ?? '',
       javascript: artifact.data.javascript ?? '',
@@ -538,7 +564,7 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 40px 80px;
+  padding: 40px 130px;
   font-family: var(
     --editor-font-family,
     'Open Sans',
@@ -548,9 +574,15 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
     sans-serif
   );
   font-size: var(--editor-font-size, 16px);
-  line-height: var(--editor-line-height, 1.6);
+  line-height: var(--editor-line-height, 1.5);
   color: var(--text-color);
   outline: none;
+}
+
+/* Remove mu-container left/right padding so cursor aligns with text */
+.muya-editor :deep(.mu-container) {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Muya editor overrides - TS Muya uses 'mu-' prefix */
@@ -559,52 +591,13 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
   width: 100%;
 }
 
-.muya-editor :deep(h1),
-.muya-editor :deep(h2),
-.muya-editor :deep(h3),
-.muya-editor :deep(h4),
-.muya-editor :deep(h5),
-.muya-editor :deep(h6) {
-  color: var(--text-color);
-  font-weight: 600;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-}
-
-.muya-editor :deep(h1) {
-  font-size: 2em;
-}
-.muya-editor :deep(h2) {
-  font-size: 1.5em;
-}
-.muya-editor :deep(h3) {
-  font-size: 1.25em;
-}
-
-.muya-editor :deep(p) {
-  margin-bottom: 1em;
-}
-
+/* Inline code styling (block-level code handled by Muya's blockSyntax.css) */
 .muya-editor :deep(code) {
   background: var(--bg-color);
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.9em;
-}
-
-.muya-editor :deep(pre) {
-  background: var(--bg-color);
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-}
-
-.muya-editor :deep(blockquote) {
-  border-left: 4px solid var(--primary-color);
-  padding-left: 16px;
-  margin-left: 0;
-  color: var(--text-color-secondary);
 }
 
 .muya-editor :deep(a) {
@@ -786,35 +779,6 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
 }
 
 /* ============================================
- * TABLES - cleaner styling
- * ============================================ */
-
-.muya-editor :deep(table) {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 16px 0;
-  border: 1px solid var(--border-color, #333);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.muya-editor :deep(th),
-.muya-editor :deep(td) {
-  border: 1px solid var(--border-color, #333);
-  padding: 10px 16px;
-  text-align: left;
-}
-
-.muya-editor :deep(th) {
-  background: rgba(100, 100, 100, 0.15);
-  font-weight: 600;
-}
-
-.muya-editor :deep(tr:nth-child(even)) {
-  background: rgba(100, 100, 100, 0.05);
-}
-
-/* ============================================
  * DIAGRAMS - visual containers
  * ============================================ */
 
@@ -828,23 +792,6 @@ defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectA
   background: rgba(100, 100, 100, 0.08);
   border-radius: 8px;
   text-align: center;
-}
-
-/* ============================================
- * BLOCKQUOTES
- * ============================================ */
-
-.muya-editor :deep(blockquote) {
-  margin: 16px 0;
-  padding: 12px 20px;
-  border-left: 4px solid var(--primary-color, #65b9f4);
-  background: rgba(100, 100, 100, 0.05);
-  border-radius: 0 8px 8px 0;
-  color: var(--text-color-secondary, #aaa);
-}
-
-.muya-editor :deep(blockquote blockquote) {
-  margin-left: 0;
 }
 
 /* ============================================

@@ -57,7 +57,7 @@ export type ThemeName =
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'one-dark',
   fontSize: 16,
-  lineHeight: 1.6,
+  lineHeight: 1.5,
   codeFontSize: 14,
   editorLineWidth: '100%',
 

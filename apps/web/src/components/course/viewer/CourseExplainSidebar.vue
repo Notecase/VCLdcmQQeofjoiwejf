@@ -242,7 +242,7 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 .header-icon {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
 }
 
 .header-title {
@@ -260,13 +260,13 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #6e7681;
+  color: var(--text-color-secondary, #94a3b8);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .close-btn:hover {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
 }
 
 /* Messages area */
@@ -323,21 +323,21 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 .ai-input-box {
-  background: rgba(22, 27, 34, 0.65);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.65));
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.04));
   border-radius: 12px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4px 20px var(--glass-shadow, rgba(0, 0, 0, 0.1));
   transition: border-color 0.2s;
 }
 
 .ai-input-box:focus-within {
-  border-color: rgba(88, 166, 255, 0.15);
+  border-color: var(--primary-color, #7c9ef8);
 }
 
 /* Context pill inside input */
@@ -354,7 +354,7 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 
 .context-title {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -372,13 +372,13 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
   border-radius: 3px;
   border: none;
   background: transparent;
-  color: #6e7681;
+  color: var(--text-color-secondary, #94a3b8);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .context-dismiss:hover {
-  color: #e2e8f0;
+  color: var(--text-color, #e2e8f0);
 }
 
 /* Textarea */
@@ -397,7 +397,8 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 .input-area textarea::placeholder {
-  color: #484f58;
+  color: var(--text-color-secondary, #94a3b8);
+  opacity: 0.5;
 }
 
 /* Footer */
@@ -418,8 +419,8 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #21262d;
-  color: #6e7681;
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
+  color: var(--text-color-secondary, #94a3b8);
   border: none;
   display: flex;
   align-items: center;

@@ -17,6 +17,34 @@ export interface RenderPlanEntryInput {
   currentTopic?: string
 }
 
+function encodeArtifactValue(value: string | undefined): string {
+  return encodeURIComponent(value || '')
+}
+
+function renderArtifactTags(plan: DailyPlan, taskIndex: number): string {
+  const artifacts = plan.tasks[taskIndex].artifacts || []
+  if (artifacts.length === 0) return ''
+
+  return artifacts
+    .map((artifact) => {
+      const payload = [
+        artifact.kind,
+        artifact.status,
+        artifact.label,
+        artifact.targetId,
+        artifact.href,
+        artifact.missionId,
+        artifact.createdByAgent,
+        artifact.createdAt,
+      ]
+        .map((value) => encodeArtifactValue(value))
+        .join('|')
+
+      return ` {artifact:${payload}}`
+    })
+    .join('')
+}
+
 /**
  * Render a daily plan markdown document while preserving user-authored sections
  * from existing content (focus/AI notes/end-of-day).
@@ -38,7 +66,7 @@ export function renderDailyPlanMarkdown(
     '',
   ]
 
-  for (const task of plan.tasks) {
+  for (const [taskIndex, task] of plan.tasks.entries()) {
     const marker =
       task.status === 'completed'
         ? 'x'
@@ -48,9 +76,10 @@ export function renderDailyPlanMarkdown(
             ? '>'
             : ' '
     const noteTag = task.noteId ? ` {note:${task.noteId}}` : ''
+    const artifactTags = renderArtifactTags(plan, taskIndex)
     const planTag = task.planId ? ` [${task.planId}]` : ''
     lines.push(
-      `- [${marker}] ${task.scheduledTime} (${task.durationMinutes}min) ${task.title}${noteTag}${planTag}`
+      `- [${marker}] ${task.scheduledTime} (${task.durationMinutes}min) ${task.title}${noteTag}${artifactTags}${planTag}`
     )
   }
 

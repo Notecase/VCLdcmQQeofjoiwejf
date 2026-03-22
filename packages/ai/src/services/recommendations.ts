@@ -7,7 +7,9 @@
  * Ported from Note3's recommendationService.ts
  */
 
-import { createOpenAIProvider } from '../providers/openai'
+import { generateText } from 'ai'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 import { createGeminiProvider } from '../providers/gemini'
 import type {
   MindmapData,
@@ -255,24 +257,27 @@ function parseAIResponse<T>(response: string, fallback: T): T {
 // Chat Helper
 // ============================================================================
 
-async function chatWithAI(prompt: string, apiKey: string): Promise<string> {
+async function chatWithAI(prompt: string, _apiKey?: string): Promise<string> {
   try {
     console.log('[RecommendationService] chatWithAI - prompt length:', prompt.length)
-    const provider = createOpenAIProvider({ apiKey })
-    let result = ''
+    const { model, entry } = resolveModel('chat')
 
-    for await (const chunk of provider.chat([{ role: 'user', content: prompt }])) {
-      result += chunk
-    }
+    const { text } = await generateText({
+      model,
+      prompt,
+      temperature: 0.7,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'chat' }),
+    })
 
-    console.log('[RecommendationService] chatWithAI - response length:', result.length)
-    console.log('[RecommendationService] chatWithAI - response preview:', result.substring(0, 300))
+    console.log('[RecommendationService] chatWithAI - response length:', text.length)
+    console.log('[RecommendationService] chatWithAI - response preview:', text.substring(0, 300))
 
-    if (!result || result.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
       throw new Error('Empty response from AI')
     }
 
-    return result
+    return text
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('[RecommendationService] chatWithAI failed:', message)
@@ -627,7 +632,7 @@ Generate exactly 6-10 resources now:`
 
 /**
  * Generate educational slides from note content using Gemini
- * Uses two-stage generation: outline (gemini-3-pro-preview) + images (gemini-3-pro-image-preview)
+ * Uses two-stage generation: outline + images via Gemini native SDK
  */
 export async function generateSlides(
   noteId: string,
@@ -649,7 +654,7 @@ export async function generateSlides(
     const geminiProvider = createGeminiProvider({ apiKey: geminiApiKey })
 
     // Call the FULL generateSlideImages() which does:
-    // 1. Generate outline (Stage 1 - gemini-3-pro-preview)
+    // 1. Generate outline (Stage 1)
     // 2. Generate actual images via Gemini Image API (Stage 2 - gemini-3-pro-image-preview)
     const generatedSlides = await geminiProvider.generateSlideImages(
       noteContent,

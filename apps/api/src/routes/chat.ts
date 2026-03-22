@@ -2,11 +2,14 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const chat = new Hono()
 
 // Apply auth middleware to all routes
 chat.use('*', authMiddleware)
+chat.use('*', creditGuard)
+chat.use('*', requestContextMiddleware)
 
 /**
  * Chat message schema

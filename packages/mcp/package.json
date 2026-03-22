@@ -1,0 +1,37 @@
+{
+  "name": "@noteshell/mcp",
+  "version": "0.2.0",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "scripts",
+    "SKILL.md",
+    "skills"
+  ],
+  "bin": {
+    "noteshell": "scripts/noteshell.mjs",
+    "mcp": "scripts/noteshell.mjs",
+    "noteshell-mcp": "dist/index.js",
+    "noteshell-setup": "scripts/setup.mjs"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "test": "node --test test/device-auth.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.7.0"
+  }
+}

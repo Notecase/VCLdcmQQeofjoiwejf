@@ -5,6 +5,7 @@ import type {
   ParserWarning,
   PlanParseResult,
   ScheduledTask,
+  TaskArtifactLink,
 } from '../types/secretary'
 
 function parseStudyDays(scheduleStr: string): string[] {
@@ -78,6 +79,45 @@ function buildWarning(
   severity: 'info' | 'warning' | 'error' = 'warning'
 ): ParserWarning {
   return { code, message, file, severity }
+}
+
+function decodeArtifactValue(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function parseTaskArtifacts(line: string): TaskArtifactLink[] {
+  const matches = [...line.matchAll(/\{artifact:([^}]+)\}/gi)]
+  const artifacts: TaskArtifactLink[] = []
+
+  for (const [idx, match] of matches.entries()) {
+    const parts = String(match[1] || '').split('|')
+    const [kind, status, label, targetId, href, missionId, createdByAgent, createdAt] = parts.map(
+      (part) => decodeArtifactValue(part)
+    )
+
+    if (!kind || !status || !label || !createdByAgent || !createdAt) {
+      continue
+    }
+
+    artifacts.push({
+      id: `artifact-${idx}-${kind}-${status}`,
+      kind: kind as TaskArtifactLink['kind'],
+      status: status as TaskArtifactLink['status'],
+      label,
+      targetId,
+      href,
+      missionId,
+      createdByAgent,
+      createdAt,
+    })
+  }
+
+  return artifacts
 }
 
 function normalizeStatus(status: string | undefined): LearningRoadmap['status'] {
@@ -228,12 +268,14 @@ export function parseDailyPlanMarkdown(
 
     const line = match[0]
     const noteMatch = line.match(/\{note:([a-f0-9-]+)\}/i)
+    const artifacts = parseTaskArtifacts(line)
 
     tasks.push({
       id: `task-${idx++}`,
       title: match[4]
         .trim()
         .replace(/\{note:[a-f0-9-]+\}/i, '')
+        .replace(/\{artifact:[^}]+\}/gi, '')
         .trim(),
       type: 'learn',
       status,
@@ -241,6 +283,7 @@ export function parseDailyPlanMarkdown(
       durationMinutes: parseInt(match[3], 10),
       planId: match[5] || undefined,
       noteId: noteMatch?.[1] || undefined,
+      artifacts,
       aiGenerated: true,
     })
   }

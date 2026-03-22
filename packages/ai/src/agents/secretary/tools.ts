@@ -1,12 +1,13 @@
 /**
  * Secretary Agent Tools
  *
- * LangChain-compatible tools for the secretary agent.
+ * AI SDK v6 tools for the secretary agent.
  * All backed by the secretary_memory Supabase table.
  */
 
-import { tool } from '@langchain/core/tools'
+import { tool, generateText } from 'ai'
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LearningRoadmap, RoadmapCandidate } from '@inkdown/shared/types'
 import {
   parsePlanMarkdown,
@@ -17,12 +18,22 @@ import {
   formatDateHeading,
 } from '@inkdown/shared/secretary'
 import { MemoryService } from './memory'
-import { runPlannerSubagent, type RoadmapPreview } from './subagents'
+import { PLANNER_SUBAGENT_PROMPT } from './prompts'
 import { parseRoadmapCandidatesFromFiles, type ParsedRoadmapCandidate } from './roadmap-candidates'
+import { resolveModel } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // ============================================================================
 // Pending Roadmap Cache (module-level, keyed by userId)
 // ============================================================================
+
+export interface RoadmapPreview {
+  id: string
+  name: string
+  content: string
+  durationDays: number
+  hoursPerDay: number
+}
 
 const pendingRoadmaps = new Map<string, RoadmapPreview>()
 
@@ -146,121 +157,153 @@ function buildPlanEntryFromRoadmap(
 // ============================================================================
 
 export interface SecretaryToolsConfig {
-  openaiApiKey: string
   userId: string
+  supabase?: SupabaseClient
   model?: string
   timezone?: string
 }
 
 export function createSecretaryTools(memoryService: MemoryService, config: SecretaryToolsConfig) {
-  const readMemoryFile = tool(
-    async ({ filename }) => {
+  const readMemoryFile = tool({
+    description:
+      'Read a memory file by filename (e.g., "Plan.md", "AI.md", "Today.md", "Tomorrow.md", "Plans/optics.md")',
+    inputSchema: z.object({
+      filename: z.string().describe('The filename to read'),
+    }),
+    execute: async ({ filename }) => {
       const file = await memoryService.readFile(filename)
       if (!file) return `File "${filename}" not found.`
       return file.content
     },
-    {
-      name: 'read_memory_file',
-      description:
-        'Read a memory file by filename (e.g., "Plan.md", "AI.md", "Today.md", "Tomorrow.md", "Plans/optics.md")',
-      schema: z.object({
-        filename: z.string().describe('The filename to read'),
-      }),
-    }
-  )
+  })
 
-  const writeMemoryFile = tool(
-    async ({ filename, content }) => {
+  const writeMemoryFile = tool({
+    description: 'Write or update a memory file. Creates the file if it does not exist.',
+    inputSchema: z.object({
+      filename: z.string().describe('The filename to write'),
+      content: z.string().describe('The content to write'),
+    }),
+    execute: async ({ filename, content }) => {
       await memoryService.writeFile(filename, content)
       return `File "${filename}" written successfully.`
     },
-    {
-      name: 'write_memory_file',
-      description: 'Write or update a memory file. Creates the file if it does not exist.',
-      schema: z.object({
-        filename: z.string().describe('The filename to write'),
-        content: z.string().describe('The content to write'),
-      }),
-    }
-  )
+  })
 
-  const listMemoryFiles = tool(
-    async ({ prefix }) => {
+  const listMemoryFiles = tool({
+    description:
+      'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
+    inputSchema: z.object({
+      prefix: z.string().optional().describe('Optional directory prefix filter'),
+    }),
+    execute: async ({ prefix }) => {
       const files = await memoryService.listFiles(prefix || undefined)
       if (files.length === 0) return 'No memory files found.'
       return files.map((f) => `- ${f.filename} (updated: ${f.updatedAt})`).join('\n')
     },
-    {
-      name: 'list_memory_files',
-      description:
-        'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
-      schema: z.object({
-        prefix: z.string().optional().describe('Optional directory prefix filter'),
-      }),
-    }
-  )
+  })
 
-  const deleteMemoryFile = tool(
-    async ({ filename }) => {
+  const deleteMemoryFile = tool({
+    description: 'Delete a memory file by filename',
+    inputSchema: z.object({
+      filename: z.string().describe('The filename to delete'),
+    }),
+    execute: async ({ filename }) => {
       await memoryService.deleteFile(filename)
       return `File "${filename}" deleted.`
     },
-    {
-      name: 'delete_memory_file',
-      description: 'Delete a memory file by filename',
-      schema: z.object({
-        filename: z.string().describe('The filename to delete'),
-      }),
-    }
-  )
+  })
 
-  const renameMemoryFile = tool(
-    async ({ oldFilename, newFilename }) => {
+  const renameMemoryFile = tool({
+    description:
+      'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
+    inputSchema: z.object({
+      oldFilename: z.string().describe('Current filename'),
+      newFilename: z.string().describe('New filename'),
+    }),
+    execute: async ({ oldFilename, newFilename }) => {
       const file = await memoryService.readFile(oldFilename)
       if (!file) return `File "${oldFilename}" not found.`
       await memoryService.writeFile(newFilename, file.content)
       await memoryService.deleteFile(oldFilename)
       return `File renamed from "${oldFilename}" to "${newFilename}".`
     },
-    {
-      name: 'rename_memory_file',
-      description:
-        'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
-      schema: z.object({
-        oldFilename: z.string().describe('Current filename'),
-        newFilename: z.string().describe('New filename'),
-      }),
-    }
-  )
+  })
 
-  const createRoadmap = tool(
-    async ({ subject, durationDays, hoursPerDay }) => {
-      // Generate a real roadmap using the planner subagent
-      const preview = await runPlannerSubagent(
-        { openaiApiKey: config.openaiApiKey, model: config.model },
-        subject,
-        { durationDays: durationDays || 14, hoursPerDay: hoursPerDay || 2 }
-      )
+  const createRoadmap = tool({
+    description:
+      'Generate a structured learning roadmap preview using AI. Returns a preview that must be confirmed before saving via save_roadmap.',
+    inputSchema: z.object({
+      subject: z.string().describe('The subject/topic for the roadmap'),
+      durationDays: z.number().optional().describe('Duration in days (default: 14)'),
+      hoursPerDay: z.number().optional().describe('Study hours per day (default: 2)'),
+    }),
+    execute: async ({ subject, durationDays, hoursPerDay }) => {
+      const duration = durationDays || 14
+      const hours = hoursPerDay || 2
+
+      // Generate a real roadmap using AI SDK generateText (was planner subagent)
+      const { model, entry } = resolveModel('secretary')
+      const userPrompt = `Create a detailed learning roadmap for: "${subject}"
+Duration: ${duration} days
+Hours per day: ${hours}
+
+Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-day plan.`
+
+      const { text: content } = await generateText({
+        model,
+        system: PLANNER_SUBAGENT_PROMPT,
+        prompt: userPrompt,
+        temperature: 0.4,
+        onFinish: trackAISDKUsage({ model: entry.id, taskType: 'secretary' }),
+      })
+
+      // Extract ID from the response
+      const idMatch = content.match(/^#\s*\[(\w{2,4})\]/m)
+      const nameMatch = content.match(/^#\s*\[\w{2,4}\]\s*(.+)/m)
+
+      const preview: RoadmapPreview = {
+        id: idMatch?.[1] || subject.slice(0, 3).toUpperCase(),
+        name: nameMatch?.[1]?.trim() || `${subject} Roadmap`,
+        content,
+        durationDays: duration,
+        hoursPerDay: hours,
+      }
 
       // Store as pending roadmap for this user
       pendingRoadmaps.set(config.userId, preview)
 
       return `## Roadmap Preview: ${preview.name}\n\n${preview.content}\n\n---\n*This roadmap is pending. Ask the user to confirm, then call \`save_roadmap\` to save it.*`
     },
-    {
-      name: 'create_roadmap',
-      description:
-        'Generate a structured learning roadmap preview using AI. Returns a preview that must be confirmed before saving via save_roadmap.',
-      schema: z.object({
-        subject: z.string().describe('The subject/topic for the roadmap'),
-        durationDays: z.number().optional().describe('Duration in days (default: 14)'),
-        hoursPerDay: z.number().optional().describe('Study hours per day (default: 2)'),
-      }),
-    }
-  )
+  })
 
-  const saveRoadmap = tool(
-    async ({ planId, planName, roadmapContent, planMdEntry, startDate }) => {
+  const saveRoadmap = tool({
+    description:
+      'Save a confirmed roadmap to Plan.md and Plans/<id>-roadmap.md. Uses pending roadmap if roadmapContent not provided.',
+    inputSchema: z.object({
+      planId: z
+        .string()
+        .optional()
+        .describe('Short plan ID (e.g., "OPT", "AWS"). Optional when a pending roadmap exists.'),
+      planName: z
+        .string()
+        .optional()
+        .describe('Full plan name. Optional when a pending roadmap exists.'),
+      roadmapContent: z
+        .string()
+        .optional()
+        .describe(
+          'Full roadmap markdown content. If omitted, uses the pending roadmap from create_roadmap.'
+        ),
+      planMdEntry: z
+        .string()
+        .optional()
+        .describe('Plan.md entry line. If omitted, auto-generated.'),
+      startDate: z
+        .string()
+        .optional()
+        .describe('Start date in YYYY-MM-DD format (default: today)'),
+    }),
+    execute: async ({ planId, planName, roadmapContent, planMdEntry, startDate }) => {
       // Use provided roadmapContent or fall back to pending roadmap
       let content = roadmapContent
       const pending = pendingRoadmaps.get(config.userId)
@@ -308,41 +351,55 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
       // Clear pending roadmap
       clearPendingRoadmap(config.userId)
 
+      // Auto-create linked project folder if supabase is available
+      if (config.supabase) {
+        try {
+          const { data: existingLink } = await config.supabase
+            .from('plan_project_links')
+            .select('project_id')
+            .eq('user_id', config.userId)
+            .eq('plan_id', planId)
+            .maybeSingle()
+
+          if (!existingLink) {
+            const { data: project } = await config.supabase
+              .from('projects')
+              .insert({ name: planName, icon: '📋', color: '#10b981', user_id: config.userId })
+              .select('id')
+              .single()
+
+            if (project) {
+              await config.supabase
+                .from('plan_project_links')
+                .insert({ user_id: config.userId, plan_id: planId, project_id: project.id })
+            }
+          }
+        } catch (err) {
+          console.warn('secretary.save_roadmap.auto_link_failed', {
+            planId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+
       return `Roadmap saved: ${archiveFilename} and Plan.md updated with [${planId}] ${planName}`
     },
-    {
-      name: 'save_roadmap',
-      description:
-        'Save a confirmed roadmap to Plan.md and Plans/<id>-roadmap.md. Uses pending roadmap if roadmapContent not provided.',
-      schema: z.object({
-        planId: z
-          .string()
-          .optional()
-          .describe('Short plan ID (e.g., "OPT", "AWS"). Optional when a pending roadmap exists.'),
-        planName: z
-          .string()
-          .optional()
-          .describe('Full plan name. Optional when a pending roadmap exists.'),
-        roadmapContent: z
-          .string()
-          .optional()
-          .describe(
-            'Full roadmap markdown content. If omitted, uses the pending roadmap from create_roadmap.'
-          ),
-        planMdEntry: z
-          .string()
-          .optional()
-          .describe('Plan.md entry line. If omitted, auto-generated.'),
-        startDate: z
-          .string()
-          .optional()
-          .describe('Start date in YYYY-MM-DD format (default: today)'),
-      }),
-    }
-  )
+  })
 
-  const activateRoadmap = tool(
-    async ({ roadmapId, startDate }) => {
+  const activateRoadmap = tool({
+    description:
+      'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
+    inputSchema: z.object({
+      roadmapId: z
+        .string()
+        .optional()
+        .describe('Roadmap ID (e.g., "RL"). Optional if there is only one roadmap candidate.'),
+      startDate: z
+        .string()
+        .optional()
+        .describe('Activation start date YYYY-MM-DD (default: today).'),
+    }),
+    execute: async ({ roadmapId, startDate }) => {
       const files = await memoryService.listFiles('Plans/')
       const candidates = parseRoadmapCandidatesFromFiles(files)
       if (candidates.length === 0) {
@@ -377,25 +434,19 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
       await memoryService.writeFile('Plan.md', updated)
       return `Activated roadmap [${selected.id}] ${selected.name} in Plan.md.`
     },
-    {
-      name: 'activate_roadmap',
-      description:
-        'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
-      schema: z.object({
-        roadmapId: z
-          .string()
-          .optional()
-          .describe('Roadmap ID (e.g., "RL"). Optional if there is only one roadmap candidate.'),
-        startDate: z
-          .string()
-          .optional()
-          .describe('Activation start date YYYY-MM-DD (default: today).'),
-      }),
-    }
-  )
+  })
 
-  const generateDailyPlan = tool(
-    async ({ targetDate, isForTomorrow }) => {
+  const generateDailyPlan = tool({
+    description:
+      'Generate a time-blocked daily study plan based on active roadmaps and preferences. Reads context, generates via AI, and writes to Today.md or Tomorrow.md.',
+    inputSchema: z.object({
+      targetDate: z.string().describe('Target date in YYYY-MM-DD format'),
+      isForTomorrow: z
+        .boolean()
+        .default(false)
+        .describe('Whether this is for tomorrow (writes to Tomorrow.md)'),
+    }),
+    execute: async ({ targetDate, isForTomorrow }) => {
       // Read full context — preferences, plans, this week
       const context = await memoryService.getFullContext()
       const filename = isForTomorrow ? 'Tomorrow.md' : 'Today.md'
@@ -438,16 +489,8 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
         }
       }
 
-      // Use the planner subagent to generate the schedule
-      const { ChatOpenAI } = await import('@langchain/openai')
-      const { HumanMessage, SystemMessage } = await import('@langchain/core/messages')
-
-      const llm = new ChatOpenAI({
-        openAIApiKey: config.openaiApiKey,
-        modelName: config.model ?? 'gpt-4o-mini',
-        temperature: 0.4,
-        maxTokens: 2000,
-      })
+      // Use AI SDK generateText to generate the schedule
+      const { model: scheduleModel, entry: scheduleEntry } = resolveModel('secretary')
 
       const dayName = getDayNameForDate(targetDate)
       const isWeekend = ['Saturday', 'Sunday'].includes(dayName)
@@ -529,14 +572,14 @@ Output EXACTLY this format (for parsing):
 - Struggled with:
 - What went well:`
 
-      const response = await llm.invoke([
-        new SystemMessage(
-          'You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.'
-        ),
-        new HumanMessage(prompt),
-      ])
-
-      const planContent = typeof response.content === 'string' ? response.content : ''
+      const { text: planContent } = await generateText({
+        model: scheduleModel,
+        system:
+          'You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.',
+        prompt,
+        temperature: 0.4,
+        onFinish: trackAISDKUsage({ model: scheduleEntry.id, taskType: 'secretary' }),
+      })
 
       // Write the plan to the target file
       await memoryService.writeFile(filename, planContent)
@@ -548,22 +591,15 @@ Output EXACTLY this format (for parsing):
 
       return `Daily plan for ${targetDate} written to ${filename}.\n\n${planContent}`
     },
-    {
-      name: 'generate_daily_plan',
-      description:
-        'Generate a time-blocked daily study plan based on active roadmaps and preferences. Reads context, generates via AI, and writes to Today.md or Tomorrow.md.',
-      schema: z.object({
-        targetDate: z.string().describe('Target date in YYYY-MM-DD format'),
-        isForTomorrow: z
-          .boolean()
-          .default(false)
-          .describe('Whether this is for tomorrow (writes to Tomorrow.md)'),
-      }),
-    }
-  )
+  })
 
-  const saveReflection = tool(
-    async ({ mood, text }) => {
+  const saveReflection = tool({
+    description: 'Save end-of-day reflection (mood + text) to Today.md "End of Day" section',
+    inputSchema: z.object({
+      mood: z.enum(['great', 'good', 'okay', 'struggling', 'overwhelmed']),
+      text: z.string().optional().describe('Free-text reflection notes'),
+    }),
+    execute: async ({ mood, text }) => {
       const todayFile = await memoryService.readFile('Today.md')
       if (!todayFile) return 'No Today.md found. Cannot save reflection.'
 
@@ -576,18 +612,28 @@ Output EXACTLY this format (for parsing):
       await memoryService.writeFile('Today.md', updated)
       return `Reflection saved: mood=${mood}`
     },
-    {
-      name: 'save_reflection',
-      description: 'Save end-of-day reflection (mood + text) to Today.md "End of Day" section',
-      schema: z.object({
-        mood: z.enum(['great', 'good', 'okay', 'struggling', 'overwhelmed']),
-        text: z.string().optional().describe('Free-text reflection notes'),
-      }),
-    }
-  )
+  })
 
-  const modifyPlan = tool(
-    async ({ action, taskTime, newTime, taskDescription, duration, target }) => {
+  const modifyPlan = tool({
+    description:
+      "Modify today's or tomorrow's schedule: remove, reschedule, add, extend, or update tasks. Use 'update' to set a task's time range (e.g. 'from 11am to 4pm' = update with newTime='11:00', duration=300). Use `target` to specify which plan.",
+    inputSchema: z.object({
+      action: z.enum(['remove', 'reschedule', 'add', 'extend', 'update']),
+      target: z
+        .enum(['today', 'tomorrow'])
+        .default('today')
+        .describe('Which plan to modify: today or tomorrow'),
+      taskTime: z.string().optional().describe('Current task time (HH:MM) to modify'),
+      newTime: z.string().optional().describe('New time (HH:MM) for reschedule or add'),
+      taskDescription: z.string().optional().describe('Task description for add action'),
+      duration: z
+        .number()
+        .optional()
+        .describe(
+          'Duration in minutes. For add/update: sets absolute duration. For extend: adds to existing duration.'
+        ),
+    }),
+    execute: async ({ action, taskTime, newTime, taskDescription, duration, target }) => {
       const filename = target === 'tomorrow' ? 'Tomorrow.md' : 'Today.md'
       const file = await memoryService.readFile(filename)
       if (!file) return `No ${filename} found.`
@@ -707,35 +753,44 @@ Output EXACTLY this format (for parsing):
         }
       }
     },
-    {
-      name: 'modify_plan',
-      description:
-        "Modify today's or tomorrow's schedule: remove, reschedule, add, extend, or update tasks. Use 'update' to set a task's time range (e.g. 'from 11am to 4pm' = update with newTime='11:00', duration=300). Use `target` to specify which plan.",
-      schema: z.object({
-        action: z.enum(['remove', 'reschedule', 'add', 'extend', 'update']),
-        target: z
-          .enum(['today', 'tomorrow'])
-          .default('today')
-          .describe('Which plan to modify: today or tomorrow'),
-        taskTime: z.string().optional().describe('Current task time (HH:MM) to modify'),
-        newTime: z.string().optional().describe('New time (HH:MM) for reschedule or add'),
-        taskDescription: z.string().optional().describe('Task description for add action'),
-        duration: z
-          .number()
-          .optional()
-          .describe(
-            'Duration in minutes. For add/update: sets absolute duration. For extend: adds to existing duration.'
-          ),
-      }),
-    }
-  )
+  })
 
   // ==========================================================================
   // Tier 1 — Schedule Surgery, Carry-Over, Recurring Blocks, Activity Log
   // ==========================================================================
 
-  const bulkModifyPlan = tool(
-    async ({
+  const bulkModifyPlan = tool({
+    description:
+      "Bulk schedule operations on today's or tomorrow's plan. Use shift_after to push all tasks after a time, insert_block to add a blocked period and reflow tasks, or swap to exchange two tasks' content. For single-task edits, use modify_plan instead.",
+    inputSchema: z.object({
+      action: z.enum(['shift_after', 'insert_block', 'swap']),
+      target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to modify'),
+      afterTime: z
+        .string()
+        .optional()
+        .describe('HH:MM — for shift_after: shift tasks at/after this time'),
+      shiftMinutes: z
+        .number()
+        .optional()
+        .describe(
+          'Minutes to shift (positive=later, negative=earlier). Required for shift_after.'
+        ),
+      blockStart: z
+        .string()
+        .optional()
+        .describe('HH:MM — for insert_block: start of blocked time'),
+      blockDuration: z
+        .number()
+        .optional()
+        .describe('Minutes — for insert_block: duration of blocked time'),
+      blockDescription: z
+        .string()
+        .optional()
+        .describe('Description of the block (e.g., "Doctor appointment")'),
+      taskTimeA: z.string().optional().describe('HH:MM — for swap: first task time'),
+      taskTimeB: z.string().optional().describe('HH:MM — for swap: second task time'),
+    }),
+    execute: async ({
       action,
       target,
       afterTime,
@@ -845,43 +900,26 @@ Output EXACTLY this format (for parsing):
         }
       }
     },
-    {
-      name: 'bulk_modify_plan',
-      description:
-        "Bulk schedule operations on today's or tomorrow's plan. Use shift_after to push all tasks after a time, insert_block to add a blocked period and reflow tasks, or swap to exchange two tasks' content. For single-task edits, use modify_plan instead.",
-      schema: z.object({
-        action: z.enum(['shift_after', 'insert_block', 'swap']),
-        target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to modify'),
-        afterTime: z
-          .string()
-          .optional()
-          .describe('HH:MM — for shift_after: shift tasks at/after this time'),
-        shiftMinutes: z
-          .number()
-          .optional()
-          .describe(
-            'Minutes to shift (positive=later, negative=earlier). Required for shift_after.'
-          ),
-        blockStart: z
-          .string()
-          .optional()
-          .describe('HH:MM — for insert_block: start of blocked time'),
-        blockDuration: z
-          .number()
-          .optional()
-          .describe('Minutes — for insert_block: duration of blocked time'),
-        blockDescription: z
-          .string()
-          .optional()
-          .describe('Description of the block (e.g., "Doctor appointment")'),
-        taskTimeA: z.string().optional().describe('HH:MM — for swap: first task time'),
-        taskTimeB: z.string().optional().describe('HH:MM — for swap: second task time'),
-      }),
-    }
-  )
+  })
 
-  const carryOverTasks = tool(
-    async ({ source, destination, filter }) => {
+  const carryOverTasks = tool({
+    description:
+      "Move incomplete tasks from today's plan (or yesterday's history) to tomorrow's or today's plan. Tasks are added with --:-- time (unscheduled) for the user or AI to assign slots.",
+    inputSchema: z.object({
+      source: z
+        .enum(['today', 'yesterday'])
+        .default('today')
+        .describe('Where to pull incomplete tasks from'),
+      destination: z
+        .enum(['today', 'tomorrow'])
+        .default('tomorrow')
+        .describe('Where to add carried-over tasks'),
+      filter: z
+        .enum(['all_incomplete', 'pending_only', 'in_progress_only'])
+        .default('all_incomplete')
+        .describe('Which tasks to carry over'),
+    }),
+    execute: async ({ source, destination, filter }) => {
       let sourceContent: string | null = null
       if (source === 'yesterday') {
         const historyFiles = await memoryService.listFiles('History/')
@@ -939,29 +977,29 @@ Output EXACTLY this format (for parsing):
       const taskList = incomplete.map((t) => `  - (${t.duration}min) ${t.desc}`).join('\n')
       return `Carried over ${incomplete.length} task(s) to ${destFilename}:\n${taskList}`
     },
-    {
-      name: 'carry_over_tasks',
-      description:
-        "Move incomplete tasks from today's plan (or yesterday's history) to tomorrow's or today's plan. Tasks are added with --:-- time (unscheduled) for the user or AI to assign slots.",
-      schema: z.object({
-        source: z
-          .enum(['today', 'yesterday'])
-          .default('today')
-          .describe('Where to pull incomplete tasks from'),
-        destination: z
-          .enum(['today', 'tomorrow'])
-          .default('tomorrow')
-          .describe('Where to add carried-over tasks'),
-        filter: z
-          .enum(['all_incomplete', 'pending_only', 'in_progress_only'])
-          .default('all_incomplete')
-          .describe('Which tasks to carry over'),
-      }),
-    }
-  )
+  })
 
-  const manageRecurringBlocks = tool(
-    async ({ action, name, days, startTime, endTime, category }) => {
+  const manageRecurringBlocks = tool({
+    description:
+      'Add, list, or remove recurring time blocks (meetings, gym, etc.) stored in Recurring.md. These blocks are respected during plan generation — the AI avoids scheduling study during blocked times.',
+    inputSchema: z.object({
+      action: z.enum(['add', 'list', 'remove']),
+      name: z
+        .string()
+        .optional()
+        .describe('Name of the recurring block (e.g., "Team Standup", "Gym")'),
+      days: z
+        .array(z.string())
+        .optional()
+        .describe('Days of week (e.g., ["Mon","Wed","Fri"] or ["Daily"])'),
+      startTime: z.string().optional().describe('Start time HH:MM'),
+      endTime: z.string().optional().describe('End time HH:MM'),
+      category: z
+        .enum(['work', 'personal', 'health', 'other'])
+        .optional()
+        .describe('Category of the block'),
+    }),
+    execute: async ({ action, name, days, startTime, endTime, category }) => {
       const filename = 'Recurring.md'
       const file = await memoryService.readFile(filename)
       let content = file?.content || '# Recurring Time Blocks\n'
@@ -996,32 +1034,19 @@ Output EXACTLY this format (for parsing):
         }
       }
     },
-    {
-      name: 'manage_recurring_blocks',
-      description:
-        'Add, list, or remove recurring time blocks (meetings, gym, etc.) stored in Recurring.md. These blocks are respected during plan generation — the AI avoids scheduling study during blocked times.',
-      schema: z.object({
-        action: z.enum(['add', 'list', 'remove']),
-        name: z
-          .string()
-          .optional()
-          .describe('Name of the recurring block (e.g., "Team Standup", "Gym")'),
-        days: z
-          .array(z.string())
-          .optional()
-          .describe('Days of week (e.g., ["Mon","Wed","Fri"] or ["Daily"])'),
-        startTime: z.string().optional().describe('Start time HH:MM'),
-        endTime: z.string().optional().describe('End time HH:MM'),
-        category: z
-          .enum(['work', 'personal', 'health', 'other'])
-          .optional()
-          .describe('Category of the block'),
-      }),
-    }
-  )
+  })
 
-  const logActivity = tool(
-    async ({ description, startTime, durationMinutes, planId, target }) => {
+  const logActivity = tool({
+    description:
+      'Log a completed activity retroactively. Inserts a pre-completed task (marked [x]) into the schedule at the correct chronological position.',
+    inputSchema: z.object({
+      description: z.string().describe('What was done (e.g., "Watched async Rust tutorial")'),
+      startTime: z.string().describe('When it started (HH:MM)'),
+      durationMinutes: z.number().describe('How long in minutes'),
+      planId: z.string().optional().describe('Associate with a roadmap plan ID (e.g., "RUST")'),
+      target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to log to'),
+    }),
+    execute: async ({ description, startTime, durationMinutes, planId, target }) => {
       const filename = target === 'tomorrow' ? 'Tomorrow.md' : 'Today.md'
       const file = await memoryService.readFile(filename)
       if (!file) return `No ${filename} found.`
@@ -1066,35 +1091,23 @@ Output EXACTLY this format (for parsing):
       await memoryService.writeFile(filename, lines.join('\n'))
       return `Logged activity: ${startTime} (${durationMinutes}min) ${description}${planTag}`
     },
-    {
-      name: 'log_activity',
-      description:
-        'Log a completed activity retroactively. Inserts a pre-completed task (marked [x]) into the schedule at the correct chronological position.',
-      schema: z.object({
-        description: z.string().describe('What was done (e.g., "Watched async Rust tutorial")'),
-        startTime: z.string().describe('When it started (HH:MM)'),
-        durationMinutes: z.number().describe('How long in minutes'),
-        planId: z.string().optional().describe('Associate with a roadmap plan ID (e.g., "RUST")'),
-        target: z.enum(['today', 'tomorrow']).default('today').describe('Which plan to log to'),
-      }),
-    }
-  )
+  })
 
-  return [
-    readMemoryFile,
-    writeMemoryFile,
-    listMemoryFiles,
-    deleteMemoryFile,
-    renameMemoryFile,
-    createRoadmap,
-    saveRoadmap,
-    activateRoadmap,
-    generateDailyPlan,
-    saveReflection,
-    modifyPlan,
-    bulkModifyPlan,
-    carryOverTasks,
-    manageRecurringBlocks,
-    logActivity,
-  ]
+  return {
+    read_memory_file: readMemoryFile,
+    write_memory_file: writeMemoryFile,
+    list_memory_files: listMemoryFiles,
+    delete_memory_file: deleteMemoryFile,
+    rename_memory_file: renameMemoryFile,
+    create_roadmap: createRoadmap,
+    save_roadmap: saveRoadmap,
+    activate_roadmap: activateRoadmap,
+    generate_daily_plan: generateDailyPlan,
+    save_reflection: saveReflection,
+    modify_plan: modifyPlan,
+    bulk_modify_plan: bulkModifyPlan,
+    carry_over_tasks: carryOverTasks,
+    manage_recurring_blocks: manageRecurringBlocks,
+    log_activity: logActivity,
+  }
 }

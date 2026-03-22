@@ -7,7 +7,9 @@
  * Ported from Note3's orchestration.ts
  */
 
-import { createOpenAIProvider } from '../providers/openai'
+import { generateText } from 'ai'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 
 // Simple UUID generator (avoids external dependency)
 function generateId(): string {
@@ -338,11 +340,10 @@ const TEMPLATES: WorkflowTemplate[] = [
 // ============================================================================
 
 export class OrchestrationService {
-  private apiKey: string
   private executions: Map<string, WorkflowExecution> = new Map()
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey
+  constructor(_apiKey?: string) {
+    // API key no longer needed — AI SDK reads from env vars via model registry
   }
 
   /**
@@ -593,8 +594,6 @@ export class OrchestrationService {
    * Generate a custom template using AI
    */
   private async generateCustomTemplate(prompt: string): Promise<WorkflowTemplate> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
-
     const systemPrompt = `You are a workflow planner. Create a workflow template based on the user's request.
 
 Available step types:
@@ -622,15 +621,18 @@ Return a JSON object:
   "parameters": []
 }`
 
-    let response = ''
-    for await (const chunk of provider.chat([
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt },
-    ])) {
-      response += chunk
-    }
+    const { model, entry } = resolveModel('planner')
 
-    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    const { text } = await generateText({
+      model,
+      system: systemPrompt,
+      prompt,
+      temperature: 0.7,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'planner' }),
+    })
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('Failed to generate workflow template')
     }
@@ -748,14 +750,17 @@ Return a JSON object:
    * Generate content using AI
    */
   private async aiGenerate(config: { prompt: string }): Promise<{ content: string }> {
-    const provider = createOpenAIProvider({ apiKey: this.apiKey })
+    const { model, entry } = resolveModel('chat')
 
-    let content = ''
-    for await (const chunk of provider.chat([{ role: 'user', content: config.prompt }])) {
-      content += chunk
-    }
+    const { text } = await generateText({
+      model,
+      prompt: config.prompt,
+      temperature: 0.7,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'chat' }),
+    })
 
-    return { content }
+    return { content: text }
   }
 
   // =========================================================================

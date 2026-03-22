@@ -38,6 +38,11 @@ export class ScrollPage extends Parent {
   static create(muya: Muya, state: TState[]) {
     const scrollPage = new ScrollPage(muya)
 
+    // Guarantee at least one empty paragraph so the editor is never left blockless
+    if (!state || state.length === 0) {
+      state = [{ name: 'paragraph', text: '' } as TState]
+    }
+
     scrollPage.append(
       ...state.map((block) => {
         return this.loadBlock(block.name).create(muya, block)
@@ -79,8 +84,22 @@ export class ScrollPage extends Parent {
 
   updateState(state: TState[]) {
     const { muya } = this
-    // Empty scrollPage dom
+
+    // Guarantee at least one empty paragraph so the editor is never left blockless
+    if (!state || state.length === 0) {
+      state = [{ name: 'paragraph', text: '' } as TState]
+    }
+
+    // Remove tracked Muya children
     this.empty()
+
+    // Remove any orphan DOM nodes not tracked by Muya's block tree
+    if (this.domNode) {
+      while (this.domNode.firstChild) {
+        this.domNode.removeChild(this.domNode.firstChild)
+      }
+    }
+
     this.append(
       ...state.map((block) => {
         return ScrollPage.loadBlock(block.name).create(muya, block)

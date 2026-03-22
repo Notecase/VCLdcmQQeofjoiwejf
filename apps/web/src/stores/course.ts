@@ -17,9 +17,13 @@ import type {
   CourseTodoItem,
   ResearchProgress,
   GenerationStageType,
+  LessonReadyEvent,
+  LessonType,
 } from '@inkdown/shared/types'
 import * as courseService from '@/services/course.service'
 import { canSubmitOutlineApproval } from './course.approval-guard'
+import { isDemoMode } from '@/utils/demo'
+import { DEMO_COURSES, DEMO_COURSE_MODULES } from '@/data/demo-courses'
 
 export const useCourseStore = defineStore('course', () => {
   // ---------------------------------------------------------------------------
@@ -72,6 +76,29 @@ export const useCourseStore = defineStore('course', () => {
   >([])
 
   // ---------------------------------------------------------------------------
+  // State: Content Generation Progress (per-lesson visibility)
+  // ---------------------------------------------------------------------------
+
+  const generatedLessonMap = ref<
+    Map<
+      string,
+      {
+        title: string
+        moduleTitle: string
+        moduleId: string
+        type: LessonType
+        markdownPreview: string
+        status: 'done'
+      }
+    >
+  >(new Map())
+
+  const totalExpectedLessons = ref(0)
+  const selectedPreviewLesson = ref<string | null>(null)
+
+  const generatedLessonsCount = computed(() => generatedLessonMap.value.size)
+
+  // ---------------------------------------------------------------------------
   // State: Quiz / Practice
   // ---------------------------------------------------------------------------
 
@@ -111,6 +138,11 @@ export const useCourseStore = defineStore('course', () => {
   // ---------------------------------------------------------------------------
 
   async function fetchCourses() {
+    if (isDemoMode()) {
+      courses.value = DEMO_COURSES
+      isLoadingCourses.value = false
+      return
+    }
     isLoadingCourses.value = true
     try {
       courses.value = await courseService.fetchCourses()
@@ -126,6 +158,17 @@ export const useCourseStore = defineStore('course', () => {
   // ---------------------------------------------------------------------------
 
   async function fetchCourse(courseId: string) {
+    if (isDemoMode()) {
+      const course = DEMO_COURSES.find((c) => c.id === courseId)
+      if (course) {
+        activeCourse.value = course
+        activeModules.value = DEMO_COURSE_MODULES[courseId] || []
+        selectedModuleIndex.value = 0
+        selectedLessonIndex.value = 0
+        resetPractice()
+      }
+      return
+    }
     try {
       const result = await courseService.fetchCourse(courseId)
       activeCourse.value = result.course
@@ -148,6 +191,7 @@ export const useCourseStore = defineStore('course', () => {
     settings: Partial<CourseSettings>,
     focusAreas: string[]
   ) {
+    if (isDemoMode()) return
     isGenerating.value = true
     generationError.value = null
     generationStage.value = 'research'
@@ -160,6 +204,9 @@ export const useCourseStore = defineStore('course', () => {
     agentSteps.value = []
     agentTodos.value = []
     activeSubAgents.value = []
+    generatedLessonMap.value = new Map()
+    totalExpectedLessons.value = 0
+    selectedPreviewLesson.value = null
 
     try {
       const { courseId, threadId } = await courseService.startCourseGeneration(
@@ -197,6 +244,7 @@ export const useCourseStore = defineStore('course', () => {
         onContentProgress: (data) => {
           generationStage.value = 'content'
           if (data.totalLessons > 0) {
+            totalExpectedLessons.value = data.totalLessons
             const progress = Math.min(
               65 + Math.round(((data.lessonIndex + 1) / data.totalLessons) * 25),
               90
@@ -205,6 +253,19 @@ export const useCourseStore = defineStore('course', () => {
               generationProgress.value = progress
             }
           }
+        },
+
+        onLessonReady: (data: LessonReadyEvent) => {
+          generatedLessonMap.value.set(data.lessonTitle, {
+            title: data.lessonTitle,
+            moduleTitle: data.moduleTitle,
+            moduleId: data.moduleId,
+            type: data.lessonType,
+            markdownPreview: data.markdownPreview,
+            status: 'done',
+          })
+          // Auto-select newly completed lesson for preview
+          selectedPreviewLesson.value = data.lessonTitle
         },
 
         onComplete: async (data) => {
@@ -278,78 +339,57 @@ export const useCourseStore = defineStore('course', () => {
         onDone: async () => {
           activeSubAgents.value = []
           // Fallback: if the agent finished but 'complete' event was lost,
-          // poll thread status with retries to recover
+          // poll thread status to recover
           if (generationStage.value !== 'complete') {
             console.warn(
               '[Course Store] onDone fallback: generation stage is',
               generationStage.value,
               'at',
               generationProgress.value,
-              '%. Polling thread status with retries...'
+              '%. Polling thread status...'
             )
             const threadId = generationThreadId.value
             if (!threadId) return
 
-            const MAX_RETRIES = 12
-            const INITIAL_DELAY = 2000
-            const RETRY_INTERVAL = 5000
+            // Quick initial poll to handle terminal states immediately
+            await new Promise((r) => setTimeout(r, 2000))
 
-            // Wait before first poll to give backend time to commit
-            await new Promise((r) => setTimeout(r, INITIAL_DELAY))
+            try {
+              const status = await courseService.getThreadStatus(threadId)
 
-            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-              try {
-                const status = await courseService.getThreadStatus(threadId)
-
-                if (status.status === 'complete') {
-                  // Generation completed — recover
-                  generationError.value = null
-                  generationStage.value = 'complete'
-                  generationProgress.value = 100
-                  generationThinking.value = ''
-                  isGenerating.value = false
-                  isAwaitingApproval.value = false
-                  if (generationCourseId.value) {
-                    await fetchCourse(generationCourseId.value)
-                    await fetchCourses()
-                  }
-                  return
-                } else if (status.status === 'error') {
-                  // Backend reported an error — surface it immediately
-                  generationError.value = status.error ?? 'Generation failed on the server.'
-                  isGenerating.value = false
-                  return
-                } else if (status.status === 'awaiting_approval') {
-                  // Outline is ready but SSE dropped before frontend got it — recover
-                  console.warn('[Course Store] Recovering awaiting_approval state')
-                  generationError.value = null
-                  isAwaitingApproval.value = true
-                  generationStage.value = 'approval'
-                  if (status.outline) {
-                    pendingOutline.value = status.outline
-                  }
-                  return
+              if (status.status === 'complete') {
+                generationError.value = null
+                generationStage.value = 'complete'
+                generationProgress.value = 100
+                generationThinking.value = ''
+                isGenerating.value = false
+                isAwaitingApproval.value = false
+                if (generationCourseId.value) {
+                  await fetchCourse(generationCourseId.value)
+                  await fetchCourses()
                 }
-
-                // Still running/saving/assembling — retry after interval
-                if (attempt < MAX_RETRIES) {
-                  console.log(
-                    `[Course Store] Poll attempt ${attempt}/${MAX_RETRIES}: status="${status.status}", progress=${status.progress}. Retrying in ${RETRY_INTERVAL}ms...`
-                  )
-                  await new Promise((r) => setTimeout(r, RETRY_INTERVAL))
+                return
+              } else if (status.status === 'error') {
+                generationError.value = status.error ?? 'Generation failed on the server.'
+                isGenerating.value = false
+                return
+              } else if (status.status === 'awaiting_approval') {
+                // Outline is ready but SSE dropped before frontend got it — recover
+                console.warn('[Course Store] Recovering awaiting_approval state')
+                generationError.value = null
+                isAwaitingApproval.value = true
+                generationStage.value = 'approval'
+                if (status.outline) {
+                  pendingOutline.value = status.outline
                 }
-              } catch (err) {
-                console.error(`[Course Store] Poll attempt ${attempt}/${MAX_RETRIES} failed:`, err)
-                if (attempt < MAX_RETRIES) {
-                  await new Promise((r) => setTimeout(r, RETRY_INTERVAL))
-                }
+                return
               }
+            } catch (err) {
+              console.error('[Course Store] Initial onDone poll failed:', err)
             }
 
-            // All retries exhausted — backend is still running or in unknown state
-            generationError.value =
-              'Connection lost. Generation may still be running. Check your courses list.'
-            isGenerating.value = false
+            // Backend still running — delegate to long-running poll
+            pollUntilComplete(threadId)
           }
         },
       })
@@ -359,14 +399,79 @@ export const useCourseStore = defineStore('course', () => {
     }
   }
 
+  /**
+   * Poll thread status until generation completes, errors, or max polls reached.
+   * Coexists safely with SSE: exits immediately if SSE delivers completion first.
+   * Fire-and-forget — does not block the caller.
+   */
+  async function pollUntilComplete(threadId: string) {
+    const POLL_INTERVAL = 5000
+    const MAX_POLLS = 180 // 15 minutes
+
+    for (let i = 0; i < MAX_POLLS; i++) {
+      // Exit if SSE already delivered completion or user cancelled
+      if (generationStage.value === 'complete' || !isGenerating.value) return
+
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL))
+
+      // Re-check after sleep — SSE may have delivered while we waited
+      if ((generationStage.value as string) === 'complete' || !isGenerating.value) return
+
+      try {
+        const status = await courseService.getThreadStatus(threadId)
+
+        if (status.status === 'complete') {
+          generationError.value = null
+          generationStage.value = 'complete'
+          generationProgress.value = 100
+          generationThinking.value = ''
+          isGenerating.value = false
+          isAwaitingApproval.value = false
+          if (status.courseId || generationCourseId.value) {
+            await fetchCourse(status.courseId || generationCourseId.value!)
+            await fetchCourses()
+          }
+          return
+        }
+
+        if (status.status === 'error') {
+          generationError.value = status.error ?? 'Generation failed on the server.'
+          isGenerating.value = false
+          return
+        }
+
+        // Update progress monotonically (never go backwards), cap at 99 during polling
+        const polledProgress = Math.min(status.progress ?? 0, 99)
+        if (polledProgress > generationProgress.value) {
+          generationProgress.value = polledProgress
+        }
+        if (status.stage) {
+          generationStage.value = status.stage as GenerationStageType
+        }
+      } catch {
+        // Network error — continue polling
+      }
+    }
+
+    // Exhausted all polls — surface a recoverable message
+    generationError.value =
+      'Connection lost. Generation may still be running. Check your courses list.'
+    isGenerating.value = false
+  }
+
   async function approveOutline(modifiedOutline?: CourseOutline) {
     if (!canSubmitOutlineApproval(generationThreadId.value, isApprovingOutline.value)) return
 
     try {
       isApprovingOutline.value = true
-      await courseService.approveOutline(generationThreadId.value, modifiedOutline)
+      await courseService.approveOutline(generationThreadId.value!, modifiedOutline)
       isAwaitingApproval.value = false
       generationStage.value = 'content'
+
+      // Start polling as a fallback in case SSE drops after approval
+      if (generationThreadId.value) {
+        pollUntilComplete(generationThreadId.value)
+      }
     } catch (err) {
       generationError.value = err instanceof Error ? err.message : 'Failed to approve outline'
     } finally {
@@ -418,6 +523,22 @@ export const useCourseStore = defineStore('course', () => {
   async function completeLesson(lessonId: string) {
     if (!activeCourse.value) return
 
+    // Demo mode: toggle locally without API call
+    if (isDemoMode()) {
+      for (const mod of activeModules.value) {
+        const lesson = mod.lessons.find((l) => l.id === lessonId)
+        if (lesson) {
+          lesson.status = 'completed'
+          lesson.completedAt = new Date().toISOString()
+          break
+        }
+      }
+      if (activeCourse.value) {
+        activeCourse.value.progress = courseProgress.value
+      }
+      return
+    }
+
     try {
       await courseService.completeLesson(activeCourse.value.id, lessonId)
 
@@ -450,6 +571,27 @@ export const useCourseStore = defineStore('course', () => {
   ): Promise<{ score: number; passed: boolean } | null> {
     if (!activeCourse.value) return null
 
+    // Demo mode: grade locally from static content
+    if (isDemoMode()) {
+      const modules = DEMO_COURSE_MODULES[activeCourse.value.id] || []
+      for (const mod of modules) {
+        const lesson = mod.lessons.find((l) => l.id === lessonId)
+        if (lesson?.content?.practiceProblems) {
+          let correct = 0
+          let total = 0
+          for (const problem of lesson.content.practiceProblems) {
+            if (problem.correctIndex !== undefined) {
+              total++
+              if (answers[problem.id] === problem.correctIndex) correct++
+            }
+          }
+          const score = total > 0 ? Math.round((correct / total) * 100) : 100
+          return { score, passed: score >= 60 }
+        }
+      }
+      return { score: 100, passed: true }
+    }
+
     try {
       const result = await courseService.submitQuiz(activeCourse.value.id, lessonId, answers)
       return result
@@ -477,6 +619,7 @@ export const useCourseStore = defineStore('course', () => {
   // ---------------------------------------------------------------------------
 
   async function deleteCourse(courseId: string) {
+    if (isDemoMode()) return
     try {
       await courseService.deleteCourse(courseId)
       courses.value = courses.value.filter((c) => c.id !== courseId)
@@ -521,6 +664,12 @@ export const useCourseStore = defineStore('course', () => {
     agentSteps,
     agentTodos,
     activeSubAgents,
+
+    // State: Content Generation Progress
+    generatedLessonMap,
+    totalExpectedLessons,
+    selectedPreviewLesson,
+    generatedLessonsCount,
 
     // State: Quiz / Practice
     practiceAnswers,

@@ -185,7 +185,7 @@ const renderedContent = computed(() => {
 }
 
 .prose :deep(strong) {
-  color: #ffffff;
+  color: var(--text-color, #e2e8f0);
 }
 
 .prose :deep(blockquote) {
@@ -198,7 +198,7 @@ const renderedContent = computed(() => {
 }
 
 .prose :deep(a) {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
   text-decoration: none;
 }
 

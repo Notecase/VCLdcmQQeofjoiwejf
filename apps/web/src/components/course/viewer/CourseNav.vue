@@ -165,7 +165,7 @@ function moduleProgress(mod: CourseModule): number {
 }
 
 .module-toggle:hover {
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .module-name {
@@ -201,13 +201,13 @@ function moduleProgress(mod: CourseModule): number {
 }
 
 .lesson-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
   color: var(--text-color, #e2e8f0);
 }
 
 .lesson-btn.selected {
   background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .lesson-btn.completed {

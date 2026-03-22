@@ -3,15 +3,16 @@
  *
  * Goal decomposition and task planning agent.
  * Creates actionable plans from high-level goals.
- *
- * Compatible with:
- * - Vercel AI SDK for streaming
- * - Hono for API routing
- * - LangGraph for state management
  */
 
 import { z } from 'zod'
+import { stripJsonFences } from '../utils/stripJsonFences'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { generateText, Output } from 'ai'
+import type { SharedContextService } from '../services/shared-context.service'
+import { selectModel } from '../providers/model-registry'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
 // Types
@@ -20,8 +21,8 @@ import { SupabaseClient } from '@supabase/supabase-js'
 export interface PlannerAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface PlanStep {
@@ -84,6 +85,22 @@ export type UpdatePlanInput = z.infer<typeof UpdatePlanSchema>
 export type ExecuteStepInput = z.infer<typeof ExecuteStepSchema>
 
 // ============================================================================
+// Structured Output Schema
+// ============================================================================
+
+const PlanOutputSchema = z.object({
+  summary: z.string(),
+  steps: z.array(
+    z.object({
+      id: z.number(),
+      description: z.string(),
+      estimatedTime: z.string().optional(),
+      dependencies: z.array(z.number()).optional(),
+    })
+  ),
+})
+
+// ============================================================================
 // Planning Prompt
 // ============================================================================
 
@@ -124,15 +141,15 @@ Only output valid JSON.`
 export class PlannerAgent {
   private supabase: SupabaseClient
   private userId: string
-  private openaiApiKey: string
   private model: string
+  private sharedContextService?: SharedContextService
   private state: PlannerAgentState
 
   constructor(config: PlannerAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
-    this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('planner').id
+    this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
       previousPlans: [],
@@ -144,30 +161,8 @@ export class PlannerAgent {
    */
   async createPlan(input: CreatePlanInput): Promise<PlannerAgentResponse> {
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-      let userContent = `Goal: ${input.goal}`
-      if (input.context) {
-        userContent += `\n\nContext: ${input.context}`
-      }
-      if (input.constraints?.length) {
-        userContent += `\n\nConstraints:\n${input.constraints.map((c) => `- ${c}`).join('\n')}`
-      }
-      userContent += `\n\nMaximum steps: ${input.maxSteps}`
-
-      const response = await client.chat.completions.create({
-        model: this.model,
-        messages: [
-          { role: 'system', content: PLANNING_PROMPT },
-          { role: 'user', content: userContent },
-        ],
-        temperature: 0.7,
-        max_completion_tokens: 2000,
-      })
-
-      const content = response.choices[0]?.message?.content || '{}'
-      const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())
+      const userContent = await this.buildPlanUserContent(input)
+      const parsed = await this.generatePlanOutput(userContent)
 
       const plan: Plan = {
         id: crypto.randomUUID(),
@@ -193,6 +188,24 @@ export class PlannerAgent {
       this.state.currentPlan = plan
       await this.savePlanToMemory(plan)
 
+      // Write shared context entry for the new plan
+      if (this.sharedContextService) {
+        try {
+          await this.sharedContextService.write({
+            agent: 'planner',
+            type: 'active_plan',
+            summary: `Plan: ${plan.summary}`,
+            payload: {
+              planId: plan.id,
+              goal: plan.goal,
+              stepCount: plan.steps.length,
+            },
+          })
+        } catch {
+          // Best-effort — swallow errors
+        }
+      }
+
       return {
         success: true,
         plan,
@@ -217,32 +230,11 @@ export class PlannerAgent {
     yield { type: 'thinking', data: 'Analyzing your goal...' }
 
     try {
-      const OpenAI = (await import('openai')).default
-      const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-      let userContent = `Goal: ${input.goal}`
-      if (input.context) {
-        userContent += `\n\nContext: ${input.context}`
-      }
-      if (input.constraints?.length) {
-        userContent += `\n\nConstraints:\n${input.constraints.map((c) => `- ${c}`).join('\n')}`
-      }
-      userContent += `\n\nMaximum steps: ${input.maxSteps}`
+      const userContent = await this.buildPlanUserContent(input)
 
       yield { type: 'thinking', data: 'Creating action plan...' }
 
-      const response = await client.chat.completions.create({
-        model: this.model,
-        messages: [
-          { role: 'system', content: PLANNING_PROMPT },
-          { role: 'user', content: userContent },
-        ],
-        temperature: 0.7,
-        max_completion_tokens: 2000,
-      })
-
-      const content = response.choices[0]?.message?.content || '{}'
-      const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim())
+      const parsed = await this.generatePlanOutput(userContent)
 
       yield { type: 'summary', data: parsed.summary || 'Plan created' }
 
@@ -272,6 +264,24 @@ export class PlannerAgent {
 
       this.state.currentPlan = plan
       await this.savePlanToMemory(plan)
+
+      // Write shared context entry for the new plan
+      if (this.sharedContextService) {
+        try {
+          await this.sharedContextService.write({
+            agent: 'planner',
+            type: 'active_plan',
+            summary: `Plan: ${plan.summary}`,
+            payload: {
+              planId: plan.id,
+              goal: plan.goal,
+              stepCount: plan.steps.length,
+            },
+          })
+        } catch {
+          // Best-effort — swallow errors
+        }
+      }
 
       yield { type: 'finish', data: plan }
     } catch (err) {
@@ -356,32 +366,27 @@ export class PlannerAgent {
     }
 
     // Get AI guidance
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const response = await client.chat.completions.create({
-      model: this.model,
+    const startTime = Date.now()
+    const { model: planModel, entry: planEntry } = resolveModel('planner', this.model)
+    const result = await generateText({
+      model: planModel,
+      system:
+        'You are a helpful assistant. Provide brief, actionable guidance for completing a task step.',
       messages: [
         {
-          role: 'system',
-          content:
-            'You are a helpful assistant. Provide brief, actionable guidance for completing a task step.',
-        },
-        {
-          role: 'user',
+          role: 'user' as const,
           content: `Goal: ${plan.goal}\n\nStep to execute: ${step.description}\n\nEstimated time: ${step.estimatedTime || 'Not specified'}\n\nProvide 2-3 practical tips for completing this step effectively.`,
         },
       ],
       temperature: 0.7,
-      max_completion_tokens: 500,
+      maxOutputTokens: 500,
     })
+    recordAISDKUsage(result.usage, { model: planEntry.id, taskType: 'planner' }, startTime)
 
     return {
       success: true,
       step,
-      guidance:
-        response.choices[0]?.message?.content ||
-        'Focus on completing this step before moving to the next.',
+      guidance: result.text || 'Focus on completing this step before moving to the next.',
     }
   }
 
@@ -397,6 +402,61 @@ export class PlannerAgent {
    */
   getCurrentPlan(): Plan | undefined {
     return this.state.currentPlan
+  }
+
+  /**
+   * Build user content string from input and shared context
+   */
+  private async buildPlanUserContent(input: CreatePlanInput): Promise<string> {
+    let userContent = `Goal: ${input.goal}`
+    if (input.context) {
+      userContent += `\n\nContext: ${input.context}`
+    }
+    if (input.constraints?.length) {
+      userContent += `\n\nConstraints:\n${input.constraints.map((c) => `- ${c}`).join('\n')}`
+    }
+    userContent += `\n\nMaximum steps: ${input.maxSteps}`
+
+    if (this.sharedContextService) {
+      try {
+        const sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['research_done', 'note_created', 'note_edited', 'course_saved'],
+        })
+        if (sharedCtx) {
+          userContent += '\n\n' + sharedCtx
+        }
+      } catch {
+        // Graceful degradation
+      }
+    }
+    return userContent
+  }
+
+  /**
+   * Generate plan output via AI SDK
+   */
+  private async generatePlanOutput(userContent: string): Promise<{
+    summary: string
+    steps: Array<{ id: number; description: string; estimatedTime?: string; dependencies?: number[] }>
+  }> {
+    const startTime = Date.now()
+    const { model: planModel, entry: planEntry } = resolveModel('planner', this.model)
+    const result = await generateText({
+      model: planModel,
+      system: PLANNING_PROMPT,
+      messages: [{ role: 'user' as const, content: userContent }],
+      temperature: 0.7,
+      maxOutputTokens: 2000,
+      output: Output.object({ schema: PlanOutputSchema }),
+    })
+    recordAISDKUsage(result.usage, { model: planEntry.id, taskType: 'planner' }, startTime)
+
+    if (result.output) return result.output
+    try {
+      return JSON.parse(stripJsonFences(result.text))
+    } catch {
+      return { summary: 'Plan created', steps: [] }
+    }
   }
 
   /**

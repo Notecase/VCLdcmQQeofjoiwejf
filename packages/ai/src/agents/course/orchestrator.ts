@@ -1,10 +1,11 @@
 /**
  * Course Orchestrator — packages/ai/src/agents/course/orchestrator.ts
  *
- * Deep agent orchestrator for end-to-end course generation.
- * Uses the same deepagents + ChatOpenAI pattern as ResearchAgent.
+ * AI SDK v6 ToolLoopAgent orchestrator for end-to-end course generation.
+ * Uses centralized model registry + AI SDK factory.
  */
 
+import { ToolLoopAgent, stepCountIs } from 'ai'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   Course,
@@ -49,11 +50,9 @@ class AsyncEventQueue<T> {
 
   finish() {
     this.done = true
-    // Resolve any pending waiter with a sentinel — the iterator will check `done`
     if (this.waiter) {
       const w = this.waiter
       this.waiter = null
-      // Push a dummy resolve; the loop will exit via `done` check
       w(undefined as unknown as T)
     }
   }
@@ -69,7 +68,6 @@ class AsyncEventQueue<T> {
           this.waiter = resolve
         })
         if (this.done && this.queue.length === 0) return
-        // Only yield real items (not the dummy from finish())
         if (item !== undefined) yield item
       }
     }
@@ -80,13 +78,16 @@ class AsyncEventQueue<T> {
 // Types
 // =============================================================================
 
+import type { SharedContextService } from '../../services/shared-context.service'
+import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+
 export interface CourseOrchestratorConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
-  geminiApiKey: string
   youtubeApiKey?: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export interface CourseThreadState {
@@ -110,9 +111,11 @@ You orchestrate the end-to-end creation of structured courses by:
 2. Indexing the research for per-lesson retrieval (using index_research)
 3. Generating a structured course outline (using generate_outline)
 4. Getting user approval of the outline (using request_outline_approval)
-5. Delegating content generation to specialized subagents (lesson-writer, quiz-writer, slides-writer)
-6. Matching YouTube videos to video/lecture lessons (using match_videos)
-7. Assembling and saving the final course (using assemble_course + save_to_supabase)
+5. Generating lesson content (using batch_generate_lessons)
+6. Generating quiz content (using batch_generate_quizzes)
+7. Generating slide decks (using batch_generate_slides)
+8. Matching YouTube videos to video/lecture lessons (using match_videos)
+9. Assembling and saving the final course (using assemble_course + save_to_supabase)
 
 ## WORKFLOW
 1. **Plan**: Create a todo list with write_todos to track progress through each stage.
@@ -120,10 +123,10 @@ You orchestrate the end-to-end creation of structured courses by:
 3. **Index**: Use index_research to create a searchable index of the research.
 4. **Outline**: Use query_rag to get relevant context, then generate_outline to create the course structure.
 5. **Approval**: Use request_outline_approval to pause for user approval. WAIT for the response before continuing.
-6. **Content Generation — delegate to subagents in this order**:
-   a. Delegate to **lesson-writer** to generate all lecture, video, and practice lessons in one batch.
-   b. Delegate to **quiz-writer** to generate all quiz lessons in one batch.
-   c. Delegate to **slides-writer** to generate all slide decks in one batch.
+6. **Content Generation — call these tools in order**:
+   a. Call **batch_generate_lessons** to generate all lecture, video, and practice lessons.
+   b. Call **batch_generate_quizzes** to generate all quiz lessons.
+   c. Call **batch_generate_slides** to generate all slide decks.
 7. **Videos**: If videos are enabled, use match_videos to find YouTube videos for relevant lessons.
 8. **Assemble**: Use assemble_course to create the final Course object.
 9. **Save**: Use save_to_supabase to persist everything.
@@ -134,10 +137,8 @@ You orchestrate the end-to-end creation of structured courses by:
 - Always request approval before generating lesson content.
 - Update todo items as you complete each step.
 - Use think() to reason about complex decisions.
-- NEVER call generate_lesson_content or generate_slides yourself. ALWAYS delegate content generation to the subagents.
-- Each subagent handles ALL lessons of its type in a single batch call.
-- After outline approval, delegate to lesson-writer FIRST, then quiz-writer, then slides-writer.
-- Generated content is stored automatically by subagent tools. Do NOT pass lesson content between tools.
+- After outline approval, call batch_generate_lessons FIRST, then batch_generate_quizzes, then batch_generate_slides.
+- Generated content is stored automatically by batch tools. Do NOT pass lesson content between tools.
 - Do NOT echo or repeat tool results. Keep messages concise.
 - assemble_course, match_videos, and save_to_supabase read from stored state — call them with minimal/no arguments.
 - NEVER call run_deep_research or index_research more than once. Research is cached.
@@ -146,18 +147,6 @@ You orchestrate the end-to-end creation of structured courses by:
 - Pipeline is strictly sequential: research → index → outline → approval → lessons → quizzes → slides → videos → assemble → save. NEVER go backwards.
 - **STOP**: After save_to_supabase returns success, your task is DONE. Do not call any more tools or generate further messages. End immediately.`
 }
-
-const LESSON_WRITER_SUBAGENT_PROMPT = `You are the LESSON WRITER subagent. Your ONLY job is to call batch_generate_lessons exactly ONCE and return the summary.
-
-Do NOT call any other tools. Do NOT explain or plan. Just call batch_generate_lessons immediately.`
-
-const QUIZ_WRITER_SUBAGENT_PROMPT = `You are the QUIZ WRITER subagent. Your ONLY job is to call batch_generate_quizzes exactly ONCE and return the summary.
-
-Do NOT call any other tools. Do NOT explain or plan. Just call batch_generate_quizzes immediately.`
-
-const SLIDES_WRITER_SUBAGENT_PROMPT = `You are the SLIDES WRITER subagent. Your ONLY job is to call batch_generate_slides exactly ONCE and return the summary.
-
-Do NOT call any other tools. Do NOT explain or plan. Just call batch_generate_slides immediately.`
 
 // =============================================================================
 // Course Orchestrator
@@ -179,9 +168,9 @@ export class CourseOrchestrator {
   }
 
   /**
-   * Stream a course generation interaction via the deepagents framework.
+   * Stream a course generation interaction via AI SDK v6 ToolLoopAgent.
    * Uses AsyncEventQueue so tool-emitted events are yielded immediately,
-   * even while the deepagents framework is blocked waiting for a tool call.
+   * even while the ToolLoopAgent is blocked waiting for a tool call.
    */
   async *stream(input: {
     topic: string
@@ -210,16 +199,13 @@ export class CourseOrchestrator {
       } satisfies CourseGenerationProgress,
     })
 
-    const { createDeepAgent } = await import('deepagents')
-    const { ChatOpenAI } = await import('@langchain/openai')
-
-    const llm = new ChatOpenAI({
-      openAIApiKey: this.config.openaiApiKey,
-      modelName: this.config.model ?? 'gpt-5.2',
-      temperature: 0.3,
-    })
-
-    const systemPrompt = getCourseOrchestratorPrompt()
+    const sharedCtx = this.config.sharedContextService
+      ? await this.config.sharedContextService.read({
+          relevantTypes: ['active_plan', 'soul_updated'],
+        })
+      : ''
+    const basePrompt = getCourseOrchestratorPrompt()
+    const systemPrompt = sharedCtx ? `${basePrompt}\n\n${sharedCtx}` : basePrompt
 
     // Mutable containers for tool state
     const researchReport: { value: string | null } = { value: null }
@@ -233,8 +219,6 @@ export class CourseOrchestrator {
 
     // Create tool context — emitEvent pushes directly to the queue
     const toolContext: CourseToolContext = {
-      geminiApiKey: this.config.geminiApiKey,
-      openaiApiKey: this.config.openaiApiKey,
       youtubeApiKey: this.config.youtubeApiKey,
       supabase: this.config.supabase,
       userId: this.config.userId,
@@ -277,50 +261,26 @@ export class CourseOrchestrator {
       },
     }
 
-    const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
-    const geminiFlash = new ChatGoogleGenerativeAI({
-      model: 'gemini-3-flash-preview',
-      apiKey: this.config.geminiApiKey,
-      temperature: 0.7,
-    })
-    const geminiPro = new ChatGoogleGenerativeAI({
-      model: 'gemini-3-pro-preview',
-      apiKey: this.config.geminiApiKey,
-      temperature: 0.7,
-    })
-
+    // Merge all tools into a single ToolLoopAgent (replaces deepagents subagents)
     const orchestratorTools = createOrchestratorTools(toolContext)
+    const lessonWriterTools = createLessonWriterTools(toolContext)
+    const quizWriterTools = createQuizWriterTools(toolContext)
+    const slidesWriterTools = createSlidesWriterTools(toolContext)
 
-    const agent = createDeepAgent({
-      model: llm,
-      systemPrompt,
-      tools: orchestratorTools,
-      subagents: [
-        {
-          name: 'lesson-writer',
-          description:
-            'Generates all lecture, video, and practice lesson content in a single batch call. Delegate to this subagent after outline approval.',
-          systemPrompt: LESSON_WRITER_SUBAGENT_PROMPT,
-          tools: createLessonWriterTools(toolContext) as any,
-          model: geminiFlash,
-        },
-        {
-          name: 'quiz-writer',
-          description:
-            'Generates all quiz content in a single batch call. Delegate to this subagent after lesson-writer completes.',
-          systemPrompt: QUIZ_WRITER_SUBAGENT_PROMPT,
-          tools: createQuizWriterTools(toolContext) as any,
-          model: geminiFlash,
-        },
-        {
-          name: 'slides-writer',
-          description:
-            'Generates all slide decks in a single batch call using higher-quality gemini-3-pro-preview. Delegate to this subagent after quiz-writer completes.',
-          systemPrompt: SLIDES_WRITER_SUBAGENT_PROMPT,
-          tools: createSlidesWriterTools(toolContext) as any,
-          model: geminiPro,
-        },
-      ],
+    const allTools = {
+      ...orchestratorTools,
+      ...lessonWriterTools,
+      ...quizWriterTools,
+      ...slidesWriterTools,
+    }
+
+    const model = getModelForTask('course')
+    const agent = new ToolLoopAgent({
+      model,
+      instructions: systemPrompt,
+      tools: allTools,
+      stopWhen: stepCountIs(25),
+      onFinish: trackAISDKUsage({ model: 'course', taskType: 'course' }),
     })
 
     const userMessage = `Generate a ${input.difficulty} course on "${input.topic}".
@@ -331,7 +291,7 @@ Estimated duration: ${input.settings.estimatedWeeks} weeks, ${input.settings.hou
 
 Please proceed through the full pipeline: research → index → outline → approval → content → videos → assemble → save.`
 
-    // Track the current stage for error reporting (avoids hardcoded 'research')
+    // Track the current stage for error reporting
     let currentStage: GenerationStageType = 'research'
     const originalEmit = toolContext.emitEvent
     toolContext.emitEvent = (event) => {
@@ -346,112 +306,92 @@ Please proceed through the full pipeline: research → index → outline → app
       originalEmit(event)
     }
 
-    // Run deepagents iteration in background, pushing all events to the queue
+    // Run ToolLoopAgent in background, pushing all events to the queue
     const agentTask = (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const streamResult = (await (agent as any).stream(
-          { messages: [{ role: 'user', content: userMessage }] },
-          { configurable: { thread_id: input.courseId } }
-        )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+        const result = await agent.stream({
+          messages: [{ role: 'user', content: userMessage }],
+        })
 
-        const seenSubagents = new Set<string>()
-
-        for await (const chunk of streamResult) {
-          for (const [nodeKey, nodeValue] of Object.entries(chunk)) {
-            const nodeData = nodeValue as { messages?: unknown[] }
-            if (!nodeData?.messages) continue
-
-            const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
-
-            for (const msg of messages) {
-              if (!msg || typeof msg !== 'object') continue
-
-              const msgObj = msg as {
-                id?: string
-                content?: string | unknown[]
-                tool_calls?: Array<{ name: string; args: Record<string, unknown> }>
-                name?: string
-                type?: string
-              }
-
-              if (nodeKey === 'tools' || msgObj.type === 'tool') {
-                const content = typeof msgObj.content === 'string' ? msgObj.content : ''
-                if (content) {
-                  eventQueue.push({
-                    event: 'tool_result',
-                    data: JSON.stringify({
-                      id: msgObj.id || crypto.randomUUID(),
-                      toolName: msgObj.name || 'unknown',
-                      result: content.slice(0, 500),
-                    }),
-                  })
-                }
-              } else {
-                if (nodeKey !== 'agent' && nodeKey !== 'tools' && !seenSubagents.has(nodeKey)) {
-                  seenSubagents.add(nodeKey)
-                  eventQueue.push({
-                    event: 'subagent-start',
-                    data: {
-                      id: `subagent-${nodeKey}-${Date.now()}`,
-                      name: nodeKey as any,
-                      status: 'running',
-                      startedAt: new Date().toISOString(),
-                    },
-                  })
-                }
-
-                const textContent =
-                  typeof msgObj.content === 'string'
-                    ? msgObj.content
-                    : Array.isArray(msgObj.content)
-                      ? msgObj.content
-                          .map((part) => {
-                            if (typeof part === 'string') return part
-                            if (part && typeof part === 'object' && 'text' in (part as any))
-                              return (part as any).text
-                            return ''
-                          })
-                          .join('')
-                      : ''
-
-                if (textContent) {
-                  eventQueue.push({ event: 'text', data: textContent })
-
-                  if (nodeKey !== 'agent' && nodeKey !== 'tools') {
-                    eventQueue.push({
-                      event: 'subagent-result',
-                      data: {
-                        id: `subagent-${nodeKey}-${Date.now()}`,
-                        name: nodeKey as any,
-                        status: 'completed',
-                        completedAt: new Date().toISOString(),
-                      },
-                    })
-                  }
-                }
-
-                if (Array.isArray(msgObj.tool_calls)) {
-                  for (const call of msgObj.tool_calls) {
-                    eventQueue.push({
-                      event: 'tool_call',
-                      data: JSON.stringify({
-                        id: crypto.randomUUID(),
-                        toolName: call.name,
-                        arguments: call.args,
-                      }),
-                    })
-                  }
-                }
-              }
+        for await (const part of result.fullStream) {
+          switch (part.type) {
+            case 'text-delta': {
+              eventQueue.push({ event: 'text', data: part.text })
+              break
             }
+
+            case 'tool-call': {
+              eventQueue.push({
+                event: 'tool_call',
+                data: JSON.stringify({
+                  id: part.toolCallId,
+                  toolName: part.toolName,
+                  arguments: part.input,
+                }),
+              })
+              break
+            }
+
+            case 'tool-result': {
+              eventQueue.push({
+                event: 'tool_result',
+                data: JSON.stringify({
+                  id: part.toolCallId,
+                  toolName: part.toolName,
+                  result:
+                    typeof part.output === 'string'
+                      ? part.output.slice(0, 500)
+                      : JSON.stringify(part.output).slice(0, 500),
+                }),
+              })
+              break
+            }
+
+            case 'tool-error': {
+              eventQueue.push({
+                event: 'error',
+                data: { message: `Tool "${part.toolName}" failed: ${part.error}`, stage: currentStage },
+              })
+              break
+            }
+
+            case 'reasoning-delta': {
+              eventQueue.push({
+                event: 'thinking',
+                data: part.text,
+              })
+              break
+            }
+
+            default:
+              break
           }
+        }
+
+        // Write shared context entry for completed course
+        if (this.config.sharedContextService) {
+          await this.config.sharedContextService.write({
+            agent: 'course',
+            type: 'course_saved',
+            summary: `Course generated: ${input.topic}`,
+            payload: { courseId: input.courseId, topic: input.topic },
+          })
         }
 
         eventQueue.push({ event: 'done' })
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error)
+        console.error('[CourseOrchestrator] agentTask error:', errorMsg)
         eventQueue.push({ event: 'error', data: { message: errorMsg, stage: currentStage } })
+        // Defense-in-depth: update DB directly in case SSE handler is gone
+        try {
+          await toolContext.supabase
+            .from('course_generation_threads')
+            .update({ status: 'error', stage: currentStage, error: errorMsg })
+            .eq('course_id', input.courseId)
+        } catch {
+          /* best-effort */
+        }
       } finally {
         eventQueue.finish()
       }

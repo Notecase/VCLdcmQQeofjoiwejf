@@ -58,7 +58,6 @@ export class NoteSubagent {
     this.noteAgent = new NoteAgent({
       supabase: config.supabase,
       userId: config.userId,
-      openaiApiKey: config.openaiApiKey,
       model: config.model,
     })
   }

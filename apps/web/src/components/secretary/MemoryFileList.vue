@@ -111,7 +111,7 @@ function formatDate(dateStr: string): string {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 0;
+  padding: 8px 0 8px 8px;
 }
 
 .list-title {
@@ -121,7 +121,7 @@ function formatDate(dateStr: string): string {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 16px;
 }
 
 .file-list {
@@ -134,7 +134,7 @@ function formatDate(dateStr: string): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -145,7 +145,7 @@ function formatDate(dateStr: string): string {
 }
 
 .file-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .file-item.active {
@@ -188,7 +188,7 @@ function formatDate(dateStr: string): string {
 .history-divider {
   height: 1px;
   background: var(--border-color, #333338);
-  margin: 6px 8px;
+  margin: 6px 16px;
 }
 
 .history-item {

@@ -56,6 +56,12 @@ apps/web/src/**/*.js
 .windsurf/
 .zencoder/
 
+# Claude Code plugin artifacts
+.superdesign/
+.superpowers/
+.claude/worktrees/
+docs/.~lock.*
+
 # OS
 .DS_Store
 Thumbs.db
@@ -74,3 +80,4 @@ supabase/.temp/
 
 # Generated Vue SFC outputs
 **/*.vue.js
+.vercel

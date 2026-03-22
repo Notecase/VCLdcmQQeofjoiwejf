@@ -7,7 +7,10 @@
 
 import { useAIStore, type DiffHunk, type ThinkingStep } from '@/stores/ai'
 import { useAuthStore } from '@/stores/auth'
+import { useCreditsStore } from '@/stores/credits'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { buildEmptyAssistantFallback } from './ai.fallback'
+import { isDemoMode } from '@/utils/demo'
 import * as Diff from 'diff'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
@@ -18,12 +21,27 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
 
 export interface AgentRequestOptions {
   input: string
+  runtime?: 'legacy' | 'editor-deep'
+  threadId?: string
   context?: {
     noteIds?: string[]
     projectId?: string
+    workspaceId?: string
     currentNoteId?: string
+    currentBlockId?: string
+    selectedText?: string
     selectedBlockIds?: string[] // For clarification flow - user-selected targets (deprecated)
     selectedLineNumbers?: number[] // For clarification flow - line numbers are stable across re-parsing
+  }
+  editorContext?: {
+    workspaceId?: string
+    currentNoteId?: string
+    currentBlockId?: string
+    selectedBlockIds?: string[]
+    selectedText?: string
+    projectId?: string
+    noteIds?: string[]
+    selectedLineNumbers?: number[]
   }
   sessionId?: string
   stream?: boolean
@@ -31,6 +49,10 @@ export interface AgentRequestOptions {
 
 export interface StreamChunk {
   type:
+    | 'assistant-start'
+    | 'assistant-delta'
+    | 'assistant-final'
+    | 'done'
     | 'text-delta'
     | 'thinking'
     | 'tool-call'
@@ -39,8 +61,10 @@ export interface StreamChunk {
     | 'citation'
     | 'edit-proposal'
     | 'clarification-request'
+    | 'clarification-requested'
     | 'artifact'
     | 'code-preview'
+    | 'pre-action-question'
     | 'finish'
     | 'error'
     // DeepAgent events for compound request handling
@@ -49,6 +73,13 @@ export interface StreamChunk {
     | 'subtask-progress'
     | 'subtask-complete'
     | 'note-navigate'
+    // Multi-mode streaming events (subagent lifecycle + custom progress)
+    | 'subagent-start'
+    | 'subagent-delta'
+    | 'subagent-complete'
+    | 'custom-progress'
+    | 'action-summary'
+    | 'synthesis-start'
   data: unknown
 }
 
@@ -118,7 +149,10 @@ export async function sendToSecretary(options: AgentRequestOptions): Promise<str
       method: 'POST',
       body: JSON.stringify({
         input: options.input,
+        runtime: options.runtime ?? 'editor-deep',
+        threadId: options.threadId,
         context: options.context,
+        editorContext: options.editorContext,
         sessionId: options.sessionId,
         stream: false,
       }),
@@ -459,17 +493,64 @@ async function streamFromAgent(agentType: string, options: AgentRequestOptions):
     method: 'POST',
     body: JSON.stringify({
       input: options.input,
+      runtime: options.runtime ?? 'editor-deep',
+      threadId: options.threadId,
       context: options.context,
+      editorContext: options.editorContext,
       sessionId: options.sessionId,
       stream: true,
     }),
   })
 
   if (!response.ok) {
+    if (response.status === 402) {
+      const creditsStore = useCreditsStore()
+      creditsStore.markExhausted()
+      throw new Error('CREDITS_EXHAUSTED')
+    }
     throw new Error(`API error: ${response.status}`)
   }
 
   return await processSSEResponse(response, store)
+}
+
+/**
+ * Batches high-frequency string pushes into periodic flushes.
+ * Used to throttle Pinia store mutations during fast LLM streams
+ * (~100 text-delta/sec → ~20 store updates/sec at 50ms interval).
+ */
+function createStreamThrottler(
+  flush: (accumulated: string) => void,
+  intervalMs = 50
+) {
+  let buffer = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return {
+    push(delta: string) {
+      buffer += delta
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null
+          if (buffer) {
+            const chunk = buffer
+            buffer = ''
+            flush(chunk)
+          }
+        }, intervalMs)
+      }
+    },
+    forceFlush() {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (buffer) {
+        const chunk = buffer
+        buffer = ''
+        flush(chunk)
+      }
+    },
+  }
 }
 
 /**
@@ -479,57 +560,57 @@ async function processSSEResponse(
   response: Response,
   store: ReturnType<typeof useAIStore>
 ): Promise<string> {
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('No response body')
-  }
-
-  const decoder = new TextDecoder()
+  const { parseSSEStream } = await import('@/utils/sse-parser')
   let fullContent = ''
-  let buffer = ''
+
+  // Throttle text-delta store mutations to ~20/sec instead of ~100/sec.
+  // fullContent accumulation stays synchronous; only the Pinia mutation is batched.
+  const throttler = createStreamThrottler((accumulated) => {
+    const sessionId = store.activeSessionId
+    if (sessionId && store.sessions[sessionId]) {
+      store.appendToLastMessage(sessionId, accumulated)
+    }
+  })
 
   try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+    await parseSSEStream(response, {
+      onEvent: async (sseEvent) => {
+        const chunk = sseEvent.data as StreamChunk
 
-      buffer += decoder.decode(value, { stream: true })
+        switch (chunk.type) {
+              case 'assistant-start':
+                store.setStatus('streaming')
+                break
 
-      // Process complete SSE messages
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
-
-          try {
-            const chunk: StreamChunk = JSON.parse(data)
-
-            switch (chunk.type) {
+              case 'assistant-delta':
               case 'text-delta': {
                 fullContent += chunk.data as string
-                // Use activeSessionId directly to avoid computed property race condition
-                // The computed activeSession can return null if sessions[id] lookup fails
-                // during the brief window between session creation and state synchronization
-                const sessionId = store.activeSessionId
-                if (sessionId && store.sessions[sessionId]) {
-                  store.appendToLastMessage(sessionId, chunk.data as string)
-                } else {
-                  console.warn(
-                    '[AI Service] Received text-delta but no active session - chunk dropped:',
-                    chunk.data
-                  )
-                }
+                throttler.push(chunk.data as string)
                 break
               }
 
+              case 'assistant-final': {
+                throttler.forceFlush()
+                const finalText = typeof chunk.data === 'string' ? chunk.data : ''
+                if (finalText && !fullContent.trim()) {
+                  fullContent = finalText
+                  const sessionId = store.activeSessionId
+                  if (sessionId && store.sessions[sessionId]) {
+                    store.appendToLastMessage(sessionId, finalText)
+                  }
+                }
+                store.setStatus('idle')
+                break
+              }
+
+              case 'done':
               case 'finish':
+                throttler.forceFlush()
                 store.setStatus('idle')
                 break
 
               case 'error':
+                throttler.forceFlush()
                 store.setError(chunk.data as string)
                 break
 
@@ -569,9 +650,10 @@ async function processSSEResponse(
                 const toolData = chunk.data as {
                   name?: string
                   tool?: string
+                  toolName?: string
                   arguments?: Record<string, unknown>
                 }
-                const toolName = toolData.name || toolData.tool || 'unknown'
+                const toolName = toolData.name || toolData.tool || toolData.toolName || 'unknown'
                 const runningThoughts = store.thinkingSteps.filter(
                   (step) => step.status === 'running' && step.type !== 'tool'
                 )
@@ -586,9 +668,27 @@ async function processSSEResponse(
                 const lastMessage = session?.messages[session.messages.length - 1]
                 const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
 
+                // Map tool names to human-readable descriptions
+                const toolDescriptions: Record<string, string> = {
+                  create_note: 'Preparing new note...',
+                  answer_question_about_note: 'Reading your note...',
+                  read_note_structure: 'Analyzing note structure...',
+                  add_paragraph: 'Adding content to your note...',
+                  edit_paragraph: 'Editing your note...',
+                  remove_paragraph: 'Removing content...',
+                  create_artifact_from_note: 'Creating interactive widget...',
+                  insert_table: 'Inserting table...',
+                  database_action: 'Running database operation...',
+                  read_memory: 'Checking memory...',
+                  write_memory: 'Saving to memory...',
+                  ask_user_preference: 'Asking for your preference...',
+                }
+                const toolDescription = toolDescriptions[toolName]
+                  || toolName.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
+
                 store.addThinkingStep({
                   type: 'tool',
-                  description: `Calling ${toolName}...`,
+                  description: toolDescription,
                   status: 'running',
                   messageId,
                 })
@@ -616,12 +716,19 @@ async function processSSEResponse(
                 const editData = chunk.data as EditProposalData
                 const diffHunks = computeDiffHunks(editData.original, editData.proposed)
 
+                // Get current assistant message ID for linking
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const editMessageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
                 const pendingEdit = store.addPendingEdit({
                   blockId: editData.blockId || '',
                   noteId: editData.noteId,
                   originalContent: editData.original,
                   proposedContent: editData.proposed,
                   diffHunks,
+                  messageId: editMessageId,
                 })
 
                 // Automatically activate this edit for inline visualization
@@ -650,6 +757,22 @@ async function processSSEResponse(
                 break
               }
 
+              case 'clarification-requested': {
+                const clarificationData = chunk.data as {
+                  options?: ClarificationRequestData['options']
+                  reason?: string
+                }
+                store.setClarificationRequest({
+                  noteId: store.activeSession?.contextNoteIds?.[0] || '',
+                  instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
+                  options: clarificationData.options || [],
+                  reason: clarificationData.reason || 'Please provide more context.',
+                })
+                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+                runningSteps.forEach((step) => store.completeThinkingStep(step.id))
+                break
+              }
+
               case 'code-preview': {
                 // Handle code preview during artifact streaming
                 const previewData = chunk.data as {
@@ -658,6 +781,24 @@ async function processSSEResponse(
                   totalChars: number
                 }
                 store.updateCodePreview(previewData)
+                break
+              }
+
+              case 'pre-action-question': {
+                // Handle proactive AI question before creating notes or major edits
+                const questionData = chunk.data as {
+                  id: string
+                  question: string
+                  options: Array<{ id: string; label: string; description?: string }>
+                  allowFreeText?: boolean
+                  context?: string
+                }
+                store.setPreActionQuestion(questionData)
+                // Complete any running thinking steps
+                const runningSteps2 = store.thinkingSteps.filter(
+                  (step) => step.status === 'running'
+                )
+                runningSteps2.forEach((step) => store.completeThinkingStep(step.id))
                 break
               }
 
@@ -710,9 +851,32 @@ async function processSSEResponse(
               }
 
               case 'intent':
-              case 'citation':
                 console.log(`[AI] ${chunk.type}:`, chunk.data)
                 break
+
+              case 'citation': {
+                const citationData = chunk.data as { noteId: string; title: string; snippet: string }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+                if (messageId) {
+                  store.addMessageCitation({ ...citationData, messageId })
+                }
+                break
+              }
+
+              case 'action-summary': {
+                const summaryData = chunk.data as { action: string; title?: string; noteId?: string; description: string }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+                if (messageId) {
+                  store.addCompletedAction({ ...summaryData, messageId })
+                }
+                break
+              }
 
               // ===== DeepAgent Events =====
 
@@ -772,6 +936,93 @@ async function processSSEResponse(
                 break
               }
 
+              // ===== Multi-Mode Streaming Events =====
+
+              case 'subagent-start': {
+                const subagentData = chunk.data as {
+                  id: string
+                  name: string
+                  description: string
+                  status: string
+                  startedAt?: number
+                }
+                store.startSubagentTracker(subagentData)
+
+                // Add as thinking step
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+                store.addThinkingStep({
+                  type: 'create',
+                  description: `Subagent: ${subagentData.name}`,
+                  status: 'running',
+                  messageId,
+                })
+                break
+              }
+
+              case 'subagent-delta': {
+                const deltaData = chunk.data as { id: string; text: string }
+                store.appendSubagentText(deltaData.id, deltaData.text)
+                break
+              }
+
+              case 'subagent-complete': {
+                const completeData = chunk.data as {
+                  id: string
+                  name: string
+                  status: string
+                  elapsedMs?: number
+                  result?: string
+                }
+                store.completeSubagentTracker(completeData.id, completeData.result)
+
+                // Complete the matching thinking step
+                const runningSteps = store.thinkingSteps.filter(
+                  (step) =>
+                    step.status === 'running' &&
+                    step.description.includes(completeData.name || completeData.id)
+                )
+                const lastRunning = runningSteps[runningSteps.length - 1]
+                if (lastRunning) {
+                  store.completeThinkingStep(lastRunning.id)
+                }
+                break
+              }
+
+              case 'custom-progress': {
+                // Render as a thinking step
+                const progressData = chunk.data as { step?: string; [key: string]: unknown }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+                // Complete previous non-tool running steps
+                const runningThoughts = store.thinkingSteps.filter(
+                  (step) => step.status === 'running' && step.type !== 'tool'
+                )
+                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+                if (lastRunningThought) {
+                  store.completeThinkingStep(lastRunningThought.id)
+                }
+
+                store.addThinkingStep({
+                  type: 'thought',
+                  description: progressData.step || 'Processing...',
+                  status: 'running',
+                  messageId,
+                })
+                break
+              }
+
+              case 'synthesis-start': {
+                store.setSynthesizing(true)
+                break
+              }
+
               case 'note-navigate': {
                 // DeepAgent created a new note — open in preview panel + load in editor
                 const navData = chunk.data as { noteId: string }
@@ -784,20 +1035,19 @@ async function processSSEResponse(
                 break
               }
             }
-          } catch (err) {
-            console.error('[AI Service] Failed to parse SSE chunk:', data, err)
-          }
-        }
-      }
-    }
+      },
+      onError: (err) => {
+        console.error('[AI Service] Failed to parse SSE chunk:', err)
+      },
+    })
+    throttler.forceFlush()
     store.setStatus('idle')
     return fullContent
   } catch (error) {
     // Handle stream errors - ensure store state is updated
+    throttler.forceFlush()
     store.setError(error instanceof Error ? error.message : 'Stream error')
     throw error
-  } finally {
-    reader.releaseLock()
   }
 }
 
@@ -813,12 +1063,20 @@ export function useAIChat() {
     agentType: 'secretary' | 'chat' = 'secretary',
     context?: AgentRequestOptions['context']
   ) {
+    if (isDemoMode()) return
+
     // Clear any previous error
     store.clearError()
     store.clearThinkingSteps()
 
+    // Reuse active session by default for continuity unless agent type changes.
+    const activeSessionId = store.activeSessionId
+    const activeSession = activeSessionId ? store.sessions[activeSessionId] : null
+    const reusableSessionId =
+      activeSession && activeSession.agentType === agentType ? activeSessionId : undefined
+
     // Get or create session and capture the ID to use consistently
-    const session = store.getOrCreateSession(undefined, { agentType })
+    const session = store.getOrCreateSession(reusableSessionId, { agentType })
     const sessionId = session.id
 
     // Ensure activeSessionId is set correctly before streaming
@@ -838,16 +1096,20 @@ export function useAIChat() {
 
     // Send to agent
     try {
+      let streamedResponse = ''
       if (agentType === 'chat') {
-        await sendToChat({
+        streamedResponse = await sendToChat({
           input: message,
           context,
           sessionId,
         })
       } else {
-        await sendToSecretary({
+        streamedResponse = await sendToSecretary({
           input: message,
+          runtime: 'editor-deep',
+          threadId: sessionId,
           context,
+          editorContext: context,
           sessionId,
         })
       }
@@ -861,11 +1123,15 @@ export function useAIChat() {
           // Check if there's a pending edit or clarification - if so, empty response is expected
           const hasPendingEdit = store.pendingEdits.some((e) => e.noteId && e.status === 'pending')
           const hasPendingClarification = store.hasPendingClarification
+          const hasBackendError = Boolean(store.error)
+          const hasServerFinal = Boolean(streamedResponse.trim())
 
-          if (!hasPendingEdit && !hasPendingClarification) {
-            // No edit/clarification pending, so show a fallback message
-            lastMessage.content =
-              'I processed your request but had no additional response to provide.'
+          if (!hasPendingEdit && !hasPendingClarification && !hasBackendError && !hasServerFinal) {
+            lastMessage.content = buildEmptyAssistantFallback({
+              hasCurrentNote:
+                Boolean(context?.currentNoteId) ||
+                Boolean(currentSession.contextNoteIds && currentSession.contextNoteIds.length > 0),
+            })
           }
         }
       }

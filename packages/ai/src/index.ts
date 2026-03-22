@@ -2,44 +2,49 @@
  * @inkdown/ai - AI Provider and Agent Abstraction
  *
  * This package provides:
- * - AI provider abstraction (OpenAI, Ollama Cloud, Gemini)
- * - LangGraph-based agents for various tasks
+ * - Centralized model registry and AI SDK v6 provider factory
+ * - Gemini native SDK for slide image generation
+ * - AI SDK v6 agents (ToolLoopAgent, streamText, generateText)
  * - Tool definitions for agent actions (30 tools)
+ * - Token usage tracking
  * - Recommendation system (mindmaps, flashcards, concepts, exercises, resources, slides)
- * - Agentic AI for autonomous task execution
  * - Workflow orchestration with pre-built templates
  */
 
 // =============================================================================
-// Provider Types and Interfaces
+// Model Registry and AI SDK Factory
 // =============================================================================
 
-export type {
-  AIContext,
-  ChatMessage,
-  AICompletionOptions,
-  AIActionType,
-  AIUsage,
-  AIProvider,
-} from './providers/interface'
+export { MODEL_REGISTRY, selectModel, getModel } from './providers/model-registry'
+export type { ModelEntry, ModelProvider, ModelCapability, AITaskType } from './providers/model-registry'
 
-// Provider implementations
-export { OpenAIProvider, createOpenAIProvider, getDefaultOpenAIProvider } from './providers/openai'
-
-export { OllamaCloudProvider, createOllamaCloudProvider } from './providers/ollama'
-
-export { GeminiProvider, createGeminiProvider } from './providers/gemini'
-
+// AI SDK v6 Provider Factory
 export {
-  createProvider,
-  getOpenAI,
-  getOllamaCloud,
-  getGemini,
-  getProviderNameForTask,
-  getModelNameForTask,
-} from './providers/factory'
+  createAIModel,
+  createAIEmbeddingModel,
+  getModelForTask,
+  getEmbeddingModel,
+  resolveModel,
+  resetAIProviders,
+} from './providers/ai-sdk-factory'
 
-export type { AITaskType, ProviderFactoryConfig } from './providers/factory'
+// AI SDK v6 Usage Tracking
+export { trackAISDKUsage, recordAISDKUsage } from './providers/ai-sdk-usage'
+export type { AISDKTrackingMeta, AISDKUsage } from './providers/ai-sdk-usage'
+
+// Token Tracker
+export {
+  tokenTracker,
+  computeCost,
+} from './providers/token-tracker'
+export type { TokenUsageEvent, SessionUsage } from './providers/token-tracker'
+
+// Request Context & Usage Persistence
+export { requestContext, getCurrentUserId } from './providers/request-context'
+export { initUsagePersister } from './providers/usage-persister'
+
+// Gemini Provider (slides — native SDK)
+export { GeminiProvider, createGeminiProvider } from './providers/gemini'
 
 // =============================================================================
 // Tool Types and Exports
@@ -131,25 +136,6 @@ export type {
   WorkflowProgress,
   OrchestrationRequest,
 } from './services'
-
-// =============================================================================
-// Agentic AI
-// =============================================================================
-
-export { AgenticAgent, createAgenticAgent } from './agents/agentic.agent'
-
-export type {
-  AgentStep,
-  AgentStepType,
-  AgenticResult,
-  AgenticStatus,
-  AgenticProgress,
-  AgenticTask,
-  ResearchResult,
-  ValidationResult,
-  DataSchema,
-  DatabaseColumn,
-} from './agents/agentic.types'
 
 // =============================================================================
 // Slide Themes and Prompts

@@ -9,6 +9,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authFetch, authFetchSSE } from '@/utils/api'
+import { parseSSEStream } from '@/utils/sse-parser'
 
 // ============================================================================
 // Types
@@ -500,54 +501,27 @@ export const useRecommendationsStore = defineStore('recommendations', () => {
       }
 
       // Handle SSE stream
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response body')
-
-      const decoder = new TextDecoder()
       let slides: Slide[] = []
-      let buffer = '' // Buffer for incomplete data
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      await parseSSEStream(response, {
+        onEvent: (sseEvent) => {
+          const data = sseEvent.data as Record<string, unknown>
 
-        // Append new data to buffer
-        buffer += decoder.decode(value, { stream: true })
-
-        // Process complete SSE events (terminated by double newline)
-        const events = buffer.split('\n\n')
-        buffer = events.pop() || '' // Keep incomplete event in buffer
-
-        for (const event of events) {
-          const lines = event.split('\n')
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6))
-
-                if (data.type === 'progress') {
-                  setSlidesProgress({
-                    currentSlide: data.currentSlide,
-                    totalSlides: data.totalSlides,
-                    message: data.message,
-                  })
-                } else if (data.type === 'complete') {
-                  slides = data.slides || []
-                  console.log('[Recommendations] Received', slides.length, 'slides')
-                } else if (data.type === 'error') {
-                  throw new Error(data.error)
-                }
-              } catch (parseError) {
-                console.error('[Recommendations] SSE parse error:', parseError)
-                // Re-throw if it was an intentional error from error event
-                if (parseError instanceof Error && !parseError.message.includes('JSON')) {
-                  throw parseError
-                }
-              }
-            }
+          if (data.type === 'progress') {
+            setSlidesProgress({
+              currentSlide: data.currentSlide as number,
+              totalSlides: data.totalSlides as number,
+              message: data.message as string,
+            })
+          } else if (data.type === 'complete') {
+            slides = (data.slides as Slide[]) || []
+            console.log('[Recommendations] Received', slides.length, 'slides')
+          } else if (data.type === 'error') {
+            throw new Error(data.error as string)
           }
-        }
-      }
+        },
+        onError: (err) => console.warn('[Recommendations] SSE parse error:', err),
+      })
 
       if (slides.length > 0) {
         setRecommendation(noteId, { slides })

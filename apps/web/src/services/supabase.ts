@@ -7,17 +7,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not configured. Running in local-only mode.')
 }
 
-export const supabase = createClient(
-  supabaseUrl || 'http://localhost:54321',
-  supabaseAnonKey || 'local-anon-key',
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-    },
-  }
-)
+export const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : (null as any)
 
 // Check if Supabase is properly configured
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)

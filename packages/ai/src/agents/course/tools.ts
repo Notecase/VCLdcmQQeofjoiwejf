@@ -180,8 +180,10 @@ export async function saveCourseToSupabase(
   console.log(`[saveCourseToSupabase] Inserting ${modules.length} modules...`)
   let modulesCompleted = 0
   for (const mod of modules) {
+    const safeModuleId = sanitizeUUID(mod.id, `module "${mod.title}"`)
+
     const { error: modError } = await supabase.from('course_modules').insert({
-      id: mod.id,
+      id: safeModuleId,
       course_id: course.id,
       title: mod.title,
       description: mod.description,
@@ -195,9 +197,11 @@ export async function saveCourseToSupabase(
     }
 
     for (const lesson of mod.lessons) {
+      const safeLessonId = sanitizeUUID(lesson.id, `lesson "${lesson.title}"`)
+
       const { error: lessonError } = await supabase.from('course_lessons').insert({
-        id: lesson.id,
-        module_id: mod.id,
+        id: safeLessonId,
+        module_id: safeModuleId,
         title: lesson.title,
         type: lesson.type,
         duration: lesson.duration,
@@ -432,11 +436,11 @@ function normalizeSlide(raw: Record<string, unknown>, index: number): SlideData 
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-function isValidUUID(value: unknown): value is string {
+export function isValidUUID(value: unknown): value is string {
   return typeof value === 'string' && UUID_REGEX.test(value)
 }
 
-function generateUUID(): string {
+export function generateUUID(): string {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID()
   }
@@ -446,6 +450,17 @@ function generateUUID(): string {
     const value = char === 'x' ? random : (random & 0x3) | 0x8
     return value.toString(16)
   })
+}
+
+/**
+ * Validate a UUID candidate and return a valid UUID.
+ * If the candidate is malformed, generates a fresh UUID and logs a warning.
+ */
+export function sanitizeUUID(candidate: unknown, label: string): string {
+  if (isValidUUID(candidate)) return candidate
+  const fresh = generateUUID()
+  console.warn(`[sanitizeUUID] Invalid UUID for ${label}: "${candidate}" → replaced with ${fresh}`)
+  return fresh
 }
 
 function normalizeUniqueUUID(candidate: unknown, used: Set<string>): string {

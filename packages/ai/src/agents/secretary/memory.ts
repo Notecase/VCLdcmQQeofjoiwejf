@@ -58,6 +58,8 @@ export interface MemoryContext {
   activationSuggestion: ActivationSuggestion
   recurringBlocks: string
   carryoverTasks: string
+  inboxContent: string
+  calendarContent: string
 }
 
 const CORE_ROOT_MEMORY_FILES = new Set([
@@ -168,7 +170,8 @@ export class MemoryService {
 
   constructor(
     private supabase: SupabaseClient,
-    private userId: string
+    private userId: string,
+    private timezone?: string
   ) {}
 
   /**
@@ -375,6 +378,8 @@ export class MemoryService {
       activationSuggestion,
       recurringBlocks: fileMap.get('Recurring.md') || '',
       carryoverTasks: fileMap.get('Carryover.md') || '',
+      inboxContent: fileMap.get('Inbox.md') || '',
+      calendarContent: fileMap.get('Calendar.md') || '',
     }
   }
 
@@ -557,7 +562,7 @@ export class MemoryService {
   }
 
   private buildAutoActivationEntry(candidate: ParsedRoadmapCandidate): string {
-    const start = getTodayDate()
+    const start = getTodayDate(this.timezone)
     const roadmapContent = candidate.content || ''
     const durationMatch = roadmapContent.match(/\*\*Duration:\*\*\s*(\d+)\s*days?/i)
     const durationDays = durationMatch ? parseInt(durationMatch[1], 10) : 14
@@ -628,7 +633,7 @@ export class MemoryService {
    * 3. Clear Tomorrow.md
    */
   async performDayTransition(): Promise<DayTransitionResult> {
-    const todayDate = getTodayDate()
+    const todayDate = getTodayDate(this.timezone)
     const todayFile = await this.readFile('Today.md')
 
     if (!todayFile || !todayFile.content.trim()) {
@@ -756,7 +761,7 @@ export class MemoryService {
     if (!planFile || !planFile.content.trim()) return false
 
     // Calculate current week's Monday
-    const currentWeekStart = getCurrentWeekMonday()
+    const currentWeekStart = getCurrentWeekMonday(this.timezone)
 
     // Check if "This Week" header already contains this week's date
     const weekHeaderMatch = planFile.content.match(/##\s*(?:This Week|THIS WEEK)\s*\(([^)]+)\)/i)

@@ -2,20 +2,20 @@
  * Secretary Agent
  *
  * Main agent for the AI Secretary feature.
- * Uses the deepagents framework (LangGraph-based) with custom Supabase-backed memory tools.
+ * Uses AI SDK v6 ToolLoopAgent with 15 tools backed by Supabase memory.
  */
 
+import { ToolLoopAgent, stepCountIs } from 'ai'
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { SecretaryStreamEvent, RoadmapCandidate } from '@inkdown/shared/types'
 import { getTodayDate, getTomorrowDate, getDayOfWeek } from '@inkdown/shared/secretary'
 import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
-import {
-  getSecretarySystemPrompt,
-  PLANNER_SUBAGENT_PROMPT,
-  RESEARCHER_SUBAGENT_PROMPT,
-} from './prompts'
-import { SecretaryStreamNormalizer } from './stream-normalizer'
+import { getSecretarySystemPrompt } from './prompts'
+import { adaptSecretaryStream } from './ai-sdk-stream-adapter'
+import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import type { SharedContextService } from '../../services/shared-context.service'
 
 // ============================================================================
 // Types
@@ -24,9 +24,9 @@ import { SecretaryStreamNormalizer } from './stream-normalizer'
 export interface SecretaryAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
   timezone?: string
+  sharedContextService?: SharedContextService
 }
 
 // ============================================================================
@@ -39,35 +39,25 @@ export class SecretaryAgent {
 
   constructor(config: SecretaryAgentConfig) {
     this.config = config
-    this.memoryService = new MemoryService(config.supabase, config.userId)
+    this.memoryService = new MemoryService(config.supabase, config.userId, config.timezone)
   }
 
   /**
-   * Stream a chat interaction with the secretary using the deepagents framework
+   * Stream a chat interaction with the secretary using AI SDK v6 ToolLoopAgent
    */
   async *stream(input: {
     message: string
     threadId?: string
   }): AsyncGenerator<SecretaryStreamEvent> {
-    yield { event: 'thinking', data: 'Loading context...' }
-
-    // Lazy import deepagents + LangChain to avoid top-level module issues
-    const { createDeepAgent } = await import('deepagents')
-    const { ChatOpenAI } = await import('@langchain/openai')
-
-    const llm = new ChatOpenAI({
-      openAIApiKey: this.config.openaiApiKey,
-      modelName: this.config.model ?? 'gpt-4o-mini',
-      temperature: 0.5,
-    })
+    yield { event: 'thinking', data: 'Loading your plans, preferences, and schedule...' }
 
     // Resolve timezone: config (from API header) → preferences → default
     const context = await this.memoryService.getFullContext()
     const tz = this.config.timezone || context.preferences?.timezone || undefined
 
     const tools = createSecretaryTools(this.memoryService, {
-      openaiApiKey: this.config.openaiApiKey,
       userId: this.config.userId,
+      supabase: this.config.supabase,
       model: this.config.model,
       timezone: tz,
     })
@@ -89,80 +79,88 @@ export class SecretaryAgent {
       ? `\n\n### Pending Roadmap\nThere is a pending roadmap: [${pending.id}] ${pending.name} (${pending.durationDays} days). If the user confirms, call save_roadmap.`
       : ''
 
-    const fullSystemPrompt = systemPrompt + '\n\n' + contextSummary + pendingInfo
+    // Read cross-agent context (research, courses, notes)
+    const sharedCtx = this.config.sharedContextService
+      ? await this.config.sharedContextService.read({
+          relevantTypes: ['research_done', 'course_saved', 'note_created', 'goal_set'],
+        })
+      : ''
+    const sharedCtxSection = sharedCtx ? '\n\n' + sharedCtx : ''
 
-    // Create the deepagents agent (returns a compiled ReactAgent)
-    const agent = createDeepAgent({
-      model: llm,
-      systemPrompt: fullSystemPrompt,
-      tools,
-      subagents: [
-        {
-          name: 'planner',
-          description: 'Creates detailed learning roadmaps with day-by-day topic breakdowns',
-          systemPrompt: PLANNER_SUBAGENT_PROMPT,
-        },
-        {
-          name: 'researcher',
-          description:
-            'Researches a subject to create a curriculum outline with prerequisites and progression',
-          systemPrompt: RESEARCHER_SUBAGENT_PROMPT,
-        },
-      ],
-    })
+    const contextParts: string[] = []
+    if (context.activePlans?.length) contextParts.push(`${context.activePlans.length} active plan${context.activePlans.length > 1 ? 's' : ''}`)
+    if (context.calendarContent?.trim()) contextParts.push('calendar events')
+    yield { event: 'thinking', data: contextParts.length ? `Found ${contextParts.join(', ')}` : 'Ready' }
+
+    const fullSystemPrompt = systemPrompt + '\n\n' + contextSummary + pendingInfo + sharedCtxSection
 
     const threadId = input.threadId || crypto.randomUUID()
+    const pendingEvents: SecretaryStreamEvent[] = []
+
+    // Create AI SDK v6 ToolLoopAgent (replaces deepagents createDeepAgent)
+    const model = getModelForTask('secretary')
+    const agent = new ToolLoopAgent({
+      model,
+      instructions: fullSystemPrompt,
+      tools,
+      stopWhen: stepCountIs(20),
+      onFinish: trackAISDKUsage({ model: 'secretary', taskType: 'secretary' }),
+    })
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deepagents generic types are too deep for TS
-      const streamResult = (await (agent as any).stream(
-        { messages: [{ role: 'user', content: input.message }] },
-        { configurable: { thread_id: threadId } }
-      )) as AsyncIterable<Record<string, { messages?: unknown[] }>>
+      yield { event: 'thread-id', data: threadId }
 
-      const normalizer = new SecretaryStreamNormalizer()
+      const result = await agent.stream({
+        messages: [{ role: 'user', content: input.message }],
+      })
 
-      for await (const chunk of streamResult) {
-        // deepagents uses standard LangGraph streaming format
-        // chunk keys: 'agent', 'tools', or subagent names
-        for (const [nodeKey, nodeValue] of Object.entries(chunk)) {
-          const nodeData = nodeValue as { messages?: unknown[] }
-          if (!nodeData?.messages) continue
+      // Detect plan/roadmap tool calls for shared context writes
+      const detectedContextWrites: Array<{
+        type: 'active_plan'
+        summary: string
+        payload: Record<string, unknown>
+      }> = []
 
-          const messages = Array.isArray(nodeData.messages) ? nodeData.messages : []
-
-          for (const msg of messages) {
-            if (!msg || typeof msg !== 'object') continue
-
-            const msgObj = msg as {
-              id?: string
-              content?: string | unknown[]
-              tool_calls?: Array<{ name: string; args: Record<string, unknown> }>
-              name?: string
-              type?: string
+      for await (const event of adaptSecretaryStream(result.fullStream, pendingEvents)) {
+        // Track tool calls for shared context
+        if (
+          event.event === 'tool_call' &&
+          this.config.sharedContextService &&
+          typeof event.data === 'string'
+        ) {
+          try {
+            const tc = JSON.parse(event.data) as {
+              toolName: string
+              arguments: Record<string, unknown>
             }
-
-            if (nodeKey === 'tools' || msgObj.type === 'tool') {
-              const toolEvents = normalizer.normalizeToolResult(nodeKey, msgObj)
-              for (const event of toolEvents) {
-                yield event
-              }
-            } else {
-              const textEvents = normalizer.normalizeText(nodeKey, msgObj)
-              for (const event of textEvents) {
-                yield event
-              }
-
-              const toolCallEvents = normalizer.normalizeToolCalls(nodeKey, msgObj)
-              for (const event of toolCallEvents) {
-                yield event
-              }
+            if (
+              tc.toolName === 'save_roadmap' ||
+              tc.toolName === 'generate_daily_plan' ||
+              tc.toolName === 'mark_day_complete'
+            ) {
+              detectedContextWrites.push({
+                type: 'active_plan',
+                summary: `Secretary: ${tc.toolName}`,
+                payload: { threadId, tool: tc.toolName, args: tc.arguments },
+              })
             }
+          } catch {
+            // Ignore JSON parse errors
           }
         }
+
+        yield event
       }
 
-      yield normalizer.done()
+      // Write detected context entries to shared bus
+      if (this.config.sharedContextService && detectedContextWrites.length > 0) {
+        for (const entry of detectedContextWrites) {
+          await this.config.sharedContextService.write({
+            agent: 'secretary',
+            ...entry,
+          })
+        }
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
       yield { event: 'error', data: errorMsg }
@@ -245,6 +243,19 @@ export class SecretaryAgent {
           `- Candidates: ${context.activationSuggestion.candidates.map((c: RoadmapCandidate) => `[${c.id}] ${c.name}`).join(', ')}`
         )
       }
+    }
+
+    if (context.inboxContent?.trim()) {
+      const lineCount = context.inboxContent.split('\n').filter((l) => l.startsWith('- ')).length
+      parts.push(
+        `\n### Inbox (${lineCount} unprocessed captures)\n${context.inboxContent.slice(0, 500)}`
+      )
+    }
+
+    if (context.calendarContent?.trim()) {
+      parts.push(
+        `\n### Calendar (synced from Google Calendar)\n${context.calendarContent.slice(0, 800)}`
+      )
     }
 
     // Recent performance analytics

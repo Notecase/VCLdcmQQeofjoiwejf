@@ -13,11 +13,7 @@ const visibleStats = computed(() => {
   return props.stats.slice(-days.value)
 })
 
-function barColor(rate: number): string {
-  if (rate >= 80) return '#34d399'
-  if (rate >= 50) return '#e3b341'
-  return '#f85149'
-}
+const BAR_COLOR = '#f85149'
 
 function shortDate(dateStr: string): string {
   const d = parseDateString(dateStr)
@@ -64,7 +60,7 @@ function shortDate(dateStr: string): string {
             class="bar-fill"
             :style="{
               height: `${Math.max(stat.completionRate, 2)}%`,
-              background: barColor(stat.completionRate),
+              background: BAR_COLOR,
             }"
           />
         </div>
@@ -119,7 +115,7 @@ function shortDate(dateStr: string): string {
 }
 
 .toggle-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .chart-bars {
@@ -142,7 +138,7 @@ function shortDate(dateStr: string): string {
   flex: 1;
   width: 100%;
   max-width: 24px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   border-radius: 4px 4px 0 0;
   display: flex;
   align-items: flex-end;

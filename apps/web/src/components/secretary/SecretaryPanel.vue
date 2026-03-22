@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSecretaryStore } from '@/stores/secretary'
-import { Target, Zap, Eye, Settings, RefreshCw, ChevronRight } from 'lucide-vue-next'
-import WeekCalendar from './WeekCalendar.vue'
+import { Crosshair, ChevronRight, RefreshCw, Settings, Map, Wrench } from 'lucide-vue-next'
+import MiniCalendar from './MiniCalendar.vue'
 import StreakBadge from './StreakBadge.vue'
 import ProgressChart from './ProgressChart.vue'
 import {
@@ -12,119 +13,132 @@ import {
 } from '@/utils/secretaryAnalytics'
 
 const store = useSecretaryStore()
+const router = useRouter()
 
-const todayFocus = computed(() => {
-  return store.activePlans
-    .filter((p) => p.status === 'active' && p.currentTopic)
-    .map((p) => ({ id: p.id, topic: p.currentTopic }))
-})
-
-const dailyStats = computed(() => computeDailyCompletionRates(store.historyEntries))
 const streak = computed(() => computeStreak(store.historyEntries))
-const weeklySummary = computed(() => computeWeeklySummary(store.historyEntries))
-const hasAnalytics = computed(() => store.historyEntries.length > 0)
+const weekly = computed(() => computeWeeklySummary(store.historyEntries))
+const dailyStats = computed(() => computeDailyCompletionRates(store.historyEntries))
+
+const focusItems = computed(() => {
+  return store.activePlans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    task: plan.currentTopic || 'No current topic',
+  }))
+})
 </script>
 
 <template>
-  <div class="secretary-panel">
-    <!-- Today's Focus -->
-    <div class="panel-section">
+  <aside class="secretary-panel">
+    <!-- Section 1: Today's Focus -->
+    <section class="panel-section">
       <h4 class="section-title">
-        <Target :size="14" />
+        <Crosshair :size="14" />
         Today's Focus
       </h4>
+
       <div
-        v-if="todayFocus.length > 0"
+        v-if="focusItems.length > 0"
         class="focus-list"
       >
         <div
-          v-for="item in todayFocus"
+          v-for="item in focusItems"
           :key="item.id"
-          class="focus-card"
+          class="focus-item"
         >
           <span class="focus-badge">{{ item.id }}</span>
-          <span class="focus-topic">{{ item.topic }}</span>
+          <span class="focus-task">{{ item.task }}</span>
         </div>
       </div>
+
       <p
         v-else
         class="empty-text"
       >
-        No active topics for today.
+        No active plans
       </p>
-    </div>
 
-    <!-- Analytics -->
-    <div
-      v-if="hasAnalytics"
-      class="panel-section analytics-sidebar"
-    >
+      <div
+        v-if="store.attentionItems.length > 0"
+        class="attention-badge"
+      >
+        {{ store.attentionItems.length }} item{{ store.attentionItems.length > 1 ? 's' : '' }} need
+        attention
+      </div>
+    </section>
+
+    <!-- Section 2: Stats -->
+    <section class="panel-section">
       <StreakBadge
         :current-streak="streak.current"
         :longest-streak="streak.longest"
-        :weekly-completed="weeklySummary.completedTasks"
-        :weekly-total="weeklySummary.totalTasks"
+        :weekly-completed="weekly.completedTasks"
+        :weekly-total="weekly.totalTasks"
       />
+    </section>
+
+    <!-- Section 3: Completion Rate -->
+    <section class="panel-section">
       <ProgressChart :stats="dailyStats" />
-    </div>
+    </section>
 
-    <!-- Week Calendar -->
-    <div class="panel-section">
-      <WeekCalendar />
-    </div>
+    <!-- Section 4: This Week -->
+    <section class="panel-section">
+      <h4 class="section-title">This Week</h4>
+      <MiniCalendar />
+    </section>
 
-    <!-- Quick Actions -->
-    <div class="panel-section">
-      <h4 class="section-title">
-        <Zap :size="14" />
-        Quick Actions
-      </h4>
+    <!-- Section 5: Quick Actions -->
+    <section class="panel-section">
+      <h4 class="section-title">Quick Actions</h4>
       <div class="quick-actions">
         <button
-          class="quick-btn"
-          @click="store.sendChatMessage('Show my active plans and progress')"
+          class="action-link"
+          @click="router.push('/calendar/plans')"
         >
-          <Eye
-            :size="14"
-            class="btn-icon"
-          />
-          <span>View Plans</span>
+          <Map :size="14" />
+          View Plans
           <ChevronRight
             :size="14"
-            class="btn-chevron"
+            class="action-chevron"
           />
         </button>
         <button
-          class="quick-btn"
-          @click="store.sendChatMessage('Update my preferences')"
+          class="action-link"
+          @click="store.openMemoryFile('AI.md')"
         >
-          <Settings
-            :size="14"
-            class="btn-icon"
-          />
-          <span>Preferences</span>
+          <Settings :size="14" />
+          Preferences
           <ChevronRight
             :size="14"
-            class="btn-chevron"
+            class="action-chevron"
           />
         </button>
         <button
-          class="quick-btn"
-          @click="store.refreshMemoryFiles()"
+          class="action-link"
+          @click="router.push('/settings')"
         >
-          <RefreshCw
-            :size="14"
-            class="btn-icon"
-          />
-          <span>Refresh Data</span>
+          <Wrench :size="14" />
+          Settings
           <ChevronRight
             :size="14"
-            class="btn-chevron"
+            class="action-chevron"
+          />
+        </button>
+        <button
+          class="action-link"
+          @click="store.initialize()"
+        >
+          <RefreshCw :size="14" />
+          Refresh Data
+          <ChevronRight
+            :size="14"
+            class="action-chevron"
           />
         </button>
       </div>
-    </div>
-  </div>
+    </section>
+  </aside>
 </template>
 
 <style scoped>
@@ -132,7 +146,7 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 8px 0;
+  padding: 8px 0 12px;
 }
 
 .panel-section {
@@ -144,106 +158,89 @@ const hasAnalytics = computed(() => store.historyEntries.length > 0)
 .section-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-color-secondary, #94a3b8);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  gap: 8px;
   margin: 0;
+  color: var(--text-color, #e2e8f0);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .focus-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.focus-card {
+.focus-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color, #333338);
 }
 
 .focus-badge {
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
   color: var(--sec-primary, #10b981);
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
-.focus-topic {
+.focus-task {
   font-size: 13px;
   color: var(--text-color, #e2e8f0);
-  flex: 1;
-  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.attention-badge {
+  padding: 6px 12px;
+  border-radius: var(--sec-radius-md, 10px);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.08);
+  color: #f5c56b;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .empty-text {
-  font-size: 12px;
-  color: var(--text-color-secondary, #94a3b8);
-  opacity: 0.6;
   margin: 0;
+  color: var(--text-color-secondary, #94a3b8);
+  font-size: 12px;
 }
 
 .quick-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
-.quick-btn {
+.action-link {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #333338);
+  padding: 10px 12px;
+  border-radius: var(--sec-radius-md, 10px);
+  border: none;
   background: transparent;
   color: var(--text-color, #e2e8f0);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  text-align: left;
-  transition: all 0.15s;
+  transition: background var(--sec-transition-fast, 180ms) ease;
 }
 
-.quick-btn span {
-  flex: 1;
+.action-link:hover {
+  background: var(--sec-surface-card, rgba(255, 255, 255, 0.03));
 }
 
-.btn-icon {
+.action-chevron {
+  margin-left: auto;
   color: var(--text-color-secondary, #94a3b8);
-  flex-shrink: 0;
-}
-
-.btn-chevron {
-  color: var(--text-color-secondary, #94a3b8);
-  opacity: 0.4;
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
-
-.quick-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.3));
-  transform: translateX(2px);
-}
-
-.quick-btn:hover .btn-chevron {
-  opacity: 0.8;
-  transform: translateX(2px);
-}
-
-.analytics-sidebar {
-  gap: 14px;
 }
 </style>

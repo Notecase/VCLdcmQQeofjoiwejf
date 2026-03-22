@@ -4,22 +4,24 @@
  * Pre-generation: centered topic input form.
  * During generation: left = agent step timeline, right = details/todos/outline.
  */
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft } from 'lucide-vue-next'
 import { useCourseStore } from '@/stores/course'
 import { useLayoutStore } from '@/stores'
+import { isDemoMode } from '@/utils/demo'
 import type { CourseDifficulty, CourseOutline, CourseSettings } from '@inkdown/shared/types'
 import NavigationDock from '@/components/ui/NavigationDock.vue'
 import CourseTopicInput from '@/components/course/generator/CourseTopicInput.vue'
 import GenerationProgress from '@/components/course/generator/GenerationProgress.vue'
 import ResearchProgress from '@/components/course/generator/ResearchProgress.vue'
 import OutlineReview from '@/components/course/generator/OutlineReview.vue'
+import ContentGenerationSidebar from '@/components/course/generator/ContentGenerationSidebar.vue'
+import LessonPreviewCard from '@/components/course/generator/LessonPreviewCard.vue'
 
 const router = useRouter()
 const courseStore = useCourseStore()
 const layoutStore = useLayoutStore()
-
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
@@ -62,6 +64,26 @@ function stepStatus(idx: number): 'done' | 'active' | 'pending' {
   return 'pending'
 }
 
+/** Show content tree instead of pipeline timeline during content generation stages */
+const showContentTree = computed(() => {
+  const stage = courseStore.generationStage
+  return (
+    (stage === 'content' || stage === 'multimedia' || stage === 'saving' || stage === 'assembly') &&
+    courseStore.pendingOutline !== null
+  )
+})
+
+/** Data for the currently selected lesson preview */
+const selectedLessonData = computed(() => {
+  const title = courseStore.selectedPreviewLesson
+  if (!title) return null
+  return courseStore.generatedLessonMap.get(title) ?? null
+})
+
+function handleLessonSelect(lessonTitle: string) {
+  courseStore.selectedPreviewLesson = lessonTitle
+}
+
 function handleSubmit(payload: {
   topic: string
   difficulty: CourseDifficulty
@@ -96,6 +118,13 @@ function handleDismissError() {
 function goBack() {
   router.push({ name: 'courseList' })
 }
+
+// Redirect away from generator in demo mode
+onMounted(() => {
+  if (isDemoMode()) {
+    router.replace({ name: 'courseList' })
+  }
+})
 </script>
 
 <template>
@@ -153,8 +182,26 @@ function goBack() {
       v-else
       class="generator-active"
     >
-      <!-- Left: Agent Step Timeline -->
-      <div class="generator-timeline">
+      <!-- Left: Content Generation Tree (during content stages) -->
+      <div
+        v-if="showContentTree && courseStore.pendingOutline"
+        class="generator-content-tree"
+      >
+        <ContentGenerationSidebar
+          :outline="courseStore.pendingOutline"
+          :generated-lessons="courseStore.generatedLessonMap"
+          :selected-lesson="courseStore.selectedPreviewLesson"
+          :generated-count="courseStore.generatedLessonsCount"
+          :total-lessons="courseStore.totalExpectedLessons || 0"
+          @select="handleLessonSelect"
+        />
+      </div>
+
+      <!-- Left: Agent Step Timeline (pre-content stages) -->
+      <div
+        v-else
+        class="generator-timeline"
+      >
         <div class="timeline-header">
           <h3>Generation Pipeline</h3>
         </div>
@@ -206,7 +253,56 @@ function goBack() {
           />
         </div>
 
-        <!-- Generation progress details -->
+        <!-- Content generation with lesson preview -->
+        <div
+          v-else-if="showContentTree"
+          class="details-section"
+        >
+          <!-- Progress header -->
+          <div class="content-progress-header glass-card">
+            <h3 class="progress-title">Generating Content</h3>
+            <div class="progress-bar-track">
+              <div
+                class="progress-bar-fill"
+                :style="{ width: `${courseStore.generationProgress}%` }"
+              />
+            </div>
+            <div class="progress-meta">
+              <span
+                >{{ courseStore.generatedLessonsCount }}/{{
+                  courseStore.totalExpectedLessons || '?'
+                }}
+                lessons generated</span
+              >
+              <span class="progress-pct">{{ courseStore.generationProgress }}%</span>
+            </div>
+          </div>
+
+          <!-- Error banner -->
+          <div
+            v-if="courseStore.generationError"
+            class="error-banner"
+          >
+            {{ courseStore.generationError }}
+          </div>
+
+          <!-- Lesson preview -->
+          <LessonPreviewCard
+            v-if="selectedLessonData"
+            :lesson-title="selectedLessonData.title"
+            :lesson-type="selectedLessonData.type"
+            :markdown-preview="selectedLessonData.markdownPreview"
+            :module-title="selectedLessonData.moduleTitle"
+          />
+          <div
+            v-else
+            class="empty-preview glass-card"
+          >
+            <p>Select a completed lesson to preview its content.</p>
+          </div>
+        </div>
+
+        <!-- Default generation progress details (pre-content stages) -->
         <div
           v-else
           class="details-section"
@@ -306,12 +402,12 @@ function goBack() {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: 6px;
   border: 1px solid var(--border-color, #333338);
   background: transparent;
   color: var(--text-color-secondary, #94a3b8);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -330,6 +426,9 @@ function goBack() {
 
 .header-right {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .cancel-btn {
@@ -383,15 +482,35 @@ function goBack() {
   gap: 0;
 }
 
+/* Left: Content Generation Tree (during content stages) */
+.generator-content-tree {
+  width: 360px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 24px;
+  border-right: 1px solid var(--border-color, #333338);
+  background: var(--app-bg, #010409);
+  display: flex;
+  flex-direction: column;
+}
+
+.generator-content-tree::-webkit-scrollbar {
+  width: 4px;
+}
+
+.generator-content-tree::-webkit-scrollbar-thumb {
+  background: var(--border-color, #333338);
+  border-radius: 2px;
+}
+
 /* Left: Agent Step Timeline */
 .generator-timeline {
   width: 360px;
   flex-shrink: 0;
   overflow-y: auto;
   padding: 24px;
-  border-right: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  background: var(--glass-bg, rgba(30, 30, 30, 0.6));
-  backdrop-filter: blur(var(--glass-blur, 12px));
+  border-right: 1px solid var(--border-color, #333338);
+  background: var(--app-bg, #010409);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -562,6 +681,57 @@ function goBack() {
 
 .research-section {
   margin-top: 4px;
+}
+
+/* ============================================
+ * CONTENT GENERATION PROGRESS HEADER
+ * ============================================ */
+
+.content-progress-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content-progress-header .progress-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color, #e2e8f0);
+  margin: 0;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-color-secondary, #94a3b8);
+}
+
+.progress-pct {
+  font-weight: 600;
+}
+
+.error-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  color: #f85149;
+  font-size: 13px;
+}
+
+.empty-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.empty-preview p {
+  color: var(--text-color-secondary, #64748b);
+  font-size: 14px;
+  margin: 0;
 }
 
 /* ============================================

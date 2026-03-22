@@ -10,6 +10,7 @@ import { ref, computed, reactive } from 'vue'
 import {
   createArtifact,
   getPendingArtifacts,
+  getArtifacts as fetchAllArtifacts,
   markArtifactInserted as markArtifactInsertedDB,
   type Artifact,
 } from '../services/artifacts.service'
@@ -96,6 +97,7 @@ export interface PendingEdit {
   proposedContent: string
   diffHunks: DiffHunk[]
   status: 'pending' | 'accepted' | 'rejected'
+  messageId?: string // Links to the assistant message for rendering in ChatMessage
   createdAt: Date
 }
 
@@ -219,6 +221,45 @@ export interface CompletedArtifact {
 }
 
 /**
+ * MessageCitation - Links a RAG citation to a specific chat message
+ */
+export interface MessageCitation {
+  id: string
+  noteId: string
+  title: string
+  snippet: string
+  messageId: string
+}
+
+/**
+ * CompletedAction - Tracks actions performed by the AI (e.g., note creation)
+ */
+export interface CompletedAction {
+  id: string
+  action: string
+  title?: string
+  noteId?: string
+  description: string
+  messageId: string
+  createdAt: Date
+}
+
+/**
+ * SubagentTracker - Tracks a subagent's lifecycle from multi-mode streaming.
+ * Used for inline subagent progress cards and synthesis indicators.
+ */
+export interface SubagentTracker {
+  id: string
+  name: string
+  description: string
+  status: 'pending' | 'running' | 'complete' | 'error'
+  lastMessage: string
+  startedAt: number
+  completedAt?: number
+  elapsedMs?: number
+}
+
+/**
  * SubTask - Tracks individual tasks from DeepAgent decomposition
  * Used when processing compound requests with multiple outputs
  */
@@ -250,8 +291,6 @@ export const useAIStore = defineStore('ai', () => {
 
   // Current interaction state
   const status = ref<AIStatus>('idle')
-  const currentAgentType = ref<ChatSession['agentType']>(null)
-
   // Thinking steps (displayed during AI processing)
   const thinkingSteps = ref<ThinkingStep[]>([])
 
@@ -276,6 +315,12 @@ export const useAIStore = defineStore('ai', () => {
   // Completed artifacts - links artifacts to chat messages for UI rendering
   const completedArtifacts = ref<CompletedArtifact[]>([])
 
+  // Message citations - links RAG citations to specific chat messages
+  const messageCitations = ref<MessageCitation[]>([])
+
+  // Completed actions - tracks AI actions (note creation, edits) linked to messages
+  const completedActions = ref<CompletedAction[]>([])
+
   // Code preview state for streaming artifacts
   const codePreview = ref<CodePreviewState>({
     active: false,
@@ -292,6 +337,10 @@ export const useAIStore = defineStore('ai', () => {
 
   // SubTasks from DeepAgent decomposition (for compound requests)
   const subTasks = ref<SubTask[]>([])
+
+  // Subagent trackers (multi-mode streaming)
+  const activeSubagents = ref<SubagentTracker[]>([])
+  const isSynthesizing = ref(false)
 
   // Note preview panel (AI Chat page - right panel showing note being edited)
   const previewNoteId = ref<string | null>(null)
@@ -821,6 +870,38 @@ export const useAIStore = defineStore('ai', () => {
   const hasPendingClarification = computed(() => pendingClarification.value !== null)
 
   // ---------------------------------------------------------------------------
+  // Pre-Action Question (HITL proactive AI questions)
+  // ---------------------------------------------------------------------------
+
+  const preActionQuestion = ref<{
+    id: string
+    question: string
+    options: Array<{ id: string; label: string; description?: string }>
+    allowFreeText?: boolean
+    context?: string
+  } | null>(null)
+
+  /**
+   * Set a pending pre-action question from the AI
+   */
+  function setPreActionQuestion(question: {
+    id: string
+    question: string
+    options: Array<{ id: string; label: string; description?: string }>
+    allowFreeText?: boolean
+    context?: string
+  }) {
+    preActionQuestion.value = question
+  }
+
+  /**
+   * Resolve the pre-action question (user selected an option or typed free text)
+   */
+  function resolvePreActionQuestion() {
+    preActionQuestion.value = null
+  }
+
+  // ---------------------------------------------------------------------------
   // SubTask Actions (DeepAgent compound request tracking)
   // ---------------------------------------------------------------------------
 
@@ -897,6 +978,65 @@ export const useAIStore = defineStore('ai', () => {
    */
   function clearSubTasks() {
     subTasks.value = []
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subagent Tracker Actions (multi-mode streaming)
+  // ---------------------------------------------------------------------------
+
+  const subagentProgress = computed(() => {
+    const total = activeSubagents.value.length
+    const completed = activeSubagents.value.filter((s) => s.status === 'complete').length
+    return {
+      total,
+      completed,
+      percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+    }
+  })
+
+  function startSubagentTracker(data: {
+    id: string
+    name: string
+    description?: string
+    startedAt?: number
+  }) {
+    // Avoid duplicates
+    if (activeSubagents.value.some((s) => s.id === data.id)) return
+
+    activeSubagents.value.push({
+      id: data.id,
+      name: data.name,
+      description: data.description || `Subagent ${data.name}`,
+      status: 'running',
+      lastMessage: '',
+      startedAt: data.startedAt || Date.now(),
+    })
+  }
+
+  function appendSubagentText(subagentId: string, text: string) {
+    const sub = activeSubagents.value.find((s) => s.id === subagentId)
+    if (sub) {
+      sub.lastMessage += text
+    }
+  }
+
+  function completeSubagentTracker(subagentId: string, result?: string) {
+    const sub = activeSubagents.value.find((s) => s.id === subagentId)
+    if (sub) {
+      sub.status = 'complete'
+      sub.completedAt = Date.now()
+      sub.elapsedMs = sub.completedAt - sub.startedAt
+      if (result) sub.lastMessage = result
+    }
+  }
+
+  function clearSubagents() {
+    activeSubagents.value = []
+    isSynthesizing.value = false
+  }
+
+  function setSynthesizing(value: boolean) {
+    isSynthesizing.value = value
   }
 
   // ---------------------------------------------------------------------------
@@ -1000,7 +1140,9 @@ export const useAIStore = defineStore('ai', () => {
    */
   async function loadPersistedArtifacts(userId: string, noteId?: string): Promise<void> {
     try {
-      const result = await getPendingArtifacts(userId, noteId)
+      const result = noteId
+        ? await fetchAllArtifacts(userId, { noteId, includeArchived: false })
+        : await getPendingArtifacts(userId, noteId)
 
       if (result.error) {
         console.warn('[AI Store] Failed to load persisted artifacts:', result.error)
@@ -1121,6 +1263,13 @@ export const useAIStore = defineStore('ai', () => {
   }
 
   /**
+   * Get pending edits linked to a specific message
+   */
+  function getPendingEditsForMessage(messageId: string): PendingEdit[] {
+    return pendingEdits.value.filter((e) => e.messageId === messageId)
+  }
+
+  /**
    * Clear completed artifacts for a session or all artifacts
    */
   function clearCompletedArtifacts(sessionId?: string) {
@@ -1129,6 +1278,43 @@ export const useAIStore = defineStore('ai', () => {
     } else {
       completedArtifacts.value = []
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Message Citation Actions (RAG source attribution)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a citation linked to a chat message (deduplicated by noteId + messageId)
+   */
+  function addMessageCitation(data: Omit<MessageCitation, 'id'>) {
+    if (messageCitations.value.some((c) => c.noteId === data.noteId && c.messageId === data.messageId)) return
+    messageCitations.value.push({ id: crypto.randomUUID(), ...data })
+  }
+
+  /**
+   * Get citations for a specific message
+   */
+  function getCitationsForMessage(messageId: string): MessageCitation[] {
+    return messageCitations.value.filter((c) => c.messageId === messageId)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Completed Action Actions (action summaries linked to messages)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a completed action linked to a chat message
+   */
+  function addCompletedAction(data: Omit<CompletedAction, 'id' | 'createdAt'>) {
+    completedActions.value.push({ id: crypto.randomUUID(), createdAt: new Date(), ...data })
+  }
+
+  /**
+   * Get completed actions for a specific message
+   */
+  function getCompletedActionsForMessage(messageId: string): CompletedAction[] {
+    return completedActions.value.filter((a) => a.messageId === messageId)
   }
 
   // ---------------------------------------------------------------------------
@@ -1165,7 +1351,6 @@ export const useAIStore = defineStore('ai', () => {
     }
     activeSessionId.value = null
     status.value = 'idle'
-    currentAgentType.value = null
     thinkingSteps.value = []
     citations.value = []
     pendingEdits.value = []
@@ -1173,9 +1358,13 @@ export const useAIStore = defineStore('ai', () => {
     diffBlocks.value = []
     pendingArtifacts.value = []
     completedArtifacts.value = []
+    messageCitations.value = []
+    completedActions.value = []
     codePreview.value = { active: false, phase: 'html', preview: '', totalChars: 0 }
     pendingClarification.value = null
     subTasks.value = []
+    activeSubagents.value = []
+    isSynthesizing.value = false
     previewNoteId.value = null
     previewPanelVisible.value = false
     error.value = null
@@ -1190,7 +1379,6 @@ export const useAIStore = defineStore('ai', () => {
     sessions,
     activeSessionId,
     status,
-    currentAgentType,
     thinkingSteps,
     citations,
     pendingEdits,
@@ -1270,6 +1458,11 @@ export const useAIStore = defineStore('ai', () => {
     resolveClarification,
     cancelClarification,
 
+    // Pre-action question (HITL)
+    preActionQuestion,
+    setPreActionQuestion,
+    resolvePreActionQuestion,
+
     // Note preview panel (AI Chat page)
     previewNoteId,
     previewPanelVisible,
@@ -1281,6 +1474,16 @@ export const useAIStore = defineStore('ai', () => {
     updateSubTask,
     updateSubTaskProgress,
     clearSubTasks,
+
+    // Subagent tracker actions (multi-mode streaming)
+    activeSubagents,
+    isSynthesizing,
+    subagentProgress,
+    startSubagentTracker,
+    appendSubagentText,
+    completeSubagentTracker,
+    clearSubagents,
+    setSynthesizing,
 
     // Pending artifact actions
     pendingArtifacts,
@@ -1295,7 +1498,18 @@ export const useAIStore = defineStore('ai', () => {
     completedArtifacts,
     addCompletedArtifact,
     getCompletedArtifactsForMessage,
+    getPendingEditsForMessage,
     clearCompletedArtifacts,
+
+    // Message citation actions (RAG source attribution)
+    messageCitations,
+    addMessageCitation,
+    getCitationsForMessage,
+
+    // Completed action actions (action summaries)
+    completedActions,
+    addCompletedAction,
+    getCompletedActionsForMessage,
 
     // Code preview actions (streaming artifact visualization)
     codePreview,

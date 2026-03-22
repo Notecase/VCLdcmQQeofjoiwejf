@@ -5,6 +5,22 @@
  * recommendations, and workflow orchestration.
  */
 
+// Shared Context Service
+export { SharedContextService, type SharedContextReadOptions } from './shared-context.service'
+
+// Mission Orchestrator Service
+export {
+  MissionOrchestratorService,
+  MISSION_STAGE_ORDER,
+  createDefaultMissionSteps,
+  buildDailyPlanMarkdown,
+  createMissionApprovalForStage,
+  isTransientMissionError,
+  toMissionEvent,
+  type StartMissionInput,
+  type ResolveApprovalInput,
+} from './mission-orchestrator'
+
 // Recommendation Service
 export {
   RecommendationService,

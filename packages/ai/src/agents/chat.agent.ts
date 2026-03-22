@@ -2,29 +2,30 @@
  * Chat Agent
  *
  * Conversational AI agent with RAG (Retrieval-Augmented Generation).
- * Uses GPT-5.2 via OpenAI provider with document context and citations.
- *
- * Compatible with:
- * - Vercel AI SDK for streaming
- * - Hono for API routing
- * - LangGraph for state management
+ * Uses AI SDK v6 with document context and citations.
  */
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { streamText, generateText, embed } from 'ai'
+import { selectModel } from '../providers/model-registry'
+import { resolveModel, getEmbeddingModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
 // Types
 // ============================================================================
 
+import type { SharedContextService } from '../services/shared-context.service'
+
 export interface ChatAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
-export interface ChatMessage {
+export interface ChatAgentMessage {
   id?: string
   role: 'user' | 'assistant' | 'system'
   content: string
@@ -46,7 +47,7 @@ export interface Citation {
 }
 
 export interface ChatAgentState {
-  messages: ChatMessage[]
+  messages: ChatAgentMessage[]
   context?: {
     documentContent?: string
     documentTitle?: string
@@ -93,15 +94,15 @@ export type ChatAgentInput = z.infer<typeof ChatAgentInputSchema>
 export class ChatAgent {
   private supabase: SupabaseClient
   private userId: string
-  private openaiApiKey: string
   private model: string
   private state: ChatAgentState
+  private sharedContextService?: SharedContextService
 
   constructor(config: ChatAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
-    this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('chat').id
+    this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
       retrievedChunks: [],
@@ -157,6 +158,10 @@ export class ChatAgent {
       for (const citation of this.state.citations) {
         yield { type: 'citation', data: citation }
       }
+
+      yield { type: 'thinking', data: this.state.citations.length > 0
+        ? `Found ${this.state.citations.length} relevant source${this.state.citations.length > 1 ? 's' : ''} from your notes`
+        : 'No matching notes found — answering from general knowledge' }
     }
 
     // 3. Add user message
@@ -166,31 +171,33 @@ export class ChatAgent {
       createdAt: new Date(),
     })
 
-    yield { type: 'thinking', data: 'Generating response...' }
+    yield { type: 'thinking', data: 'Composing response...' }
 
     // 4. Stream response
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
+    let systemPrompt = this.buildSystemPrompt()
+    if (this.sharedContextService) {
+      const sharedCtx = await this.sharedContextService.read({
+        relevantTypes: ['active_plan', 'soul_updated', 'research_done'],
+      })
+      if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
+    }
 
-    const systemPrompt = this.buildSystemPrompt()
-    const messages = this.buildOpenAIMessages(systemPrompt)
-
-    const stream = await client.chat.completions.create({
-      model: this.model,
-      messages,
+    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
+    const chatMessages = this.buildChatMessages()
+    const result = streamText({
+      model: chatModel,
+      system: systemPrompt,
+      messages: chatMessages,
       temperature: 0.7,
-      max_completion_tokens: 4000,
-      stream: true,
+      maxOutputTokens: 4000,
+      onFinish: trackAISDKUsage({ model: chatEntry.id, taskType: 'chat' }),
     })
 
     let fullContent = ''
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content
-      if (delta) {
-        fullContent += delta
-        yield { type: 'text-delta', data: delta }
-      }
+    for await (const chunk of result.textStream) {
+      fullContent += chunk
+      yield { type: 'text-delta', data: chunk }
     }
 
     // 5. Add assistant message to state
@@ -252,17 +259,11 @@ export class ChatAgent {
   // =========================================================================
 
   private async retrieveContext(query: string, noteIds?: string[], maxChunks = 5): Promise<void> {
-    // Generate embedding for query
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
-    const embeddingResponse = await client.embeddings.create({
-      model: 'text-embedding-3-large',
-      input: query,
-      dimensions: 1536,
+    // Generate embedding for query using AI SDK
+    const { embedding: queryEmbedding } = await embed({
+      model: getEmbeddingModel(),
+      value: query,
     })
-
-    const queryEmbedding = embeddingResponse.data[0].embedding
 
     // Search for similar chunks
     const searchQuery = this.supabase.rpc('search_embeddings', {
@@ -327,47 +328,42 @@ cite it using [1], [2], etc. to reference the source.`
     return prompt
   }
 
-  private buildOpenAIMessages(systemPrompt: string): Array<{
-    role: 'system' | 'user' | 'assistant'
-    content: string
-  }> {
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: systemPrompt },
-    ]
-
-    for (const msg of this.state.messages) {
-      // Skip messages with null or empty content
-      if (msg.content == null || msg.content === '') continue
-      messages.push({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })
-    }
-
-    return messages
+  private buildChatMessages(): Array<{ role: 'user' | 'assistant'; content: string }> {
+    return this.state.messages
+      .filter((m) => m.role !== 'system' && m.content != null && m.content !== '')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }))
   }
 
   private async generateResponse(): Promise<ChatAgentResponse> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
+    let systemPrompt = this.buildSystemPrompt()
+    if (this.sharedContextService) {
+      const sharedCtx = await this.sharedContextService.read({
+        relevantTypes: ['active_plan', 'soul_updated', 'research_done'],
+      })
+      if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
+    }
 
-    const systemPrompt = this.buildSystemPrompt()
-    const messages = this.buildOpenAIMessages(systemPrompt)
-
-    const response = await client.chat.completions.create({
-      model: this.model,
-      messages,
+    const startTime = Date.now()
+    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
+    const result = await generateText({
+      model: chatModel,
+      system: systemPrompt,
+      messages: this.buildChatMessages(),
       temperature: 0.7,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
     })
+    recordAISDKUsage(result.usage, { model: chatEntry.id, taskType: 'chat' }, startTime)
 
     return {
-      content: response.choices[0]?.message?.content || '',
+      content: result.text,
       citations: this.state.citations,
-      usage: response.usage
+      usage: result.usage
         ? {
-            inputTokens: response.usage.prompt_tokens,
-            outputTokens: response.usage.completion_tokens,
+            inputTokens: result.usage.inputTokens ?? 0,
+            outputTokens: result.usage.outputTokens ?? 0,
           }
         : undefined,
     }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSecretaryStore } from '@/stores/secretary'
-import { Check, Pencil, Loader2 } from 'lucide-vue-next'
+import { Check, CheckCircle, Pencil, Loader2 } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
 import type { ScheduledTask } from '@inkdown/shared/types'
 
@@ -46,12 +46,20 @@ function handleApprove() {
           Edit
         </button>
         <button
+          v-if="!store.isTomorrowApproved"
           class="action-btn approve"
           @click="showConfirm = true"
         >
           <Check :size="14" />
           Approve
         </button>
+        <span
+          v-else
+          class="action-btn approved"
+        >
+          <CheckCircle :size="14" />
+          Approved
+        </span>
       </div>
     </div>
 
@@ -111,7 +119,6 @@ function handleApprove() {
   border-radius: 12px;
   background: var(--card-bg, #242428);
   border: 1px solid var(--border-color, #333338);
-  opacity: 0.85;
 }
 
 .plan-header {
@@ -189,6 +196,13 @@ function handleApprove() {
 
 .action-btn.approve:hover {
   background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
+}
+
+.action-btn.approved {
+  color: var(--sec-primary, #10b981);
+  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.3));
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
+  cursor: default;
 }
 
 .generating {

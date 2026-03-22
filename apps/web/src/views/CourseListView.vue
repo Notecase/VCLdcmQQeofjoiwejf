@@ -12,7 +12,6 @@ import CourseFilters from '@/components/course/list/CourseFilters.vue'
 const router = useRouter()
 const courseStore = useCourseStore()
 const layoutStore = useLayoutStore()
-
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
@@ -65,13 +64,15 @@ onMounted(() => {
             {{ courseStore.courses.length }} course{{ courseStore.courses.length !== 1 ? 's' : '' }}
           </span>
         </div>
-        <button
-          class="create-btn"
-          @click="goToGenerator"
-        >
-          <Plus :size="16" />
-          New Course
-        </button>
+        <div class="header-actions">
+          <button
+            class="create-btn"
+            @click="goToGenerator"
+          >
+            <Plus :size="16" />
+            New Course
+          </button>
+        </div>
       </div>
     </header>
 
@@ -177,6 +178,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .header-title {

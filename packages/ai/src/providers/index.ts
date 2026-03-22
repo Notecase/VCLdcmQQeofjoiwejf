@@ -1,43 +1,28 @@
 /**
  * AI Provider exports
  *
- * Provider implementations for the AI system:
- * - OpenAI (GPT-5.2): Chat, agents, embeddings
- * - Ollama Cloud (GLM-4.6): Artifacts, code generation
- * - Gemini: Slides, deep research, courses
+ * Provider infrastructure for the AI system:
+ * - Model Registry: Central catalog of all models + selectModel()
+ * - AI SDK Factory: Creates AI SDK v6 LanguageModel instances
+ * - AI SDK Usage: Bridges AI SDK callbacks to token tracker
+ * - Token Tracker: Captures real token usage from LLM calls
+ * - Gemini Provider: Slides (image gen) via native SDK
  */
 
-// Types
-export type {
-  AIContext,
-  ChatMessage,
-  AICompletionOptions,
-  AIActionType,
-  AIUsage,
-  AIProvider,
-} from './interface'
+// Model Registry (central source of truth)
+export { MODEL_REGISTRY, selectModel, getModel } from './model-registry'
+export type { AITaskType, ModelEntry, ModelProvider, ModelCapability } from './model-registry'
 
-// OpenAI Provider
+// Token Tracker (usage tracking)
 export {
-  OpenAIProvider,
-  createOpenAIProvider,
-  getDefaultOpenAIProvider,
-  DEFAULT_CHAT_MODEL,
-  DEFAULT_EMBEDDING_MODEL,
-  EMBEDDING_DIMENSIONS,
-} from './openai'
-export type { OpenAIProviderConfig } from './openai'
+  tokenTracker,
+  trackGeminiResponse,
+  trackGeminiStream,
+  computeCost,
+} from './token-tracker'
+export type { TokenUsageEvent, SessionUsage } from './token-tracker'
 
-// Ollama Cloud Provider (GLM-4.6)
-export {
-  OllamaCloudProvider,
-  createOllamaCloudProvider,
-  getDefaultOllamaCloudProvider,
-  OLLAMA_CLOUD_URL,
-} from './ollama'
-export type { OllamaCloudConfig } from './ollama'
-
-// Gemini Provider
+// Gemini Provider (slides — native SDK)
 export {
   GeminiProvider,
   createGeminiProvider,
@@ -48,14 +33,22 @@ export {
 } from './gemini'
 export type { GeminiProviderConfig, SlideOutline, GeneratedSlide } from './gemini'
 
-// Provider Factory
+// Request Context (AsyncLocalStorage userId propagation)
+export { requestContext, getCurrentUserId } from './request-context'
+
+// Usage Persister (TokenTracker → DB bridge)
+export { initUsagePersister } from './usage-persister'
+
+// AI SDK v6 Factory
 export {
-  createProvider,
-  getOpenAI,
-  getOllamaCloud,
-  getGemini,
-  clearProviderCache,
-  getProviderNameForTask,
-  getModelNameForTask,
-} from './factory'
-export type { AITaskType, ProviderFactoryConfig } from './factory'
+  createAIModel,
+  createAIEmbeddingModel,
+  getModelForTask,
+  getEmbeddingModel,
+  resolveModel,
+  resetAIProviders,
+} from './ai-sdk-factory'
+
+// AI SDK v6 Usage Tracking
+export { trackAISDKUsage, recordAISDKUsage } from './ai-sdk-usage'
+export type { AISDKTrackingMeta, AISDKUsage } from './ai-sdk-usage'

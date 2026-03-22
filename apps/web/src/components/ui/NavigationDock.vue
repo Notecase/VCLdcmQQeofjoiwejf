@@ -10,6 +10,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLayoutStore } from '@/stores'
 import { FileText, Calendar, GraduationCap, PanelLeft, PanelRight, Home } from 'lucide-vue-next'
+import { isDemoMode } from '@/utils/demo'
 
 // Props for pill mode
 defineProps<{
@@ -40,6 +41,8 @@ const isNoteActive = computed(() => {
 const isHomeActive = computed(() => {
   return route.path === '/' || route.name === 'home'
 })
+
+const inDemoMode = computed(() => isDemoMode())
 </script>
 
 <template>
@@ -109,6 +112,14 @@ const isHomeActive = computed(() => {
     >
       <Home :size="18" />
     </button>
+
+    <!-- Demo Mode Badge -->
+    <span
+      v-if="inDemoMode"
+      class="demo-badge"
+    >
+      Demo
+    </span>
   </nav>
 </template>
 
@@ -134,14 +145,14 @@ const isHomeActive = computed(() => {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  color: #7d8590;
+  color: var(--text-color-secondary, #7d8590);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dock-item:hover {
   background: transparent;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
 }
 
 /* Nav icons: neutral by default, colored only when active */
@@ -149,8 +160,8 @@ const isHomeActive = computed(() => {
 .nav-calendar:hover,
 .nav-courses:hover,
 .nav-home:hover {
-  color: #e6edf3;
-  background: rgba(139, 148, 158, 0.08);
+  color: var(--text-color, #e6edf3);
+  background: var(--hover-bg, rgba(139, 148, 158, 0.08));
 }
 
 /* Active state - tinted background */
@@ -195,17 +206,17 @@ const isHomeActive = computed(() => {
 
 /* Toggle buttons styling */
 .toggle-btn {
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
 }
 
 .toggle-btn:hover {
-  color: #c9d1d9;
-  background: rgba(139, 148, 158, 0.08);
+  color: var(--text-color, #c9d1d9);
+  background: var(--hover-bg, rgba(139, 148, 158, 0.08));
 }
 
 .toggle-btn.active {
-  color: #c9d1d9;
-  background: rgba(139, 148, 158, 0.12);
+  color: var(--text-color, #c9d1d9);
+  background: var(--hover-bg, rgba(139, 148, 158, 0.12));
   border-color: transparent;
 }
 
@@ -226,12 +237,12 @@ const isHomeActive = computed(() => {
   background: var(--app-bg, #010409);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   border-radius: 12px;
   padding: 8px 12px; /* Match non-pill padding exactly */
   box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 4px 16px var(--glass-shadow, rgba(0, 0, 0, 0.2)),
+    0 0 0 1px var(--glass-inset, rgba(255, 255, 255, 0.05)) inset;
   animation: pill-fade-in 0.2s ease-out;
 }
 
@@ -250,9 +261,22 @@ const isHomeActive = computed(() => {
   height: 28px;
 }
 
+/* Demo badge */
+.demo-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .nav-dock.pill-mode .dock-divider {
   height: 14px; /* Match non-pill height */
   margin: 0 4px; /* Match non-pill margin */
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--border-color, rgba(255, 255, 255, 0.1));
 }
 </style>

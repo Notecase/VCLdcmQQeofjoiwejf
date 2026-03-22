@@ -12,6 +12,11 @@
 
 import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { streamText, generateText } from 'ai'
+import type { SharedContextService } from '../services/shared-context.service'
+import { selectModel } from '../providers/model-registry'
+import { resolveModel } from '../providers/ai-sdk-factory'
+import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 import {
   EDIT_START_MARKER,
   EDIT_END_MARKER,
@@ -29,8 +34,8 @@ import {
 export interface NoteAgentConfig {
   supabase: SupabaseClient
   userId: string
-  openaiApiKey: string
   model?: string
+  sharedContextService?: SharedContextService
 }
 
 export type NoteAction = 'create' | 'update' | 'organize' | 'summarize' | 'expand'
@@ -211,15 +216,15 @@ Generate the new content to insert:`
 export class NoteAgent {
   private supabase: SupabaseClient
   private userId: string
-  private openaiApiKey: string
   private model: string
+  private sharedContextService?: SharedContextService
   private state: NoteAgentState
 
   constructor(config: NoteAgentConfig) {
     this.supabase = config.supabase
     this.userId = config.userId
-    this.openaiApiKey = config.openaiApiKey
-    this.model = config.model ?? 'gpt-5.2'
+    this.model = config.model ?? selectModel('note-agent').id
+    this.sharedContextService = config.sharedContextService
     this.state = {
       messages: [],
       action: 'create',
@@ -283,14 +288,21 @@ export class NoteAgent {
     this.state.noteId = input.noteId
     this.state.projectId = input.projectId
 
-    yield { type: 'thinking', data: `Processing ${action} action...` }
+    const actionDescriptions: Record<string, string> = {
+      create: 'Preparing to create a new note...',
+      update: 'Preparing to update your note...',
+      organize: 'Analyzing note structure for reorganization...',
+      summarize: 'Reading note to prepare a summary...',
+      expand: 'Looking for areas to expand...',
+    }
+    yield { type: 'thinking', data: actionDescriptions[action] || `Processing ${action}...` }
 
     // Get existing note content if needed
     let existingContent = ''
     let existingTitle = ''
 
     if (input.noteId && ['update', 'organize', 'summarize', 'expand'].includes(action)) {
-      yield { type: 'thinking', data: 'Loading note content...' }
+      yield { type: 'thinking', data: 'Loading your note...' }
 
       const { data: note, error } = await this.supabase
         .from('notes')
@@ -309,7 +321,7 @@ export class NoteAgent {
     }
 
     // Build prompt with EXPLICIT null checks
-    const systemPrompt: string = ACTION_PROMPTS[action] ?? ACTION_PROMPTS.update
+    let systemPrompt: string = ACTION_PROMPTS[action] ?? ACTION_PROMPTS.update
 
     // Ensure input.input is a string (not null/undefined)
     const inputText = input.input
@@ -324,6 +336,20 @@ export class NoteAgent {
       userContent = existingContent
     } else {
       userContent = safeInput
+    }
+
+    // Enrich system prompt with shared cross-agent context
+    if (this.sharedContextService) {
+      try {
+        const sharedCtx = await this.sharedContextService.read({
+          relevantTypes: ['active_plan', 'research_done', 'note_created'],
+        })
+        if (sharedCtx) {
+          systemPrompt += '\n\n' + sharedCtx
+        }
+      } catch {
+        // Graceful degradation
+      }
     }
 
     // Final validation - explicit string check with strict null coalescing
@@ -343,36 +369,36 @@ export class NoteAgent {
       return
     }
 
-    // Debug logging (can be removed after verification)
-    console.log('[NoteAgent] OpenAI call params:', {
-      model: this.model,
+    console.log('[NoteAgent] AI SDK call params:', {
+      taskType: 'note-agent',
       systemPromptLength: validatedSystemPrompt.length,
       userContentLength: validatedUserContent.length,
-      systemPromptType: typeof validatedSystemPrompt,
-      userContentType: typeof validatedUserContent,
     })
 
     // Stream response with try-catch for error handling
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
+    const genDescriptions: Record<string, string> = {
+      create: 'Writing the note...',
+      update: 'Applying changes...',
+      organize: 'Reorganizing content...',
+      summarize: 'Summarizing key points...',
+      expand: 'Expanding with more detail...',
+    }
+    yield { type: 'thinking', data: genDescriptions[action] || 'Generating content...' }
 
-    yield { type: 'thinking', data: 'Generating content...' }
-
-    let stream
+    let aiStream
     try {
-      stream = await client.chat.completions.create({
-        model: this.model,
-        messages: [
-          { role: 'system', content: validatedSystemPrompt },
-          { role: 'user', content: validatedUserContent },
-        ],
+      const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
+      aiStream = streamText({
+        model: noteModel,
+        system: validatedSystemPrompt,
+        messages: [{ role: 'user' as const, content: validatedUserContent }],
         temperature: 0.7,
-        max_completion_tokens: 4000,
-        stream: true,
+        maxOutputTokens: 4000,
+        onFinish: trackAISDKUsage({ model: noteEntry.id, taskType: 'note-agent' }),
       })
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
-      console.error('[NoteAgent] OpenAI API error:', errMsg)
+      console.error('[NoteAgent] AI SDK error:', errMsg)
       yield { type: 'text-delta', data: `AI processing error: ${errMsg}` }
       yield { type: 'finish', data: { success: false } }
       return
@@ -381,20 +407,10 @@ export class NoteAgent {
     let fullContent = ''
     let extractedTitle = ''
 
-    for await (const chunk of stream) {
-      // Log chunk structure for debugging GPT-5.2 format
-      console.log('[NoteAgent.stream] Chunk:', JSON.stringify(chunk).slice(0, 200))
-
-      // Try multiple delta paths for GPT-5.2 compatibility
-      const delta =
-        chunk.choices?.[0]?.delta?.content ??
-        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
-        (chunk.choices?.[0] as { text?: string })?.text ??
-        (chunk.choices?.[0] as { content?: string })?.content
-
-      if (delta) {
-        fullContent += delta
-        yield { type: 'text-delta', data: delta }
+    for await (const chunk of aiStream.textStream) {
+      if (chunk) {
+        fullContent += chunk
+        yield { type: 'text-delta', data: chunk }
 
         // Extract title from first line if it's a heading
         if (!extractedTitle && fullContent.includes('\n')) {
@@ -404,8 +420,6 @@ export class NoteAgent {
             yield { type: 'title', data: extractedTitle }
           }
         }
-      } else if (chunk.choices?.[0]?.finish_reason !== 'stop') {
-        console.warn('[NoteAgent.stream] No delta content in chunk:', chunk)
       }
     }
 
@@ -446,6 +460,29 @@ export class NoteAgent {
         .eq('user_id', this.userId)
     }
 
+    // Write shared context entry for significant actions
+    if (this.sharedContextService) {
+      try {
+        if (action === 'create') {
+          await this.sharedContextService.write({
+            agent: 'note',
+            type: 'note_created',
+            summary: `Created note: ${title}`,
+            payload: { noteId, title },
+          })
+        } else if (['update', 'organize', 'expand'].includes(action)) {
+          await this.sharedContextService.write({
+            agent: 'note',
+            type: 'note_edited',
+            summary: `${action.charAt(0).toUpperCase() + action.slice(1)}d note: ${title}`,
+            payload: { noteId, title, action },
+          })
+        }
+      } catch {
+        // Best-effort — swallow errors
+      }
+    }
+
     yield { type: 'finish', data: { success: true, noteId, title } }
   }
 
@@ -477,22 +514,18 @@ export class NoteAgent {
       systemPrompt = buildSurgicalEditPrompt(config.instruction)
     }
 
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     yield { type: 'thinking', data: 'Generating targeted changes...' }
 
-    let stream
+    let aiStream
     try {
-      stream = await client.chat.completions.create({
-        model: this.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: config.focusedContent },
-        ],
+      const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
+      aiStream = streamText({
+        model: noteModel,
+        system: systemPrompt,
+        messages: [{ role: 'user' as const, content: config.focusedContent }],
         temperature: 0.7,
-        max_completion_tokens: 4000,
-        stream: true,
+        maxOutputTokens: 4000,
+        onFinish: trackAISDKUsage({ model: noteEntry.id, taskType: 'note-agent' }),
       })
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
@@ -503,22 +536,10 @@ export class NoteAgent {
 
     let fullContent = ''
 
-    for await (const chunk of stream) {
-      // Log chunk structure for debugging GPT-5.2 format
-      console.log('[NoteAgent.streamSurgicalEdit] Chunk:', JSON.stringify(chunk).slice(0, 200))
-
-      // Try multiple delta paths for GPT-5.2 compatibility
-      const delta =
-        chunk.choices?.[0]?.delta?.content ??
-        (chunk.choices?.[0]?.delta as { text?: string })?.text ??
-        (chunk.choices?.[0] as { text?: string })?.text ??
-        (chunk.choices?.[0] as { content?: string })?.content
-
-      if (delta) {
-        fullContent += delta
-        yield { type: 'text-delta', data: delta }
-      } else if (chunk.choices?.[0]?.finish_reason !== 'stop') {
-        console.warn('[NoteAgent.streamSurgicalEdit] No delta content in chunk:', chunk)
+    for await (const chunk of aiStream.textStream) {
+      if (chunk) {
+        fullContent += chunk
+        yield { type: 'text-delta', data: chunk }
       }
     }
 
@@ -709,24 +730,22 @@ export class NoteAgent {
   // =========================================================================
 
   private async generateContent(systemPrompt: string, userInput: string): Promise<string> {
-    const OpenAI = (await import('openai')).default
-    const client = new OpenAI({ apiKey: this.openaiApiKey })
-
     // Ensure inputs are valid strings
     const validSystemPrompt = systemPrompt || 'You are a helpful assistant.'
     const validUserInput = userInput || 'Please help with this note.'
 
-    const response = await client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: validSystemPrompt },
-        { role: 'user', content: validUserInput },
-      ],
+    const startTime = Date.now()
+    const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
+    const result = await generateText({
+      model: noteModel,
+      system: validSystemPrompt,
+      messages: [{ role: 'user' as const, content: validUserInput }],
       temperature: 0.7,
-      max_completion_tokens: 4000,
+      maxOutputTokens: 4000,
     })
+    recordAISDKUsage(result.usage, { model: noteEntry.id, taskType: 'note-agent' }, startTime)
 
-    return response.choices[0]?.message?.content || ''
+    return result.text || ''
   }
 
   private extractTitle(content: string): string | undefined {

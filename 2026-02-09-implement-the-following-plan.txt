@@ -1,0 +1,791 @@
+
+           Claude Code v2.1.37
+ ▐▛███▜▌   Opus 4.6 · Claude Max
+▝▜█████▛▘  ~/CodingPRJ/inkdown
+  ▘▘ ▝▝    Opus 4.6 is here · $50 free extra usage · Try fast mode or use i…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Plan to implement                                                            │
+│                                                                              │
+│ Demo Polish — UI Fixes, Content Reset, Banner Removal                        │
+│                                                                              │
+│ Context                                                                      │
+│                                                                              │
+│ The Noteshell demo is the first thing potential users see. It currently      │
+│ works (password gate → in-memory notes → resets on refresh) but has UI rough │
+│  edges and incomplete demo state. This plan addresses 3 UI fixes, 3 demo     │
+│ behavior fixes, and a Vercel deployment — all minimal, targeted changes.     │
+│                                                                              │
+│ ---                                                                          │
+│ Task A1: Fix Memory Files Sidebar Spacing                                    │
+│                                                                              │
+│ File: apps/web/src/components/secretary/MemoryFileList.vue                   │
+│                                                                              │
+│ The left-edge spacing between file names and the screen edge is too tight    │
+│ (8–10px). Widen padding on all sidebar elements.                             │
+│ ┌───────────────────┬───────────────────┬────────────────────────┐           │
+│ │     Selector      │      Current      │          New           │           │
+│ ├───────────────────┼───────────────────┼────────────────────────┤           │
+│ │ .memory-file-list │ padding: 8px 0    │ padding: 8px 0 8px 8px │           │
+│ ├───────────────────┼───────────────────┼────────────────────────┤           │
+│ │ .list-title       │ padding: 0 8px    │ padding: 0 16px        │           │
+│ ├───────────────────┼───────────────────┼────────────────────────┤           │
+│ │ .file-item        │ padding: 8px 10px │ padding: 8px 16px      │           │
+│ ├───────────────────┼───────────────────┼────────────────────────┤           │
+│ │ .history-divider  │ margin: 6px 8px   │ margin: 6px 16px       │           │
+│ └───────────────────┴───────────────────┴────────────────────────┘           │
+│ ---                                                                          │
+│ Task A2: Fix Course Generation Timeline Background                           │
+│                                                                              │
+│ File: apps/web/src/views/CourseGeneratorView.vue                             │
+│                                                                              │
+│ The .generator-timeline panel uses a semi-transparent glass background       │
+│ that's lighter than the main app background. Change to solid dark to match.  │
+│ Property: border-right                                                       │
+│ Current: var(--glass-border, rgba(255,255,255,0.1))                          │
+│ New: var(--border-color, #333338)                                            │
+│ ────────────────────────────────────────                                     │
+│ Property: background                                                         │
+│ Current: var(--glass-bg, rgba(30,30,30,0.6))                                 │
+│ New: var(--app-bg, #010409)                                                  │
+│ ────────────────────────────────────────                                     │
+│ Property: backdrop-filter                                                    │
+│ Current: blur(var(--glass-blur, 12px))                                       │
+│ New: remove line                                                             │
+│ This makes it match .generator-content-tree (line 479–488) which already     │
+│ uses var(--app-bg).                                                          │
+│                                                                              │
+│ ---                                                                          │
+│ Task A3: Fix "Back to Courses" Button Size                                   │
+│                                                                              │
+│ File: apps/web/src/views/CourseGeneratorView.vue                             │
+│                                                                              │
+│ The .back-btn in the generator view is slightly oversized vs the lesson      │
+│ canvas version. Match the compact CourseView.vue style.                      │
+│ ┌───────────┬─────────────────────┬─────────────────────┐                    │
+│ │ Property  │ Generator (current) │ CourseView (target) │                    │
+│ ├───────────┼─────────────────────┼─────────────────────┤                    │
+│ │ padding   │ 6px 10px            │ 5px 10px            │                    │
+│ ├───────────┼─────────────────────┼─────────────────────┤                    │
+│ │ font-size │ 13px                │ 12px                │                    │
+│ └───────────┴─────────────────────┴─────────────────────┘                    │
+│ Change lines 401 and 406 in CourseGeneratorView.vue. No changes to           │
+│ CourseView.vue.                                                              │
+│                                                                              │
+│ ---                                                                          │
+│ Task B1: Enable In-Memory Edits for Demo Memory Files                        │
+│                                                                              │
+│ File: apps/web/src/stores/secretary.ts                                       │
+│                                                                              │
+│ Problem: updateMemoryFile() (line 265) has if (isDemoMode()) return which    │
+│ silently drops all edits. Users can't save changes to memory files, and task │
+│  status changes in the schedule don't reflect in Today.md content.           │
+│                                                                              │
+│ Fix: Replace the early return with an in-memory update:                      │
+│                                                                              │
+│ async function updateMemoryFile(filename: string, content: string) {         │
+│   if (isDemoMode()) {                                                        │
+│     const idx = memoryFiles.value.findIndex((f) => f.filename === filename)  │
+│     if (idx >= 0) {                                                          │
+│       memoryFiles.value[idx] = {                                             │
+│         ...memoryFiles.value[idx],                                           │
+│         content,                                                             │
+│         updatedAt: new Date().toISOString(),                                 │
+│       }                                                                      │
+│     }                                                                        │
+│     parsePlanData()                                                          │
+│     notifications.success('File saved successfully')                         │
+│     return                                                                   │
+│   }                                                                          │
+│   // ... rest unchanged                                                      │
+│                                                                              │
+│ Edits persist in memory during the session. On refresh, fixtures reload from │
+│  demo-secretary.ts.                                                          │
+│                                                                              │
+│ ---                                                                          │
+│ Task B2: Add Carryover.md + Keep Existing Content                            │
+│                                                                              │
+│ File: apps/web/src/data/demo-secretary.ts                                    │
+│                                                                              │
+│ Add a CARRYOVER_MD constant with realistic carried-over task content and     │
+│ include it in the DEMO_MEMORY_FILES array:                                   │
+│                                                                              │
+│ const CARRYOVER_MD = `# Carryover — Sat 08 Feb 2026                          │
+│                                                                              │
+│ ## Incomplete Tasks                                                          │
+│ - [ ] Finish MDP value iteration coding exercise (RL Day 4)                  │
+│ - [ ] Review OpenClaw installation notes                                     │
+│                                                                              │
+│ ## Reason                                                                    │
+│ Saturday was a lighter schedule day. MDP coding exercise took longer than    │
+│ expected — the convergence threshold needed tuning. Deferred to Sunday       │
+│ session.                                                                     │
+│                                                                              │
+│ ## Action                                                                    │
+│ - MDP exercise rolled into today's first study block                         │
+│ - OpenClaw notes review merged into tomorrow's session                       │
+│ `                                                                            │
+│                                                                              │
+│ Add to array: memoryFile('mem-carryover', 'Carryover.md', CARRYOVER_MD).     │
+│ Files sort alphabetically, so Carryover.md will slot between AI.md and       │
+│ Plan.md.                                                                     │
+│                                                                              │
+│ ---                                                                          │
+│ Task B3: Reset Both Demo Courses to 0% Progress                              │
+│                                                                              │
+│ File: apps/web/src/data/demo-courses.ts                                      │
+│                                                                              │
+│ Reset the OpenClaw course (currently 25% complete) so all lessons are        │
+│ unmarked:                                                                    │
+│                                                                              │
+│ - Course-level: progress: 25 → progress: 0                                   │
+│ - Module 1 (oc-m1): status: 'completed' → 'available', progress: 100 → 0     │
+│ - Module 1 lessons (oc-m1-l1, l2, l3): status: 'completed' → 'available',    │
+│ remove completedAt                                                           │
+│ - Module 2 (oc-m2): status: 'in_progress' → 'available', progress: 50 → 0    │
+│ - Module 2 lessons (oc-m2-l1, l2): status: 'completed' → 'available', remove │
+│  completedAt                                                                 │
+│                                                                              │
+│ Scaling Laws is already at 0%. Course lesson completion already works in     │
+│ demo mode — completeLesson() (course.ts:526) toggles status locally without  │
+│ API calls.                                                                   │
+│                                                                              │
+│ ---                                                                          │
+│ Task B4: Remove Demo Banner                                                  │
+│                                                                              │
+│ File: apps/web/src/App.vue                                                   │
+│                                                                              │
+│ Remove entirely:                                                             │
+│ - Template: Delete the <div v-if="inDemoMode" class="demo-banner"> block     │
+│ (lines 26–32)                                                                │
+│ - Script: Remove import { isDemoMode } from './utils/demo' and const         │
+│ inDemoMode = computed(() => isDemoMode())                                    │
+│ - Styles: Delete .demo-banner and .demo-banner a CSS rules                   │
+│                                                                              │
+│ isDemoMode is still used in stores/views — only the App.vue references are   │
+│ removed.                                                                     │
+│                                                                              │
+│ ---                                                                          │
+│ Task C1: Deploy to Vercel                                                    │
+│                                                                              │
+│ After all changes are verified locally:                                      │
+│ 1. Use Vercel MCP list_projects to find the project                          │
+│ 2. Deploy with deploy_to_vercel                                              │
+│ 3. Verify the deployed demo at the production URL                            │
+│                                                                              │
+│ ---                                                                          │
+│ Files Changed Summary                                                        │
+│ File: apps/web/src/components/secretary/MemoryFileList.vue                   │
+│ Changes: Widen sidebar padding (A1)                                          │
+│ ────────────────────────────────────────                                     │
+│ File: apps/web/src/views/CourseGeneratorView.vue                             │
+│ Changes: Dark timeline bg (A2) + compact back-btn (A3)                       │
+│ ────────────────────────────────────────                                     │
+│ File: apps/web/src/stores/secretary.ts                                       │
+│ Changes: In-memory save for demo mode (B1)                                   │
+│ ────────────────────────────────────────                                     │
+│ File: apps/web/src/data/demo-secretary.ts                                    │
+│ Changes: Add Carryover.md (B2)                                               │
+│ ────────────────────────────────────────                                     │
+│ File: apps/web/src/data/demo-courses.ts                                      │
+│ Changes: Reset OpenClaw to 0% (B3)                                           │
+│ ────────────────────────────────────────                                     │
+│ File: apps/web/src/App.vue                                                   │
+│ Changes: Remove demo banner (B4)                                             │
+│ ---                                                                          │
+│ Verification                                                                 │
+│                                                                              │
+│ 1. pnpm dev → navigate to /demo → enter password                             │
+│ 2. No banner at top of app                                                   │
+│ 3. Secretary sidebar (/calendar): file names have more breathing room from   │
+│ left edge; Carryover.md appears                                              │
+│ 4. Edit a memory file → changes visible → refresh → content resets to        │
+│ original                                                                     │
+│ 5. Task checkboxes → check a task in Today → Today.md content reflects the   │
+│ change                                                                       │
+│ 6. Courses (/courses): both courses show 0% progress; click into OpenClaw →  │
+│ all lessons unmarked                                                         │
+│ 7. Mark a lesson complete → progress bar updates → refresh → resets to 0%    │
+│ 8. Course generator → timeline panel matches dark bg (no glass effect); back │
+│  button matches compact size                                                 │
+│ 9. pnpm build && pnpm typecheck && pnpm lint — no regressions                │
+│ 10. Non-demo mode: navigate normally without demo flag — app works unchanged │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+⏺ I'll start by reading all the files that need to be modified to understand the
+   current state before making changes.
+
+⏺ Read 6 files (ctrl+o to expand)
+
+⏺ All files read. Now I'll make all the edits. The tasks are independent so I'll
+   do them all in parallel.
+
+⏺ Update(apps/web/src/components/secretary/MemoryFileList.vue)
+  ⎿  Added 2 lines, removed 2 lines
+      111    display: flex;
+      112    flex-direction: column;
+      113    gap: 8px;
+      114 -  padding: 8px 0;                                             
+      114 +  padding: 8px 0 8px 8px;                                     
+      115  }
+      116  
+      117  .list-title {
+     ...
+      121    text-transform: uppercase;
+      122    letter-spacing: 0.5px;
+      123    margin: 0;
+      124 -  padding: 0 8px;                                             
+      124 +  padding: 0 16px;                                            
+      125  }
+      126  
+      127  .file-list {
+
+⏺ Update(apps/web/src/components/secretary/MemoryFileList.vue)
+  ⎿  Added 1 line, removed 1 line
+      134    display: flex;
+      135    align-items: center;
+      136    gap: 10px;
+      137 -  padding: 8px 10px;                                          
+      137 +  padding: 8px 16px;                                          
+      138    border-radius: 8px;
+      139    border: none;
+      140    background: transparent;
+
+⏺ Update(apps/web/src/components/secretary/MemoryFileList.vue)
+  ⎿  Added 1 line, removed 1 line
+      188  .history-divider {
+      189    height: 1px;
+      190    background: var(--border-color, #333338);
+      191 -  margin: 6px 8px;                                            
+      191 +  margin: 6px 16px;                                           
+      192  }
+      193  
+      194  .history-item {
+
+⏺ Update(apps/web/src/views/CourseGeneratorView.vue)
+  ⎿  Added 2 lines, removed 3 lines
+      502    flex-shrink: 0;
+      503    overflow-y: auto;
+      504    padding: 24px;
+      505 -  border-right: 1px solid var(--glass-border, rgba(255, 255, 2
+          -55, 0.1));                                                    
+      506 -  background: var(--glass-bg, rgba(30, 30, 30, 0.6));         
+      507 -  backdrop-filter: blur(var(--glass-blur, 12px));             
+      505 +  border-right: 1px solid var(--border-color, #333338);       
+      506 +  background: var(--app-bg, #010409);                         
+      507    display: flex;
+      508    flex-direction: column;
+      509    gap: 20px;
+
+⏺ Update(apps/web/src/views/CourseGeneratorView.vue)
+  ⎿  Added 2 lines, removed 2 lines
+      398    display: flex;
+      399    align-items: center;
+      400    gap: 4px;
+      401 -  padding: 6px 10px;                                          
+      401 +  padding: 5px 10px;                                          
+      402    border-radius: 6px;
+      403    border: 1px solid var(--border-color, #333338);
+      404    background: transparent;
+      405    color: var(--text-color-secondary, #94a3b8);
+      406 -  font-size: 13px;                                            
+      406 +  font-size: 12px;                                            
+      407    cursor: pointer;
+      408    transition: all 0.15s;
+      409  }
+
+⏺ Update(apps/web/src/stores/secretary.ts)
+  ⎿  Added 13 lines, removed 1 line
+      263    }
+      264  
+      265    async function updateMemoryFile(filename: string, content: s
+           tring) {
+      266 -    if (isDemoMode()) return                                  
+      266 +    if (isDemoMode()) {                                       
+      267 +      const idx = memoryFiles.value.findIndex((f) => f.filenam
+          +e === filename)                                               
+      268 +      if (idx >= 0) {                                         
+      269 +        memoryFiles.value[idx] = {                            
+      270 +          ...memoryFiles.value[idx],                          
+      271 +          content,                                            
+      272 +          updatedAt: new Date().toISOString(),                
+      273 +        }                                                     
+      274 +      }                                                       
+      275 +      parsePlanData()                                         
+      276 +      notifications.success('File saved successfully')        
+      277 +      return                                                  
+      278 +    }                                                         
+      279      try {
+      280        const res = await authFetch(`${SECRETARY_API}/memory/${f
+           ilename}`, {
+      281          method: 'PUT',
+
+⏺ Update(apps/web/src/data/demo-secretary.ts)
+  ⎿  Added 15 lines
+      154  - OpenClaw auth: JWT validation, role scoping, token refresh f
+           low
+      155  `
+      156  
+      157 +const CARRYOVER_MD = `# Carryover — Sat 08 Feb 2026           
+      158 +                                                              
+      159 +## Incomplete Tasks                                           
+      160 +- [ ] Finish MDP value iteration coding exercise (RL Day 4)   
+      161 +- [ ] Review OpenClaw installation notes                      
+      162 +                                                              
+      163 +## Reason                                                     
+      164 +Saturday was a lighter schedule day. MDP coding exercise took 
+          +longer than expected — the convergence threshold needed tuning
+          +. Deferred to Sunday session.                                 
+      165 +                                                              
+      166 +## Action                                                     
+      167 +- MDP exercise rolled into today's first study block          
+      168 +- OpenClaw notes review merged into tomorrow's session        
+      169 +`                                                             
+      170 +                                                              
+      171  // ===========================================================
+           ==================
+      172  // Exports — Memory Files
+      173  // ===========================================================
+           ==================
+     ...
+      175  export const DEMO_MEMORY_FILES: MemoryFile[] = [
+      176    memoryFile('mem-plan', 'Plan.md', PLAN_MD),
+      177    memoryFile('mem-ai', 'AI.md', AI_MD),
+      178 +  memoryFile('mem-carryover', 'Carryover.md', CARRYOVER_MD),  
+      179    memoryFile('mem-today', 'Today.md', TODAY_MD),
+      180    memoryFile('mem-tomorrow', 'Tomorrow.md', TOMORROW_MD),
+      181  ]
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 3 lines, removed 4 lines
+      37      title: 'Getting Started',
+      38      description: 'Introduction to OpenClaw and initial setup',
+      39      order: 0,
+      40 -    status: 'completed',                                       
+      41 -    progress: 100,                                             
+      40 +    status: 'available',                                       
+      41 +    progress: 0,                                               
+      42      lessons: [
+      43        {
+      44          id: 'oc-m1-l1',
+     ...
+      47          type: 'lecture',
+      48          duration: '20 min',
+      49          order: 0,
+      50 -        status: 'completed',                                   
+      51 -        completedAt: '2026-02-07T10:00:00Z',                   
+      50 +        status: 'available',                                   
+      51          content: {
+      52            markdown: `# What is OpenClaw?
+      53  
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 2 lines
+      116          type: 'lecture',
+      117          duration: '25 min',
+      118          order: 1,
+      119 -        status: 'completed',                                  
+      120 -        completedAt: '2026-02-07T11:00:00Z',                  
+      119 +        status: 'available',                                  
+      120          content: {
+      121            markdown: `# Architecture Overview
+      122  
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 2 lines
+      207          type: 'practice',
+      208          duration: '30 min',
+      209          order: 2,
+      210 -        status: 'completed',                                  
+      211 -        completedAt: '2026-02-07T12:00:00Z',                  
+      210 +        status: 'available',                                  
+      211          content: {
+      212            markdown: `# Installation & First Run
+      213  
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 3 lines, removed 4 lines
+      258      title: 'Multi-Channel Setup',
+      259      description: 'Connect AI to messaging platforms',
+      260      order: 1,
+      261 -    status: 'in_progress',                                    
+      262 -    progress: 50,                                             
+      261 +    status: 'available',                                      
+      262 +    progress: 0,                                              
+      263      lessons: [
+      264        {
+      265          id: 'oc-m2-l1',
+     ...
+      268          type: 'lecture',
+      269          duration: '20 min',
+      270          order: 0,
+      271 -        status: 'completed',                                  
+      272 -        completedAt: '2026-02-08T09:00:00Z',                  
+      271 +        status: 'available',                                  
+      272          content: {
+      273            markdown: `# Channel Concepts
+      274  
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 2 lines
+      334          type: 'lecture',
+      335          duration: '25 min',
+      336          order: 1,
+      337 -        status: 'completed',                                  
+      338 -        completedAt: '2026-02-08T10:00:00Z',                  
+      337 +        status: 'available',                                  
+      338          content: {
+      339            markdown: `# WhatsApp Integration
+      340  
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 1 line
+      1939        'Deploy to production with monitoring',
+      1940      ],
+      1941      status: 'ready',
+      1942 -    progress: 25,                                            
+      1942 +    progress: 0,                                             
+      1943      settings: { ...defaultSettings, focusAreas: ['setup', 'ch
+            annels', 'routing'] },
+      1944      researchReport: null,
+      1945      thinkingTrace: null,
+
+⏺ Update(apps/web/src/App.vue)
+  ⎿  Removed 3 lines
+      3  import { usePreferencesStore, useLayoutStore } from './stores'
+      4  import CommandPalette from './components/ui/CommandPalette.vue'
+      5  import NotificationToast from './components/ui/NotificationToast
+         .vue'
+      6 -import { isDemoMode } from './utils/demo'                       
+      6  
+      7  const preferencesStore = usePreferencesStore()
+      8  const layoutStore = useLayoutStore()
+     ...
+      13    'source-code-mode': layoutStore.isSourceMode,
+      14    'zen-mode': layoutStore.isZenMode,
+      15  }))
+      17 -                                                               
+      18 -const inDemoMode = computed(() => isDemoMode())                
+      16  </script>
+      17  
+      18  <template>
+
+⏺ Update(apps/web/src/App.vue)
+  ⎿  Removed 7 lines
+      20      id="inkdown-app"
+      21      :class="appClasses"
+      22    >
+      23 -    <div                                                       
+      24 -      v-if="inDemoMode"                                        
+      25 -      class="demo-banner"                                      
+      26 -    >                                                          
+      27 -      You're viewing the NoteShell demo. Your edits are saved l
+         -ocally in this browser.                                        
+      28 -      <a href="/auth">Sign up for full access &rarr;</a>       
+      29 -    </div>                                                     
+      23      <router-view />
+      24  
+      25      <!-- Global components -->
+
+⏺ Update(apps/web/src/App.vue)
+  ⎿  Removed 22 lines
+      47      sans-serif;
+      48  }
+      49  
+      50 -/* Demo banner */                                              
+      51 -.demo-banner {                                                 
+      52 -  background: rgba(167, 139, 250, 0.08);                       
+      53 -  border-bottom: 1px solid rgba(167, 139, 250, 0.15);          
+      54 -  color: #8b949e;                                              
+      55 -  font-size: 12px;                                             
+      56 -  text-align: center;                                          
+      57 -  padding: 6px 16px;                                           
+      58 -  flex-shrink: 0;                                              
+      59 -}                                                              
+      60 -                                                               
+      61 -.demo-banner a {                                               
+      62 -  color: #a78bfa;                                              
+      63 -  text-decoration: none;                                       
+      64 -  font-weight: 500;                                            
+      65 -  margin-left: 8px;                                            
+      66 -}                                                              
+      67 -                                                               
+      68 -.demo-banner a:hover {                                         
+      69 -  text-decoration: underline;                                  
+      70 -}                                                              
+      71 -                                                               
+      50  /* Zen mode - hide sidebar with smooth fade */
+      51  #inkdown-app.zen-mode .sidebar {
+      52    opacity: 0;
+
+⏺ All edits applied. Let me now run the build validation to confirm no
+  regressions.
+
+⏺ Bash(pnpm build 2>&1 | tail -30)
+  ⎿  @inkdown/web:build: dist/assets/flowDiagram-NV44I4VS-CvHuAORN.js
+                        60.51 kB │ gzip:  19.48 kB
+     @inkdown/web:build: dist/assets/SecretaryView-BWyaRQE5.js
+     … +43 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ Build successful. Let me also run typecheck and lint.
+
+⏺ Bash(pnpm typecheck 2>&1 | tail -15)
+  ⎿ @inkdown/editor:build: cache hit, replaying logs d6902a772722eec7
+    @inkdown/editor:build:
+    @inkdown/editor:build: > @inkdown/editor@0.1.0 build /Users/quangnguyen
+    … +13 lines (ctrl+o to expand)
+
+  ⎿  (timeout 2m)
+
+⏺ Bash(pnpm lint 2>&1 | tail -15)
+  ⎿ /Users/quangnguyen/CodingPRJ/inkdown/packages/muya/src/utils/prism/load
+    Language.ts
+      47:34  warning  Unexpected any. Specify a different type  @typescript
+    … +18 lines (ctrl+o to expand)
+
+
+  ⎿  (timeout 2m)
+
+⏺ Typecheck passes. The lint error is pre-existing (not from my changes). Let me
+   verify which file has the lint error.
+
+⏺ Bash(pnpm lint 2>&1 | grep " error " | head -5)
+  ⎿   142:15  error  This generator function does not have 'yield'  require
+    -yield
+
+  ⎿  (timeout 2m)
+
+⏺ Bash(pnpm lint 2>&1 | grep -B1 "error  This generator")
+  ⎿ /Users/quangnguyen/CodingPRJ/inkdown/packages/ai/src/agents/editor-deep
+    /agent.test.ts
+      142:15  error  This generator function does not have 'yield'  require
+    -yield
+
+
+  ⎿  (timeout 2m)
+
+⏺ The single lint error is in packages/ai/src/agents/editor-deep/agent.test.ts —
+   a pre-existing test file unrelated to my changes. All 6 files I modified pass
+   cleanly.
+
+  Here's a summary of all changes:
+
+  A1 — Memory Files Sidebar Spacing (MemoryFileList.vue): Widened left padding
+  on .memory-file-list, .list-title, .file-item, and .history-divider for better
+   breathing room.
+
+  A2 — Course Timeline Background (CourseGeneratorView.vue): Changed
+  .generator-timeline from glass-effect (semi-transparent + backdrop-filter) to
+  solid dark background matching .generator-content-tree.
+
+  A3 — Back Button Size (CourseGeneratorView.vue): Reduced .back-btn padding
+  from 6px 10px → 5px 10px and font-size from 13px → 12px to match the compact
+  style.
+
+  B1 — In-Memory Demo Edits (secretary.ts): Replaced the if (isDemoMode()) 
+  return early-exit with an in-memory update that modifies the file content,
+  updates parsePlanData(), and shows a success notification.
+
+  B2 — Carryover.md (demo-secretary.ts): Added CARRYOVER_MD content and included
+   it in DEMO_MEMORY_FILES array between AI.md and Today.md.
+
+  B3 — Reset OpenClaw to 0% (demo-courses.ts): Reset course progress from 25% →
+  0%, Module 1 from completed/100% → available/0%, Module 2 from in_progress/50%
+   → available/0%, and removed completedAt from all 5 previously-completed
+  lessons.
+
+  B4 — Remove Demo Banner (App.vue): Removed the isDemoMode import, the
+  inDemoMode computed, the banner template block, and the .demo-banner CSS
+  rules.
+
+  Ready for Task C1 (Vercel deploy) whenever you want to proceed.
+
+✻ Baked for 2m 6s
+
+❯ /export 
+  ⎿  Conversation copied to clipboard
+
+❯ /verify 
+
+⏺ Skill(verify)
+  ⎿  Successfully loaded skill
+
+⏺ Let me review each changed file by reading the current state after edits.
+
+⏺ Read 6 files (ctrl+o to expand)
+
+⏺ Now let me check for the course-level progress field and verify the comment is
+   now stale on the module.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ I notice a stale comment. Let me check it.
+
+⏺ Searched for 2 patterns (ctrl+o to expand)
+
+⏺ Found two stale comments. These should be updated to match the new status. Let
+   me also verify there are no remaining completedAt fields in modules 1 and 2.
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Good - all completedAt fields were removed. Now here's the full verification
+  report:
+
+  ---
+  Verification Report
+
+  1. apps/web/src/components/secretary/MemoryFileList.vue (Task A1)
+
+  Changes: CSS-only. Widened left padding on .memory-file-list (8px→8px left),
+  .list-title (8px→16px), .file-item (10px→16px), .history-divider margin
+  (8px→16px).
+
+  Issues: None. Pure CSS spacing adjustments. No logic, no TypeScript, no
+  security surface.
+
+  Verdict: PASS
+
+  ---
+  2. apps/web/src/views/CourseGeneratorView.vue (Tasks A2 + A3)
+
+  Changes:
+  - .generator-timeline: Replaced glass-effect (semi-transparent bg +
+  backdrop-filter) with solid dark var(--app-bg) and var(--border-color),
+  matching .generator-content-tree at line 479.
+  - .back-btn: padding 6px 10px → 5px 10px, font-size 13px → 12px.
+
+  Issues: None. Pure CSS changes, consistent with existing patterns in the same
+  file.
+
+  Verdict: PASS
+
+  ---
+  3. apps/web/src/stores/secretary.ts (Task B1)
+
+  Changes: Replaced if (isDemoMode()) return with an in-memory update block
+  that:
+  1. Finds the file by filename via findIndex
+  2. Creates a new object with spread + updated content/timestamp
+  3. Calls parsePlanData() to re-parse plan state
+  4. Shows success notification
+  5. Returns early (no API call)
+
+  Best Practices:
+  - Follows exact same pattern as the non-demo path (spread + replace at index)
+  - Proper TypeScript typing — filename: string, content: string params
+  unchanged
+  - Uses new Date().toISOString() matching the MemoryFile.updatedAt type
+  - parsePlanData() call ensures Today.md task status changes propagate to the
+  UI
+
+  Efficiency: findIndex is O(n) on a small array (~5 files), fine.
+
+  Security: Demo mode has no backend calls — this is purely local state. No
+  injection surface. The isDemoMode() guard ensures this path only runs in demo
+  context.
+
+  Verdict: PASS
+
+  ---
+  4. apps/web/src/data/demo-secretary.ts (Task B2)
+
+  Changes: Added CARRYOVER_MD constant with realistic demo content. Added
+  memoryFile('mem-carryover', 'Carryover.md', CARRYOVER_MD) to the
+  DEMO_MEMORY_FILES array, alphabetically between AI.md and Today.md.
+
+  Issues: None. Static fixture data following the exact same memoryFile() helper
+   pattern as the other entries.
+
+  Verdict: PASS
+
+  ---
+  5. apps/web/src/data/demo-courses.ts (Task B3)
+
+  Changes:
+  - Course-level progress: 25 → progress: 0
+  - Module oc-m1: status: 'completed' → 'available', progress: 100 → 0
+  - Module oc-m2: status: 'in_progress' → 'available', progress: 50 → 0
+  - 5 lessons (oc-m1-l1, l2, l3, oc-m2-l1, l2): status: 'completed' →
+  'available', completedAt removed
+
+  Issues found:
+  - Stale comments (minor): Line 33 still says // Module 1 - Getting Started 
+  (completed) and line 254 says // Module 2 - Multi-Channel Setup (in_progress)
+  — these no longer match the actual status.
+
+  Verdict: PASS with minor nit (stale comments)
+
+  ---
+  6. apps/web/src/App.vue (Task B4)
+
+  Changes:
+  - Removed import { isDemoMode } from './utils/demo'
+  - Removed const inDemoMode = computed(() => isDemoMode())
+  - Removed the <div v-if="inDemoMode" class="demo-banner"> template block
+  - Removed .demo-banner and .demo-banner a CSS rules
+
+  Best Practices: Clean removal — no dead code left behind. The isDemoMode
+  utility is still used in other files (stores, views), so it's not orphaned
+  globally.
+
+  Verdict: PASS
+
+  ---
+  Minor Fix: Stale Comments
+
+  Let me fix the two stale comments in demo-courses.ts:
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 1 line
+      30  // ============================================================
+          =================
+      31  
+      32  const openclawModules: CourseModule[] = [
+      33 -  // Module 1 - Getting Started (completed)                    
+      33 +  // Module 1 - Getting Started                                
+      34    {
+      35      id: 'oc-m1',
+      36      courseId: 'demo-course-openclaw',
+
+⏺ Update(apps/web/src/data/demo-courses.ts)
+  ⎿  Added 1 line, removed 1 line
+      251      ],
+      252    },
+      253  
+      254 -  // Module 2 - Multi-Channel Setup (in_progress)             
+      254 +  // Module 2 - Multi-Channel Setup                           
+      255    {
+      256      id: 'oc-m2',
+      257      courseId: 'demo-course-openclaw',
+
+⏺ Final Summary
+
+  All 6 files pass verification:
+  ┌─────────────────────────┬────────────────────────────────────┬────────┐
+  │          File           │              Changes               │ Status │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ MemoryFileList.vue      │ CSS padding widened                │ PASS   │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ CourseGeneratorView.vue │ Dark bg + compact button           │ PASS   │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ secretary.ts            │ In-memory demo save                │ PASS   │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ demo-secretary.ts       │ Added Carryover.md                 │ PASS   │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ demo-courses.ts         │ Reset to 0% + fixed stale comments │ PASS   │
+  ├─────────────────────────┼────────────────────────────────────┼────────┤
+  │ App.vue                 │ Removed demo banner                │ PASS   │
+  └─────────────────────────┴────────────────────────────────────┴────────┘
+  - No any types introduced
+  - No security issues — all changes are CSS or client-side demo mode state
+  - No unnecessary re-renders — the secretary store update creates a new object
+  reference (correct for Vue reactivity) and only calls parsePlanData() once
+  - No dead code — removed imports/computed/styles are fully cleaned up
+  - Build + typecheck pass — the single pre-existing lint error is in an
+  unrelated test file
+
+✻ Baked for 1m 3s
+
+❯ /export 
+  ⎿  Conversation copied to clipboard

@@ -4,16 +4,69 @@
  *
  * Collapsible with chevron toggle.
  * Status badge: running=blue spinner, completed=green check, error=red x.
+ * Enhanced: elapsed time display, live text preview, auto-collapse when ≥5 total.
  */
-import { ref } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { SubagentInfo } from '@inkdown/shared/types'
 import { ChevronDown, Loader2, CheckCircle, XCircle, Bot } from 'lucide-vue-next'
 
-defineProps<{
+const props = defineProps<{
   subagent: SubagentInfo
+  totalCount?: number
 }>()
 
 const expanded = ref(false)
+const elapsedDisplay = ref('')
+let intervalId: ReturnType<typeof setInterval> | undefined
+
+function updateElapsed() {
+  const sub = props.subagent
+  if (sub.completedAt && sub.startedAt) {
+    const ms = new Date(sub.completedAt).getTime() - new Date(sub.startedAt).getTime()
+    elapsedDisplay.value = formatMs(ms)
+    return
+  }
+  if (sub.startedAt) {
+    elapsedDisplay.value = formatMs(Date.now() - new Date(sub.startedAt).getTime())
+  }
+}
+
+function formatMs(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+onMounted(() => {
+  intervalId = setInterval(updateElapsed, 500)
+  updateElapsed()
+})
+
+onUnmounted(() => {
+  if (intervalId) clearInterval(intervalId)
+})
+
+// Auto-collapse completed cards when ≥5 total
+watch(
+  () => props.subagent.status,
+  (newStatus) => {
+    if (newStatus === 'completed' && (props.totalCount || 0) >= 5) {
+      setTimeout(() => {
+        expanded.value = false
+      }, 2000)
+    }
+    if (newStatus === 'completed' || newStatus === 'error') {
+      if (intervalId) clearInterval(intervalId)
+      updateElapsed()
+    }
+  }
+)
+
+const outputPreview = computed(() => {
+  const output = props.subagent.output
+  if (!output) return ''
+  const trimmed = typeof output === 'string' ? output.trim() : ''
+  return trimmed.length > 200 ? trimmed.slice(0, 200) + '...' : trimmed
+})
 </script>
 
 <template>
@@ -50,6 +103,12 @@ const expanded = ref(false)
             :size="10"
           />
           <span class="badge-text">{{ subagent.status }}</span>
+        </span>
+        <span
+          v-if="elapsedDisplay"
+          class="elapsed-time"
+        >
+          {{ elapsedDisplay }}
         </span>
       </div>
       <ChevronDown
@@ -88,7 +147,15 @@ const expanded = ref(false)
         </div>
 
         <div
-          v-if="subagent.status === 'running' && !subagent.output"
+          v-if="subagent.status === 'running' && outputPreview"
+          class="live-preview"
+        >
+          <span class="section-label">Live output</span>
+          <p class="preview-text">{{ outputPreview }}</p>
+        </div>
+
+        <div
+          v-else-if="subagent.status === 'running' && !subagent.output"
           class="running-hint"
         >
           <Loader2
@@ -193,6 +260,13 @@ const expanded = ref(false)
   text-transform: capitalize;
 }
 
+.elapsed-time {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: rgba(139, 148, 158, 0.6);
+  flex-shrink: 0;
+}
+
 .chevron {
   color: rgba(139, 148, 158, 0.6);
   flex-shrink: 0;
@@ -268,6 +342,22 @@ const expanded = ref(false)
   color: var(--text-color, #e6edf3);
   background: rgba(63, 185, 80, 0.05);
   border-color: rgba(63, 185, 80, 0.2);
+}
+
+.live-preview {
+  margin-top: 4px;
+}
+
+.preview-text {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-color-secondary, #8b949e);
+  margin: 4px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .running-hint {

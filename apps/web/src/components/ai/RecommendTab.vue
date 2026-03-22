@@ -731,21 +731,21 @@ function isSaved(type: RecommendationType): boolean {
 .analysis-label {
   font-size: 12px;
   font-weight: 500;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .analysis-trigger {
   font-size: 20px;
-  color: #30363d;
+  color: var(--border-color, #333338);
   cursor: default;
   transition: all 0.2s;
   user-select: none;
 }
 
 .analysis-trigger.clickable {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
   cursor: pointer;
 }
 
@@ -821,7 +821,7 @@ function isSaved(type: RecommendationType): boolean {
 
 .thinking-message {
   font-size: 13px;
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
   transition: opacity 0.3s ease;
 }
 
@@ -856,7 +856,7 @@ function isSaved(type: RecommendationType): boolean {
 
 .warning-message {
   font-size: 12px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   line-height: 1.4;
 }
 
@@ -895,7 +895,7 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .content-warning .warning-message {
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Context Indicator */
@@ -905,14 +905,14 @@ function isSaved(type: RecommendationType): boolean {
   gap: 12px;
   padding: 12px 16px;
   margin-bottom: 8px;
-  border-left: 3px solid #58a6ff;
+  border-left: 3px solid var(--primary-color, #7c9ef8);
   background: transparent;
 }
 
 .radio-dot {
   width: 14px;
   height: 14px;
-  border: 2px solid #30363d;
+  border: 2px solid var(--border-color, #333338);
   border-radius: 50%;
   background: transparent;
   flex-shrink: 0;
@@ -921,13 +921,13 @@ function isSaved(type: RecommendationType): boolean {
 
 .context-indicator span:last-child {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Slides Progress */
 .slides-progress {
-  background: rgba(22, 27, 34, 0.7);
-  border: 1px solid #30363d;
+  background: var(--glass-bg, rgba(22, 27, 34, 0.7));
+  border: 1px solid var(--border-color, #333338);
   border-radius: 10px;
   padding: 16px;
 }
@@ -937,17 +937,17 @@ function isSaved(type: RecommendationType): boolean {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #e6edf3;
+  color: var(--text-color, #e2e8f0);
   margin-bottom: 12px;
 }
 
 .progress-header svg {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
 }
 
 .progress-bar-container {
   height: 4px;
-  background: #21262d;
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -962,7 +962,7 @@ function isSaved(type: RecommendationType): boolean {
 
 .progress-text {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 /* Recommendations List */
@@ -1017,14 +1017,14 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .card-icon {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
   flex-shrink: 0;
 }
 
 .card-title {
   font-size: 14px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--text-color, #e2e8f0);
 }
 
 .card-badge {
@@ -1053,7 +1053,7 @@ function isSaved(type: RecommendationType): boolean {
 
 .card-desc {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   line-height: 1.5;
   text-align: left;
 }
@@ -1078,7 +1078,7 @@ function isSaved(type: RecommendationType): boolean {
 /* Tags - minimal style with dot separators */
 .card-tag {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
   background: transparent;
   padding: 0;
   border-radius: 0;
@@ -1122,7 +1122,7 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .action-btn.primary {
-  color: #58a6ff;
+  color: var(--primary-color, #7c9ef8);
 }
 
 .action-btn.primary:hover:not(:disabled) {
@@ -1130,11 +1130,11 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .action-btn.secondary {
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 .action-btn.secondary:hover {
-  color: #c9d1d9;
+  color: var(--text-color, #e2e8f0);
 }
 
 .action-btn.save {
@@ -1153,7 +1153,7 @@ function isSaved(type: RecommendationType): boolean {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #94a3b8);
 }
 
 .empty-state p {
@@ -1161,9 +1161,9 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .reset-btn {
-  background: #21262d;
-  color: #58a6ff;
-  border: 1px solid #30363d;
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
+  color: var(--primary-color, #7c9ef8);
+  border: 1px solid var(--border-color, #333338);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -1172,8 +1172,8 @@ function isSaved(type: RecommendationType): boolean {
 }
 
 .reset-btn:hover {
-  background: #30363d;
-  border-color: #58a6ff;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--primary-color, #7c9ef8);
 }
 
 /* Spinner */

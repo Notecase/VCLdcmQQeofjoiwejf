@@ -20,6 +20,7 @@ import RecommendTab from './RecommendTab.vue'
 import WorkflowsTab from './WorkflowsTab.vue'
 import LearningResourcesTab from './LearningResourcesTab.vue'
 import ClarificationDialog from './ClarificationDialog.vue'
+import PreActionQuestionCard from './PreActionQuestionCard.vue'
 
 // Modal components
 import MindmapModal from './modals/MindmapModal.vue'
@@ -34,9 +35,6 @@ import {
   Minimize2,
   Plus,
   Loader2,
-  Paperclip,
-  Globe,
-  AtSign,
   ArrowUp,
   FileText,
 } from 'lucide-vue-next'
@@ -96,8 +94,6 @@ onUnmounted(() => {
 
 // Local state
 const inputValue = ref('')
-const searchQuery = ref('')
-
 // Computed
 const messages = computed(() => store.activeSession?.messages || [])
 const activeNote = computed(() => editorStore.currentDocument)
@@ -144,6 +140,26 @@ function handleKeydown(e: globalThis.KeyboardEvent) {
     e.preventDefault()
     handleSubmit()
   }
+}
+
+// Handle pre-action question responses
+function handleQuestionSelect(optionLabel: string) {
+  store.resolvePreActionQuestion()
+  // Send the user's selection as a follow-up message to continue the AI flow
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage(optionLabel, 'secretary', context)
+}
+
+function handleQuestionFreeText(text: string) {
+  store.resolvePreActionQuestion()
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage(text, 'secretary', context)
+}
+
+function handleQuestionSkip() {
+  store.resolvePreActionQuestion()
+  const context = activeNote.value ? { currentNoteId: activeNote.value.id } : undefined
+  sendMessage('Skip — proceed with your best judgment', 'secretary', context)
 }
 
 // Close sidebar
@@ -260,7 +276,6 @@ function handleClarificationCancel() {
         <div class="search-input">
           <Search :size="14" />
           <input
-            v-model="searchQuery"
             type="text"
             placeholder="Search knowledge base..."
           />
@@ -322,6 +337,15 @@ function handleClarificationCancel() {
             :message="msg"
           />
         </template>
+
+        <!-- Pre-action question card (HITL) -->
+        <PreActionQuestionCard
+          v-if="store.preActionQuestion"
+          :question="store.preActionQuestion"
+          @select="handleQuestionSelect"
+          @free-text="handleQuestionFreeText"
+          @skip="handleQuestionSkip"
+        />
 
         <!-- Loading -->
         <div
@@ -389,22 +413,7 @@ function handleClarificationCancel() {
         </div>
 
         <div class="input-footer">
-          <div class="footer-left">
-            <button
-              class="footer-btn"
-              title="Attach"
-            >
-              <Paperclip :size="14" />
-            </button>
-            <button class="footer-btn labeled">
-              <Globe :size="14" />
-              <span>Search</span>
-            </button>
-            <button class="footer-btn labeled">
-              <AtSign :size="14" />
-              <span>Mention</span>
-            </button>
-          </div>
+          <div class="footer-left"></div>
 
           <button
             class="send-cirle-btn"
@@ -556,11 +565,11 @@ function handleClarificationCancel() {
 }
 
 .tab-btn:hover {
-  color: #c9d1d9;
+  color: var(--text-color, #c9d1d9);
 }
 
 .tab-btn.active {
-  color: #ffffff;
+  color: var(--ai-tab-active, #ffffff);
 }
 
 /* Simple underline */
@@ -571,7 +580,7 @@ function handleClarificationCancel() {
   left: 0;
   right: 0;
   height: 2px;
-  background: #58a6ff;
+  background: var(--primary-color, #58a6ff);
   border-radius: 0;
 }
 
@@ -579,14 +588,14 @@ function handleClarificationCancel() {
   padding: 6px;
   background: none;
   border: none;
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
   cursor: pointer;
   border-radius: 4px;
 }
 
 .expand-btn:hover {
-  color: #58a6ff;
-  background: #21262d;
+  color: var(--primary-color, #58a6ff);
+  background: var(--hover-bg, #21262d);
 }
 
 /* Content Area */
@@ -618,15 +627,15 @@ function handleClarificationCancel() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
 }
 
 .new-chat-btn:hover {
-  background: #21262d;
-  color: #58a6ff;
+  background: var(--hover-bg, #21262d);
+  color: var(--primary-color, #58a6ff);
 }
 
 /* Search Input - 60% opacity per spec */
@@ -635,16 +644,16 @@ function handleClarificationCancel() {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(22, 27, 34, 0.6);
-  border: 1px solid #30363d;
+  background: var(--glass-bg, rgba(22, 27, 34, 0.6));
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 8px;
   padding: 6px 10px;
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
   transition: border-color 0.2s;
 }
 
 .search-input:focus-within {
-  border-color: rgba(48, 54, 61, 0.7);
+  border-color: var(--primary-color, rgba(48, 54, 61, 0.7));
 }
 
 .search-input input {
@@ -652,12 +661,12 @@ function handleClarificationCancel() {
   background: none;
   border: none;
   outline: none;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
   font-size: 13px;
 }
 
 .search-input input::placeholder {
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
 }
 
 /* Error Banner */
@@ -714,17 +723,17 @@ function handleClarificationCancel() {
 .error-dismiss {
   padding: 4px 8px;
   font-size: 10px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   background: none;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color, #30363d);
   border-radius: 4px;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .error-dismiss:hover {
-  color: #e6edf3;
-  background: #21262d;
+  color: var(--text-color, #e6edf3);
+  background: var(--hover-bg, #21262d);
 }
 
 /* Messages Area */
@@ -737,22 +746,22 @@ function handleClarificationCancel() {
 .welcome-section {
   margin-bottom: 16px;
   padding: 12px;
-  background: rgba(22, 27, 34, 0.5);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.5));
   border-radius: 8px;
-  border: 1px solid rgba(48, 54, 61, 0.4);
+  border: 1px solid var(--glass-border, rgba(48, 54, 61, 0.4));
 }
 
 .welcome-text {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   line-height: 1.5;
   margin: 0;
 }
 
 /* Quick Commands Box - Semi-transparent to blend with gradient */
 .quick-commands-box {
-  background: rgba(22, 27, 34, 0.7);
-  border: 1px solid rgba(48, 54, 61, 0.6);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.7));
+  border: 1px solid var(--glass-border, rgba(48, 54, 61, 0.6));
   border-radius: 10px;
   padding: 10px 12px;
   margin: 12px 0;
@@ -761,7 +770,7 @@ function handleClarificationCancel() {
 .commands-header {
   font-size: 10px;
   font-weight: 600;
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -790,8 +799,8 @@ function handleClarificationCancel() {
     Liberation Mono,
     monospace;
   font-size: 11px;
-  color: #e6edf3;
-  background: #0d1117;
+  color: var(--text-color, #e6edf3);
+  background: var(--bg-color, #0d1117);
   padding: 3px 8px;
   border-radius: 4px;
   min-width: 80px;
@@ -799,7 +808,7 @@ function handleClarificationCancel() {
 
 .command-desc {
   font-size: 11px;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
 }
 
 /* Recommend Tab */
@@ -974,13 +983,13 @@ function handleClarificationCancel() {
 }
 
 .context-icon {
-  color: #58a6ff;
+  color: var(--primary-color, #58a6ff);
   flex-shrink: 0;
 }
 
 .context-title {
   font-size: 13px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -991,7 +1000,7 @@ function handleClarificationCancel() {
   background: none;
   border: none;
   outline: none;
-  color: #e6edf3;
+  color: var(--text-color, #e6edf3);
   font-size: 14px;
   resize: none;
   min-height: 24px;
@@ -1000,21 +1009,21 @@ function handleClarificationCancel() {
 }
 
 .input-area textarea::placeholder {
-  color: #6e7681;
+  color: var(--text-color-secondary, #6e7681);
 }
 
 /* Input Box - Glass morphism effect */
 .ai-input-box {
-  background: rgba(22, 27, 34, 0.65);
+  background: var(--glass-bg, rgba(22, 27, 34, 0.65));
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.04));
   border-radius: 12px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4px 20px var(--glass-shadow, rgba(0, 0, 0, 0.1));
   transition: border-color 0.2s;
 }
 
@@ -1034,37 +1043,13 @@ function handleClarificationCancel() {
   gap: 8px;
 }
 
-.footer-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6e7681;
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.footer-btn:hover {
-  color: #58a6ff;
-  background: rgba(33, 38, 45, 0.5);
-}
-
-.footer-btn.labeled {
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
 /* Send Button - GREEN when active */
 .send-cirle-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #21262d;
-  color: #6e7681;
+  background: var(--editor-color-10, #21262d);
+  color: var(--text-color-secondary, #6e7681);
   border: none;
   display: flex;
   align-items: center;
@@ -1090,7 +1075,7 @@ function handleClarificationCancel() {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #8b949e;
+  color: var(--text-color-secondary, #8b949e);
   font-size: 13px;
   padding: 12px 0;
 }

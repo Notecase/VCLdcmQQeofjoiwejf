@@ -24,8 +24,15 @@ import { zValidator } from '@hono/zod-validator'
 import { handleError, ErrorCode } from '@inkdown/shared'
 import { getTodayDate } from '@inkdown/shared/secretary'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
 const secretary = new Hono()
+
+function getTimezone(c: {
+  req: { header: (name: string) => string | undefined }
+}): string | undefined {
+  return c.req.header('X-Timezone') || undefined
+}
 
 function isHardeningEnabled(): boolean {
   const raw = process.env.SECRETARY_PHASE5_HARDENING
@@ -59,6 +66,8 @@ function inferUpdatedFiles(toolName: string, args?: Record<string, unknown>): st
 
 // Apply auth middleware
 secretary.use('*', authMiddleware)
+secretary.use('*', creditGuard)
+secretary.use('*', requestContextMiddleware)
 
 // ============================================================================
 // Chat (Streaming SSE)
@@ -92,6 +101,8 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   }
 
   const { SecretaryAgent, ChatPersistenceService } = await import('@inkdown/ai/agents')
+  const { SharedContextService } = await import('@inkdown/ai/services')
+  const sharedContextService = new SharedContextService(auth.supabase, auth.userId)
   const persistence = new ChatPersistenceService(auth.supabase)
 
   // Resolve or create thread
@@ -141,8 +152,8 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const agent = new SecretaryAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     timezone,
+    sharedContextService,
   })
 
   return streamSSE(c, async (stream) => {
@@ -157,6 +168,8 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
         message: body.message,
         threadId,
       })) {
+        if (c.req.raw.signal.aborted) break
+
         // Accumulate assistant response data for persistence
         if (event.event === 'text') {
           assistantContent += event.data
@@ -398,7 +411,7 @@ secretary.get('/memory', async (c) => {
   const auth = requireAuth(c)
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const files = await memService.listFiles()
   return c.json({ files })
@@ -413,7 +426,7 @@ secretary.get('/memory/:filename{.+}', async (c) => {
   const filename = c.req.param('filename')
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const file = await memService.readFile(filename)
   if (!file) {
@@ -436,7 +449,7 @@ secretary.put(
     const { content } = c.req.valid('json')
 
     const { MemoryService } = await import('@inkdown/ai/agents')
-    const memService = new MemoryService(auth.supabase, auth.userId)
+    const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
     const file = await memService.writeFile(filename, content)
     return c.json({ file })
@@ -455,7 +468,7 @@ secretary.post('/initialize', async (c) => {
   const auth = requireAuth(c)
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const files = await memService.initializeDefaults()
   return c.json({ files })
@@ -476,13 +489,14 @@ secretary.post('/prepare-tomorrow', async (c) => {
   }
 
   const { SecretaryAgent } = await import('@inkdown/ai/agents')
+  const { SharedContextService } = await import('@inkdown/ai/services')
 
   const tzHeader = c.req.header('X-Timezone') || undefined
   const agent = new SecretaryAgent({
     supabase: auth.supabase,
     userId: auth.userId,
-    openaiApiKey,
     timezone: tzHeader,
+    sharedContextService: new SharedContextService(auth.supabase, auth.userId),
   })
 
   // Use SSE streaming for the generation
@@ -589,7 +603,7 @@ secretary.get('/debug/context', async (c) => {
   }
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
   const diagnostics = await memService.getContextDiagnostics()
 
   return c.json(diagnostics)
@@ -603,7 +617,7 @@ secretary.post('/approve-tomorrow', async (c) => {
   const auth = requireAuth(c)
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const tomorrowFile = await memService.readFile('Tomorrow.md')
   if (!tomorrowFile || !tomorrowFile.content.trim()) {
@@ -639,7 +653,7 @@ secretary.post('/day-transition', async (c) => {
   const auth = requireAuth(c)
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const result = await memService.performDayTransition()
   return c.json({ result })
@@ -653,10 +667,427 @@ secretary.get('/history', async (c) => {
   const auth = requireAuth(c)
 
   const { MemoryService } = await import('@inkdown/ai/agents')
-  const memService = new MemoryService(auth.supabase, auth.userId)
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
   const files = await memService.listFiles('History/')
   return c.json({ files })
+})
+
+// ============================================================================
+// Plan Workspace
+// ============================================================================
+
+/**
+ * GET /api/secretary/plan/:planId
+ * Aggregated workspace data: plan + instructions + roadmap + schedules + artifacts
+ */
+secretary.get('/plan/:planId', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+
+  const { MemoryService } = await import('@inkdown/ai/agents')
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+
+  // Read roadmap and instructions files in parallel
+  const [roadmapFile, instructionsFile, planMd] = await Promise.all([
+    memService.readFile(`Plans/${planId.toLowerCase()}-roadmap.md`),
+    memService.readFile(`Plans/${planId.toLowerCase()}-instructions.md`),
+    memService.readFile('Plan.md'),
+  ])
+
+  // Parse plan data from Plan.md to find matching plan
+  const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+  const parsed = parsePlanMarkdown(planMd?.content || '')
+  const plan = parsed.plans.find((p) => p.id === planId) || null
+
+  if (!plan) {
+    return c.json({ error: 'Plan not found' }, 404)
+  }
+
+  // Load schedules and plan-project link in parallel
+  const [schedulesResult, linkResult] = await Promise.all([
+    auth.supabase
+      .from('plan_schedules')
+      .select('*')
+      .eq('user_id', auth.userId)
+      .eq('plan_id', planId)
+      .order('created_at', { ascending: true }),
+    auth.supabase
+      .from('plan_project_links')
+      .select('project_id')
+      .eq('user_id', auth.userId)
+      .eq('plan_id', planId)
+      .maybeSingle(),
+  ])
+
+  const schedules = schedulesResult.data || []
+  const projectId = linkResult.data?.project_id || undefined
+
+  // If linked, load notes from the project folder
+  let projectNotes: Array<{ id: string; title: string; updatedAt: string }> = []
+  if (projectId) {
+    const { data: notes } = await auth.supabase
+      .from('notes')
+      .select('id, title, updated_at')
+      .eq('project_id', projectId)
+      .order('updated_at', { ascending: false })
+      .limit(50)
+    if (notes) {
+      projectNotes = notes.map((n: { id: string; title: string; updated_at: string }) => ({
+        id: n.id,
+        title: n.title,
+        updatedAt: n.updated_at,
+      }))
+    }
+  }
+
+  return c.json({
+    plan,
+    instructions: instructionsFile?.content || '',
+    roadmapContent: roadmapFile?.content || '',
+    projectId,
+    projectNotes,
+    schedules: schedules.map((s: Record<string, unknown>) => ({
+      id: s.id,
+      planId: s.plan_id,
+      title: s.title,
+      instructions: s.instructions,
+      workflow: s.workflow,
+      frequency: s.frequency,
+      time: s.time,
+      days: s.days,
+      enabled: s.enabled,
+      lastRunAt: s.last_run_at,
+      nextRunAt: s.next_run_at,
+      runCount: s.run_count,
+      lastRunStatus: s.last_run_status,
+      lastRunError: s.last_run_error,
+      createdAt: s.created_at,
+    })),
+  })
+})
+
+/**
+ * PUT /api/secretary/plan/:planId/instructions
+ * Save plan instructions file
+ */
+secretary.put(
+  '/plan/:planId/instructions',
+  zValidator('json', z.object({ content: z.string() })),
+  async (c) => {
+    const auth = requireAuth(c)
+    const planId = c.req.param('planId')
+    const { content } = c.req.valid('json')
+
+    const { MemoryService } = await import('@inkdown/ai/agents')
+    const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+
+    const filename = `Plans/${planId.toLowerCase()}-instructions.md`
+    const file = await memService.writeFile(filename, content)
+    return c.json({ file })
+  }
+)
+
+const CreateScheduleSchema = z.object({
+  title: z.string().min(1).max(200),
+  instructions: z.string().optional(),
+  workflow: z.enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan']),
+  frequency: z.enum(['daily', 'weekly', 'custom']),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  days: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+})
+
+/**
+ * POST /api/secretary/plan/:planId/schedules
+ * Create a new schedule automation
+ */
+secretary.post('/plan/:planId/schedules', zValidator('json', CreateScheduleSchema), async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+  const body = c.req.valid('json')
+
+  const { data, error: dbError } = await auth.supabase
+    .from('plan_schedules')
+    .insert({
+      user_id: auth.userId,
+      plan_id: planId,
+      title: body.title,
+      instructions: body.instructions || null,
+      workflow: body.workflow,
+      frequency: body.frequency,
+      time: body.time,
+      days: body.days || null,
+      enabled: body.enabled ?? true,
+    })
+    .select()
+    .single()
+
+  if (dbError) {
+    return c.json({ error: dbError.message }, 500)
+  }
+
+  return c.json({
+    schedule: {
+      id: data.id,
+      planId: data.plan_id,
+      title: data.title,
+      instructions: data.instructions,
+      workflow: data.workflow,
+      frequency: data.frequency,
+      time: data.time,
+      days: data.days,
+      enabled: data.enabled,
+      lastRunAt: data.last_run_at,
+      nextRunAt: data.next_run_at,
+      runCount: data.run_count,
+      lastRunStatus: data.last_run_status,
+      lastRunError: data.last_run_error,
+      createdAt: data.created_at,
+    },
+  })
+})
+
+const UpdateScheduleSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  instructions: z.string().optional(),
+  workflow: z
+    .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+    .optional(),
+  frequency: z.enum(['daily', 'weekly', 'custom']).optional(),
+  time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
+  days: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+})
+
+/**
+ * PUT /api/secretary/plan/:planId/schedules/:id
+ * Update a schedule automation
+ */
+secretary.put(
+  '/plan/:planId/schedules/:id',
+  zValidator('json', UpdateScheduleSchema),
+  async (c) => {
+    const auth = requireAuth(c)
+    const planId = c.req.param('planId')
+    const scheduleId = c.req.param('id')
+    const body = c.req.valid('json')
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (body.title !== undefined) updates.title = body.title
+    if (body.instructions !== undefined) updates.instructions = body.instructions
+    if (body.workflow !== undefined) updates.workflow = body.workflow
+    if (body.frequency !== undefined) updates.frequency = body.frequency
+    if (body.time !== undefined) updates.time = body.time
+    if (body.days !== undefined) updates.days = body.days
+    if (body.enabled !== undefined) updates.enabled = body.enabled
+
+    const { error: dbError } = await auth.supabase
+      .from('plan_schedules')
+      .update(updates)
+      .eq('id', scheduleId)
+      .eq('user_id', auth.userId)
+      .eq('plan_id', planId)
+
+    if (dbError) {
+      return c.json({ error: dbError.message }, 500)
+    }
+
+    return c.json({ success: true })
+  }
+)
+
+/**
+ * DELETE /api/secretary/plan/:planId/schedules/:id
+ * Delete a schedule automation
+ */
+secretary.delete('/plan/:planId/schedules/:id', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+  const scheduleId = c.req.param('id')
+
+  const { error: dbError } = await auth.supabase
+    .from('plan_schedules')
+    .delete()
+    .eq('id', scheduleId)
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+
+  if (dbError) {
+    return c.json({ error: dbError.message }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
+/**
+ * POST /api/secretary/plan/:planId/run
+ * Trigger immediate content generation for the plan's current topic
+ */
+secretary.post(
+  '/plan/:planId/run',
+  zValidator(
+    'json',
+    z
+      .object({
+        workflow: z
+          .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+          .optional(),
+      })
+      .optional()
+  ),
+  async (c) => {
+    const auth = requireAuth(c)
+    const planId = c.req.param('planId')
+    const body = c.req.valid('json') || {}
+    const workflow = body.workflow || 'make_note_from_task'
+
+    // Read plan data to build goal
+    const { MemoryService } = await import('@inkdown/ai/agents')
+    const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+    const planMd = await memService.readFile('Plan.md')
+
+    const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+    const parsed = parsePlanMarkdown(planMd?.content || '')
+    const plan = parsed.plans.find((p) => p.id === planId)
+
+    if (!plan) {
+      return c.json({ error: 'Plan not found' }, 404)
+    }
+
+    // Read plan instructions for context
+    const instructionsFile = await memService.readFile(
+      `Plans/${planId.toLowerCase()}-instructions.md`
+    )
+    const instructions = instructionsFile?.content || ''
+
+    // Build goal with instructions context
+    let goal: string
+    switch (workflow) {
+      case 'make_course_from_plan':
+        goal = `Turn the active plan "${plan.name}"${plan.currentTopic ? ` on ${plan.currentTopic}` : ''} into a structured course outline.`
+        break
+      case 'research_topic_from_task':
+        goal = `Research the active plan "${plan.name}"${plan.currentTopic ? ` focused on ${plan.currentTopic}` : ''} and capture the highest-value insights.`
+        break
+      default:
+        goal = `Create a note for the active plan "${plan.name}"${plan.currentTopic ? ` focused on ${plan.currentTopic}` : ''}.`
+    }
+
+    if (instructions) {
+      goal += `\n\nPlan instructions:\n${instructions}`
+    }
+
+    return c.json({
+      goal,
+      workflow,
+      planId: plan.id,
+      planName: plan.name,
+      currentTopic: plan.currentTopic,
+    })
+  }
+)
+
+// ============================================================================
+// Plan-Project Links
+// ============================================================================
+
+/**
+ * GET /api/secretary/plan-links
+ * All plan-project links for the current user (bulk, called on init)
+ */
+secretary.get('/plan-links', async (c) => {
+  const auth = requireAuth(c)
+  const { data, error: dbError } = await auth.supabase
+    .from('plan_project_links')
+    .select('plan_id, project_id')
+    .eq('user_id', auth.userId)
+
+  if (dbError) {
+    return c.json({ error: dbError.message }, 500)
+  }
+
+  const links: Record<string, string> = {}
+  for (const row of data || []) {
+    links[row.plan_id] = row.project_id
+  }
+  return c.json({ links })
+})
+
+/**
+ * POST /api/secretary/plan/:planId/link-project
+ * Create a project folder and link it to the plan
+ */
+secretary.post('/plan/:planId/link-project', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+
+  // Check if already linked
+  const { data: existing } = await auth.supabase
+    .from('plan_project_links')
+    .select('project_id')
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+    .maybeSingle()
+
+  if (existing) {
+    return c.json({ projectId: existing.project_id, alreadyLinked: true })
+  }
+
+  // Read plan name for the folder
+  const { MemoryService } = await import('@inkdown/ai/agents')
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+  const planMd = await memService.readFile('Plan.md')
+  const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+  const parsed = parsePlanMarkdown(planMd?.content || '')
+  const plan = parsed.plans.find((p) => p.id === planId)
+  const folderName = plan?.name || `Plan: ${planId}`
+
+  // Create project folder
+  const { data: project, error: projError } = await auth.supabase
+    .from('projects')
+    .insert({ name: folderName, icon: '📋', color: '#10b981', user_id: auth.userId })
+    .select('id')
+    .single()
+
+  if (projError || !project) {
+    return c.json({ error: projError?.message || 'Failed to create project' }, 500)
+  }
+
+  // Create link
+  const { error: linkError } = await auth.supabase
+    .from('plan_project_links')
+    .insert({ user_id: auth.userId, plan_id: planId, project_id: project.id })
+
+  if (linkError) {
+    return c.json({ error: linkError.message }, 500)
+  }
+
+  return c.json({ projectId: project.id })
+})
+
+/**
+ * DELETE /api/secretary/plan/:planId/unlink-project
+ * Remove the plan-project link (does NOT delete the project folder)
+ */
+secretary.delete('/plan/:planId/unlink-project', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+
+  const { error: dbError } = await auth.supabase
+    .from('plan_project_links')
+    .delete()
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+
+  if (dbError) {
+    return c.json({ error: dbError.message }, 500)
+  }
+
+  return c.json({ success: true })
 })
 
 export default secretary

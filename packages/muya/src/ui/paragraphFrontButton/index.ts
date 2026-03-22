@@ -7,14 +7,11 @@ import { autoUpdate, computePosition, flip, offset } from '@floating-ui/dom'
 
 import BulletList from '../../block/commonMark/bulletList'
 import OrderList from '../../block/commonMark/orderList'
-import { BLOCK_DOM_PROPERTY } from '../../config'
-import { throttle } from '../../utils'
 import { h, patch } from '../../utils/snabbdom'
 import { getIcon } from './config'
 
 import './index.css'
 
-const LEFT_OFFSET = 100
 const FRONT_CONTROLS_CLASS = 'mu-front-controls-enabled'
 
 function defaultOptions() {
@@ -107,46 +104,9 @@ export class ParagraphFrontButton {
     return Boolean(block?.domNode && this.muya.domNode.contains(block.domNode))
   }
 
-  private isPointerWithinEditor(x: number, y: number) {
-    const rect = this.muya.domNode.getBoundingClientRect()
-    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-  }
-
   listen() {
     const { _container: container } = this
     const { eventCenter } = this.muya
-
-    const mousemoveHandler = throttle((event: MouseEvent) => {
-      if (!this.isFrontControlsEnabled()) {
-        this.hide()
-        return
-      }
-
-      const { x, y } = event
-      if (!this.isPointerWithinEditor(x, y)) {
-        this.hide()
-        return
-      }
-
-      const els = [
-        ...document.elementsFromPoint(x, y),
-        ...document.elementsFromPoint(x + LEFT_OFFSET, y),
-      ]
-      const outMostElement = els.find((ele) => {
-        const block = ele[BLOCK_DOM_PROPERTY] as Parent | undefined
-        return Boolean(block?.isOutMostBlock && this.isBlockFromCurrentEditor(block))
-      })
-      if (outMostElement) {
-        const block = outMostElement[BLOCK_DOM_PROPERTY] as Parent
-        // Only show/render if block changed to avoid unnecessary work
-        if (this._block !== block) {
-          this.show(block)
-          this.render()
-        }
-      } else {
-        this.hide()
-      }
-    }, 300)
 
     const clickHandler = () => {
       if (!this.isFrontControlsEnabled()) return
@@ -159,7 +119,35 @@ export class ParagraphFrontButton {
       })
     }
 
-    eventCenter.attachDOMEvent(document, 'mousemove', mousemoveHandler)
+    // Show front button when selection changes (user clicks/focuses a block)
+    eventCenter.subscribe('selection-change', () => {
+      if (!this.isFrontControlsEnabled()) {
+        this.hide()
+        return
+      }
+      // Read from selection state directly — the event payload may have undefined anchorBlock
+      // when callers use `block` shorthand instead of `anchorBlock`
+      const anchorBlock = this.muya.editor.selection.anchorBlock
+      const block = anchorBlock?.outMostBlock
+      if (block && this.isBlockFromCurrentEditor(block) && block.domNode?.isConnected) {
+        if (this._block !== block) {
+          this.show(block)
+          this.render()
+        }
+      } else {
+        this.hide()
+      }
+    })
+
+    // Hide on scroll so button doesn't float around during scrolling
+    // Use domNode itself — it has overflow-y: auto via .muya-editor CSS
+    const scrollContainer = this.muya.domNode
+    if (scrollContainer) {
+      eventCenter.attachDOMEvent(scrollContainer, 'scroll', () => {
+        this.hide()
+      })
+    }
+
     eventCenter.attachDOMEvent(container, 'click', clickHandler)
   }
 
@@ -220,7 +208,7 @@ export class ParagraphFrontButton {
     this._block = block
     const { domNode } = block
     const { _floatBox: floatBox } = this
-    const { placement, offsetOptions } = this._options
+    const { placement } = this._options
     const { eventCenter } = this.muya
 
     if (this._cleanup) {
@@ -231,25 +219,20 @@ export class ParagraphFrontButton {
     const styles = window.getComputedStyle(domNode!)
     const paddingTop = Number.parseFloat(styles.paddingTop)
 
+    // For placement: 'left-start':
+    //   mainAxis  = horizontal gap from block edge (keep small & fixed)
+    //   alignmentAxis = vertical offset from block top (use paddingTop to align with first text line)
     const isLooseList = isOrderOrBulletList(block) && block.meta.loose
-    const dynamicMainAxis = isLooseList ? paddingTop * 2 : paddingTop
-
-    // Extract offset values, handling both number and object types
-    let crossAxisValue = 0
-    let alignmentAxisValue = 0
-    if (typeof offsetOptions === 'object' && offsetOptions !== null && !('then' in offsetOptions)) {
-      crossAxisValue = (offsetOptions as { crossAxis?: number }).crossAxis ?? 0
-      alignmentAxisValue = (offsetOptions as { alignmentAxis?: number | null }).alignmentAxis ?? 0
-    }
+    const verticalOffset = isLooseList ? paddingTop * 2 : paddingTop
 
     const updatePosition = () => {
       computePosition(domNode! as Element | ReferenceElement, floatBox, {
         placement,
         middleware: [
           offset({
-            mainAxis: dynamicMainAxis,
-            crossAxis: crossAxisValue,
-            alignmentAxis: alignmentAxisValue,
+            mainAxis: 4,
+            crossAxis: 0,
+            alignmentAxis: verticalOffset,
           }),
           flip(),
         ],

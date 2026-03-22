@@ -102,7 +102,7 @@ async function submitReflection() {
 }
 
 .mood-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .mood-btn.active {
@@ -123,7 +123,7 @@ async function submitReflection() {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-color, #333338);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   color: var(--text-color, #e2e8f0);
   font-size: 13px;
   font-family: inherit;

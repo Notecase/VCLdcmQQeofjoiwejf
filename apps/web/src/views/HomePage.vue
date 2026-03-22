@@ -12,6 +12,7 @@ import { useAIStore } from '@/stores/ai'
 import { useDeepAgentStore } from '@/stores/deepAgent'
 import { useEditorStore, useLayoutStore } from '@/stores'
 import { useAIChat } from '@/services/ai.service'
+import { isDemoMode } from '@/utils/demo'
 import type { VirtualFile } from '@inkdown/shared/types'
 import ChatComposer from '@/components/ai/ChatComposer.vue'
 import ChatHero from '@/components/ai/ChatHero.vue'
@@ -49,7 +50,6 @@ const showComposerTop = computed(() =>
     deepAgent.pendingInterrupt || deepAgent.pendingOutputClarification || showInlinePanel.value
   )
 )
-
 // CSS variable for sidebar width (matches EditorView)
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
@@ -62,7 +62,7 @@ function scrollToBottom() {
 }
 
 async function handleSubmit(value: string) {
-  if (!value.trim() || deepAgent.isChatStreaming) return
+  if (!value.trim() || deepAgent.isChatStreaming || isDemoMode()) return
   const autoOutputDestination = deepAgent.getAutoOutputDestination(value)
   if (deepAgent.requestOutputClarification(value)) return
   scrollToBottom()
@@ -344,6 +344,7 @@ onMounted(async () => {
           <!-- Composer at bottom -->
           <ChatComposer
             :is-processing="deepAgent.isChatStreaming"
+            :demo-mode="isDemoMode()"
             @submit="handleSubmit"
           >
             <template
@@ -473,7 +474,7 @@ onMounted(async () => {
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--editor-color-04, rgba(255, 255, 255, 0.04));
   font-size: 12px;
   font-weight: 500;
   color: var(--text-color-secondary, #8b949e);
@@ -514,7 +515,7 @@ onMounted(async () => {
 }
 
 .ghost-action:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
 }
 
 .home-body {
@@ -569,7 +570,7 @@ onMounted(async () => {
   max-width: 70%;
   padding: 10px 16px;
   border-radius: 18px 18px 4px 18px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.05));
   color: var(--text-color, #e6edf3);
   font-size: 14px;
   line-height: 1.6;

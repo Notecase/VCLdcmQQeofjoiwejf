@@ -1,36 +1,64 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchAgent } from './agent'
 
-const { createMock, getOllamaCloudMock, ollamaGenerateArtifactMock } = vi.hoisted(() => ({
-  createMock: vi.fn(),
-  getOllamaCloudMock: vi.fn(),
-  ollamaGenerateArtifactMock: vi.fn(),
+const { streamTextMock, generateTextMock } = vi.hoisted(() => ({
+  streamTextMock: vi.fn(),
+  generateTextMock: vi.fn(),
 }))
 
-vi.mock('openai', () => ({
-  default: class OpenAI {
-    chat = {
-      completions: {
-        create: createMock,
-      },
-    }
-  },
-}))
-
-vi.mock('../../providers/factory', () => ({
-  getOllamaCloud: getOllamaCloudMock,
-}))
-
-function createTextStream(chunks: string[]) {
+vi.mock('ai', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
   return {
-    async *[Symbol.asyncIterator]() {
-      for (const chunk of chunks) {
-        yield {
-          choices: [{ delta: { content: chunk } }],
-        }
-      }
+    ...actual,
+    streamText: streamTextMock,
+    generateText: generateTextMock,
+  }
+})
+
+vi.mock('../../providers/ai-sdk-factory', () => ({
+  resolveModel: (taskType: string) => ({
+    model: `mock-${taskType}`,
+    entry: {
+      id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
+      provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
+      displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 2.5 Pro',
+    },
+  }),
+  getModelForTask: (taskType: string) => `mock-${taskType}`,
+}))
+
+vi.mock('../../providers/ai-sdk-usage', () => ({
+  trackAISDKUsage: () => () => {},
+}))
+
+vi.mock('../../providers/model-registry', () => {
+  const makeEntry = (taskType: string) => ({
+    id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
+    provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
+    displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 2.5 Pro',
+    contextWindow: 131072,
+    capabilities: ['chat'],
+    costPer1kInput: 0,
+    costPer1kOutput: 0,
+    maxOutputTokens: 32768,
+    supportsToolChoice: false,
+  })
+  return {
+    selectModel: (taskType: string) => makeEntry(taskType),
+    MODEL_REGISTRY: {
+      'gemini-2.5-pro': makeEntry('research'),
+      'kimi-k2.5': makeEntry('artifact'),
     },
   }
+})
+
+function createMockTextStream(chunks: string[]) {
+  async function* gen() {
+    for (const chunk of chunks) {
+      yield chunk
+    }
+  }
+  return { textStream: gen() }
 }
 
 function createArtifactPayload(
@@ -54,25 +82,15 @@ describe('ResearchAgent note draft mode', () => {
 
   beforeEach(() => {
     process.env.RESEARCH_NOTE_DRAFT_ENABLED = 'true'
-    createMock.mockReset()
-    getOllamaCloudMock.mockReset()
-    ollamaGenerateArtifactMock.mockReset()
-    getOllamaCloudMock.mockReturnValue({
-      generateArtifact: ollamaGenerateArtifactMock,
-    })
+    streamTextMock.mockReset()
+    generateTextMock.mockReset()
 
-    createMock.mockImplementation(async (params: { stream?: boolean }) => {
-      if (params.stream) {
-        return createTextStream(['# Black Holes\n\n', 'Draft content body.'])
-      }
-
-      return {
-        choices: [{ message: { content: createArtifactPayload() } }],
-      }
-    })
-
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      yield createArtifactPayload()
+    // Default: streamText returns streaming chunks, generateText returns artifact
+    streamTextMock.mockReturnValue(
+      createMockTextStream(['# Black Holes\n\n', 'Draft content body.'])
+    )
+    generateTextMock.mockResolvedValue({
+      text: createArtifactPayload(),
     })
   })
 
@@ -88,7 +106,6 @@ describe('ResearchAgent note draft mode', () => {
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     const events = []
@@ -113,19 +130,13 @@ describe('ResearchAgent note draft mode', () => {
   })
 
   it('emits note-draft delta payloads without full currentContent on every chunk', async () => {
-    createMock.mockImplementation(async (params: { stream?: boolean }) => {
-      if (params.stream) {
-        return createTextStream(['# Streaming Draft', '\n\nFirst chunk.', '\n\nSecond chunk.'])
-      }
-      return {
-        choices: [{ message: { content: createArtifactPayload() } }],
-      }
-    })
+    streamTextMock.mockReturnValue(
+      createMockTextStream(['# Streaming Draft', '\n\nFirst chunk.', '\n\nSecond chunk.'])
+    )
 
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     const payloads: Array<Record<string, unknown>> = []
@@ -143,25 +154,24 @@ describe('ResearchAgent note draft mode', () => {
     expect(payloads.slice(1).some((p) => p.currentContent === undefined)).toBe(true)
   })
 
-  it('falls back to GPT-5.2 artifact generation when Ollama fails', async () => {
-    // eslint-disable-next-line require-yield
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      throw new Error('ollama unavailable')
-    })
+  it('falls back to Gemini artifact generation when Ollama client fails', async () => {
+    streamTextMock.mockReturnValue(
+      createMockTextStream(['# Study Note\n\nKey points.'])
+    )
 
-    createMock.mockImplementation(async (params: { stream?: boolean }) => {
-      if (params.stream) {
-        return createTextStream(['# Study Note\n\nKey points.'])
+    let callCount = 0
+    generateTextMock.mockImplementation(async () => {
+      callCount++
+      // First call (artifact via Ollama) fails
+      if (callCount === 1) {
+        throw new Error('ollama unavailable')
       }
-      return {
-        choices: [{ message: { content: createArtifactPayload({ title: 'Fallback Timer' }) } }],
-      }
+      return { text: createArtifactPayload({ title: 'Fallback Timer' }) }
     })
 
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     const events = []
@@ -176,31 +186,19 @@ describe('ResearchAgent note draft mode', () => {
     const payload =
       typeof draftEvent?.data === 'string' ? JSON.parse(draftEvent.data) : draftEvent?.data
 
-    const fallbackCalls = createMock.mock.calls.filter(([arg]) => arg && arg.stream === false)
-
-    expect(getOllamaCloudMock).toHaveBeenCalledTimes(1)
-    expect(fallbackCalls.length).toBeGreaterThan(0)
     expect(payload.proposedContent).toContain('```artifact')
     expect(events.some((e) => e.event === 'error')).toBe(false)
   })
 
   it('emits an artifact error and skips artifact block when primary and fallback generation both fail', async () => {
-    // eslint-disable-next-line require-yield
-    ollamaGenerateArtifactMock.mockImplementation(async function* () {
-      throw new Error('ollama unavailable')
-    })
-
-    createMock.mockImplementation(async (params: { stream?: boolean }) => {
-      if (params.stream) {
-        return createTextStream(['# Study Note\n\nKey points.'])
-      }
-      throw new Error('openai fallback unavailable')
-    })
+    streamTextMock.mockReturnValue(
+      createMockTextStream(['# Study Note\n\nKey points.'])
+    )
+    generateTextMock.mockRejectedValue(new Error('all artifact generation failed'))
 
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     const events = []
@@ -227,7 +225,6 @@ describe('ResearchAgent note draft mode', () => {
     const agent = new ResearchAgent({
       supabase: {} as any,
       userId: 'user-1',
-      openaiApiKey: 'test-key',
     })
 
     const events = []

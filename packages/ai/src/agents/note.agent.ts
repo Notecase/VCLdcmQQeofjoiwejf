@@ -288,14 +288,21 @@ export class NoteAgent {
     this.state.noteId = input.noteId
     this.state.projectId = input.projectId
 
-    yield { type: 'thinking', data: `Processing ${action} action...` }
+    const actionDescriptions: Record<string, string> = {
+      create: 'Preparing to create a new note...',
+      update: 'Preparing to update your note...',
+      organize: 'Analyzing note structure for reorganization...',
+      summarize: 'Reading note to prepare a summary...',
+      expand: 'Looking for areas to expand...',
+    }
+    yield { type: 'thinking', data: actionDescriptions[action] || `Processing ${action}...` }
 
     // Get existing note content if needed
     let existingContent = ''
     let existingTitle = ''
 
     if (input.noteId && ['update', 'organize', 'summarize', 'expand'].includes(action)) {
-      yield { type: 'thinking', data: 'Loading note content...' }
+      yield { type: 'thinking', data: 'Loading your note...' }
 
       const { data: note, error } = await this.supabase
         .from('notes')
@@ -369,7 +376,14 @@ export class NoteAgent {
     })
 
     // Stream response with try-catch for error handling
-    yield { type: 'thinking', data: 'Generating content...' }
+    const genDescriptions: Record<string, string> = {
+      create: 'Writing the note...',
+      update: 'Applying changes...',
+      organize: 'Reorganizing content...',
+      summarize: 'Summarizing key points...',
+      expand: 'Expanding with more detail...',
+    }
+    yield { type: 'thinking', data: genDescriptions[action] || 'Generating content...' }
 
     let aiStream
     try {

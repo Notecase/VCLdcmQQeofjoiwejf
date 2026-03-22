@@ -31,7 +31,7 @@ async function getUserApiKey(
     .single()
 
   const provider = prefs?.preferred_provider ?? 'google'
-  const model = prefs?.preferred_model ?? 'gemini-3.1-pro-preview'
+  const model = prefs?.preferred_model ?? 'gemini-2.5-pro'
   const fallback = prefs?.fallback_provider
 
   // Try primary key

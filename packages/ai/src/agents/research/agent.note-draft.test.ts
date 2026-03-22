@@ -19,9 +19,9 @@ vi.mock('../../providers/ai-sdk-factory', () => ({
   resolveModel: (taskType: string) => ({
     model: `mock-${taskType}`,
     entry: {
-      id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-3.1-pro-preview',
+      id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
       provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
-      displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 3.1 Pro',
+      displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 2.5 Pro',
     },
   }),
   getModelForTask: (taskType: string) => `mock-${taskType}`,
@@ -33,9 +33,9 @@ vi.mock('../../providers/ai-sdk-usage', () => ({
 
 vi.mock('../../providers/model-registry', () => {
   const makeEntry = (taskType: string) => ({
-    id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-3.1-pro-preview',
+    id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
     provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
-    displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 3.1 Pro',
+    displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 2.5 Pro',
     contextWindow: 131072,
     capabilities: ['chat'],
     costPer1kInput: 0,
@@ -46,7 +46,7 @@ vi.mock('../../providers/model-registry', () => {
   return {
     selectModel: (taskType: string) => makeEntry(taskType),
     MODEL_REGISTRY: {
-      'gemini-3.1-pro-preview': makeEntry('research'),
+      'gemini-2.5-pro': makeEntry('research'),
       'kimi-k2.5': makeEntry('artifact'),
     },
   }

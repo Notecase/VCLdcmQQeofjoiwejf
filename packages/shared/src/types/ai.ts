@@ -319,8 +319,18 @@ export interface EmbeddingModelConfig {
 export const CHAT_MODELS: ChatModelConfig[] = [
   {
     provider: 'google',
+    model: 'gemini-2.5-pro',
+    displayName: 'Gemini 2.5 Pro',
+    contextWindow: 1048576,
+    supportsStreaming: true,
+    supportsTools: true,
+    costPer1kInput: 0.125,
+    costPer1kOutput: 1.0,
+  },
+  {
+    provider: 'google',
     model: 'gemini-3.1-pro-preview',
-    displayName: 'Gemini 3.1 Pro',
+    displayName: 'Gemini 3.1 Pro (Preview)',
     contextWindow: 2000000,
     supportsStreaming: true,
     supportsTools: true,
@@ -374,7 +384,7 @@ export const EMBEDDING_MODELS: EmbeddingModelConfig[] = [
 /**
  * Default models
  */
-export const DEFAULT_CHAT_MODEL = 'gemini-3.1-pro-preview'
+export const DEFAULT_CHAT_MODEL = 'gemini-2.5-pro'
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-large'
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1536
 

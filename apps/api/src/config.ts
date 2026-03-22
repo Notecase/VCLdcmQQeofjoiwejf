@@ -40,7 +40,7 @@ export const config = {
 
   // Model Defaults
   models: {
-    defaultChat: process.env.DEFAULT_CHAT_MODEL || 'gemini-3.1-pro-preview',
+    defaultChat: process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro',
     defaultEmbedding: process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large',
     embeddingDimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
   },

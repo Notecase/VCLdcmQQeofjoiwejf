@@ -135,7 +135,7 @@ settings.get('/ai-preferences', async (c) => {
     return c.json({
       preferences: {
         preferred_provider: 'google',
-        preferred_model: 'gemini-3.1-pro-preview',
+        preferred_model: 'gemini-2.5-pro',
         fallback_provider: null,
         max_daily_cost_usd: 0.5,
       },

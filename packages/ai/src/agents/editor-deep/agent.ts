@@ -80,7 +80,7 @@ export class EditorDeepAgent {
       longTermMemoriesLoaded: 0,
     }
 
-    yield { type: 'thinking', data: 'Loading editor context...' }
+    yield { type: 'thinking', data: 'Reviewing conversation and loading your notes...' }
 
     const memoryService = new EditorLongTermMemory(this.config.supabase, this.config.userId)
     if (input.context?.currentNoteId && this.isNoteSummaryRequest(input.message)) {
@@ -109,6 +109,9 @@ export class EditorDeepAgent {
     this.state.longTermMemoriesLoaded = memorySummary
       ? memorySummary.split('\n').filter(Boolean).length
       : 0
+    const noteLabel = input.context?.currentNoteId ? 'with active note' : 'no note open'
+    yield { type: 'thinking', data: `Context ready (${noteLabel}, ${historyMessages.length} prior messages)` }
+
     console.info('editor_deep_agent.context', {
       threadId,
       currentNoteId: input.context?.currentNoteId || null,

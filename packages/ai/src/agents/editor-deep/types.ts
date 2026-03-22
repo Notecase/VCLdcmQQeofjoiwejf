@@ -36,6 +36,7 @@ export type EditorDeepAgentEventType =
   | 'subagent-delta'
   | 'subagent-complete'
   | 'custom-progress'
+  | 'action-summary'
   | 'synthesis-start'
 
 export interface SubagentEventData {

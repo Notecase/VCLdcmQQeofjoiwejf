@@ -97,6 +97,7 @@ export interface PendingEdit {
   proposedContent: string
   diffHunks: DiffHunk[]
   status: 'pending' | 'accepted' | 'rejected'
+  messageId?: string // Links to the assistant message for rendering in ChatMessage
   createdAt: Date
 }
 
@@ -220,6 +221,30 @@ export interface CompletedArtifact {
 }
 
 /**
+ * MessageCitation - Links a RAG citation to a specific chat message
+ */
+export interface MessageCitation {
+  id: string
+  noteId: string
+  title: string
+  snippet: string
+  messageId: string
+}
+
+/**
+ * CompletedAction - Tracks actions performed by the AI (e.g., note creation)
+ */
+export interface CompletedAction {
+  id: string
+  action: string
+  title?: string
+  noteId?: string
+  description: string
+  messageId: string
+  createdAt: Date
+}
+
+/**
  * SubagentTracker - Tracks a subagent's lifecycle from multi-mode streaming.
  * Used for inline subagent progress cards and synthesis indicators.
  */
@@ -289,6 +314,12 @@ export const useAIStore = defineStore('ai', () => {
 
   // Completed artifacts - links artifacts to chat messages for UI rendering
   const completedArtifacts = ref<CompletedArtifact[]>([])
+
+  // Message citations - links RAG citations to specific chat messages
+  const messageCitations = ref<MessageCitation[]>([])
+
+  // Completed actions - tracks AI actions (note creation, edits) linked to messages
+  const completedActions = ref<CompletedAction[]>([])
 
   // Code preview state for streaming artifacts
   const codePreview = ref<CodePreviewState>({
@@ -1232,6 +1263,13 @@ export const useAIStore = defineStore('ai', () => {
   }
 
   /**
+   * Get pending edits linked to a specific message
+   */
+  function getPendingEditsForMessage(messageId: string): PendingEdit[] {
+    return pendingEdits.value.filter((e) => e.messageId === messageId)
+  }
+
+  /**
    * Clear completed artifacts for a session or all artifacts
    */
   function clearCompletedArtifacts(sessionId?: string) {
@@ -1240,6 +1278,43 @@ export const useAIStore = defineStore('ai', () => {
     } else {
       completedArtifacts.value = []
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Message Citation Actions (RAG source attribution)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a citation linked to a chat message (deduplicated by noteId + messageId)
+   */
+  function addMessageCitation(data: Omit<MessageCitation, 'id'>) {
+    if (messageCitations.value.some((c) => c.noteId === data.noteId && c.messageId === data.messageId)) return
+    messageCitations.value.push({ id: crypto.randomUUID(), ...data })
+  }
+
+  /**
+   * Get citations for a specific message
+   */
+  function getCitationsForMessage(messageId: string): MessageCitation[] {
+    return messageCitations.value.filter((c) => c.messageId === messageId)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Completed Action Actions (action summaries linked to messages)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Add a completed action linked to a chat message
+   */
+  function addCompletedAction(data: Omit<CompletedAction, 'id' | 'createdAt'>) {
+    completedActions.value.push({ id: crypto.randomUUID(), createdAt: new Date(), ...data })
+  }
+
+  /**
+   * Get completed actions for a specific message
+   */
+  function getCompletedActionsForMessage(messageId: string): CompletedAction[] {
+    return completedActions.value.filter((a) => a.messageId === messageId)
   }
 
   // ---------------------------------------------------------------------------
@@ -1283,6 +1358,8 @@ export const useAIStore = defineStore('ai', () => {
     diffBlocks.value = []
     pendingArtifacts.value = []
     completedArtifacts.value = []
+    messageCitations.value = []
+    completedActions.value = []
     codePreview.value = { active: false, phase: 'html', preview: '', totalChars: 0 }
     pendingClarification.value = null
     subTasks.value = []
@@ -1421,7 +1498,18 @@ export const useAIStore = defineStore('ai', () => {
     completedArtifacts,
     addCompletedArtifact,
     getCompletedArtifactsForMessage,
+    getPendingEditsForMessage,
     clearCompletedArtifacts,
+
+    // Message citation actions (RAG source attribution)
+    messageCitations,
+    addMessageCitation,
+    getCitationsForMessage,
+
+    // Completed action actions (action summaries)
+    completedActions,
+    addCompletedAction,
+    getCompletedActionsForMessage,
 
     // Code preview actions (streaming artifact visualization)
     codePreview,

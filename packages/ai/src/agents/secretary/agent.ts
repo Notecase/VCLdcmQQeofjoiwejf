@@ -49,7 +49,7 @@ export class SecretaryAgent {
     message: string
     threadId?: string
   }): AsyncGenerator<SecretaryStreamEvent> {
-    yield { event: 'thinking', data: 'Loading context...' }
+    yield { event: 'thinking', data: 'Loading your plans, preferences, and schedule...' }
 
     // Resolve timezone: config (from API header) → preferences → default
     const context = await this.memoryService.getFullContext()
@@ -86,6 +86,11 @@ export class SecretaryAgent {
         })
       : ''
     const sharedCtxSection = sharedCtx ? '\n\n' + sharedCtx : ''
+
+    const contextParts: string[] = []
+    if (context.activePlans?.length) contextParts.push(`${context.activePlans.length} active plan${context.activePlans.length > 1 ? 's' : ''}`)
+    if (context.calendarContent?.trim()) contextParts.push('calendar events')
+    yield { event: 'thinking', data: contextParts.length ? `Found ${contextParts.join(', ')}` : 'Ready' }
 
     const fullSystemPrompt = systemPrompt + '\n\n' + contextSummary + pendingInfo + sharedCtxSection
 

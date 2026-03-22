@@ -158,6 +158,10 @@ export class ChatAgent {
       for (const citation of this.state.citations) {
         yield { type: 'citation', data: citation }
       }
+
+      yield { type: 'thinking', data: this.state.citations.length > 0
+        ? `Found ${this.state.citations.length} relevant source${this.state.citations.length > 1 ? 's' : ''} from your notes`
+        : 'No matching notes found — answering from general knowledge' }
     }
 
     // 3. Add user message
@@ -167,7 +171,7 @@ export class ChatAgent {
       createdAt: new Date(),
     })
 
-    yield { type: 'thinking', data: 'Generating response...' }
+    yield { type: 'thinking', data: 'Composing response...' }
 
     // 4. Stream response
     let systemPrompt = this.buildSystemPrompt()

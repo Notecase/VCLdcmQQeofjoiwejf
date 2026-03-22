@@ -78,6 +78,7 @@ export interface StreamChunk {
     | 'subagent-delta'
     | 'subagent-complete'
     | 'custom-progress'
+    | 'action-summary'
     | 'synthesis-start'
   data: unknown
 }
@@ -667,9 +668,27 @@ async function processSSEResponse(
                 const lastMessage = session?.messages[session.messages.length - 1]
                 const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
 
+                // Map tool names to human-readable descriptions
+                const toolDescriptions: Record<string, string> = {
+                  create_note: 'Preparing new note...',
+                  answer_question_about_note: 'Reading your note...',
+                  read_note_structure: 'Analyzing note structure...',
+                  add_paragraph: 'Adding content to your note...',
+                  edit_paragraph: 'Editing your note...',
+                  remove_paragraph: 'Removing content...',
+                  create_artifact_from_note: 'Creating interactive widget...',
+                  insert_table: 'Inserting table...',
+                  database_action: 'Running database operation...',
+                  read_memory: 'Checking memory...',
+                  write_memory: 'Saving to memory...',
+                  ask_user_preference: 'Asking for your preference...',
+                }
+                const toolDescription = toolDescriptions[toolName]
+                  || toolName.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
+
                 store.addThinkingStep({
                   type: 'tool',
-                  description: `Calling ${toolName}...`,
+                  description: toolDescription,
                   status: 'running',
                   messageId,
                 })
@@ -697,12 +716,19 @@ async function processSSEResponse(
                 const editData = chunk.data as EditProposalData
                 const diffHunks = computeDiffHunks(editData.original, editData.proposed)
 
+                // Get current assistant message ID for linking
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const editMessageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
                 const pendingEdit = store.addPendingEdit({
                   blockId: editData.blockId || '',
                   noteId: editData.noteId,
                   originalContent: editData.original,
                   proposedContent: editData.proposed,
                   diffHunks,
+                  messageId: editMessageId,
                 })
 
                 // Automatically activate this edit for inline visualization
@@ -825,9 +851,32 @@ async function processSSEResponse(
               }
 
               case 'intent':
-              case 'citation':
                 console.log(`[AI] ${chunk.type}:`, chunk.data)
                 break
+
+              case 'citation': {
+                const citationData = chunk.data as { noteId: string; title: string; snippet: string }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+                if (messageId) {
+                  store.addMessageCitation({ ...citationData, messageId })
+                }
+                break
+              }
+
+              case 'action-summary': {
+                const summaryData = chunk.data as { action: string; title?: string; noteId?: string; description: string }
+                const sessionId = store.activeSessionId
+                const session = sessionId ? store.sessions[sessionId] : null
+                const lastMessage = session?.messages[session.messages.length - 1]
+                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+                if (messageId) {
+                  store.addCompletedAction({ ...summaryData, messageId })
+                }
+                break
+              }
 
               // ===== DeepAgent Events =====
 

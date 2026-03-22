@@ -8,6 +8,9 @@ const { mockStore, resetStore } = vi.hoisted(() => {
     isProcessing: false,
     getCompletedArtifactsForMessage: vi.fn(() => []),
     getThinkingStepsForMessage: vi.fn(() => []),
+    getPendingEditsForMessage: vi.fn(() => []),
+    getCitationsForMessage: vi.fn(() => []),
+    getCompletedActionsForMessage: vi.fn(() => []),
   }
 
   return {
@@ -17,6 +20,9 @@ const { mockStore, resetStore } = vi.hoisted(() => {
       state.isProcessing = false
       state.getCompletedArtifactsForMessage.mockClear()
       state.getThinkingStepsForMessage.mockClear()
+      state.getPendingEditsForMessage.mockClear()
+      state.getCitationsForMessage.mockClear()
+      state.getCompletedActionsForMessage.mockClear()
     },
   }
 })

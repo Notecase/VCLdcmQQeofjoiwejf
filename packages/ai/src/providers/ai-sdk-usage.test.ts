@@ -20,13 +20,13 @@ describe('ai-sdk-usage', () => {
 
   describe('trackAISDKUsage', () => {
     it('returns a function', () => {
-      const callback = trackAISDKUsage({ model: 'gemini-3.1-pro-preview', taskType: 'chat' })
+      const callback = trackAISDKUsage({ model: 'gemini-2.5-pro', taskType: 'chat' })
       expect(typeof callback).toBe('function')
     })
 
     it('callback records usage to tokenTracker', () => {
       const callback = trackAISDKUsage({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-2.5-pro',
         taskType: 'chat',
         userId: 'user-123',
         sessionId: 'session-456',
@@ -36,7 +36,7 @@ describe('ai-sdk-usage', () => {
 
       expect(tokenTracker.record).toHaveBeenCalledTimes(1)
       const event = vi.mocked(tokenTracker.record).mock.calls[0][0]
-      expect(event.model).toBe('gemini-3.1-pro-preview')
+      expect(event.model).toBe('gemini-2.5-pro')
       expect(event.provider).toBe('gemini')
       expect(event.taskType).toBe('chat')
       expect(event.inputTokens).toBe(100)
@@ -49,7 +49,7 @@ describe('ai-sdk-usage', () => {
     })
 
     it('handles zero token counts', () => {
-      const callback = trackAISDKUsage({ model: 'gemini-3.1-pro-preview', taskType: 'chat' })
+      const callback = trackAISDKUsage({ model: 'gemini-2.5-pro', taskType: 'chat' })
       callback({ usage: makeUsage(0, 0, 0) })
 
       const event = vi.mocked(tokenTracker.record).mock.calls[0][0]

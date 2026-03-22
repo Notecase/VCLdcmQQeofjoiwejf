@@ -1,13 +1,15 @@
 <script setup lang="ts">
 /**
  * SecretaryMessageCard — Rich message rendering for the secretary chat.
- * Renders markdown content, tool call cards, and thinking step indicators.
+ * Renders markdown content, activity stream (thinking + tool calls), and streaming indicators.
  */
 import { computed } from 'vue'
-import type { SecretaryChatMessage, SecretaryToolCall } from '@/stores/secretary'
+import type { SecretaryChatMessage } from '@/stores/secretary'
+import type { ThinkingStep, ToolCall } from '@/stores/ai'
 import { renderMathContent } from '@/utils/mathRenderer'
-import ToolCallCard from '@/components/ai/ToolCallCard.vue'
-import { Loader2, Brain } from 'lucide-vue-next'
+import { ActivityStream } from '@/components/ai/activity'
+import StreamingCursor from '@/components/ai/shared/StreamingCursor.vue'
+import { Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   message: SecretaryChatMessage
@@ -25,22 +27,47 @@ const formattedTime = computed(() => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 })
 
-const toolCalls = computed(() => props.message.toolCalls || [])
-const thinkingSteps = computed(() => props.message.thinkingSteps || [])
-
-/**
- * Adapt SecretaryToolCall to the ToolCall shape expected by ToolCallCard.
- * ToolCallCard expects { id, toolName, arguments, result?, status }
- */
-function toToolCallProp(tc: SecretaryToolCall) {
-  return {
-    id: tc.id,
-    toolName: tc.toolName,
-    arguments: tc.arguments,
-    result: tc.result,
-    status: tc.status,
-  }
+// Secretary tool name → human-readable description
+const secretaryToolDescriptions: Record<string, string> = {
+  readMemoryFile: 'Reading your memory...',
+  writeMemoryFile: 'Saving to memory...',
+  listMemoryFiles: 'Checking your memories...',
+  deleteMemoryFile: 'Removing memory file...',
+  renameMemoryFile: 'Renaming memory file...',
+  createRoadmap: 'Creating a new roadmap...',
+  saveRoadmap: 'Saving your roadmap...',
+  activateRoadmap: 'Activating roadmap...',
+  generateDailyPlan: 'Generating your daily plan...',
+  saveReflection: 'Saving your reflection...',
+  modifyPlan: 'Updating your plan...',
+  bulkModifyPlan: 'Applying bulk changes to plan...',
+  carryOverTasks: 'Carrying tasks to next day...',
+  manageRecurringBlocks: 'Managing recurring blocks...',
+  logActivity: 'Logging activity...',
 }
+
+// Adapt secretary string[] thinking steps → ThinkingStep[]
+const thinkingStepsAsActivity = computed<ThinkingStep[]>(() =>
+  (props.message.thinkingSteps || []).map((desc, i, arr) => ({
+    id: `sec-${props.message.id}-${i}`,
+    type: 'thought' as const,
+    description: desc,
+    status: (props.isStreaming && i === arr.length - 1) ? 'running' as const : 'complete' as const,
+    startedAt: props.message.createdAt,
+  }))
+)
+
+// Adapt secretary tool calls with human-readable names
+const toolCallsForActivity = computed<ToolCall[]>(() =>
+  (props.message.toolCalls || []).map(tc => ({
+    ...tc,
+    toolName: secretaryToolDescriptions[tc.toolName] || tc.toolName.replace(/_/g, ' ') + '...',
+  }))
+)
+
+const hasActivityContent = computed(() =>
+  thinkingStepsAsActivity.value.length > 0 || toolCallsForActivity.value.length > 0
+)
 </script>
 
 <template>
@@ -67,25 +94,13 @@ function toToolCallProp(tc: SecretaryToolCall) {
       >
     </div>
 
-    <!-- Thinking steps -->
-    <div
-      v-if="thinkingSteps.length > 0"
-      class="thinking-section"
-    >
-      <div class="thinking-header">
-        <Brain :size="12" />
-        <span
-          >{{ thinkingSteps.length }} thinking step{{ thinkingSteps.length > 1 ? 's' : '' }}</span
-        >
-      </div>
-    </div>
-
-    <!-- Tool calls -->
-    <ToolCallCard
-      v-for="tc in toolCalls"
-      :key="tc.id"
-      :tool="toToolCallProp(tc)"
-      class="embedded-tool"
+    <!-- Activity stream (thinking + tool calls) -->
+    <ActivityStream
+      v-if="isAssistant && hasActivityContent"
+      :message-id="message.id"
+      :tool-calls="toolCallsForActivity"
+      :is-streaming="isStreaming"
+      :thinking-steps-override="thinkingStepsAsActivity"
     />
 
     <!-- Content -->
@@ -94,10 +109,7 @@ function toToolCallProp(tc: SecretaryToolCall) {
         class="prose"
         v-html="renderedContent"
       />
-      <span
-        v-if="isStreaming"
-        class="streaming-cursor"
-      />
+      <StreamingCursor v-if="isStreaming" />
     </div>
 
     <!-- Streaming typing indicator (no content yet) -->
@@ -148,25 +160,6 @@ function toToolCallProp(tc: SecretaryToolCall) {
   opacity: 0.5;
 }
 
-/* Thinking */
-.thinking-section {
-  margin-bottom: 8px;
-}
-
-.thinking-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-color-secondary, #94a3b8);
-  opacity: 0.7;
-}
-
-/* Tool calls */
-.embedded-tool {
-  margin-bottom: 8px;
-}
-
 /* Content */
 .msg-body {
   font-size: 14px;
@@ -177,22 +170,6 @@ function toToolCallProp(tc: SecretaryToolCall) {
 
 .secretary-message.user .msg-body {
   color: var(--text-color-secondary, #94a3b8);
-}
-
-.streaming-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  background: var(--primary-color, #7c9ef8);
-  margin-left: 2px;
-  animation: blink 1s step-end infinite;
-  vertical-align: text-bottom;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 /* Prose styling */

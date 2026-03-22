@@ -152,6 +152,13 @@
   --stream-pulse: rgba(255, 255, 255, 0.3);
   --stream-glow: 0 0 0 1px rgba(255, 255, 255, 0.3);
 
+  /* Task Checklist */
+  --task-pending-color: #6e7681;
+  --task-running-color: #fbbf24;
+  --task-complete-color: #3fb950;
+  --task-failed-color: #f85149;
+  --task-progress-track: rgba(48, 54, 61, 0.6);
+
   /* Role Badges */
   --role-user-bg: rgba(255, 255, 255, 0.08);
   --role-user-color: #e2e8f0;
@@ -462,6 +469,13 @@
   --stream-cursor: #1a1a1a;
   --stream-pulse: rgba(0, 0, 0, 0.2);
   --stream-glow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+
+  /* Task Checklist */
+  --task-pending-color: #94a3b8;
+  --task-running-color: #d97706;
+  --task-complete-color: #16a34a;
+  --task-failed-color: #dc2626;
+  --task-progress-track: rgba(0, 0, 0, 0.08);
 
   /* Role Badges */
   --role-user-bg: rgba(0, 0, 0, 0.06);

@@ -29,9 +29,9 @@ describe('ai-sdk-factory', () => {
   })
 
   it('createAIModel returns a model for gemini provider', () => {
-    const entry = MODEL_REGISTRY['gemini-3.1-pro-preview']
+    const entry = MODEL_REGISTRY['gemini-2.5-pro']
     const model = createAIModel(entry) as unknown as { modelId: string }
-    expect(model.modelId).toBe('gemini-3.1-pro-preview')
+    expect(model.modelId).toBe('gemini-2.5-pro')
   })
 
   it('createAIModel returns a model for openai provider', () => {
@@ -48,7 +48,7 @@ describe('ai-sdk-factory', () => {
 
   it('getModelForTask resolves task type to model', () => {
     const model = getModelForTask('chat') as unknown as { modelId: string }
-    expect(model.modelId).toBe('gemini-3.1-pro-preview')
+    expect(model.modelId).toBe('gemini-2.5-pro')
   })
 
   it('getModelForTask for artifact returns kimi model', () => {

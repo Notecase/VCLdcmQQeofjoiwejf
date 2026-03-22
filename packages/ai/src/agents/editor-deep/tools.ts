@@ -201,7 +201,7 @@ export function createEditorDeepTools(
         return 'No note selected. Ask the user to open or specify a note.'
       }
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'reading', noteId: effectiveNoteId } })
+      ctx.emitEvent({ type: 'custom-progress', data: { step: 'Reading your note to find the answer...' } })
 
       const readResult =
         blockIndex !== undefined
@@ -222,7 +222,7 @@ export function createEditorDeepTools(
       const truncated =
         content.length > 8000 ? `${content.slice(0, 8000)}\n...[truncated]` : content
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'analyzing', chars: content.length } })
+      ctx.emitEvent({ type: 'custom-progress', data: { step: 'Analyzing note structure...' } })
 
       return [`Question: ${question}`, `Note title: ${title}`, 'Note content:', truncated].join(
         '\n\n'
@@ -275,14 +275,16 @@ export function createEditorDeepTools(
     execute: async ({ title, content, projectId }) => {
       const effectiveProjectId = projectId || ctx.editorContext.projectId
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'saving', title } })
+      ctx.emitEvent({ type: 'custom-progress', data: { step: `Creating new note "${title}"...` } })
 
+      // Create note with EMPTY content — the full content is proposed as a diff
+      // so the user can review all-green addition blocks before accepting
       const { data: newNote, error } = await ctx.supabase
         .from('notes')
         .insert({
           user_id: ctx.userId,
           title: title || 'Untitled',
-          content,
+          content: '',
           project_id: effectiveProjectId || null,
         })
         .select('id')
@@ -294,12 +296,29 @@ export function createEditorDeepTools(
 
       const noteId = (newNote as { id: string }).id
 
+      // Navigate to the new (empty) note first
       ctx.emitEvent({
         type: 'note-navigate',
         data: { noteId },
       })
 
-      return `Note "${title}" created (ID: ${noteId}). The note has been saved and opened.`
+      // Propose the full content as an edit so the user sees all-green diff blocks
+      ctx.emitEvent({
+        type: 'edit-proposal',
+        data: {
+          noteId,
+          original: '',
+          proposed: content,
+          structure: [],
+        },
+      })
+
+      ctx.emitEvent({
+        type: 'action-summary',
+        data: { action: 'create_note', title, noteId, description: `Created note "${title}"` },
+      })
+
+      return `Note "${title}" created (ID: ${noteId}). The note has been opened for review.`
     },
   })
 
@@ -352,7 +371,7 @@ export function createEditorDeepTools(
         targetIndex = resolveAfterHeadingIndex(current, afterHeading)
       }
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'computing-diff', noteId: effectiveNoteId } })
+      ctx.emitEvent({ type: 'custom-progress', data: { step: 'Computing changes to propose...' } })
       const proposed = spliceAtBlockIndex(current, targetIndex, 'insert-after', paragraph.trim())
       return proposeNoteEdit(ctx, effectiveNoteId, proposed, current)
     },
@@ -448,7 +467,7 @@ export function createEditorDeepTools(
       const effectiveBlockIndex = blockIndex ?? getContextBlockIndex(ctx)
 
       if (effectiveBlockIndex === undefined) {
-        ctx.emitEvent({ type: 'custom-progress', data: { step: 'computing-diff', noteId: effectiveNoteId } })
+        ctx.emitEvent({ type: 'custom-progress', data: { step: 'Computing changes to propose...' } })
         const proposed = spliceAtBlockIndex(current, undefined, 'insert-after', newContent.trim())
         return proposeNoteEdit(ctx, effectiveNoteId, proposed, current)
       }
@@ -458,7 +477,7 @@ export function createEditorDeepTools(
         return `Paragraph index ${effectiveBlockIndex} is out of range (0-${Math.max(parsed.blocks.length - 1, 0)}).`
       }
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'computing-diff', noteId: effectiveNoteId } })
+      ctx.emitEvent({ type: 'custom-progress', data: { step: 'Computing changes to propose...' } })
       const proposed = spliceAtBlockIndex(
         current,
         effectiveBlockIndex,

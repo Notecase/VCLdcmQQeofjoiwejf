@@ -31,6 +31,17 @@ export interface ModelEntry {
 // ============================================================================
 
 export const MODEL_REGISTRY: Record<string, ModelEntry> = {
+  'gemini-2.5-pro': {
+    id: 'gemini-2.5-pro',
+    provider: 'gemini',
+    displayName: 'Gemini 2.5 Pro',
+    contextWindow: 1_048_576,
+    capabilities: ['chat', 'tool-calling', 'vision'],
+    costPer1kInput: 0.125,
+    costPer1kOutput: 1.0,
+    maxOutputTokens: 65536,
+    supportsToolChoice: true,
+  },
   'gemini-3.1-pro-preview': {
     id: 'gemini-3.1-pro-preview',
     provider: 'gemini',
@@ -114,22 +125,22 @@ export type AITaskType =
 
 // Task → model mapping
 const TASK_MODEL_MAP: Record<AITaskType, string> = {
-  chat: 'gemini-3.1-pro-preview',
-  'note-agent': 'gemini-3.1-pro-preview',
-  planner: 'gemini-3.1-pro-preview',
-  secretary: 'gemini-3.1-pro-preview',
-  editor: 'gemini-3.1-pro-preview',
-  'editor-deep': 'gemini-3.1-pro-preview',
-  completion: 'gemini-3.1-pro-preview',
-  rewrite: 'gemini-3.1-pro-preview',
-  summarize: 'gemini-3.1-pro-preview',
-  explain: 'gemini-3.1-pro-preview',
-  table: 'gemini-3.1-pro-preview',
-  research: 'gemini-3.1-pro-preview',
+  chat: 'gemini-2.5-pro',
+  'note-agent': 'gemini-2.5-pro',
+  planner: 'gemini-2.5-pro',
+  secretary: 'gemini-2.5-pro',
+  editor: 'gemini-2.5-pro',
+  'editor-deep': 'gemini-2.5-pro',
+  completion: 'gemini-2.5-pro',
+  rewrite: 'gemini-2.5-pro',
+  summarize: 'gemini-2.5-pro',
+  explain: 'gemini-2.5-pro',
+  table: 'gemini-2.5-pro',
+  research: 'gemini-2.5-pro',
   artifact: 'kimi-k2.5',
   code: 'kimi-k2.5',
   slides: 'gemini-3.1-pro-preview',
-  course: 'gemini-3-flash-preview',
+  course: 'gemini-2.5-pro',
   'deep-research': 'deep-research-pro-preview-12-2025',
   embedding: 'text-embedding-3-large',
 }
@@ -143,9 +154,9 @@ export function selectModel(taskType: AITaskType): ModelEntry {
   const entry = MODEL_REGISTRY[modelId]
   if (!entry) {
     console.warn(
-      `[ModelRegistry] Unknown model "${modelId}" for task "${taskType}", falling back to gemini-3.1-pro`
+      `[ModelRegistry] Unknown model "${modelId}" for task "${taskType}", falling back to gemini-2.5-pro`
     )
-    return MODEL_REGISTRY['gemini-3.1-pro-preview']
+    return MODEL_REGISTRY['gemini-2.5-pro']
   }
   return entry
 }

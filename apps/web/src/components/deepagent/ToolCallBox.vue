@@ -15,6 +15,36 @@ const props = defineProps<{
 
 const expanded = ref(false)
 
+// Human-readable tool descriptions
+const toolDescriptions: Record<string, string> = {
+  write_file: 'Writing file...',
+  read_file: 'Reading file...',
+  delete_file: 'Deleting file...',
+  list_files: 'Listing files...',
+  write_todos: 'Creating task list...',
+  update_todo: 'Updating task...',
+  web_search: 'Searching the web...',
+  think: 'Reasoning...',
+  request_approval: 'Requesting your approval...',
+  read_note: 'Reading your note...',
+  search_notes: 'Searching knowledge base...',
+}
+
+const displayName = computed(() => {
+  const name = props.toolCall.toolName
+  const args = (props.toolCall.arguments || {}) as Record<string, unknown>
+
+  // Contextual descriptions using arguments when available
+  if (name === 'write_file' && args.filename) return `Writing "${args.filename}"...`
+  if (name === 'read_file' && args.filename) return `Reading "${args.filename}"...`
+  if (name === 'delete_file' && args.filename) return `Deleting "${args.filename}"...`
+  if (name === 'web_search' && args.query) return `Searching: ${String(args.query).slice(0, 60)}`
+  if (name === 'search_notes' && args.query) return `Searching for "${args.query}"...`
+
+  return toolDescriptions[name]
+    || name.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) + '...'
+})
+
 const statusIcon = computed(() => {
   switch (props.toolCall.status) {
     case 'complete':
@@ -87,7 +117,7 @@ function isLongValue(value: unknown): boolean {
             { spin: toolCall.status === 'running' || toolCall.status === 'pending' },
           ]"
         />
-        <span class="tool-name">{{ toolCall.toolName }}</span>
+        <span class="tool-name">{{ displayName }}</span>
       </div>
       <ChevronDown
         :size="14"
@@ -208,7 +238,6 @@ function isLongValue(value: unknown): boolean {
 .tool-name {
   font-size: 13px;
   font-weight: 500;
-  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
   color: var(--text-color, #e6edf3);
 }
 

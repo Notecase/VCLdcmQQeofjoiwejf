@@ -10,7 +10,7 @@
  */
 
 // Model Registry (central source of truth)
-export { MODEL_REGISTRY, selectModel, getModel } from './model-registry'
+export { MODEL_REGISTRY, selectModel, selectFallbackModel, getModel } from './model-registry'
 export type { AITaskType, ModelEntry, ModelProvider, ModelCapability } from './model-registry'
 
 // Token Tracker (usage tracking)
@@ -44,8 +44,11 @@ export {
   createAIModel,
   createAIEmbeddingModel,
   getModelForTask,
+  getModelsForTask,
   getEmbeddingModel,
   resolveModel,
+  resolveModelsForTask,
+  isTransientError,
   resetAIProviders,
 } from './ai-sdk-factory'
 

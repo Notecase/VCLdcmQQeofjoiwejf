@@ -7,8 +7,7 @@ import { EditorLongTermMemory } from './memory'
 import { EditorConversationHistoryService, type EditorThreadMessage } from './history'
 import type { EditorDeepAgentEvent, EditorDeepAgentRequest, EditorRunState } from './types'
 import { executeTool } from '../../tools'
-import { selectModel } from '../../providers/model-registry'
-import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { getModelsForTask, isTransientError } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import type { SharedContextService } from '../../services/shared-context.service'
 
@@ -131,7 +130,6 @@ export class EditorDeepAgent {
     )
 
     // Build system prompt with context, memory, and shared context
-    const selectedModel = selectModel('editor-deep')
     const contextSummary = this.buildContextSummary(input.context)
     const memorySection = memorySummary
       ? `\n\n### Long-term Memory\n${memorySummary}`
@@ -144,32 +142,49 @@ export class EditorDeepAgent {
     const sharedCtxSection = sharedCtx ? `\n\n${sharedCtx}` : ''
     const systemPrompt = `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
 
-    // Create ToolLoopAgent with AI SDK v6
-    const agent = new ToolLoopAgent({
-      model: getModelForTask('editor-deep'),
-      instructions: systemPrompt,
-      tools,
-      temperature: 0.3,
-      stopWhen: stepCountIs(20),
-      onFinish: trackAISDKUsage({ model: selectedModel.id, taskType: 'editor-deep' }),
-    })
-
     // Build messages from conversation history (structured, preserves turn roles)
     const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
 
-    try {
-      const result = await agent.stream({
-        messages: invocationMessages,
-      })
+    // Create ToolLoopAgent with AI SDK v6 — try primary, fall back on transient errors
+    const { primary, fallback } = getModelsForTask('editor-deep')
+    let streamed = false
 
-      // Adapt AI SDK stream to our event format
-      for await (const event of adaptAISDKStream(
-        result.fullStream,
-        this.pendingEvents,
-        threadId
-      )) {
-        this.consumeEvent(event)
-        yield event
+    try {
+      for (const modelOption of [primary, fallback]) {
+        if (!modelOption || streamed) continue
+
+        const agent = new ToolLoopAgent({
+          model: modelOption.model,
+          instructions: systemPrompt,
+          tools,
+          temperature: 0.3,
+          stopWhen: stepCountIs(20),
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'editor-deep' }),
+        })
+
+        try {
+          const result = await agent.stream({
+            messages: invocationMessages,
+          })
+
+          // Adapt AI SDK stream to our event format
+          for await (const event of adaptAISDKStream(
+            result.fullStream,
+            this.pendingEvents,
+            threadId
+          )) {
+            this.consumeEvent(event)
+            yield event
+          }
+          streamed = true
+        } catch (modelError) {
+          if (isTransientError(modelError) && modelOption === primary && fallback) {
+            console.warn(`[EditorDeepAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+            yield { type: 'thinking', data: `Switching to ${fallback.entry.displayName}...` }
+            continue
+          }
+          throw modelError
+        }
       }
 
       this.state.updatedAt = new Date().toISOString()

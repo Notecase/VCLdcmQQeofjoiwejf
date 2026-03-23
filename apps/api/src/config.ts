@@ -7,8 +7,6 @@ loadEnv()
  * Application configuration
  *
  * Uses getters so process.env is read at access time, not module load time.
- * This is required for Cloudflare Workers where secrets are injected into
- * process.env after module evaluation.
  */
 export const config = {
   // Server

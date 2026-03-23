@@ -395,14 +395,16 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 
 ## apps/api
 
-**Purpose:** Hono-based backend server. AI gateway, CRUD operations, streaming.
+**Purpose:** Hono-based backend server deployed on Railway (`api.noteshell.io`). AI gateway, CRUD operations, streaming.
 
 ### Stack
 
 - **Framework:** Hono 4.6.0 with @hono/node-server
+- **Hosting:** Railway (single entry point: `src/index.ts`)
 - **Database:** Supabase (PostgreSQL with RLS)
 - **Validation:** Zod + @hono/zod-validator
 - **AI:** Vercel AI SDK v6 (`streamText`, `generateText`, `embed`, `ToolLoopAgent`)
+- **Model Fallback:** All agents use `resolveModelsForTask()` / `getModelsForTask()` + `isTransientError()` to retry with a fallback model on rate limits / 503s
 
 ### Middleware Pipeline
 
@@ -901,13 +903,14 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Optional Variables
 
-| Variable            | Purpose                             |
-| ------------------- | ----------------------------------- |
-| `ANTHROPIC_API_KEY` | Claude chat (default model)         |
-| `GOOGLE_AI_API_KEY` | Gemini slides/research              |
-| `API_PORT`          | Backend port (default 3001)         |
-| `CORS_ORIGIN`       | Allowed frontend origin             |
-| `VITE_PROVIDER`     | Service provider: supabase or local |
+| Variable            | Purpose                                                                      |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Claude chat (default model)                                                  |
+| `GOOGLE_AI_API_KEY` | Gemini slides/research                                                       |
+| `API_PORT`          | Backend port (default 3001)                                                  |
+| `CORS_ORIGIN`       | Allowed frontend origin                                                      |
+| `VITE_PROVIDER`     | Service provider: supabase or local                                          |
+| `VITE_API_URL`      | API server base URL (empty in dev → Vite proxy, `https://api.noteshell.io` in prod) |
 
 ### Version Constraints
 

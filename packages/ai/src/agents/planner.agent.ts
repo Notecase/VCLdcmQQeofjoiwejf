@@ -11,7 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { generateText, Output } from 'ai'
 import type { SharedContextService } from '../services/shared-context.service'
 import { selectModel } from '../providers/model-registry'
-import { resolveModel } from '../providers/ai-sdk-factory'
+import { resolveModelsForTask, isTransientError } from '../providers/ai-sdk-factory'
 import { recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
@@ -365,28 +365,41 @@ export class PlannerAgent {
       }
     }
 
-    // Get AI guidance
-    const startTime = Date.now()
-    const { model: planModel, entry: planEntry } = resolveModel('planner', this.model)
-    const result = await generateText({
-      model: planModel,
-      system:
-        'You are a helpful assistant. Provide brief, actionable guidance for completing a task step.',
-      messages: [
-        {
-          role: 'user' as const,
-          content: `Goal: ${plan.goal}\n\nStep to execute: ${step.description}\n\nEstimated time: ${step.estimatedTime || 'Not specified'}\n\nProvide 2-3 practical tips for completing this step effectively.`,
-        },
-      ],
-      temperature: 0.7,
-      maxOutputTokens: 500,
-    })
-    recordAISDKUsage(result.usage, { model: planEntry.id, taskType: 'planner' }, startTime)
+    // Get AI guidance with fallback
+    const { primary: guidePrimary, fallback: guideFallback } = resolveModelsForTask('planner', this.model)
+    let result: Awaited<ReturnType<typeof generateText>> | undefined
+    for (const modelOption of [guidePrimary, guideFallback]) {
+      if (!modelOption) continue
+      try {
+        const startTime = Date.now()
+        result = await generateText({
+          model: modelOption.model,
+          system:
+            'You are a helpful assistant. Provide brief, actionable guidance for completing a task step.',
+          messages: [
+            {
+              role: 'user' as const,
+              content: `Goal: ${plan.goal}\n\nStep to execute: ${step.description}\n\nEstimated time: ${step.estimatedTime || 'Not specified'}\n\nProvide 2-3 practical tips for completing this step effectively.`,
+            },
+          ],
+          temperature: 0.7,
+          maxOutputTokens: 500,
+        })
+        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'planner' }, startTime)
+        break
+      } catch (err) {
+        if (isTransientError(err) && modelOption === guidePrimary && guideFallback) {
+          console.warn(`[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${guideFallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
+    }
 
     return {
       success: true,
       step,
-      guidance: result.text || 'Focus on completing this step before moving to the next.',
+      guidance: result?.text || 'Focus on completing this step before moving to the next.',
     }
   }
 
@@ -439,24 +452,37 @@ export class PlannerAgent {
     summary: string
     steps: Array<{ id: number; description: string; estimatedTime?: string; dependencies?: number[] }>
   }> {
-    const startTime = Date.now()
-    const { model: planModel, entry: planEntry } = resolveModel('planner', this.model)
-    const result = await generateText({
-      model: planModel,
-      system: PLANNING_PROMPT,
-      messages: [{ role: 'user' as const, content: userContent }],
-      temperature: 0.7,
-      maxOutputTokens: 2000,
-      output: Output.object({ schema: PlanOutputSchema }),
-    })
-    recordAISDKUsage(result.usage, { model: planEntry.id, taskType: 'planner' }, startTime)
+    const { primary, fallback } = resolveModelsForTask('planner', this.model)
 
-    if (result.output) return result.output
-    try {
-      return JSON.parse(stripJsonFences(result.text))
-    } catch {
-      return { summary: 'Plan created', steps: [] }
+    for (const modelOption of [primary, fallback]) {
+      if (!modelOption) continue
+      try {
+        const startTime = Date.now()
+        const result = await generateText({
+          model: modelOption.model,
+          system: PLANNING_PROMPT,
+          messages: [{ role: 'user' as const, content: userContent }],
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+          output: Output.object({ schema: PlanOutputSchema }),
+        })
+        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'planner' }, startTime)
+
+        if (result.output) return result.output
+        try {
+          return JSON.parse(stripJsonFences(result.text))
+        } catch {
+          return { summary: 'Plan created', steps: [] }
+        }
+      } catch (err) {
+        if (isTransientError(err) && modelOption === primary && fallback) {
+          console.warn(`[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
     }
+    throw new Error('[PlannerAgent] All models unavailable')
   }
 
   /**

@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { streamText, generateText, embed } from 'ai'
 import { selectModel } from '../providers/model-registry'
-import { resolveModel, getEmbeddingModel } from '../providers/ai-sdk-factory'
+import { resolveModelsForTask, isTransientError, getEmbeddingModel } from '../providers/ai-sdk-factory'
 import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
@@ -182,32 +182,45 @@ export class ChatAgent {
       if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
     }
 
-    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
+    const { primary, fallback } = resolveModelsForTask('chat', this.model)
     const chatMessages = this.buildChatMessages()
-    const result = streamText({
-      model: chatModel,
-      system: systemPrompt,
-      messages: chatMessages,
-      temperature: 0.7,
-      maxOutputTokens: 4000,
-      onFinish: trackAISDKUsage({ model: chatEntry.id, taskType: 'chat' }),
-    })
 
     let fullContent = ''
+    for (const modelOption of [primary, fallback]) {
+      if (!modelOption) continue
 
-    for await (const chunk of result.textStream) {
-      fullContent += chunk
-      yield { type: 'text-delta', data: chunk }
+      try {
+        const result = streamText({
+          model: modelOption.model,
+          system: systemPrompt,
+          messages: chatMessages,
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'chat' }),
+        })
+
+        for await (const chunk of result.textStream) {
+          fullContent += chunk
+          yield { type: 'text-delta', data: chunk }
+        }
+
+        // 5. Add assistant message to state
+        this.state.messages.push({
+          role: 'assistant',
+          content: fullContent,
+          createdAt: new Date(),
+        })
+
+        yield { type: 'finish', data: { reason: 'stop' } }
+        return
+      } catch (err) {
+        if (isTransientError(err) && modelOption === primary && fallback) {
+          console.warn(`[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
     }
-
-    // 5. Add assistant message to state
-    this.state.messages.push({
-      role: 'assistant',
-      content: fullContent,
-      createdAt: new Date(),
-    })
-
-    yield { type: 'finish', data: { reason: 'stop' } }
   }
 
   /**
@@ -346,27 +359,43 @@ cite it using [1], [2], etc. to reference the source.`
       if (sharedCtx) systemPrompt += '\n\n' + sharedCtx
     }
 
-    const startTime = Date.now()
-    const { model: chatModel, entry: chatEntry } = resolveModel('chat', this.model)
-    const result = await generateText({
-      model: chatModel,
-      system: systemPrompt,
-      messages: this.buildChatMessages(),
-      temperature: 0.7,
-      maxOutputTokens: 4000,
-    })
-    recordAISDKUsage(result.usage, { model: chatEntry.id, taskType: 'chat' }, startTime)
+    const { primary, fallback } = resolveModelsForTask('chat', this.model)
 
-    return {
-      content: result.text,
-      citations: this.state.citations,
-      usage: result.usage
-        ? {
-            inputTokens: result.usage.inputTokens ?? 0,
-            outputTokens: result.usage.outputTokens ?? 0,
-          }
-        : undefined,
+    for (const modelOption of [primary, fallback]) {
+      if (!modelOption) continue
+
+      try {
+        const startTime = Date.now()
+        const result = await generateText({
+          model: modelOption.model,
+          system: systemPrompt,
+          messages: this.buildChatMessages(),
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+        })
+        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'chat' }, startTime)
+
+        return {
+          content: result.text,
+          citations: this.state.citations,
+          usage: result.usage
+            ? {
+                inputTokens: result.usage.inputTokens ?? 0,
+                outputTokens: result.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        }
+      } catch (err) {
+        if (isTransientError(err) && modelOption === primary && fallback) {
+          console.warn(`[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
     }
+
+    // Should not reach here, but satisfy TypeScript
+    throw new Error('[ChatAgent] All models unavailable')
   }
 }
 

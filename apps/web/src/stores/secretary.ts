@@ -51,10 +51,10 @@ import {
   resolveWorkflowArtifactFromMission,
 } from './secretary.workflow'
 
-const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
-const SECRETARY_API = `${API_BASE}/api/secretary`
-const HEARTBEAT_API = `${API_BASE}/api/settings/heartbeat`
-const INTEGRATIONS_API = `${API_BASE}/api/integrations`
+const API_URL = import.meta.env.VITE_API_URL || ''
+const SECRETARY_API = `${API_URL}/api/secretary`
+const HEARTBEAT_API = `${API_URL}/api/settings/heartbeat`
+const INTEGRATIONS_API = `${API_URL}/api/integrations`
 const SECRETARY_HARDENING_ENABLED = !['0', 'false', 'off', 'no'].includes(
   String(import.meta.env.VITE_SECRETARY_PHASE5_HARDENING ?? 'true')
     .trim()

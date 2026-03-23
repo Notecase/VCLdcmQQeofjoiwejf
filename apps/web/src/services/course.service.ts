@@ -21,7 +21,7 @@ import type {
   LessonReadyEvent,
 } from '@inkdown/shared/types'
 
-const API_BASE = '/api/course'
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/course`
 
 // ============================================================================
 // snake_case → camelCase mappers (Supabase rows → frontend types)

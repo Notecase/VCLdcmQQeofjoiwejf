@@ -1,389 +1,199 @@
-# Migration: API from Cloudflare Workers to Railway
+# Infrastructure Cleanup: Unified API Deployment & Reliable AI
 
 ## Context
 
-The Inkdown/Noteshell API (`apps/api`) runs on Cloudflare Workers but suffers from recurring runtime compatibility issues:
-- **Immediate**: AI text generation fails silently (provider singleton caches empty API key before env bindings are injected)
-- **Recurring**: 3 CF Workers-specific bugs in recent commits (`setInterval` forbidden, CORS timing, provider singleton timing)
-- **Structural**: Dual entry points (`worker.ts` + `index.ts`) create maintenance burden
-- **Future**: Product roadmap includes bot integrations and background processing that need a long-running Node.js server
+The Inkdown API (`apps/api`) accumulated technical debt during the CF Workers → Railway migration:
+- **Two API backends** exist (CF Workers `worker.ts` + Railway `index.ts`), unclear which serves production
+- **Web app API routing is hacky** — secretary/deepAgent do `.replace('/api/agent', '')` to derive base URL; course service hardcodes paths
+- **Model fallback only in secretary** — all other agents fail silently on Gemini rate limits ("high demand")
+- **Env vars fragmented** across CF Workers secrets, Railway vars, and Vercel env vars
 
-The Node.js entry point (`apps/api/src/index.ts`) already exists and works for local dev. Migration to Railway is ~30 min of code changes + configuration.
-
-### Current Architecture
-```
-Vercel ──────── Web SPA (Vue 3, app.noteshell.io)
-CF Workers ──── API (Hono, inkdown-api.quangcpm6205.workers.dev)
-Supabase ────── Database + Edge Functions (heartbeat daemon)
-```
-
-### Target Architecture
-```
-Vercel ──────── Web SPA (Vue 3, app.noteshell.io)  [NO CHANGE]
-Railway ─────── API (Hono on Node.js)               [MIGRATED]
-Supabase ────── Database + Edge Functions            [NO CHANGE]
-```
+**Goal:** One API target (Railway), clean frontend routing, model fallback everywhere, simple env management.
 
 ---
 
-## Pre-Migration Checklist
+## Phase 1: Remove Cloudflare Workers
 
-- [ ] Railway account created (railway.app)
-- [ ] Railway CLI installed (`npm i -g @railway/cli && railway login`)
-- [ ] All CF Workers secrets documented (Step 1 below)
-- [ ] Current production is accessible (verify app.noteshell.io works, even if AI is broken)
+**Delete files:**
+- `apps/api/src/worker.ts` — CF Workers entry point
+- `apps/api/wrangler.toml` — CF Workers config
+- `apps/api/.gitignore` — only contained `.vercel`
 
----
+**Modify:**
+- `apps/api/package.json` — remove `wrangler` from devDependencies, change `"start"` script to `"tsx src/index.ts"`
+- `apps/api/src/config.ts` — remove comment about CF Workers env binding timing (lines ~9-11). Keep getter pattern (good practice regardless)
 
-## Step 1: Document All Required Environment Variables
-
-Collect all secrets currently set in CF Workers. These must be transferred to Railway.
-
-**Required variables** (from `wrangler.toml` comments + `apps/api/.env.example`):
-
-| Variable | Source | Required |
-|----------|--------|----------|
-| `PORT` | Railway auto-sets this | Auto |
-| `NODE_ENV` | Set to `production` | Yes |
-| `SUPABASE_URL` | CF Workers secret | Yes |
-| `SUPABASE_SERVICE_KEY` | CF Workers secret | Yes |
-| `SUPABASE_ANON_KEY` | CF Workers secret | Yes |
-| `GOOGLE_AI_API_KEY` | CF Workers secret | Yes |
-| `OPENAI_API_KEY` | CF Workers secret | Yes |
-| `CORS_ORIGIN` | Set to `https://app.noteshell.io` | Yes |
-| `ADMIN_USER_IDS` | CF Workers secret | If set |
-| `ANTHROPIC_API_KEY` | If using Anthropic | Optional |
-
-**Action**: Run `npx wrangler secret list` in `apps/api/` to see all configured secrets. Note their names (values won't be shown — you'll need them from your password manager or `.env` files).
-
-**File**: `apps/api/.env.example` — reference for all supported variables
+**Verify:** `grep -r "wrangler\|worker\.ts" apps/api/` returns nothing. `pnpm typecheck` passes.
 
 ---
 
-## Step 2: Create Railway Project
+## Phase 2: Unify Frontend API URL Construction
 
-### 2a. Initialize Railway project
+**Problem:** Two env vars (`VITE_API_BASE`, `VITE_API_URL`) used inconsistently. `VITE_API_BASE` defaults to `/api/agent` and services hack it with `.replace('/api/agent', '')`.
 
-```bash
-cd /Users/quangnguyen/CodingPRJ/inkdown
-railway init
-# Select "Empty Project"
-# Name it: noteshell-api
-```
+**Solution:** Standardize on `VITE_API_URL` — the base URL of the API server (empty string in dev → Vite proxy, `https://api.noteshell.io` in prod).
 
-### 2b. Configure the service
+| File | Current | New |
+|------|---------|-----|
+| `apps/web/src/services/ai.service.ts:16` | `VITE_API_BASE \|\| '/api/agent'` | `` `${VITE_API_URL \|\| ''}/api/agent` `` |
+| `apps/web/src/stores/secretary.ts:54` | `VITE_API_BASE?.replace('/api/agent','') \|\| ''` | `VITE_API_URL \|\| ''` |
+| `apps/web/src/stores/deepAgent.ts:40` | `VITE_API_BASE?.replace('/api/agent','') \|\| ''` | `VITE_API_URL \|\| ''` |
+| `apps/web/src/services/deepAgent.service.ts:14` | `VITE_API_BASE?.replace('/api/agent','') \|\| ''` | `VITE_API_URL \|\| ''` |
+| `apps/web/src/services/course.service.ts:24` | `'/api/course'` (hardcoded) | `` `${VITE_API_URL \|\| ''}/api/course` `` |
+| `apps/web/src/components/secretary/plan/PlanCreationChat.vue:24` | `VITE_API_BASE?.replace('/api/agent','') \|\| ''` | `VITE_API_URL \|\| ''` |
+| `turbo.json` | Has `VITE_API_BASE` in passthrough | Remove `VITE_API_BASE`, keep `VITE_API_URL` |
 
-Railway needs to know this is a monorepo and only the API should be deployed.
+**Manual step:** Set `VITE_API_URL=https://api.noteshell.io` in Vercel Dashboard → Environment Variables → Production. Then rebuild.
 
-**In Railway Dashboard** (or via CLI):
-- **Root Directory**: `/` (monorepo root — pnpm workspaces need the full repo)
-- **Build Command**: `pnpm install --frozen-lockfile && pnpm build`
-- **Start Command**: `node apps/api/dist/index.js`
-
-The `pnpm build` step uses Turborepo which respects dependency order: `@inkdown/shared` -> `@inkdown/ai` -> `apps/api`. This ensures `dist/` is always fresh — the exact bug that started this investigation.
-
-### 2c. Set Node.js version
-
-Create a `.node-version` file or set in Railway:
-- **Node.js version**: `20` (matches `.nvmrc` and CI)
-
-### 2d. Configure health check
-
-Railway pings a health endpoint to verify the service is running:
-- **Health Check Path**: `/health`
-- **Health Check Timeout**: `30s`
-
-**File**: Health endpoint exists at `apps/api/src/routes/health.ts`
+**Verify:** `grep -r "VITE_API_BASE" apps/web/` returns nothing. `pnpm dev` works (Vite proxy). Production build works.
 
 ---
 
-## Step 3: Set Environment Variables in Railway
+## Phase 3: Add Shared Fallback Utilities
 
-```bash
-# Required
-railway variables set NODE_ENV=production
-railway variables set SUPABASE_URL=<value>
-railway variables set SUPABASE_SERVICE_KEY=<value>
-railway variables set SUPABASE_ANON_KEY=<value>
-railway variables set GOOGLE_AI_API_KEY=<value>
-railway variables set OPENAI_API_KEY=<value>
-railway variables set CORS_ORIGIN=https://app.noteshell.io
-
-# Optional
-railway variables set ADMIN_USER_IDS=<value>
-railway variables set ANTHROPIC_API_KEY=<value>
-```
-
-**Note**: Railway auto-sets `PORT`. The `config.ts` already reads `process.env.PORT` with a default of `3001` (line 15). No code changes needed.
-
----
-
-## Step 4: Code Changes (Minimal)
-
-### 4a. Add `railway.toml` for deployment config
-
-**Create**: `railway.toml` at repo root
-
-```toml
-[build]
-builder = "nixpacks"
-buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm build"
-
-[deploy]
-startCommand = "node apps/api/dist/index.js"
-healthcheckPath = "/health"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
-```
-
-**Why `corepack enable`**: Railway's Nixpacks builder needs corepack to use pnpm 9.
-
-### 4b. Add `.railwayignore` at repo root
-
-```
-apps/web/dist
-apps/web/node_modules
-.turbo
-.git
-```
-
-Prevents uploading large unnecessary files.
-
-### 4c. Update `apps/api/src/index.ts` — production CORS
-
-The current `index.ts` uses static CORS from config. This already works because `config.cors.origin` reads `process.env.CORS_ORIGIN` via a getter.
-
-**File**: `apps/api/src/index.ts:30-40` — **NO CHANGE NEEDED**. The CORS middleware already reads from `config.cors.origin` which uses a getter that reads `process.env.CORS_ORIGIN` at access time.
-
-### 4d. Update `apps/api/src/index.ts` — add provider reset (match worker.ts pattern)
-
-The provider singleton issue exists in both entry points. On Node.js with `dotenv`, it works because `.env` is loaded at module evaluation time. But for robustness, add the same reset pattern:
-
-**File**: `apps/api/src/index.ts` — inside `startServer()`, after the usage persister init, add:
+**Add to `packages/ai/src/providers/ai-sdk-factory.ts`:**
 
 ```typescript
-// Defensive: reset provider singletons after env is fully loaded
-try {
-  const { resetAIProviders } = await import('@inkdown/ai/providers')
-  resetAIProviders()
-} catch (err) {
-  console.warn('AI provider reset failed:', err)
+/** Check if an error is transient (rate limit, capacity, etc.) */
+export function isTransientError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error)
+  return /high demand|rate limit|overloaded|Resource exhausted|\b503\b|\b429\b/i.test(msg)
+}
+
+/** Get primary + fallback models, respecting optional user model override */
+export function resolveModelsForTask(
+  taskType: AITaskType,
+  overrideModelId?: string
+): {
+  primary: { model: LanguageModel; entry: ModelEntry }
+  fallback: { model: LanguageModel; entry: ModelEntry } | null
+} {
+  if (overrideModelId) {
+    const overrideEntry = getModel(overrideModelId)
+    if (overrideEntry) {
+      const fallbackEntry = selectFallbackModel(taskType)
+      return {
+        primary: { model: createAIModel(overrideEntry), entry: overrideEntry },
+        fallback: fallbackEntry ? { model: createAIModel(fallbackEntry), entry: fallbackEntry } : null,
+      }
+    }
+  }
+  return getModelsForTask(taskType)
 }
 ```
 
-### 4e. Remove diagnostic logging (cleanup from debugging)
+**Export from `packages/ai/src/providers/index.ts`:** Add `getModelsForTask`, `resolveModelsForTask`, `isTransientError` to exports.
 
-**File**: `packages/ai/src/providers/ai-sdk-factory.ts:37-47` — Remove the diagnostic `console.info` from `getGoogleProvider()`. The singleton issue is solved by moving off CF Workers.
-
-**File**: `packages/ai/src/agents/secretary/agent.ts:165-168` — Remove `streamEventCount === 0` error yield (was debugging aid).
-
-**File**: `apps/api/src/routes/secretary.ts:277-294` — Remove `NO_TEXT_GENERATED` diagnostic block (was debugging aid).
-
-### 4f. (Optional) Keep `worker.ts` as fallback
-
-Do NOT delete `worker.ts` or `wrangler.toml` yet. Keep them as a rollback option until Railway is verified working in production. Can be removed in a follow-up cleanup PR.
+**Also export `selectFallbackModel`** from `model-registry.ts` barrel.
 
 ---
 
-## Step 5: Update Web App to Point to Railway API
+## Phase 4: Add Model Fallback to All Agents
 
-### 5a. Get Railway URL
-
-After first deploy, Railway provides a URL like:
-```
-noteshell-api-production.up.railway.app
-```
-
-### 5b. Set custom domain: `api.noteshell.io`
-
-You own `noteshell.io` and manage DNS via Cloudflare. Add a subdomain for the API:
-
-1. **In Railway Dashboard** → Service → Settings → Domains → Add Custom Domain: `api.noteshell.io`
-2. Railway gives you a CNAME target (e.g., `cname.railway.app`)
-3. **In Cloudflare DNS** → Add record:
-   - Type: `CNAME`
-   - Name: `api`
-   - Target: `<railway-provided-target>`
-   - Proxy status: **DNS only** (grey cloud, NOT orange — Railway handles SSL)
-4. Railway auto-provisions SSL certificate for `api.noteshell.io`
-
-**Result**:
-- `app.noteshell.io` → Vercel (web SPA) — no change
-- `api.noteshell.io` → Railway (API) — new
-
-### 5c. Update Vercel environment variables
-
-The web app is deployed on Vercel. Update the env vars in Vercel Dashboard (or CLI):
-
-```bash
-# In Vercel Dashboard → Project Settings → Environment Variables
-# Or via Vercel CLI:
-vercel env add VITE_API_BASE production
-# Value: https://api.noteshell.io/api/agent
-# (or https://noteshell-api-production.up.railway.app/api/agent if no custom domain)
-```
-
-**How the web app uses this** (verified across all service files):
+Apply the secretary's fallback pattern to all agents. For agents using `streamText`/`generateText` directly (not ToolLoopAgent), the pattern is:
 
 ```typescript
-// ai.service.ts:16 — Agent endpoint
-const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
-
-// secretary.ts:54 — Secretary (strips /api/agent, appends /api/secretary)
-const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
-const SECRETARY_API = `${API_BASE}/api/secretary`
+const { primary, fallback } = resolveModelsForTask('chat', this.model)
+for (const opt of [primary, fallback]) {
+  if (!opt) continue
+  try {
+    const result = streamText({ model: opt.model, ... })
+    // ... process stream ...
+    return // success
+  } catch (err) {
+    if (isTransientError(err) && opt === primary && fallback) {
+      console.warn(`[Agent] ${opt.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+      continue
+    }
+    throw err
+  }
+}
 ```
 
-So setting `VITE_API_BASE=https://api.noteshell.io/api/agent` makes all services point to Railway.
+**Agents to update (in order of simplicity):**
 
-**Also update** `VITE_API_URL`:
-```bash
-vercel env add VITE_API_URL production
-# Value: https://api.noteshell.io
-```
+| Agent | File | Call Sites | Model Resolution |
+|-------|------|-----------|-----------------|
+| ChatAgent | `packages/ai/src/agents/chat.agent.ts` | ~2 (streamChat, generateResponse) | `resolveModel` → `resolveModelsForTask` |
+| NoteAgent | `packages/ai/src/agents/note.agent.ts` | ~3 (create, update, organize) | `resolveModel` → `resolveModelsForTask` |
+| PlannerAgent | `packages/ai/src/agents/planner.agent.ts` | ~2 (generateText calls) | `resolveModel` → `resolveModelsForTask` |
+| EditorDeepAgent | `packages/ai/src/agents/editor-deep/agent.ts` | 1 (ToolLoopAgent) | `getModelForTask` → `getModelsForTask` |
+| ResearchAgent | `packages/ai/src/agents/research/agent.ts` | ~5 | `resolveModel` → `resolveModelsForTask` |
+| SecretaryAgent | Already done | — | — |
 
-### 5d. Trigger Vercel rebuild
-
-```bash
-# Push a commit or trigger manually:
-vercel --prod
-```
-
-The web app is rebuilt with the new env vars pointing to Railway.
+**Note:** Start with ChatAgent (simplest, 2 call sites), verify pattern works, then proceed to others.
 
 ---
 
-## Step 6: Deploy to Railway
+## Phase 5: Documentation & Cleanup
 
-### 6a. First deployment
-
-```bash
-cd /Users/quangnguyen/CodingPRJ/inkdown
-railway up
-```
-
-Or connect GitHub repo in Railway Dashboard for auto-deploys on push.
-
-### 6b. Monitor deployment
-
-```bash
-railway logs
-```
-
-Expected startup output:
-```
-@inkdown/api - AI Backend Server
-AI Providers: ✅ openai, ✅ google
-Server running at http://0.0.0.0:<PORT>
-```
-
-### 6c. Test the API directly
-
-```bash
-# Health check
-curl https://api.noteshell.io/health
-
-# Should return:
-# { "status": "ok", "database": "connected", ... }
-```
+1. **`CLAUDE.md`** — Update deploy instructions: `railway up` instead of `wrangler deploy`. Remove `VITE_API_BASE` from env vars section. Add `VITE_API_URL`.
+2. **`docs/ARCHITECTURE.md`** — Change API hosting from "CF Workers" to "Railway (api.noteshell.io)". Document model fallback pattern.
+3. **`apps/api/.env.example`** — Already correct, no changes needed.
+4. **`apps/web/.env.example`** — Already documents `VITE_API_URL`, no changes needed.
 
 ---
 
-## Step 7: End-to-End Verification Checklist
+## Phase 6: Decommission CF Workers (Manual)
 
-### 7a. API Health
-- [ ] `GET /health` returns 200 with `"status": "ok"`
-- [ ] Database connection confirmed in health response
-
-### 7b. Authentication
-- [ ] Send request with valid JWT → 200
-- [ ] Send request without JWT → 401
-
-### 7c. Secretary Chat (the broken feature)
-- [ ] Send message on app.noteshell.io secretary chat
-- [ ] SSE response includes `thinking` events
-- [ ] SSE response includes `text` events (LLM generates text)
-- [ ] SSE response includes `done` event
-- [ ] No `error` events about empty text generation
-
-### 7d. Other AI Features
-- [ ] Editor AI agent (inline editing) — generates edit proposals
-- [ ] Note agent — creates/updates notes
-- [ ] Chat agent — responds with text
-- [ ] Deep agent (compound requests) — works
-
-### 7e. CORS
-- [ ] Requests from `https://app.noteshell.io` succeed
-- [ ] Requests from other origins are rejected
-- [ ] Preflight OPTIONS requests return correct headers
-
-### 7f. SSE Streaming
-- [ ] Long-running streams stay connected (no premature disconnect)
-- [ ] Heartbeat events arrive every 15s for long streams
-- [ ] Client abort (navigate away) doesn't crash the server
-
-### 7g. Non-AI Routes
-- [ ] Memory files CRUD works
-- [ ] Thread listing works
-- [ ] Calendar integration works (if configured)
-- [ ] Settings/API keys endpoint works
+After Railway is verified stable for 24-48h:
+1. **Cloudflare Dashboard** → Workers → `inkdown-api` → Delete
+2. If there's a GitHub integration auto-deploying to CF Workers, disconnect it
+3. Remove any DNS records pointing to CF Workers
 
 ---
 
-## Step 8: Post-Migration Cleanup (Follow-up PR)
+## Verification Checklist
 
-After Railway is verified stable for 24-48 hours:
+### Build & Types
+- [ ] `pnpm install` succeeds (lockfile updated after removing wrangler)
+- [ ] `pnpm build` succeeds
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm test:run` passes
 
-1. **Remove CF Workers artifacts**:
-   - Delete `apps/api/wrangler.toml`
-   - Delete `apps/api/src/worker.ts`
-   - Remove `wrangler` from `apps/api/package.json` devDependencies
-   - Remove `apps/api/.gitignore` (only had `.vercel` ignore)
-   - Remove diagnostic logging from `ai-sdk-factory.ts`, `secretary/agent.ts`, `secretary.ts`
+### Dead Code Removal
+- [ ] `grep -r "wrangler\|worker\.ts" apps/api/` — zero results
+- [ ] `grep -r "VITE_API_BASE" apps/web/` — zero results
+- [ ] `apps/api/src/worker.ts` does not exist
+- [ ] `apps/api/wrangler.toml` does not exist
 
-2. **Simplify config.ts**: Remove the CF Workers comment about getters (lines 6-12). Keep getters though — they're good practice regardless.
+### Local Dev
+- [ ] `pnpm dev` starts both web (:5173) and api (:3001)
+- [ ] Secretary chat works on localhost
+- [ ] Other AI features work on localhost
 
-3. **Update CLAUDE.md**: Change deploy instructions from `wrangler deploy` to `railway up` or `git push`.
+### Production
+- [ ] `VITE_API_URL=https://api.noteshell.io` set in Vercel
+- [ ] Vercel rebuild triggered (with build cache disabled)
+- [ ] `curl https://api.noteshell.io/health` returns `{"status":"ok"}`
+- [ ] Secretary chat works on app.noteshell.io
+- [ ] CORS preflight from app.noteshell.io succeeds
 
-4. **Update docs/ARCHITECTURE.md**: Change API hosting from CF Workers to Railway.
-
-5. **Decommission CF Worker**: `npx wrangler delete` (only after Railway is confirmed stable)
-
----
-
-## Files Modified (Implementation Phase)
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `railway.toml` | CREATE | Railway deployment config |
-| `.railwayignore` | CREATE | Exclude unnecessary files |
-| `apps/api/src/index.ts` | EDIT | Add defensive `resetAIProviders()` call |
-| `packages/ai/src/providers/ai-sdk-factory.ts` | EDIT | Remove diagnostic logging |
-| `packages/ai/src/agents/secretary/agent.ts` | EDIT | Remove diagnostic logging |
-| `apps/api/src/routes/secretary.ts` | EDIT | Remove diagnostic logging |
-
-**No changes to**: Routes, middleware, config, web app code, build system, Turbo config
-
----
-
-## Rollback Plan
-
-If Railway has issues:
-1. Web app: Revert `VITE_API_BASE` in Vercel to the CF Workers URL
-2. API: Run `cd apps/api && pnpm build && npx wrangler deploy` (worker.ts still exists)
-3. Trigger Vercel rebuild
-
-The CF Worker continues to exist until explicitly deleted.
+### Model Fallback
+- [ ] `isTransientError()` utility exists and exported
+- [ ] Secretary agent has fallback (already done)
+- [ ] ChatAgent has fallback
+- [ ] NoteAgent has fallback
+- [ ] PlannerAgent has fallback
+- [ ] EditorDeepAgent has fallback
+- [ ] ResearchAgent has fallback
 
 ---
 
-## Why Not Other Options
+## Implementation Order
 
-| Option | Verdict | Reason |
-|--------|---------|--------|
-| **Fix CF Workers** | Tried, fragile | 3 bugs in recent commits, singleton fix may not resolve deeper V8 issues |
-| **Vercel Functions** | Same problems | Serverless, stateless, same timeout/compatibility concerns |
-| **Fly.io** | Good but overkill | More config complexity than Railway for this use case |
-| **Raw VPS** | Unnecessary ops | Railway gives VPS-like reliability without server management |
-| **Railway** | Best fit | Node.js native, $5/mo, git-push deploy, monorepo support, zero migration friction |
+| Step | Phase | Time Est. | Risk |
+|------|-------|-----------|------|
+| 1 | Delete CF Workers files | 5 min | None |
+| 2 | Unify API URL construction | 15 min | Low — test with `pnpm dev` |
+| 3 | Add shared fallback utilities | 10 min | None |
+| 4a | ChatAgent fallback | 15 min | Low |
+| 4b | NoteAgent fallback | 15 min | Low |
+| 4c | PlannerAgent fallback | 10 min | Low |
+| 4d | EditorDeepAgent fallback | 15 min | Low |
+| 4e | ResearchAgent fallback | 20 min | Medium — most call sites |
+| 5 | Documentation | 10 min | None |
+| 6 | Set Vercel env var + rebuild | 5 min | **Manual — user must do** |
+| 7 | Decommission CF Workers | 5 min | **Manual — user must do** |
+
+**Total code work:** ~2 hours. Steps 6-7 are manual by the user.

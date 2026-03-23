@@ -37,8 +37,8 @@ import type {
 } from '@inkdown/shared/types'
 import { isDemoMode } from '@/utils/demo'
 
-const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
-const RESEARCH_API = `${API_BASE}/api/research`
+const API_URL = import.meta.env.VITE_API_URL || ''
+const RESEARCH_API = `${API_URL}/api/research`
 
 // ============================================================================
 // Chat Types (local to store)

@@ -21,8 +21,8 @@ const props = defineProps<{
 const router = useRouter()
 const store = useSecretaryStore()
 
-const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
-const SECRETARY_API = `${API_BASE}/api/secretary`
+const API_URL = import.meta.env.VITE_API_URL || ''
+const SECRETARY_API = `${API_URL}/api/secretary`
 const BROWSER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 const TIMEZONE_HEADERS = { 'X-Timezone': BROWSER_TIMEZONE }
 

@@ -69,7 +69,7 @@ Copy `.env.example` to `.env`. Key vars:
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` — AI provider keys
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase connection
 - `VITE_PROVIDER` — `supabase` or `local`
-- `VITE_API_BASE` — API base URL (default `/api/agent`)
+- `VITE_API_URL` — API server base URL (empty in dev → Vite proxy, `https://api.noteshell.io` in prod)
 - `API_PORT` — API server port (default 3001)
 
 ### Database

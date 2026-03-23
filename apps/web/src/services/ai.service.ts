@@ -13,7 +13,7 @@ import { buildEmptyAssistantFallback } from './ai.fallback'
 import { isDemoMode } from '@/utils/demo'
 import * as Diff from 'diff'
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api/agent'
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/agent`
 
 // ============================================================================
 // Types

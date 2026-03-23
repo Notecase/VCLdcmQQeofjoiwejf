@@ -38,7 +38,7 @@ import {
   extractDraftTitle,
 } from './note-draft-artifacts'
 import { selectModel } from '../../providers/model-registry'
-import { resolveModel, getModelForTask } from '../../providers/ai-sdk-factory'
+import { resolveModelsForTask, getModelsForTask, isTransientError } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // =============================================================================
@@ -149,19 +149,31 @@ export class ResearchAgent {
   }
 
   private async *streamSimpleChat(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const { model, entry } = resolveModel('research')
+    const { primary, fallback } = resolveModelsForTask('research')
 
-    const result = streamText({
-      model,
-      system: 'You are a concise and helpful assistant for note-taking and learning.',
-      prompt: message,
-      temperature: 0.5,
-      maxOutputTokens: 4000,
-      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
-    })
+    for (const modelOption of [primary, fallback]) {
+      if (!modelOption) continue
+      try {
+        const result = streamText({
+          model: modelOption.model,
+          system: 'You are a concise and helpful assistant for note-taking and learning.',
+          prompt: message,
+          temperature: 0.5,
+          maxOutputTokens: 4000,
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
+        })
 
-    for await (const chunk of result.textStream) {
-      yield { event: 'text', data: chunk, isDelta: true }
+        for await (const chunk of result.textStream) {
+          yield { event: 'text', data: chunk, isDelta: true }
+        }
+        return
+      } catch (err) {
+        if (isTransientError(err) && modelOption === primary && fallback) {
+          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
     }
   }
 
@@ -204,7 +216,7 @@ export class ResearchAgent {
     message: string,
     threadId: string
   ): AsyncGenerator<ResearchStreamEvent> {
-    const { model, entry } = resolveModel('research')
+    const { primary: draftModel } = resolveModelsForTask('research')
 
     const existingDraft = this.state.noteDraft
     const originalContent = existingDraft?.currentContent || ''
@@ -221,7 +233,7 @@ export class ResearchAgent {
       : message
 
     const result = streamText({
-      model,
+      model: draftModel.model,
       system: [
         'You are an expert note-writing assistant.',
         'Return markdown only with a clear H1 title on the first line.',
@@ -234,7 +246,7 @@ export class ResearchAgent {
       prompt,
       temperature: 0.5,
       maxOutputTokens: 4000,
-      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
+      onFinish: trackAISDKUsage({ model: draftModel.entry.id, taskType: 'research' }),
     })
 
     let generated = ''
@@ -378,7 +390,9 @@ export class ResearchAgent {
     prompt: string,
     taskType: string
   ) {
-    const { model, entry } = resolveModel(taskType as any)
+    const { primary: artModel } = resolveModelsForTask(taskType as any)
+    const model = artModel.model
+    const entry = artModel.entry
 
     const systemPrompt = `You are an interactive artifact generator. Create engaging, self-contained web components.
 
@@ -430,20 +444,34 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
   }
 
   private async *streamMarkdownFile(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const { model, entry } = resolveModel('research')
+    const { primary: mdPrimary, fallback: mdFallback } = resolveModelsForTask('research')
+    let text = ''
 
-    const { text } = await generateText({
-      model,
-      system: [
-        'You write complete long-form markdown deliverables.',
-        'Return markdown only (no code fences, no prose outside markdown).',
-        'Use clear headings and actionable detail.',
-      ].join(' '),
-      prompt: message,
-      temperature: 0.4,
-      maxOutputTokens: 3000,
-      onFinish: trackAISDKUsage({ model: entry.id, taskType: 'research' }),
-    })
+    for (const modelOption of [mdPrimary, mdFallback]) {
+      if (!modelOption) continue
+      try {
+        const result = await generateText({
+          model: modelOption.model,
+          system: [
+            'You write complete long-form markdown deliverables.',
+            'Return markdown only (no code fences, no prose outside markdown).',
+            'Use clear headings and actionable detail.',
+          ].join(' '),
+          prompt: message,
+          temperature: 0.4,
+          maxOutputTokens: 3000,
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
+        })
+        text = result.text
+        break
+      } catch (err) {
+        if (isTransientError(err) && modelOption === mdPrimary && mdFallback) {
+          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${mdFallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
+    }
 
     const markdown = text.trim() || '# Final Report\n\nUnable to generate report content.'
     const file = this.upsertVirtualFile('final_report.md', markdown)
@@ -501,19 +529,35 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
 
     const tools = createResearchTools(toolContext, { includeFileTools: allowFileWrites })
 
-    // Create AI SDK v6 ToolLoopAgent (replaces deepagents createDeepAgent)
-    const model = getModelForTask('research')
-    const agent = new ToolLoopAgent({
-      model,
-      instructions: systemPrompt,
-      tools,
-      stopWhen: stepCountIs(30),
-      onFinish: trackAISDKUsage({ model: 'research', taskType: 'research' }),
-    })
+    // Create AI SDK v6 ToolLoopAgent with fallback
+    const { primary: resPrimary, fallback: resFallback } = getModelsForTask('research')
+    let result: Awaited<ReturnType<ToolLoopAgent['stream']>> | undefined
 
-    const result = await agent.stream({
-      messages: [{ role: 'user', content: message }],
-    })
+    for (const modelOption of [resPrimary, resFallback]) {
+      if (!modelOption) continue
+      try {
+        const agent = new ToolLoopAgent({
+          model: modelOption.model,
+          instructions: systemPrompt,
+          tools,
+          stopWhen: stepCountIs(30),
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
+        })
+        result = await agent.stream({
+          messages: [{ role: 'user', content: message }],
+        })
+        break
+      } catch (err) {
+        if (isTransientError(err) && modelOption === resPrimary && resFallback) {
+          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${resFallback.entry.id}`)
+          yield { event: 'thinking', data: `Switching to ${resFallback.entry.displayName}...` }
+          continue
+        }
+        throw err
+      }
+    }
+
+    if (!result) throw new Error('[ResearchAgent] All models unavailable')
 
     const subagentLifecycle = new SubagentLifecycle(['researcher', 'writer'])
     const subagentOutputs = new Map<string, string>()

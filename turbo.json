@@ -1,8 +1,8 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local", "**/.env"],
-  "globalPassThroughEnv": ["VITE_API_BASE", "VITE_API_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_PROVIDER", "VITE_DEMO_PASSWORD", "VITE_ENABLE_AI"],
-  "globalEnv": ["VITE_API_BASE", "VITE_API_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_PROVIDER", "VITE_DEMO_PASSWORD", "VITE_ENABLE_AI"],
+  "globalPassThroughEnv": ["VITE_API_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_PROVIDER", "VITE_DEMO_PASSWORD", "VITE_ENABLE_AI"],
+  "globalEnv": ["VITE_API_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_PROVIDER", "VITE_DEMO_PASSWORD", "VITE_ENABLE_AI"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

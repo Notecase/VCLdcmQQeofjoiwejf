@@ -186,6 +186,42 @@ export function getEmbeddingModel(): EmbeddingModel {
 }
 
 // ============================================================================
+// Fallback Utilities
+// ============================================================================
+
+/** Check if an error is transient (rate limit, capacity, etc.) */
+export function isTransientError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error)
+  return /high demand|rate limit|overloaded|Resource exhausted|\b503\b|\b429\b/i.test(msg)
+}
+
+/**
+ * Get primary + fallback models, respecting an optional user model override.
+ * Combines resolveModel() semantics with getModelsForTask() fallback support.
+ */
+export function resolveModelsForTask(
+  taskType: AITaskType,
+  overrideModelId?: string
+): {
+  primary: { model: LanguageModel; entry: ModelEntry }
+  fallback: { model: LanguageModel; entry: ModelEntry } | null
+} {
+  if (overrideModelId) {
+    const overrideEntry = getModel(overrideModelId)
+    if (overrideEntry) {
+      const fallbackEntry = selectFallbackModel(taskType)
+      return {
+        primary: { model: createAIModel(overrideEntry), entry: overrideEntry },
+        fallback: fallbackEntry
+          ? { model: createAIModel(fallbackEntry), entry: fallbackEntry }
+          : null,
+      }
+    }
+  }
+  return getModelsForTask(taskType)
+}
+
+// ============================================================================
 // Testing / Reset
 // ============================================================================
 

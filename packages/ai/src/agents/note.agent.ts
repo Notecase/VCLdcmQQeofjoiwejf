@@ -15,7 +15,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { streamText, generateText } from 'ai'
 import type { SharedContextService } from '../services/shared-context.service'
 import { selectModel } from '../providers/model-registry'
-import { resolveModel } from '../providers/ai-sdk-factory'
+import { resolveModelsForTask, isTransientError } from '../providers/ai-sdk-factory'
 import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 import {
   EDIT_START_MARKER,
@@ -386,20 +386,33 @@ export class NoteAgent {
     yield { type: 'thinking', data: genDescriptions[action] || 'Generating content...' }
 
     let aiStream
-    try {
-      const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
-      aiStream = streamText({
-        model: noteModel,
-        system: validatedSystemPrompt,
-        messages: [{ role: 'user' as const, content: validatedUserContent }],
-        temperature: 0.7,
-        maxOutputTokens: 4000,
-        onFinish: trackAISDKUsage({ model: noteEntry.id, taskType: 'note-agent' }),
-      })
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      console.error('[NoteAgent] AI SDK error:', errMsg)
-      yield { type: 'text-delta', data: `AI processing error: ${errMsg}` }
+    const { primary, fallback } = resolveModelsForTask('note-agent', this.model)
+    for (const modelOption of [primary, fallback]) {
+      if (!modelOption) continue
+      try {
+        aiStream = streamText({
+          model: modelOption.model,
+          system: validatedSystemPrompt,
+          messages: [{ role: 'user' as const, content: validatedUserContent }],
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'note-agent' }),
+        })
+        break
+      } catch (error) {
+        if (isTransientError(error) && modelOption === primary && fallback) {
+          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          continue
+        }
+        const errMsg = error instanceof Error ? error.message : String(error)
+        console.error('[NoteAgent] AI SDK error:', errMsg)
+        yield { type: 'text-delta', data: `AI processing error: ${errMsg}` }
+        yield { type: 'finish', data: { success: false } }
+        return
+      }
+    }
+    if (!aiStream) {
+      yield { type: 'text-delta', data: 'AI processing error: All models unavailable' }
       yield { type: 'finish', data: { success: false } }
       return
     }
@@ -517,19 +530,31 @@ export class NoteAgent {
     yield { type: 'thinking', data: 'Generating targeted changes...' }
 
     let aiStream
-    try {
-      const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
-      aiStream = streamText({
-        model: noteModel,
-        system: systemPrompt,
-        messages: [{ role: 'user' as const, content: config.focusedContent }],
-        temperature: 0.7,
-        maxOutputTokens: 4000,
-        onFinish: trackAISDKUsage({ model: noteEntry.id, taskType: 'note-agent' }),
-      })
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      console.error('[NoteAgent] Surgical edit error:', errMsg)
+    const { primary: surgPrimary, fallback: surgFallback } = resolveModelsForTask('note-agent', this.model)
+    for (const modelOption of [surgPrimary, surgFallback]) {
+      if (!modelOption) continue
+      try {
+        aiStream = streamText({
+          model: modelOption.model,
+          system: systemPrompt,
+          messages: [{ role: 'user' as const, content: config.focusedContent }],
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'note-agent' }),
+        })
+        break
+      } catch (error) {
+        if (isTransientError(error) && modelOption === surgPrimary && surgFallback) {
+          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${surgFallback.entry.id}`)
+          continue
+        }
+        const errMsg = error instanceof Error ? error.message : String(error)
+        console.error('[NoteAgent] Surgical edit error:', errMsg)
+        yield { type: 'finish', data: { success: false } }
+        return
+      }
+    }
+    if (!aiStream) {
       yield { type: 'finish', data: { success: false } }
       return
     }
@@ -734,18 +759,29 @@ export class NoteAgent {
     const validSystemPrompt = systemPrompt || 'You are a helpful assistant.'
     const validUserInput = userInput || 'Please help with this note.'
 
-    const startTime = Date.now()
-    const { model: noteModel, entry: noteEntry } = resolveModel('note-agent', this.model)
-    const result = await generateText({
-      model: noteModel,
-      system: validSystemPrompt,
-      messages: [{ role: 'user' as const, content: validUserInput }],
-      temperature: 0.7,
-      maxOutputTokens: 4000,
-    })
-    recordAISDKUsage(result.usage, { model: noteEntry.id, taskType: 'note-agent' }, startTime)
-
-    return result.text || ''
+    const { primary: genPrimary, fallback: genFallback } = resolveModelsForTask('note-agent', this.model)
+    for (const modelOption of [genPrimary, genFallback]) {
+      if (!modelOption) continue
+      try {
+        const startTime = Date.now()
+        const result = await generateText({
+          model: modelOption.model,
+          system: validSystemPrompt,
+          messages: [{ role: 'user' as const, content: validUserInput }],
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+        })
+        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'note-agent' }, startTime)
+        return result.text || ''
+      } catch (err) {
+        if (isTransientError(err) && modelOption === genPrimary && genFallback) {
+          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${genFallback.entry.id}`)
+          continue
+        }
+        throw err
+      }
+    }
+    throw new Error('[NoteAgent] All models unavailable')
   }
 
   private extractTitle(content: string): string | undefined {

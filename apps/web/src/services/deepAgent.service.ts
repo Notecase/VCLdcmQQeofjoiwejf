@@ -11,8 +11,8 @@
 import { authFetch, authFetchSSE } from '@/utils/api'
 import type { InterruptResponse } from '@inkdown/shared/types'
 
-const API_BASE = import.meta.env.VITE_API_BASE?.replace('/api/agent', '') || ''
-const RESEARCH_API = `${API_BASE}/api/research`
+const API_URL = import.meta.env.VITE_API_URL || ''
+const RESEARCH_API = `${API_URL}/api/research`
 
 /**
  * Send a chat message and get an SSE stream response.

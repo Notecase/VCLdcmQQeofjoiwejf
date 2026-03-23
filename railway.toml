@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm build"
 
 [deploy]
-startCommand = "npx tsx apps/api/src/index.ts"
+startCommand = "node_modules/.bin/tsx apps/api/src/index.ts"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

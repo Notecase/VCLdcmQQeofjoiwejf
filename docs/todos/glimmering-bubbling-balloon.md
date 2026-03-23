@@ -39,8 +39,8 @@ const props = defineProps<{
 }>()
 
 // Line 29: Use override when provided
-const thinkingSteps = computed(() =>
-  props.thinkingStepsOverride ?? store.getThinkingStepsForMessage(props.messageId)
+const thinkingSteps = computed(
+  () => props.thinkingStepsOverride ?? store.getThinkingStepsForMessage(props.messageId)
 )
 ```
 
@@ -51,6 +51,7 @@ Import `ThinkingStep` type from `@/stores/ai`.
 **File:** `apps/web/src/components/secretary/SecretaryMessageCard.vue`
 
 **Add imports:**
+
 ```typescript
 import { ActivityStream } from '@/components/ai/activity'
 import type { ThinkingStep, ToolCall } from '@/stores/ai'
@@ -60,19 +61,22 @@ import StreamingCursor from '@/components/ai/shared/StreamingCursor.vue'
 **Remove imports:** `ToolCallCard`, `Loader2`, `Brain`
 
 **Add computed adapters** (secretary `string[]` → `ThinkingStep[]`):
+
 ```typescript
 const thinkingStepsAsActivity = computed<ThinkingStep[]>(() =>
   (props.message.thinkingSteps || []).map((desc, i, arr) => ({
     id: `sec-${props.message.id}-${i}`,
     type: 'thought' as const,
     description: desc,
-    status: (props.isStreaming && i === arr.length - 1) ? 'running' as const : 'complete' as const,
+    status:
+      props.isStreaming && i === arr.length - 1 ? ('running' as const) : ('complete' as const),
     startedAt: props.message.createdAt,
   }))
 )
 ```
 
 **Add secretary tool description map** (secretary tool names → human-readable):
+
 ```typescript
 const secretaryToolDescriptions: Record<string, string> = {
   readMemoryFile: 'Reading your memory...',
@@ -93,18 +97,19 @@ const secretaryToolDescriptions: Record<string, string> = {
 }
 
 const toolCallsForActivity = computed<ToolCall[]>(() =>
-  (props.message.toolCalls || []).map(tc => ({
+  (props.message.toolCalls || []).map((tc) => ({
     ...tc,
     toolName: secretaryToolDescriptions[tc.toolName] || tc.toolName.replace(/_/g, ' ') + '...',
   }))
 )
 
-const hasActivityContent = computed(() =>
-  thinkingStepsAsActivity.value.length > 0 || toolCallsForActivity.value.length > 0
+const hasActivityContent = computed(
+  () => thinkingStepsAsActivity.value.length > 0 || toolCallsForActivity.value.length > 0
 )
 ```
 
 **Replace template** — remove the thinking section + ToolCallCard loop, add ActivityStream:
+
 ```html
 <!-- Replace lines 70-89 with: -->
 <ActivityStream
@@ -135,6 +140,7 @@ Replace inline `<span class="streaming-cursor" />` with `<StreamingCursor v-if="
 **File:** `apps/web/src/components/deepagent/ToolCallBox.vue`
 
 **Add tool mapping + computed:**
+
 ```typescript
 const toolDescriptions: Record<string, string> = {
   write_file: 'Writing file...',
@@ -161,8 +167,9 @@ const displayName = computed(() => {
   if (name === 'web_search' && args.query) return `Searching: ${String(args.query).slice(0, 60)}`
   if (name === 'search_notes' && args.query) return `Searching for "${args.query}"...`
 
-  return toolDescriptions[name]
-    || name.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) + '...'
+  return (
+    toolDescriptions[name] || name.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
+  )
 })
 ```
 
@@ -207,11 +214,13 @@ Phase E (ToolCallBox descriptions):
 ## Key Files
 
 ### Modified (3 files)
+
 - `apps/web/src/components/ai/activity/ActivityStream.vue` — Add `thinkingStepsOverride` prop
 - `apps/web/src/components/secretary/SecretaryMessageCard.vue` — Rewrite to use ActivityStream
 - `apps/web/src/components/deepagent/ToolCallBox.vue` — Add tool description map + displayName
 
 ### Reference (unchanged)
+
 - `apps/web/src/components/ai/activity/ActivityItem.vue` — ThinkingStep type contract
 - `apps/web/src/stores/secretary.ts` — SecretaryChatMessage/SecretaryToolCall types
 - `apps/web/src/stores/ai.ts` — ThinkingStep, ToolCall types

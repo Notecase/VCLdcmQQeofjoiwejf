@@ -53,10 +53,11 @@ describe('createEditorDeepTools', () => {
     expect(qaTool).toBeTruthy()
 
     // AI SDK tools have an execute property
-    const output = await qaTool.execute!(
-      { question: "what's this note about?" },
-      { toolCallId: 'test-call', abortSignal: new AbortController().signal, messages: [] } as any
-    )
+    const output = await qaTool.execute!({ question: "what's this note about?" }, {
+      toolCallId: 'test-call',
+      abortSignal: new AbortController().signal,
+      messages: [],
+    } as any)
 
     expect(executeToolMock).toHaveBeenCalledWith(
       'read_note',
@@ -88,10 +89,11 @@ describe('createEditorDeepTools', () => {
     const addTool = tools.add_paragraph
     expect(addTool).toBeTruthy()
 
-    const output = await addTool.execute!(
-      { paragraph: 'A new paragraph.' },
-      { toolCallId: 'test-call', abortSignal: new AbortController().signal, messages: [] } as any
-    )
+    const output = await addTool.execute!({ paragraph: 'A new paragraph.' }, {
+      toolCallId: 'test-call',
+      abortSignal: new AbortController().signal,
+      messages: [],
+    } as any)
 
     expect(executeToolMock).not.toHaveBeenCalled()
     expect(events.some((event) => event.type === 'clarification-requested')).toBe(true)

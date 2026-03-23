@@ -41,8 +41,9 @@ const displayName = computed(() => {
   if (name === 'web_search' && args.query) return `Searching: ${String(args.query).slice(0, 60)}`
   if (name === 'search_notes' && args.query) return `Searching for "${args.query}"...`
 
-  return toolDescriptions[name]
-    || name.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) + '...'
+  return (
+    toolDescriptions[name] || name.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
+  )
 })
 
 const statusIcon = computed(() => {

@@ -287,7 +287,8 @@ export async function runDeepResearch(
     maxConsecutivePollErrors = DEFAULT_MAX_CONSECUTIVE_POLL_ERRORS,
   } = config
 
-  const geminiApiKey = _geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || ''
+  const geminiApiKey =
+    _geminiApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || ''
 
   // Notify: starting
   onProgress?.({

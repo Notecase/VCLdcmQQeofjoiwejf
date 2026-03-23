@@ -350,7 +350,10 @@ Please proceed through the full pipeline: research → index → outline → app
             case 'tool-error': {
               eventQueue.push({
                 event: 'error',
-                data: { message: `Tool "${part.toolName}" failed: ${part.error}`, stage: currentStage },
+                data: {
+                  message: `Tool "${part.toolName}" failed: ${part.error}`,
+                  stage: currentStage,
+                },
               })
               break
             }

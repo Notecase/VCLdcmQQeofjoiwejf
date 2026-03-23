@@ -142,16 +142,19 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
         <span
           class="role-label"
           :class="roleClass"
-        >{{ roleLabel }}</span>
+          >{{ roleLabel }}</span
+        >
         <span
           v-if="message.model"
           class="model-chip"
-        >{{ message.model }}</span>
+          >{{ message.model }}</span
+        >
       </div>
       <span
         v-if="formattedTime"
         class="timestamp"
-      >{{ formattedTime }}</span>
+        >{{ formattedTime }}</span
+      >
     </div>
 
     <!-- Activity Stream (replaces MessageThinkingSteps + ToolCallCard) -->
@@ -267,7 +270,9 @@ function handleDeleteArtifact(artifact: CompletedArtifact) {
   padding: 16px 0;
   margin-bottom: 0;
   border-bottom: 1px solid var(--chat-separator);
-  transition: background var(--transition-normal) ease, border-color var(--transition-normal) ease;
+  transition:
+    background var(--transition-normal) ease,
+    border-color var(--transition-normal) ease;
   position: relative;
 }
 

@@ -27,7 +27,10 @@ function handleChipClick(noteId: string) {
 <template>
   <div class="source-chips">
     <div class="chips-label">
-      <FileText :size="11" class="label-icon" />
+      <FileText
+        :size="11"
+        class="label-icon"
+      />
       <span>{{ citations.length }} source{{ citations.length > 1 ? 's' : '' }}</span>
     </div>
     <div class="chips-list">
@@ -44,7 +47,8 @@ function handleChipClick(noteId: string) {
       <span
         v-if="overflowCount > 0"
         class="overflow-pill"
-      >+{{ overflowCount }} more</span>
+        >+{{ overflowCount }} more</span
+      >
     </div>
   </div>
 </template>

@@ -79,11 +79,13 @@ function handleReject() {
           <span
             v-if="addedLines > 0"
             class="added"
-          >+{{ addedLines }}</span>
+            >+{{ addedLines }}</span
+          >
           <span
             v-if="removedLines > 0"
             class="removed"
-          >-{{ removedLines }}</span>
+            >-{{ removedLines }}</span
+          >
         </span>
       </div>
       <div class="header-right">
@@ -132,7 +134,9 @@ function handleReject() {
           class="diff-line"
           :class="line.type"
         >
-          <span class="diff-prefix">{{ line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ' }}</span>
+          <span class="diff-prefix">{{
+            line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '
+          }}</span>
           <span class="diff-text">{{ line.text }}</span>
         </div>
       </div>
@@ -147,7 +151,9 @@ function handleReject() {
   border-radius: 10px;
   overflow: hidden;
   margin-top: 8px;
-  transition: border-color 0.2s ease, opacity 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .edit-proposal-card:hover {

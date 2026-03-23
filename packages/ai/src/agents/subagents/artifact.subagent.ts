@@ -141,7 +141,10 @@ export class ArtifactSubagent {
     let artifact: ArtifactData | null = null
 
     const structuredOutput = await result.output
-    if (structuredOutput && (structuredOutput.html || structuredOutput.css || structuredOutput.javascript)) {
+    if (
+      structuredOutput &&
+      (structuredOutput.html || structuredOutput.css || structuredOutput.javascript)
+    ) {
       artifact = {
         title: structuredOutput.title || this.extractTitle(taskDescription),
         html: structuredOutput.html || '',
@@ -176,7 +179,11 @@ export class ArtifactSubagent {
           maxOutputTokens: 8000,
           output: Output.object({ schema: ArtifactSchema }),
         })
-        recordAISDKUsage(retryResult.usage, { model: retryEntry.id, taskType: 'artifact' }, retryStart)
+        recordAISDKUsage(
+          retryResult.usage,
+          { model: retryEntry.id, taskType: 'artifact' },
+          retryStart
+        )
 
         if (retryResult.output) {
           artifact = {
@@ -202,7 +209,8 @@ export class ArtifactSubagent {
         data: {
           success: false,
           artifact,
-          error: 'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
+          error:
+            'Failed to generate artifact code. The AI response could not be parsed into HTML/CSS/JavaScript.',
         },
       }
       return

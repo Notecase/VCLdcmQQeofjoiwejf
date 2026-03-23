@@ -30,14 +30,7 @@ import ExercisesModal from './modals/ExercisesModal.vue'
 import ResourcesModal from './modals/ResourcesModal.vue'
 import SlidesModal from './modals/SlidesModal.vue'
 
-import {
-  Search,
-  Minimize2,
-  Plus,
-  Loader2,
-  ArrowUp,
-  FileText,
-} from 'lucide-vue-next'
+import { Search, Minimize2, Plus, Loader2, ArrowUp, FileText } from 'lucide-vue-next'
 
 // Props
 defineProps<{

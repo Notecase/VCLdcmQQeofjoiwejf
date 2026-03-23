@@ -30,11 +30,7 @@ import { trackAISDKUsage } from '../providers/ai-sdk-usage'
 export class WorkflowActions {
   private storage: ReturnType<typeof createSourceStorage>
 
-  constructor(
-    supabase: SupabaseClient,
-    userId: string,
-    _openaiApiKey?: string
-  ) {
+  constructor(supabase: SupabaseClient, userId: string, _openaiApiKey?: string) {
     // API key no longer needed — AI SDK reads from env vars via model registry
     this.storage = createSourceStorage(supabase, userId)
   }

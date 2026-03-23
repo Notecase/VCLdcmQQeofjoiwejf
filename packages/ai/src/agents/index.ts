@@ -221,7 +221,6 @@ export {
   type TableSubagentResult,
 } from './subagents'
 
-
 // ============================================================================
 // Agent Factory
 // ============================================================================
@@ -234,13 +233,7 @@ import { SecretaryAgent } from './secretary'
 import { ResearchAgent } from './research'
 import { ExplainAgent } from './explain'
 
-export type AgentType =
-  | 'chat'
-  | 'note'
-  | 'planner'
-  | 'secretary'
-  | 'research'
-  | 'explain'
+export type AgentType = 'chat' | 'note' | 'planner' | 'secretary' | 'research' | 'explain'
 
 export interface AgentConfig {
   supabase: SupabaseClient

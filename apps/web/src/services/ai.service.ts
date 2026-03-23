@@ -519,10 +519,7 @@ async function streamFromAgent(agentType: string, options: AgentRequestOptions):
  * Used to throttle Pinia store mutations during fast LLM streams
  * (~100 text-delta/sec → ~20 store updates/sec at 50ms interval).
  */
-function createStreamThrottler(
-  flush: (accumulated: string) => void,
-  intervalMs = 50
-) {
+function createStreamThrottler(flush: (accumulated: string) => void, intervalMs = 50) {
   let buffer = ''
   let timer: ReturnType<typeof setTimeout> | null = null
   return {
@@ -578,463 +575,467 @@ async function processSSEResponse(
         const chunk = sseEvent.data as StreamChunk
 
         switch (chunk.type) {
-              case 'assistant-start':
-                store.setStatus('streaming')
-                break
+          case 'assistant-start':
+            store.setStatus('streaming')
+            break
 
-              case 'assistant-delta':
-              case 'text-delta': {
-                fullContent += chunk.data as string
-                throttler.push(chunk.data as string)
-                break
-              }
+          case 'assistant-delta':
+          case 'text-delta': {
+            fullContent += chunk.data as string
+            throttler.push(chunk.data as string)
+            break
+          }
 
-              case 'assistant-final': {
-                throttler.forceFlush()
-                const finalText = typeof chunk.data === 'string' ? chunk.data : ''
-                if (finalText && !fullContent.trim()) {
-                  fullContent = finalText
-                  const sessionId = store.activeSessionId
-                  if (sessionId && store.sessions[sessionId]) {
-                    store.appendToLastMessage(sessionId, finalText)
-                  }
-                }
-                store.setStatus('idle')
-                break
-              }
-
-              case 'done':
-              case 'finish':
-                throttler.forceFlush()
-                store.setStatus('idle')
-                break
-
-              case 'error':
-                throttler.forceFlush()
-                store.setError(chunk.data as string)
-                break
-
-              case 'thinking': {
-                // Add thinking step to store, linked to current assistant message
-                const thinkingData = chunk.data as {
-                  description: string
-                  type?: ThinkingStep['type']
-                }
-                const runningThoughts = store.thinkingSteps.filter(
-                  (step) => step.status === 'running' && step.type !== 'tool'
-                )
-                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
-                if (lastRunningThought) {
-                  store.completeThinkingStep(lastRunningThought.id)
-                }
-
-                // Get current assistant message ID for linking
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                store.addThinkingStep({
-                  type: thinkingData.type || 'thought',
-                  description: thinkingData.description || (thinkingData as unknown as string),
-                  status: 'running',
-                  messageId,
-                })
-                store.setStatus('thinking')
-                break
-              }
-
-              case 'tool-call': {
-                // Add tool call as thinking step, linked to current assistant message
-                // Backend may send 'tool' or 'name' depending on the source
-                const toolData = chunk.data as {
-                  name?: string
-                  tool?: string
-                  toolName?: string
-                  arguments?: Record<string, unknown>
-                }
-                const toolName = toolData.name || toolData.tool || toolData.toolName || 'unknown'
-                const runningThoughts = store.thinkingSteps.filter(
-                  (step) => step.status === 'running' && step.type !== 'tool'
-                )
-                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
-                if (lastRunningThought) {
-                  store.completeThinkingStep(lastRunningThought.id)
-                }
-
-                // Get current assistant message ID for linking
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                // Map tool names to human-readable descriptions
-                const toolDescriptions: Record<string, string> = {
-                  create_note: 'Preparing new note...',
-                  answer_question_about_note: 'Reading your note...',
-                  read_note_structure: 'Analyzing note structure...',
-                  add_paragraph: 'Adding content to your note...',
-                  edit_paragraph: 'Editing your note...',
-                  remove_paragraph: 'Removing content...',
-                  create_artifact_from_note: 'Creating interactive widget...',
-                  insert_table: 'Inserting table...',
-                  database_action: 'Running database operation...',
-                  read_memory: 'Checking memory...',
-                  write_memory: 'Saving to memory...',
-                  ask_user_preference: 'Asking for your preference...',
-                }
-                const toolDescription = toolDescriptions[toolName]
-                  || toolName.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
-
-                store.addThinkingStep({
-                  type: 'tool',
-                  description: toolDescription,
-                  status: 'running',
-                  messageId,
-                })
-                store.setStatus('tool-calling')
-                break
-              }
-
-              case 'tool-result': {
-                // Complete the last tool thinking step
-                const runningTools = store.thinkingSteps.filter(
-                  (step) => step.status === 'running' && step.type === 'tool'
-                )
-                const stepToComplete =
-                  runningTools[runningTools.length - 1] ||
-                  store.thinkingSteps.filter((step) => step.status === 'running').slice(-1)[0]
-                if (stepToComplete) {
-                  store.completeThinkingStep(stepToComplete.id)
-                }
-                store.setStatus('streaming')
-                break
-              }
-
-              case 'edit-proposal': {
-                // Handle edit proposal - compute diff hunks and add to store
-                const editData = chunk.data as EditProposalData
-                const diffHunks = computeDiffHunks(editData.original, editData.proposed)
-
-                // Get current assistant message ID for linking
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const editMessageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                const pendingEdit = store.addPendingEdit({
-                  blockId: editData.blockId || '',
-                  noteId: editData.noteId,
-                  originalContent: editData.original,
-                  proposedContent: editData.proposed,
-                  diffHunks,
-                  messageId: editMessageId,
-                })
-
-                // Automatically activate this edit for inline visualization
-                store.setActiveEdit(pendingEdit.id)
-
-                // Auto-open preview panel if there's a noteId
-                if (editData.noteId && !store.previewPanelVisible) {
-                  store.openNotePreview(editData.noteId)
-                }
-                break
-              }
-
-              case 'clarification-request': {
-                // Handle clarification request - AI needs user to select target section
-                const clarificationData = chunk.data as ClarificationRequestData
-                store.setClarificationRequest({
-                  noteId: store.activeSession?.contextNoteIds?.[0] || '',
-                  instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
-                  options: clarificationData.options,
-                  reason: clarificationData.reason,
-                })
-                // Complete any running thinking steps
-                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
-                runningSteps.forEach((step) => store.completeThinkingStep(step.id))
-                // Status is set to 'clarifying' inside setClarificationRequest
-                break
-              }
-
-              case 'clarification-requested': {
-                const clarificationData = chunk.data as {
-                  options?: ClarificationRequestData['options']
-                  reason?: string
-                }
-                store.setClarificationRequest({
-                  noteId: store.activeSession?.contextNoteIds?.[0] || '',
-                  instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
-                  options: clarificationData.options || [],
-                  reason: clarificationData.reason || 'Please provide more context.',
-                })
-                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
-                runningSteps.forEach((step) => store.completeThinkingStep(step.id))
-                break
-              }
-
-              case 'code-preview': {
-                // Handle code preview during artifact streaming
-                const previewData = chunk.data as {
-                  phase: 'html' | 'css' | 'javascript'
-                  preview: string
-                  totalChars: number
-                }
-                store.updateCodePreview(previewData)
-                break
-              }
-
-              case 'pre-action-question': {
-                // Handle proactive AI question before creating notes or major edits
-                const questionData = chunk.data as {
-                  id: string
-                  question: string
-                  options: Array<{ id: string; label: string; description?: string }>
-                  allowFreeText?: boolean
-                  context?: string
-                }
-                store.setPreActionQuestion(questionData)
-                // Complete any running thinking steps
-                const runningSteps2 = store.thinkingSteps.filter(
-                  (step) => step.status === 'running'
-                )
-                runningSteps2.forEach((step) => store.completeThinkingStep(step.id))
-                break
-              }
-
-              case 'artifact': {
-                // Handle artifact creation - add to pending artifacts for insertion into editor
-                const artifactData = chunk.data as ArtifactData
-                const authStore = useAuthStore()
-
-                // Clear the streaming preview when artifact completes
-                store.clearCodePreview()
-
-                const noteId = artifactData.noteId || store.activeSession?.contextNoteIds?.[0] || ''
-
-                if (noteId) {
-                  // Pass userId for database persistence
-                  // Note: Don't pass sessionId - chat sessions aren't persisted to DB yet,
-                  // so the local UUID would cause FK constraint violation (409 Conflict)
-                  store.addPendingArtifact(
-                    noteId,
-                    {
-                      title: artifactData.title,
-                      html: artifactData.html,
-                      css: artifactData.css,
-                      javascript: artifactData.javascript,
-                    },
-                    {
-                      userId: authStore.user?.id,
-                    }
-                  )
-
-                  // Track completed artifact linked to the current assistant message for UI rendering
-                  const session = store.activeSession
-                  if (session && session.messages.length > 0) {
-                    const lastMessage = session.messages[session.messages.length - 1]
-                    if (lastMessage.role === 'assistant') {
-                      store.addCompletedArtifact({
-                        title: artifactData.title,
-                        noteId,
-                        sessionId: store.activeSessionId || '',
-                        messageId: lastMessage.id,
-                      })
-                    }
-                  }
-
-                  console.log('[AI] Artifact added to pending:', artifactData.title)
-                } else {
-                  console.warn('[AI] Received artifact but no noteId available')
-                }
-                break
-              }
-
-              case 'intent':
-                console.log(`[AI] ${chunk.type}:`, chunk.data)
-                break
-
-              case 'citation': {
-                const citationData = chunk.data as { noteId: string; title: string; snippet: string }
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-                if (messageId) {
-                  store.addMessageCitation({ ...citationData, messageId })
-                }
-                break
-              }
-
-              case 'action-summary': {
-                const summaryData = chunk.data as { action: string; title?: string; noteId?: string; description: string }
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-                if (messageId) {
-                  store.addCompletedAction({ ...summaryData, messageId })
-                }
-                break
-              }
-
-              // ===== DeepAgent Events =====
-
-              case 'decomposition': {
-                // Task decomposition from DeepAgent
-                const decompositionData = chunk.data as DecompositionData
-                store.setSubTasks(decompositionData.tasks)
-                console.log('[AI] Task decomposition:', decompositionData.reasoning)
-                break
-              }
-
-              case 'subtask-start': {
-                // Subagent starting work on a task
-                const startData = chunk.data as SubTaskData
-                store.updateSubTask(startData.id, { status: 'in_progress' })
-
-                // Get current assistant message ID for linking
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                store.addThinkingStep({
-                  type: 'create',
-                  description: `Working on: ${startData.description}`,
-                  status: 'running',
-                  messageId,
-                })
-                store.setStatus('thinking')
-                break
-              }
-
-              case 'subtask-progress': {
-                // Progress update from subagent
-                const progressData = chunk.data as SubtaskProgressData
-                store.updateSubTaskProgress(
-                  progressData.taskId,
-                  progressData.progress,
-                  progressData.message
-                )
-                break
-              }
-
-              case 'subtask-complete': {
-                // Subagent completed task
-                const completeData = chunk.data as { taskId: string; result: unknown }
-                store.updateSubTask(completeData.taskId, { status: 'completed' })
-
-                // Complete the thinking step
-                const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
-                const lastRunningStep = runningSteps[runningSteps.length - 1]
-                if (lastRunningStep) {
-                  store.completeThinkingStep(lastRunningStep.id)
-                }
-
-                store.setStatus('streaming')
-                break
-              }
-
-              // ===== Multi-Mode Streaming Events =====
-
-              case 'subagent-start': {
-                const subagentData = chunk.data as {
-                  id: string
-                  name: string
-                  description: string
-                  status: string
-                  startedAt?: number
-                }
-                store.startSubagentTracker(subagentData)
-
-                // Add as thinking step
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                store.addThinkingStep({
-                  type: 'create',
-                  description: `Subagent: ${subagentData.name}`,
-                  status: 'running',
-                  messageId,
-                })
-                break
-              }
-
-              case 'subagent-delta': {
-                const deltaData = chunk.data as { id: string; text: string }
-                store.appendSubagentText(deltaData.id, deltaData.text)
-                break
-              }
-
-              case 'subagent-complete': {
-                const completeData = chunk.data as {
-                  id: string
-                  name: string
-                  status: string
-                  elapsedMs?: number
-                  result?: string
-                }
-                store.completeSubagentTracker(completeData.id, completeData.result)
-
-                // Complete the matching thinking step
-                const runningSteps = store.thinkingSteps.filter(
-                  (step) =>
-                    step.status === 'running' &&
-                    step.description.includes(completeData.name || completeData.id)
-                )
-                const lastRunning = runningSteps[runningSteps.length - 1]
-                if (lastRunning) {
-                  store.completeThinkingStep(lastRunning.id)
-                }
-                break
-              }
-
-              case 'custom-progress': {
-                // Render as a thinking step
-                const progressData = chunk.data as { step?: string; [key: string]: unknown }
-                const sessionId = store.activeSessionId
-                const session = sessionId ? store.sessions[sessionId] : null
-                const lastMessage = session?.messages[session.messages.length - 1]
-                const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
-
-                // Complete previous non-tool running steps
-                const runningThoughts = store.thinkingSteps.filter(
-                  (step) => step.status === 'running' && step.type !== 'tool'
-                )
-                const lastRunningThought = runningThoughts[runningThoughts.length - 1]
-                if (lastRunningThought) {
-                  store.completeThinkingStep(lastRunningThought.id)
-                }
-
-                store.addThinkingStep({
-                  type: 'thought',
-                  description: progressData.step || 'Processing...',
-                  status: 'running',
-                  messageId,
-                })
-                break
-              }
-
-              case 'synthesis-start': {
-                store.setSynthesizing(true)
-                break
-              }
-
-              case 'note-navigate': {
-                // DeepAgent created a new note — open in preview panel + load in editor
-                const navData = chunk.data as { noteId: string }
-                store.openNotePreview(navData.noteId)
-                const { useEditorStore } = await import('@/stores')
-                const editorStore = useEditorStore()
-                await editorStore.loadDocument(navData.noteId)
-                // Refresh sidebar document list so the new note appears immediately
-                await editorStore.loadDocuments()
-                break
+          case 'assistant-final': {
+            throttler.forceFlush()
+            const finalText = typeof chunk.data === 'string' ? chunk.data : ''
+            if (finalText && !fullContent.trim()) {
+              fullContent = finalText
+              const sessionId = store.activeSessionId
+              if (sessionId && store.sessions[sessionId]) {
+                store.appendToLastMessage(sessionId, finalText)
               }
             }
+            store.setStatus('idle')
+            break
+          }
+
+          case 'done':
+          case 'finish':
+            throttler.forceFlush()
+            store.setStatus('idle')
+            break
+
+          case 'error':
+            throttler.forceFlush()
+            store.setError(chunk.data as string)
+            break
+
+          case 'thinking': {
+            // Add thinking step to store, linked to current assistant message
+            const thinkingData = chunk.data as {
+              description: string
+              type?: ThinkingStep['type']
+            }
+            const runningThoughts = store.thinkingSteps.filter(
+              (step) => step.status === 'running' && step.type !== 'tool'
+            )
+            const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+            if (lastRunningThought) {
+              store.completeThinkingStep(lastRunningThought.id)
+            }
+
+            // Get current assistant message ID for linking
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            store.addThinkingStep({
+              type: thinkingData.type || 'thought',
+              description: thinkingData.description || (thinkingData as unknown as string),
+              status: 'running',
+              messageId,
+            })
+            store.setStatus('thinking')
+            break
+          }
+
+          case 'tool-call': {
+            // Add tool call as thinking step, linked to current assistant message
+            // Backend may send 'tool' or 'name' depending on the source
+            const toolData = chunk.data as {
+              name?: string
+              tool?: string
+              toolName?: string
+              arguments?: Record<string, unknown>
+            }
+            const toolName = toolData.name || toolData.tool || toolData.toolName || 'unknown'
+            const runningThoughts = store.thinkingSteps.filter(
+              (step) => step.status === 'running' && step.type !== 'tool'
+            )
+            const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+            if (lastRunningThought) {
+              store.completeThinkingStep(lastRunningThought.id)
+            }
+
+            // Get current assistant message ID for linking
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            // Map tool names to human-readable descriptions
+            const toolDescriptions: Record<string, string> = {
+              create_note: 'Preparing new note...',
+              answer_question_about_note: 'Reading your note...',
+              read_note_structure: 'Analyzing note structure...',
+              add_paragraph: 'Adding content to your note...',
+              edit_paragraph: 'Editing your note...',
+              remove_paragraph: 'Removing content...',
+              create_artifact_from_note: 'Creating interactive widget...',
+              insert_table: 'Inserting table...',
+              database_action: 'Running database operation...',
+              read_memory: 'Checking memory...',
+              write_memory: 'Saving to memory...',
+              ask_user_preference: 'Asking for your preference...',
+            }
+            const toolDescription =
+              toolDescriptions[toolName] ||
+              toolName.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) + '...'
+
+            store.addThinkingStep({
+              type: 'tool',
+              description: toolDescription,
+              status: 'running',
+              messageId,
+            })
+            store.setStatus('tool-calling')
+            break
+          }
+
+          case 'tool-result': {
+            // Complete the last tool thinking step
+            const runningTools = store.thinkingSteps.filter(
+              (step) => step.status === 'running' && step.type === 'tool'
+            )
+            const stepToComplete =
+              runningTools[runningTools.length - 1] ||
+              store.thinkingSteps.filter((step) => step.status === 'running').slice(-1)[0]
+            if (stepToComplete) {
+              store.completeThinkingStep(stepToComplete.id)
+            }
+            store.setStatus('streaming')
+            break
+          }
+
+          case 'edit-proposal': {
+            // Handle edit proposal - compute diff hunks and add to store
+            const editData = chunk.data as EditProposalData
+            const diffHunks = computeDiffHunks(editData.original, editData.proposed)
+
+            // Get current assistant message ID for linking
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const editMessageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            const pendingEdit = store.addPendingEdit({
+              blockId: editData.blockId || '',
+              noteId: editData.noteId,
+              originalContent: editData.original,
+              proposedContent: editData.proposed,
+              diffHunks,
+              messageId: editMessageId,
+            })
+
+            // Automatically activate this edit for inline visualization
+            store.setActiveEdit(pendingEdit.id)
+
+            // Auto-open preview panel if there's a noteId
+            if (editData.noteId && !store.previewPanelVisible) {
+              store.openNotePreview(editData.noteId)
+            }
+            break
+          }
+
+          case 'clarification-request': {
+            // Handle clarification request - AI needs user to select target section
+            const clarificationData = chunk.data as ClarificationRequestData
+            store.setClarificationRequest({
+              noteId: store.activeSession?.contextNoteIds?.[0] || '',
+              instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
+              options: clarificationData.options,
+              reason: clarificationData.reason,
+            })
+            // Complete any running thinking steps
+            const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+            runningSteps.forEach((step) => store.completeThinkingStep(step.id))
+            // Status is set to 'clarifying' inside setClarificationRequest
+            break
+          }
+
+          case 'clarification-requested': {
+            const clarificationData = chunk.data as {
+              options?: ClarificationRequestData['options']
+              reason?: string
+            }
+            store.setClarificationRequest({
+              noteId: store.activeSession?.contextNoteIds?.[0] || '',
+              instruction: store.activeSession?.messages?.slice(-2)?.[0]?.content || '',
+              options: clarificationData.options || [],
+              reason: clarificationData.reason || 'Please provide more context.',
+            })
+            const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+            runningSteps.forEach((step) => store.completeThinkingStep(step.id))
+            break
+          }
+
+          case 'code-preview': {
+            // Handle code preview during artifact streaming
+            const previewData = chunk.data as {
+              phase: 'html' | 'css' | 'javascript'
+              preview: string
+              totalChars: number
+            }
+            store.updateCodePreview(previewData)
+            break
+          }
+
+          case 'pre-action-question': {
+            // Handle proactive AI question before creating notes or major edits
+            const questionData = chunk.data as {
+              id: string
+              question: string
+              options: Array<{ id: string; label: string; description?: string }>
+              allowFreeText?: boolean
+              context?: string
+            }
+            store.setPreActionQuestion(questionData)
+            // Complete any running thinking steps
+            const runningSteps2 = store.thinkingSteps.filter((step) => step.status === 'running')
+            runningSteps2.forEach((step) => store.completeThinkingStep(step.id))
+            break
+          }
+
+          case 'artifact': {
+            // Handle artifact creation - add to pending artifacts for insertion into editor
+            const artifactData = chunk.data as ArtifactData
+            const authStore = useAuthStore()
+
+            // Clear the streaming preview when artifact completes
+            store.clearCodePreview()
+
+            const noteId = artifactData.noteId || store.activeSession?.contextNoteIds?.[0] || ''
+
+            if (noteId) {
+              // Pass userId for database persistence
+              // Note: Don't pass sessionId - chat sessions aren't persisted to DB yet,
+              // so the local UUID would cause FK constraint violation (409 Conflict)
+              store.addPendingArtifact(
+                noteId,
+                {
+                  title: artifactData.title,
+                  html: artifactData.html,
+                  css: artifactData.css,
+                  javascript: artifactData.javascript,
+                },
+                {
+                  userId: authStore.user?.id,
+                }
+              )
+
+              // Track completed artifact linked to the current assistant message for UI rendering
+              const session = store.activeSession
+              if (session && session.messages.length > 0) {
+                const lastMessage = session.messages[session.messages.length - 1]
+                if (lastMessage.role === 'assistant') {
+                  store.addCompletedArtifact({
+                    title: artifactData.title,
+                    noteId,
+                    sessionId: store.activeSessionId || '',
+                    messageId: lastMessage.id,
+                  })
+                }
+              }
+
+              console.log('[AI] Artifact added to pending:', artifactData.title)
+            } else {
+              console.warn('[AI] Received artifact but no noteId available')
+            }
+            break
+          }
+
+          case 'intent':
+            console.log(`[AI] ${chunk.type}:`, chunk.data)
+            break
+
+          case 'citation': {
+            const citationData = chunk.data as { noteId: string; title: string; snippet: string }
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+            if (messageId) {
+              store.addMessageCitation({ ...citationData, messageId })
+            }
+            break
+          }
+
+          case 'action-summary': {
+            const summaryData = chunk.data as {
+              action: string
+              title?: string
+              noteId?: string
+              description: string
+            }
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+            if (messageId) {
+              store.addCompletedAction({ ...summaryData, messageId })
+            }
+            break
+          }
+
+          // ===== DeepAgent Events =====
+
+          case 'decomposition': {
+            // Task decomposition from DeepAgent
+            const decompositionData = chunk.data as DecompositionData
+            store.setSubTasks(decompositionData.tasks)
+            console.log('[AI] Task decomposition:', decompositionData.reasoning)
+            break
+          }
+
+          case 'subtask-start': {
+            // Subagent starting work on a task
+            const startData = chunk.data as SubTaskData
+            store.updateSubTask(startData.id, { status: 'in_progress' })
+
+            // Get current assistant message ID for linking
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            store.addThinkingStep({
+              type: 'create',
+              description: `Working on: ${startData.description}`,
+              status: 'running',
+              messageId,
+            })
+            store.setStatus('thinking')
+            break
+          }
+
+          case 'subtask-progress': {
+            // Progress update from subagent
+            const progressData = chunk.data as SubtaskProgressData
+            store.updateSubTaskProgress(
+              progressData.taskId,
+              progressData.progress,
+              progressData.message
+            )
+            break
+          }
+
+          case 'subtask-complete': {
+            // Subagent completed task
+            const completeData = chunk.data as { taskId: string; result: unknown }
+            store.updateSubTask(completeData.taskId, { status: 'completed' })
+
+            // Complete the thinking step
+            const runningSteps = store.thinkingSteps.filter((step) => step.status === 'running')
+            const lastRunningStep = runningSteps[runningSteps.length - 1]
+            if (lastRunningStep) {
+              store.completeThinkingStep(lastRunningStep.id)
+            }
+
+            store.setStatus('streaming')
+            break
+          }
+
+          // ===== Multi-Mode Streaming Events =====
+
+          case 'subagent-start': {
+            const subagentData = chunk.data as {
+              id: string
+              name: string
+              description: string
+              status: string
+              startedAt?: number
+            }
+            store.startSubagentTracker(subagentData)
+
+            // Add as thinking step
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            store.addThinkingStep({
+              type: 'create',
+              description: `Subagent: ${subagentData.name}`,
+              status: 'running',
+              messageId,
+            })
+            break
+          }
+
+          case 'subagent-delta': {
+            const deltaData = chunk.data as { id: string; text: string }
+            store.appendSubagentText(deltaData.id, deltaData.text)
+            break
+          }
+
+          case 'subagent-complete': {
+            const completeData = chunk.data as {
+              id: string
+              name: string
+              status: string
+              elapsedMs?: number
+              result?: string
+            }
+            store.completeSubagentTracker(completeData.id, completeData.result)
+
+            // Complete the matching thinking step
+            const runningSteps = store.thinkingSteps.filter(
+              (step) =>
+                step.status === 'running' &&
+                step.description.includes(completeData.name || completeData.id)
+            )
+            const lastRunning = runningSteps[runningSteps.length - 1]
+            if (lastRunning) {
+              store.completeThinkingStep(lastRunning.id)
+            }
+            break
+          }
+
+          case 'custom-progress': {
+            // Render as a thinking step
+            const progressData = chunk.data as { step?: string; [key: string]: unknown }
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            // Complete previous non-tool running steps
+            const runningThoughts = store.thinkingSteps.filter(
+              (step) => step.status === 'running' && step.type !== 'tool'
+            )
+            const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+            if (lastRunningThought) {
+              store.completeThinkingStep(lastRunningThought.id)
+            }
+
+            store.addThinkingStep({
+              type: 'thought',
+              description: progressData.step || 'Processing...',
+              status: 'running',
+              messageId,
+            })
+            break
+          }
+
+          case 'synthesis-start': {
+            store.setSynthesizing(true)
+            break
+          }
+
+          case 'note-navigate': {
+            // DeepAgent created a new note — open in preview panel + load in editor
+            const navData = chunk.data as { noteId: string }
+            store.openNotePreview(navData.noteId)
+            const { useEditorStore } = await import('@/stores')
+            const editorStore = useEditorStore()
+            await editorStore.loadDocument(navData.noteId)
+            // Refresh sidebar document list so the new note appears immediately
+            await editorStore.loadDocuments()
+            break
+          }
+        }
       },
       onError: (err) => {
         console.error('[AI Service] Failed to parse SSE chunk:', err)

@@ -157,7 +157,6 @@ Only output valid JSON, no markdown code blocks or explanation.`
     }
   }
 
-
   /**
    * Generate slide images using Gemini Image model
    * Full implementation of Note3's two-stage slide generation
@@ -350,7 +349,6 @@ Only output valid JSON, no markdown code blocks or explanation.`
       caption,
     }
   }
-
 }
 
 // ============================================================================

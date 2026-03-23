@@ -24,6 +24,27 @@ vi.mock('../../providers/ai-sdk-factory', () => ({
       displayName: taskType === 'artifact' ? 'Kimi K2.5' : 'Gemini 2.5 Pro',
     },
   }),
+  resolveModelsForTask: (taskType: string) => ({
+    primary: {
+      model: `mock-${taskType}`,
+      entry: {
+        id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
+        provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
+      },
+    },
+    fallback: null,
+  }),
+  getModelsForTask: (taskType: string) => ({
+    primary: {
+      model: `mock-${taskType}`,
+      entry: {
+        id: taskType === 'artifact' ? 'kimi-k2.5' : 'gemini-2.5-pro',
+        provider: taskType === 'artifact' ? 'ollama-cloud' : 'gemini',
+      },
+    },
+    fallback: null,
+  }),
+  isTransientError: () => false,
   getModelForTask: (taskType: string) => `mock-${taskType}`,
 }))
 
@@ -155,9 +176,7 @@ describe('ResearchAgent note draft mode', () => {
   })
 
   it('falls back to Gemini artifact generation when Ollama client fails', async () => {
-    streamTextMock.mockReturnValue(
-      createMockTextStream(['# Study Note\n\nKey points.'])
-    )
+    streamTextMock.mockReturnValue(createMockTextStream(['# Study Note\n\nKey points.']))
 
     let callCount = 0
     generateTextMock.mockImplementation(async () => {
@@ -191,9 +210,7 @@ describe('ResearchAgent note draft mode', () => {
   })
 
   it('emits an artifact error and skips artifact block when primary and fallback generation both fail', async () => {
-    streamTextMock.mockReturnValue(
-      createMockTextStream(['# Study Note\n\nKey points.'])
-    )
+    streamTextMock.mockReturnValue(createMockTextStream(['# Study Note\n\nKey points.']))
     generateTextMock.mockRejectedValue(new Error('all artifact generation failed'))
 
     const agent = new ResearchAgent({

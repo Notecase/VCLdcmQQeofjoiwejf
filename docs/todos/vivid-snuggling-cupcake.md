@@ -7,6 +7,7 @@ Phases 0-2 are complete: dead code removed, AI SDK v6 provider layer built, 5 si
 ### Critical Discovery
 
 The API route `/api/agent/secretary` has `shouldUseEditorDeepRuntime()` which **always returns true** (line 49-57 of `agent.ts`). This means:
+
 - **EditorDeepAgent** (`packages/ai/src/agents/editor-deep/`) — the ONLY production runtime
 - **EditorAgent** (`editor.agent.ts`) — legacy, never used, deprecate
 - **InkdownDeepAgent** (`deep-agent.ts`) — legacy, never used, deprecate
@@ -14,13 +15,13 @@ The API route `/api/agent/secretary` has `shouldUseEditorDeepRuntime()` which **
 
 ### What Changes
 
-| Component | Before | After |
-|-----------|--------|-------|
-| Agent framework | `deepagents` (LangGraph) | AI SDK v6 `ToolLoopAgent` |
-| Tool definitions | `@langchain/core/tools` `tool()` | `'ai'` `tool()` |
-| Model creation | `createLangChainModel()` + `TokenTrackingCallback` | `getModelForTask()` + `trackAISDKUsage()` |
-| Stream processing | `EditorDeepStreamNormalizer` (LangGraph events) | New `AISdkStreamAdapter` (AI SDK `fullStream`) |
-| Subagent routing | `createEditorSubagents()` (LangGraph nodes) | Implicit — ToolLoopAgent decides which tools to call |
+| Component         | Before                                             | After                                                |
+| ----------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| Agent framework   | `deepagents` (LangGraph)                           | AI SDK v6 `ToolLoopAgent`                            |
+| Tool definitions  | `@langchain/core/tools` `tool()`                   | `'ai'` `tool()`                                      |
+| Model creation    | `createLangChainModel()` + `TokenTrackingCallback` | `getModelForTask()` + `trackAISDKUsage()`            |
+| Stream processing | `EditorDeepStreamNormalizer` (LangGraph events)    | New `AISdkStreamAdapter` (AI SDK `fullStream`)       |
+| Subagent routing  | `createEditorSubagents()` (LangGraph nodes)        | Implicit — ToolLoopAgent decides which tools to call |
 
 ### What Stays Unchanged
 
@@ -52,7 +53,11 @@ const readNoteStructure = tool(
     // ... execution logic
     return JSON.stringify(result)
   },
-  { name: 'read_note_structure', description: '...', schema: z.object({ noteId: z.string().optional() }) }
+  {
+    name: 'read_note_structure',
+    description: '...',
+    schema: z.object({ noteId: z.string().optional() }),
+  }
 )
 
 // AFTER (AI SDK v6)
@@ -64,38 +69,38 @@ const readNoteStructure = tool({
   execute: async (input, _options) => {
     // ctx is captured via closure from createEditorDeepTools()
     // ... same execution logic
-    return result  // Return object directly, not JSON.stringify
+    return result // Return object directly, not JSON.stringify
   },
 })
 ```
 
 ### Key differences
 
-| LangChain | AI SDK v6 |
-|-----------|-----------|
-| `tool(executeFn, { name, description, schema })` | `tool({ description, inputSchema, execute })` |
-| Tool name in options object | Tool name is the key in the tools record |
-| `config.configurable` for context | Closure-captured context |
-| `config.writer` for progress events | `ctx.emitEvent()` side-channel (already used by most tools) |
-| Returns `JSON.stringify(result)` | Returns object directly |
-| `schema: z.object(...)` | `inputSchema: z.object(...)` |
+| LangChain                                        | AI SDK v6                                                   |
+| ------------------------------------------------ | ----------------------------------------------------------- |
+| `tool(executeFn, { name, description, schema })` | `tool({ description, inputSchema, execute })`               |
+| Tool name in options object                      | Tool name is the key in the tools record                    |
+| `config.configurable` for context                | Closure-captured context                                    |
+| `config.writer` for progress events              | `ctx.emitEvent()` side-channel (already used by most tools) |
+| Returns `JSON.stringify(result)`                 | Returns object directly                                     |
+| `schema: z.object(...)`                          | `inputSchema: z.object(...)`                                |
 
 ### Tool inventory (12 tools to convert)
 
-| Tool | Input Schema | Side-effects | Notes |
-|------|-------------|-------------|-------|
-| `read_note_structure` | `{ noteId? }` | None | Reads note + parses markdown structure |
-| `answer_question_about_note` | `{ noteId? }` | None | Reads note content for Q&A |
-| `create_note` | `{ title, content, projectId? }` | Supabase insert, emits `note-navigate` | Creates new note |
-| `add_paragraph` | `{ content, position?, afterHeading? }` | Emits `edit-proposal` | Adds content to note |
-| `remove_paragraph` | `{ blockIndex, heading? }` | Emits `edit-proposal` | Removes section/block |
-| `edit_paragraph` | `{ instruction, blockIndex?, heading? }` | LLM call + emits `edit-proposal` | Edits specific section |
-| `create_artifact_from_note` | `{ description }` | Emits `artifact` | Creates HTML/CSS/JS widget |
-| `insert_table` | `{ description, noteId? }` | Emits `edit-proposal` | Generates markdown table |
-| `database_action` | `{ action, noteId?, ... }` | Delegates to `executeTool()` | CRUD on embedded databases |
-| `read_memory` | `{ memoryType }` | None | Reads AI memory/preferences |
-| `write_memory` | `{ memoryType, content }` | Supabase write | Updates AI memory |
-| `ask_user_preference` | `{ question, options }` | Emits `pre-action-question` | Asks user before proceeding |
+| Tool                         | Input Schema                             | Side-effects                           | Notes                                  |
+| ---------------------------- | ---------------------------------------- | -------------------------------------- | -------------------------------------- |
+| `read_note_structure`        | `{ noteId? }`                            | None                                   | Reads note + parses markdown structure |
+| `answer_question_about_note` | `{ noteId? }`                            | None                                   | Reads note content for Q&A             |
+| `create_note`                | `{ title, content, projectId? }`         | Supabase insert, emits `note-navigate` | Creates new note                       |
+| `add_paragraph`              | `{ content, position?, afterHeading? }`  | Emits `edit-proposal`                  | Adds content to note                   |
+| `remove_paragraph`           | `{ blockIndex, heading? }`               | Emits `edit-proposal`                  | Removes section/block                  |
+| `edit_paragraph`             | `{ instruction, blockIndex?, heading? }` | LLM call + emits `edit-proposal`       | Edits specific section                 |
+| `create_artifact_from_note`  | `{ description }`                        | Emits `artifact`                       | Creates HTML/CSS/JS widget             |
+| `insert_table`               | `{ description, noteId? }`               | Emits `edit-proposal`                  | Generates markdown table               |
+| `database_action`            | `{ action, noteId?, ... }`               | Delegates to `executeTool()`           | CRUD on embedded databases             |
+| `read_memory`                | `{ memoryType }`                         | None                                   | Reads AI memory/preferences            |
+| `write_memory`               | `{ memoryType, content }`                | Supabase write                         | Updates AI memory                      |
+| `ask_user_preference`        | `{ question, options }`                  | Emits `pre-action-question`            | Asks user before proceeding            |
 
 ### Function signature change
 
@@ -110,7 +115,7 @@ export function createEditorDeepTools(
 export function createEditorDeepTools(
   ctx: EditorToolContext,
   memoryService: EditorLongTermMemory
-): Record<string, ReturnType<typeof tool>>  // AI SDK tools record
+): Record<string, ReturnType<typeof tool>> // AI SDK tools record
 ```
 
 The return type changes from LangChain `StructuredToolInterface[]` to AI SDK's tools record (`Record<string, Tool>`).
@@ -122,6 +127,7 @@ The `ctx.emitEvent()` pattern is already used by most tools to push `edit-propos
 ### config.writer migration
 
 3 tools use `config.writer` from LangChain's `RunnableConfig` for streaming progress:
+
 - `edit_paragraph` — emits "Reading note..." / "Editing section..."
 - `create_artifact_from_note` — emits generation progress
 - `database_action` — emits action progress
@@ -138,13 +144,13 @@ Replaces `EditorDeepStreamNormalizer` — maps AI SDK `fullStream` parts to `Edi
 
 ### Mapping
 
-| AI SDK `fullStream` part | `EditorDeepAgentEvent` |
-|-------------------------|----------------------|
-| First `text` chunk | `{ type: 'assistant-start' }` + `{ type: 'assistant-delta', data: text }` |
-| Subsequent `text` chunks | `{ type: 'assistant-delta', data: text }` |
-| `tool-call` | `{ type: 'tool-call', data: { tool: name, arguments } }` |
-| `tool-result` | `{ type: 'tool-result', data: output }` + drain `pendingEvents` |
-| `finish` | `{ type: 'assistant-final', data: fullText }` + `{ type: 'done' }` |
+| AI SDK `fullStream` part | `EditorDeepAgentEvent`                                                    |
+| ------------------------ | ------------------------------------------------------------------------- |
+| First `text` chunk       | `{ type: 'assistant-start' }` + `{ type: 'assistant-delta', data: text }` |
+| Subsequent `text` chunks | `{ type: 'assistant-delta', data: text }`                                 |
+| `tool-call`              | `{ type: 'tool-call', data: { tool: name, arguments } }`                  |
+| `tool-result`            | `{ type: 'tool-result', data: output }` + drain `pendingEvents`           |
+| `finish`                 | `{ type: 'assistant-final', data: fullText }` + `{ type: 'done' }`        |
 
 ### pendingEvents drain
 
@@ -153,7 +159,7 @@ After each `tool-result`, drain the `pendingEvents` array (populated by tool exe
 ```typescript
 export async function* adaptAISDKStream(
   fullStream: AsyncIterable<TextStreamPart>,
-  pendingEvents: EditorDeepAgentEvent[],
+  pendingEvents: EditorDeepAgentEvent[]
 ): AsyncGenerator<EditorDeepAgentEvent> {
   let seq = 0
   let assistantStarted = false
@@ -171,7 +177,11 @@ export async function* adaptAISDKStream(
         break
 
       case 'tool-call':
-        yield { type: 'tool-call', data: { tool: part.toolName, arguments: part.input }, seq: seq++ }
+        yield {
+          type: 'tool-call',
+          data: { tool: part.toolName, arguments: part.input },
+          seq: seq++,
+        }
         break
 
       case 'tool-result':
@@ -287,11 +297,11 @@ async *stream(input: EditorDeepAgentRequest): AsyncGenerator<EditorDeepAgentEven
 
 NoteAgent is still used by EditorDeepAgent tools (specifically `edit_paragraph` and `create_note` tools that may delegate to NoteAgent methods). Migrate its 3 OpenAI SDK calls:
 
-| Method | Before | After |
-|--------|--------|-------|
-| `stream()` | `client.chat.completions.create({ stream: true })` + `trackOpenAIStream()` | `streamText()` + `trackAISDKUsage()` |
-| `streamSurgicalEdit()` | Same OpenAI streaming | `streamText()` + `trackAISDKUsage()` |
-| `generateContent()` | `client.chat.completions.create()` + `trackOpenAIResponse()` | `generateText()` + `recordAISDKUsage()` |
+| Method                 | Before                                                                     | After                                   |
+| ---------------------- | -------------------------------------------------------------------------- | --------------------------------------- |
+| `stream()`             | `client.chat.completions.create({ stream: true })` + `trackOpenAIStream()` | `streamText()` + `trackAISDKUsage()`    |
+| `streamSurgicalEdit()` | Same OpenAI streaming                                                      | `streamText()` + `trackAISDKUsage()`    |
+| `generateContent()`    | `client.chat.completions.create()` + `trackOpenAIResponse()`               | `generateText()` + `recordAISDKUsage()` |
 
 Remove `openaiApiKey` from `NoteAgentConfig`. Same pattern as Phase 2 agents.
 
@@ -300,19 +310,23 @@ Remove `openaiApiKey` from `NoteAgentConfig`. Same pattern as Phase 2 agents.
 ## Step 3.5 — Delete obsolete files and deprecate legacy
 
 ### Delete
+
 - `packages/ai/src/agents/editor-deep/stream-normalizer.ts` — replaced by `ai-sdk-stream-adapter.ts`
 - `packages/ai/src/agents/editor-deep/stream-normalizer.test.ts` — replaced by adapter tests
 - `packages/ai/src/agents/editor-deep/subagents.ts` — LangGraph subagent routing replaced by ToolLoopAgent's implicit routing
 - `packages/ai/src/providers/langchain-token-callback.ts` — LangChain-specific, no longer needed
 
 ### Deprecate (add `@deprecated` JSDoc, keep functional)
+
 - `packages/ai/src/agents/editor.agent.ts` — legacy intent-classification agent
 - `packages/ai/src/agents/deep-agent.ts` — legacy compound-request decomposer
 
 ### Remove from `client-factory.ts`
+
 - `createLangChainModel()` function — no longer called after this migration
 
 ### Remove `openaiApiKey` from
+
 - `EditorDeepAgentConfig`
 - `NoteAgentConfig`
 - `EditorAgentConfig` (legacy but clean it)
@@ -327,6 +341,7 @@ Remove `openaiApiKey` from `NoteAgentConfig`. Same pattern as Phase 2 agents.
 **File:** `packages/ai/package.json`
 
 After verifying no remaining imports, remove:
+
 ```
 "@langchain/anthropic"
 "@langchain/core"
@@ -357,15 +372,15 @@ After verifying no remaining imports, remove:
 
 ## Migration Order
 
-| Step | Files | Risk | Deps |
-|------|-------|------|------|
-| 3.1 | `editor-deep/tools.ts` | MEDIUM — 12 tool conversions | None |
-| 3.2 | `editor-deep/ai-sdk-stream-adapter.ts` (new) | LOW — new file | None |
-| 3.3 | `editor-deep/agent.ts` | HIGH — core agent rewrite | 3.1, 3.2 |
-| 3.4 | `note.agent.ts` | LOW — same pattern as Phase 2 | None (parallel) |
-| 3.5 | Delete files + deprecate legacy | LOW | 3.3 |
-| 3.6 | `package.json` deps | MEDIUM — verify no remaining imports | 3.5 |
-| 3.7 | `agent.ts` route | LOW | 3.3 |
+| Step | Files                                        | Risk                                 | Deps            |
+| ---- | -------------------------------------------- | ------------------------------------ | --------------- |
+| 3.1  | `editor-deep/tools.ts`                       | MEDIUM — 12 tool conversions         | None            |
+| 3.2  | `editor-deep/ai-sdk-stream-adapter.ts` (new) | LOW — new file                       | None            |
+| 3.3  | `editor-deep/agent.ts`                       | HIGH — core agent rewrite            | 3.1, 3.2        |
+| 3.4  | `note.agent.ts`                              | LOW — same pattern as Phase 2        | None (parallel) |
+| 3.5  | Delete files + deprecate legacy              | LOW                                  | 3.3             |
+| 3.6  | `package.json` deps                          | MEDIUM — verify no remaining imports | 3.5             |
+| 3.7  | `agent.ts` route                             | LOW                                  | 3.3             |
 
 Steps 3.1, 3.2, and 3.4 can run in parallel. Step 3.3 depends on 3.1 + 3.2.
 
@@ -401,20 +416,21 @@ grep -r "openaiApiKey" packages/ai/src/agents/editor-deep/ packages/ai/src/agent
 
 ## Risk Summary
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| ToolLoopAgent API differs from docs | HIGH | Read `node_modules/ai/` source before implementing. Verify `ToolLoopAgent` class exists and has `stream()` method. |
-| Tool execute return type changes | MEDIUM | LangChain tools return `string`. AI SDK tools return any value. Tool execute functions must return objects, not `JSON.stringify()`. |
-| Side-channel events (emitEvent) timing | MEDIUM | Drain `pendingEvents` after each `tool-result` in the adapter. Test with multi-tool sequences. |
-| Subagent events disappear | LOW | `subagent-start/delta/complete` events from LangGraph subgraph tracking have no AI SDK equivalent. Frontend already handles their absence gracefully. |
-| LangChain deps still needed by other agents | MEDIUM | Only remove deps after confirming SecretaryAgent/ResearchAgent/CourseOrchestrator are also migrated (Phase 4). |
-| NoteAgent still used by legacy EditorAgent | LOW | Legacy EditorAgent is deprecated. NoteAgent's Phase 2-style migration is safe. |
+| Risk                                        | Severity | Mitigation                                                                                                                                            |
+| ------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ToolLoopAgent API differs from docs         | HIGH     | Read `node_modules/ai/` source before implementing. Verify `ToolLoopAgent` class exists and has `stream()` method.                                    |
+| Tool execute return type changes            | MEDIUM   | LangChain tools return `string`. AI SDK tools return any value. Tool execute functions must return objects, not `JSON.stringify()`.                   |
+| Side-channel events (emitEvent) timing      | MEDIUM   | Drain `pendingEvents` after each `tool-result` in the adapter. Test with multi-tool sequences.                                                        |
+| Subagent events disappear                   | LOW      | `subagent-start/delta/complete` events from LangGraph subgraph tracking have no AI SDK equivalent. Frontend already handles their absence gracefully. |
+| LangChain deps still needed by other agents | MEDIUM   | Only remove deps after confirming SecretaryAgent/ResearchAgent/CourseOrchestrator are also migrated (Phase 4).                                        |
+| NoteAgent still used by legacy EditorAgent  | LOW      | Legacy EditorAgent is deprecated. NoteAgent's Phase 2-style migration is safe.                                                                        |
 
 ---
 
 ## What This Phase Achieves
 
 After Phase 3:
+
 - **Production AI agent uses AI SDK v6 ToolLoopAgent** with real LLM tool calling
 - **12 tools defined in AI SDK format** — extensible, type-safe, documented
 - **`deepagents` dependency removable** (pending Phase 4 agents)

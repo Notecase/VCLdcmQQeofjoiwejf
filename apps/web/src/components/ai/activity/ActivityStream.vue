@@ -27,8 +27,8 @@ const store = useAIStore()
 const collapsed = ref(false)
 
 // Thinking steps for this message — use override when provided (e.g. Secretary)
-const thinkingSteps = computed(() =>
-  props.thinkingStepsOverride ?? store.getThinkingStepsForMessage(props.messageId)
+const thinkingSteps = computed(
+  () => props.thinkingStepsOverride ?? store.getThinkingStepsForMessage(props.messageId)
 )
 
 // Merge thinking steps + tool calls into chronological list
@@ -71,9 +71,7 @@ const totalDuration = computed(() => {
 
 // Code preview for artifact streaming
 const codePreview = computed(() => store.codePreview)
-const showCodePreview = computed(() =>
-  codePreview.value.active && hasRunningItem.value
-)
+const showCodePreview = computed(() => codePreview.value.active && hasRunningItem.value)
 
 // DeepAgent tasks
 const subTasks = computed(() => store.subTasks)
@@ -85,9 +83,7 @@ const hasSubagents = computed(() => activeSubagents.value.length > 0)
 const isSynthesizing = computed(() => store.isSynthesizing)
 
 // Show the stream if any content exists
-const hasContent = computed(() =>
-  hasItems.value || hasSubTasks.value || hasSubagents.value
-)
+const hasContent = computed(() => hasItems.value || hasSubTasks.value || hasSubagents.value)
 </script>
 
 <template>
@@ -222,8 +218,13 @@ const hasContent = computed(() =>
 }
 
 @keyframes header-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); }
-  50% { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.08); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.08);
+  }
 }
 
 .header-label {

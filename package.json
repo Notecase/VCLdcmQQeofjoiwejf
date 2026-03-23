@@ -15,10 +15,18 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "prepare": "husky",
+    "verify:prod": "tsx scripts/verify-deployment.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:load": "k6 run load-tests/api-health.js",
+    "test:load:chat": "k6 run load-tests/api-chat.js",
+    "test:load:sse": "k6 run load-tests/api-sse-concurrent.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.58.2",
     "@vitejs/plugin-vue": "^5.1.0",
     "@vitest/coverage-v8": "^1.6.0",
     "@vue/test-utils": "^2.4.0",
@@ -27,7 +35,10 @@
     "eslint-plugin-vue": "^9.23.0",
     "globals": "^17.2.0",
     "happy-dom": "^13.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.2.0",
+    "tsx": "^4.19.0",
     "turbo": "^2.3.0",
     "typescript": "~5.7.0",
     "typescript-eslint": "^8.0.0",
@@ -40,5 +51,14 @@
   },
   "dependencies": {
     "pdf-parse": "^1.1.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ]
   }
 }

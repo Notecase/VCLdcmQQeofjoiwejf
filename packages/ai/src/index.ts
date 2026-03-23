@@ -16,7 +16,12 @@
 // =============================================================================
 
 export { MODEL_REGISTRY, selectModel, getModel } from './providers/model-registry'
-export type { ModelEntry, ModelProvider, ModelCapability, AITaskType } from './providers/model-registry'
+export type {
+  ModelEntry,
+  ModelProvider,
+  ModelCapability,
+  AITaskType,
+} from './providers/model-registry'
 
 // AI SDK v6 Provider Factory
 export {
@@ -33,10 +38,7 @@ export { trackAISDKUsage, recordAISDKUsage } from './providers/ai-sdk-usage'
 export type { AISDKTrackingMeta, AISDKUsage } from './providers/ai-sdk-usage'
 
 // Token Tracker
-export {
-  tokenTracker,
-  computeCost,
-} from './providers/token-tracker'
+export { tokenTracker, computeCost } from './providers/token-tracker'
 export type { TokenUsageEvent, SessionUsage } from './providers/token-tracker'
 
 // Request Context & Usage Persistence

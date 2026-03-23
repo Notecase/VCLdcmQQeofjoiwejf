@@ -23,6 +23,11 @@ vi.mock('../providers/ai-sdk-factory', () => ({
     model: 'mock-model',
     entry: { id: 'test-model' },
   }),
+  resolveModelsForTask: () => ({
+    primary: { model: 'mock-model', entry: { id: 'test-model', provider: 'openai' } },
+    fallback: null,
+  }),
+  isTransientError: () => false,
 }))
 
 vi.mock('../providers/ai-sdk-usage', () => ({
@@ -284,9 +289,7 @@ describe('PlannerAgent', () => {
         text: '{}',
         output: {
           summary: 'Simple plan',
-          steps: [
-            { id: 1, description: 'Only step', estimatedTime: '5 min' },
-          ],
+          steps: [{ id: 1, description: 'Only step', estimatedTime: '5 min' }],
         },
         usage: { inputTokens: 50, outputTokens: 50 },
       })

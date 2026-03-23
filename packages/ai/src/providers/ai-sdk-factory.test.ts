@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createAIModel, getModelForTask, getEmbeddingModel, resetAIProviders } from './ai-sdk-factory'
+import {
+  createAIModel,
+  getModelForTask,
+  getEmbeddingModel,
+  resetAIProviders,
+} from './ai-sdk-factory'
 import { MODEL_REGISTRY } from './model-registry'
 import type { ModelEntry } from './model-registry'
 

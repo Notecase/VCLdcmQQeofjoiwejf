@@ -20,6 +20,7 @@ The `feature/generative-ui` branch has ~30 files of uncommitted work (UI cleanup
 **File**: `apps/web/src/components/ai/ChatMessage.test.ts`
 
 The component uses (lines 58-67 of `ChatMessage.vue`):
+
 - `store.getCompletedArtifactsForMessage()` — mocked ✅
 - `store.getPendingEditsForMessage()` — **MISSING** ❌
 - `store.getCitationsForMessage()` — **MISSING** ❌
@@ -50,12 +51,14 @@ Also add `.mockClear()` calls in `resetStore()` for the new mocks.
 ## Task 2: Commit & Merge to Main
 
 **Steps**:
+
 1. Stage all changes (the model migration work + test fix + all UI changes on the branch)
 2. Create a single commit with a descriptive message covering the full branch scope
 3. Merge `feature/generative-ui` into `main`
 4. Push `main`
 
 **Pre-commit check**:
+
 ```bash
 pnpm build && pnpm typecheck && pnpm lint && pnpm test:run
 ```
@@ -78,12 +81,14 @@ export default app
 **New file**: `apps/api/src/index.worker.ts`
 
 Copy of `index.ts` but:
+
 - Remove `import { serve } from '@hono/node-server'` and the `serve()` call
 - Remove `import { config as loadEnv } from 'dotenv'` (CF uses env bindings)
 - Export `app` as default (CF Workers convention)
 - Access env vars from Hono's `c.env` context instead of `process.env`
 
 **Key change**: The `config.ts` currently reads `process.env.*`. For CF Workers, env vars come from `wrangler.toml` secrets. Two approaches:
+
 - **Option A (simplest)**: Use CF Workers' `nodejs_compat` + `node_compat` flags which polyfill `process.env` from bindings. This means `config.ts` works as-is.
 - **Option B**: Refactor `config.ts` to accept env as a parameter. More correct but bigger change.
 
@@ -134,6 +139,7 @@ This gives you a URL like `https://inkdown-api.<your-cf-account>.workers.dev`.
 ### 3.5 — Update frontend env
 
 In Vercel dashboard (or `apps/web/.env.production`), set:
+
 ```
 VITE_API_URL=https://inkdown-api.<your-cf-account>.workers.dev
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -146,6 +152,7 @@ VITE_PROVIDER=supabase
 ## Task 4: Deploy Frontend to Vercel
 
 **Already configured** — `vercel.json` exists with correct settings:
+
 ```json
 {
   "buildCommand": "pnpm install && pnpm build",
@@ -156,6 +163,7 @@ VITE_PROVIDER=supabase
 ```
 
 **Steps**:
+
 1. Push `main` to GitHub
 2. Connect repo to Vercel (if not already): `vercel link`
 3. Set env vars in Vercel dashboard:
@@ -172,6 +180,7 @@ VITE_PROVIDER=supabase
 **Approach**: Manual via admin endpoint (as requested).
 
 **How it works**:
+
 1. Your Supabase user ID must be in the `ADMIN_USER_IDS` env var
 2. After a friend signs up, get their user ID from Supabase dashboard (Auth → Users)
 3. Call the grant endpoint:
@@ -196,12 +205,12 @@ This grants $5.00 worth of credits. The `deduct_credits()` RPC automatically dec
 
 ## Files Modified
 
-| # | File | Task | Change |
-|---|------|------|--------|
-| 1 | `apps/web/src/components/ai/ChatMessage.test.ts` | T1 | Add 3 missing store mock functions |
-| 2 | `apps/api/src/index.worker.ts` | T3 | New CF Workers entry point (adapted from index.ts) |
-| 3 | `apps/api/wrangler.toml` | T3 | CF Workers config |
-| 4 | `apps/api/package.json` | T3 | Add wrangler devDependency |
+| #   | File                                             | Task | Change                                             |
+| --- | ------------------------------------------------ | ---- | -------------------------------------------------- |
+| 1   | `apps/web/src/components/ai/ChatMessage.test.ts` | T1   | Add 3 missing store mock functions                 |
+| 2   | `apps/api/src/index.worker.ts`                   | T3   | New CF Workers entry point (adapted from index.ts) |
+| 3   | `apps/api/wrangler.toml`                         | T3   | CF Workers config                                  |
+| 4   | `apps/api/package.json`                          | T3   | Add wrangler devDependency                         |
 
 ---
 
@@ -218,17 +227,20 @@ This grants $5.00 worth of credits. The `deduct_credits()` RPC automatically dec
 ## Verification
 
 ### After Task 1
+
 ```bash
 pnpm test:run  # All 41 test files pass
 ```
 
 ### After Task 2
+
 ```bash
 pnpm build && pnpm typecheck && pnpm lint && pnpm test:run  # All green
 git log --oneline -3  # Confirm commit on main
 ```
 
 ### After Tasks 3+4 — Smoke Test
+
 1. Open `https://your-app.vercel.app` → should load the app
 2. Sign up / log in with Google → should authenticate
 3. Send a chat message → should stream AI response (confirms API + Gemini 2.5 Pro working)
@@ -236,6 +248,7 @@ git log --oneline -3  # Confirm commit on main
 5. Check Settings → Credits should show granted amount
 
 ### If something breaks
+
 - **API returns 500**: Check `wrangler tail` for live logs
 - **CORS errors**: Verify `CORS_ORIGIN` secret matches your Vercel URL exactly (including `https://`)
 - **Auth fails**: Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` match between frontend and backend

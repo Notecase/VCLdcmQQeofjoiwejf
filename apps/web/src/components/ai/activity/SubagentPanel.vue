@@ -16,9 +16,7 @@ const props = defineProps<{
 }>()
 
 const total = computed(() => props.subagents.length)
-const completed = computed(() =>
-  props.subagents.filter((s) => s.status === 'complete').length
-)
+const completed = computed(() => props.subagents.filter((s) => s.status === 'complete').length)
 const percent = computed(() =>
   total.value === 0 ? 0 : Math.round((completed.value / total.value) * 100)
 )
@@ -35,9 +33,7 @@ const shouldAutoCollapse = computed(() => total.value >= 5)
     <!-- Header -->
     <div class="panel-header">
       <span class="header-title">Specialist agents</span>
-      <span class="header-count">
-        {{ completed }}/{{ total }} completed
-      </span>
+      <span class="header-count"> {{ completed }}/{{ total }} completed </span>
     </div>
 
     <!-- Progress bar -->

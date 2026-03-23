@@ -109,7 +109,10 @@ export class EditorDeepAgent {
       ? memorySummary.split('\n').filter(Boolean).length
       : 0
     const noteLabel = input.context?.currentNoteId ? 'with active note' : 'no note open'
-    yield { type: 'thinking', data: `Context ready (${noteLabel}, ${historyMessages.length} prior messages)` }
+    yield {
+      type: 'thinking',
+      data: `Context ready (${noteLabel}, ${historyMessages.length} prior messages)`,
+    }
 
     console.info('editor_deep_agent.context', {
       threadId,
@@ -179,7 +182,9 @@ export class EditorDeepAgent {
           streamed = true
         } catch (modelError) {
           if (isTransientError(modelError) && modelOption === primary && fallback) {
-            console.warn(`[EditorDeepAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+            console.warn(
+              `[EditorDeepAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+            )
             yield { type: 'thinking', data: `Switching to ${fallback.entry.displayName}...` }
             continue
           }
@@ -494,11 +499,12 @@ export class EditorDeepAgent {
         toolName?: unknown
         result?: unknown
       }
-      const toolName = typeof payload?.toolName === 'string'
-        ? payload.toolName
-        : typeof payload?.tool === 'string'
-          ? payload.tool
-          : undefined
+      const toolName =
+        typeof payload?.toolName === 'string'
+          ? payload.toolName
+          : typeof payload?.tool === 'string'
+            ? payload.tool
+            : undefined
       const id = typeof payload?.id === 'string' ? payload.id : crypto.randomUUID()
       if (toolName) {
         this.state.toolResults.push({

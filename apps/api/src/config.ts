@@ -10,56 +10,94 @@ loadEnv()
  */
 export const config = {
   // Server
-  get port() { return parseInt(process.env.PORT || '3001', 10) },
-  get nodeEnv() { return process.env.NODE_ENV || 'development' },
-  get isDev() { return process.env.NODE_ENV !== 'production' },
+  get port() {
+    return parseInt(process.env.PORT || '3001', 10)
+  },
+  get nodeEnv() {
+    return process.env.NODE_ENV || 'development'
+  },
+  get isDev() {
+    return process.env.NODE_ENV !== 'production'
+  },
 
   // Supabase
   supabase: {
-    get url() { return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '' },
-    get serviceKey() { return process.env.SUPABASE_SERVICE_KEY || '' },
-    get anonKey() { return process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '' },
+    get url() {
+      return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''
+    },
+    get serviceKey() {
+      return process.env.SUPABASE_SERVICE_KEY || ''
+    },
+    get anonKey() {
+      return process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
+    },
   },
 
   // AI Providers
   ai: {
     openai: {
-      get apiKey() { return process.env.OPENAI_API_KEY || '' },
+      get apiKey() {
+        return process.env.OPENAI_API_KEY || ''
+      },
     },
     anthropic: {
-      get apiKey() { return process.env.ANTHROPIC_API_KEY || '' },
+      get apiKey() {
+        return process.env.ANTHROPIC_API_KEY || ''
+      },
     },
     google: {
-      get apiKey() { return process.env.GOOGLE_AI_API_KEY || '' },
+      get apiKey() {
+        return process.env.GOOGLE_AI_API_KEY || ''
+      },
     },
     ollama: {
-      get cloudUrl() { return process.env.OLLAMA_CLOUD_URL || 'https://ollama.com' },
-      get apiKey() { return process.env.OLLAMA_API_KEY || '' },
-      get localUrl() { return process.env.OLLAMA_LOCAL_URL || 'http://localhost:11434' },
+      get cloudUrl() {
+        return process.env.OLLAMA_CLOUD_URL || 'https://ollama.com'
+      },
+      get apiKey() {
+        return process.env.OLLAMA_API_KEY || ''
+      },
+      get localUrl() {
+        return process.env.OLLAMA_LOCAL_URL || 'http://localhost:11434'
+      },
     },
   },
 
   // Model Defaults
   models: {
-    get defaultChat() { return process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro' },
-    get defaultEmbedding() { return process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large' },
-    get embeddingDimensions() { return parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10) },
+    get defaultChat() {
+      return process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro'
+    },
+    get defaultEmbedding() {
+      return process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large'
+    },
+    get embeddingDimensions() {
+      return parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10)
+    },
   },
 
   // Rate Limiting
   rateLimit: {
-    get requestsPerMinute() { return parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60', 10) },
-    get tokensPerDay() { return parseInt(process.env.RATE_LIMIT_TOKENS_PER_DAY || '100000', 10) },
+    get requestsPerMinute() {
+      return parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60', 10)
+    },
+    get tokensPerDay() {
+      return parseInt(process.env.RATE_LIMIT_TOKENS_PER_DAY || '100000', 10)
+    },
   },
 
   // CORS
   cors: {
-    get origin() { return process.env.CORS_ORIGIN || 'http://localhost:5173' },
+    get origin() {
+      return process.env.CORS_ORIGIN || 'http://localhost:5173'
+    },
     credentials: true,
   },
 
   // Base URL for building verification URIs in CLI auth flow
-  get baseUrl() { return process.env.BASE_URL || 'https://app.noteshell.io' },
+  get baseUrl() {
+    return process.env.BASE_URL || 'https://app.noteshell.io'
+  },
 
   // Feature flags
   flags: {

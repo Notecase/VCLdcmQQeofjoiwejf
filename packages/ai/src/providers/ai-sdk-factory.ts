@@ -172,9 +172,7 @@ export function getModelsForTask(taskType: AITaskType): {
   const fallbackEntry = selectFallbackModel(taskType)
   return {
     primary: { model: createAIModel(primaryEntry), entry: primaryEntry },
-    fallback: fallbackEntry
-      ? { model: createAIModel(fallbackEntry), entry: fallbackEntry }
-      : null,
+    fallback: fallbackEntry ? { model: createAIModel(fallbackEntry), entry: fallbackEntry } : null,
   }
 }
 

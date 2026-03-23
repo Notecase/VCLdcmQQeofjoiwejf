@@ -165,11 +165,11 @@ Central error handling with `AppError` class:
 
 All agents and services use AI SDK v6 (`streamText`, `generateText`, `embed`, `ToolLoopAgent`). The legacy OpenAI SDK has been removed.
 
-| Provider         | Models                                     | Routed Tasks                                                                    |
-| ---------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| **OpenAI**       | GPT-5.2 (chat), text-embedding-3-large     | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
-| **Gemini**       | gemini-3.1-pro-preview                     | slides (native SDK for image gen), artifacts                                    |
-| **Ollama Cloud** | kimi-k2.5:cloud                            | artifact, code, html, css, javascript                                           |
+| Provider         | Models                                 | Routed Tasks                                                                    |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
+| **OpenAI**       | GPT-5.2 (chat), text-embedding-3-large | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
+| **Gemini**       | gemini-3.1-pro-preview                 | slides (native SDK for image gen), artifacts                                    |
+| **Ollama Cloud** | kimi-k2.5:cloud                        | artifact, code, html, css, javascript                                           |
 
 `resolveModel(taskType)` returns an AI SDK `LanguageModel` + `ModelEntry` for the optimal provider. Providers are lazy-initialized singletons via `@ai-sdk/openai` and `@ai-sdk/google`.
 
@@ -177,16 +177,16 @@ Gemini's native SDK (`@google/generative-ai`, `@google/genai`) is retained only 
 
 ### Agent System (AI SDK v6 — 8 agents)
 
-| Agent                  | Purpose                           | AI SDK Pattern                                   |
-| ---------------------- | --------------------------------- | ------------------------------------------------ |
-| **SecretaryAgent**     | Intent classification and routing | `ToolLoopAgent` with 15 tools                    |
-| **EditorDeepAgent**    | Full editor AI with tool loop     | `ToolLoopAgent` with 12 tools + stream adapter   |
-| **ChatAgent**          | Conversational AI with RAG        | `streamText()` with document context             |
-| **NoteAgent**          | Note manipulation                 | `streamText()` / `generateText()`                |
-| **PlannerAgent**       | Goal decomposition                | `generateText()` with structured output          |
+| Agent                  | Purpose                           | AI SDK Pattern                                           |
+| ---------------------- | --------------------------------- | -------------------------------------------------------- |
+| **SecretaryAgent**     | Intent classification and routing | `ToolLoopAgent` with 15 tools                            |
+| **EditorDeepAgent**    | Full editor AI with tool loop     | `ToolLoopAgent` with 12 tools + stream adapter           |
+| **ChatAgent**          | Conversational AI with RAG        | `streamText()` with document context                     |
+| **NoteAgent**          | Note manipulation                 | `streamText()` / `generateText()`                        |
+| **PlannerAgent**       | Goal decomposition                | `generateText()` with structured output                  |
 | **ResearchAgent**      | Deep research workflow            | `ToolLoopAgent` for deep mode, `streamText()` for simple |
-| **ExplainAgent**       | Course AI tutor                   | `streamText()` with course context               |
-| **CourseOrchestrator** | AI course generation pipeline     | `ToolLoopAgent` with merged subagent tools       |
+| **ExplainAgent**       | Course AI tutor                   | `streamText()` with course context                       |
+| **CourseOrchestrator** | AI course generation pipeline     | `ToolLoopAgent` with merged subagent tools               |
 
 All agents use `resolveModel()` from `ai-sdk-factory.ts` and `trackAISDKUsage()` from `ai-sdk-usage.ts` for usage tracking.
 
@@ -513,17 +513,17 @@ Multiple endpoints support SSE (`text/event-stream`). Chunk types: `text-delta`,
 
 ### Service Layer
 
-| Service                          | Purpose                                                       |
-| -------------------------------- | ------------------------------------------------------------- |
-| **factory.ts**                   | Provider-agnostic initialization (Supabase or local adapters) |
-| **notes.service.ts**             | Note CRUD via database provider                               |
-| **projects.service.ts**          | Project/folder CRUD                                           |
+| Service                          | Purpose                                                        |
+| -------------------------------- | -------------------------------------------------------------- |
+| **factory.ts**                   | Provider-agnostic initialization (Supabase or local adapters)  |
+| **notes.service.ts**             | Note CRUD via database provider                                |
+| **projects.service.ts**          | Project/folder CRUD                                            |
 | **ai.service.ts**                | Agent communication with SSE streaming (uses `parseSSEStream`) |
-| **learningResources.service.ts** | Learning resource persistence                                 |
-| **attachments.service.ts**       | File attachment management                                    |
-| **subscriptions.service.ts**     | Realtime database subscriptions                               |
-| **supabase.ts**                  | Supabase client + auth/database/storage adapters              |
-| **local/**                       | Offline fallback adapters (LocalForage)                       |
+| **learningResources.service.ts** | Learning resource persistence                                  |
+| **attachments.service.ts**       | File attachment management                                     |
+| **subscriptions.service.ts**     | Realtime database subscriptions                                |
+| **supabase.ts**                  | Supabase client + auth/database/storage adapters               |
+| **local/**                       | Offline fallback adapters (LocalForage)                        |
 
 ### Composables
 
@@ -903,13 +903,13 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Optional Variables
 
-| Variable            | Purpose                                                                      |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Claude chat (default model)                                                  |
-| `GOOGLE_AI_API_KEY` | Gemini slides/research                                                       |
-| `API_PORT`          | Backend port (default 3001)                                                  |
-| `CORS_ORIGIN`       | Allowed frontend origin                                                      |
-| `VITE_PROVIDER`     | Service provider: supabase or local                                          |
+| Variable            | Purpose                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Claude chat (default model)                                                         |
+| `GOOGLE_AI_API_KEY` | Gemini slides/research                                                              |
+| `API_PORT`          | Backend port (default 3001)                                                         |
+| `CORS_ORIGIN`       | Allowed frontend origin                                                             |
+| `VITE_PROVIDER`     | Service provider: supabase or local                                                 |
 | `VITE_API_URL`      | API server base URL (empty in dev → Vite proxy, `https://api.noteshell.io` in prod) |
 
 ### Version Constraints

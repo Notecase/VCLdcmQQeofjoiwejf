@@ -1288,7 +1288,10 @@ export const useAIStore = defineStore('ai', () => {
    * Add a citation linked to a chat message (deduplicated by noteId + messageId)
    */
   function addMessageCitation(data: Omit<MessageCitation, 'id'>) {
-    if (messageCitations.value.some((c) => c.noteId === data.noteId && c.messageId === data.messageId)) return
+    if (
+      messageCitations.value.some((c) => c.noteId === data.noteId && c.messageId === data.messageId)
+    )
+      return
     messageCitations.value.push({ id: crypto.randomUUID(), ...data })
   }
 

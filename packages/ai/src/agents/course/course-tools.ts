@@ -517,8 +517,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): Record<string, 
     inputSchema: z.object({}),
     execute: async () => {
       console.log('[CourseTools] save_to_supabase called')
-      if (!ctx.assembledCourse.value)
-        return 'No course assembled yet. Call assemble_course first.'
+      if (!ctx.assembledCourse.value) return 'No course assembled yet. Call assemble_course first.'
 
       ctx.emitEvent({
         type: 'progress',
@@ -569,9 +568,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): Record<string, 
         /* best-effort — SSE handler will also update if still connected */
       }
 
-      console.log(
-        '[CourseTools] save_to_supabase completed successfully, emitting complete event'
-      )
+      console.log('[CourseTools] save_to_supabase completed successfully, emitting complete event')
       ctx.emitEvent({ type: 'complete', data: { courseId: ctx.courseId } })
       return `Course "${ctx.assembledCourse.value.title}" saved successfully to database.`
     },
@@ -817,9 +814,7 @@ export function createLessonWriterTools(ctx: CourseToolContext): Record<string, 
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             if (attempts < maxAttempts) {
-              console.warn(
-                `[batch_generate_lessons] RETRY ${attempts}: "${lesson.title}" — ${msg}`
-              )
+              console.warn(`[batch_generate_lessons] RETRY ${attempts}: "${lesson.title}" — ${msg}`)
               ctx.emitEvent({
                 type: 'thinking',
                 data: `Retrying "${lesson.title}" (attempt ${attempts + 1}/${maxAttempts})...`,
@@ -1019,16 +1014,12 @@ export function createQuizWriterTools(ctx: CourseToolContext): Record<string, an
               },
             })
 
-            console.log(
-              `[batch_generate_quizzes] DONE: "${lesson.title}" [${generated}/${total}]`
-            )
+            console.log(`[batch_generate_quizzes] DONE: "${lesson.title}" [${generated}/${total}]`)
             break // success
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             if (attempts < maxAttempts) {
-              console.warn(
-                `[batch_generate_quizzes] RETRY ${attempts}: "${lesson.title}" — ${msg}`
-              )
+              console.warn(`[batch_generate_quizzes] RETRY ${attempts}: "${lesson.title}" — ${msg}`)
               ctx.emitEvent({
                 type: 'thinking',
                 data: `Retrying "${lesson.title}" (attempt ${attempts + 1}/${maxAttempts})...`,
@@ -1248,9 +1239,7 @@ export function createSlidesWriterTools(ctx: CourseToolContext): Record<string, 
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             if (attempts < maxAttempts) {
-              console.warn(
-                `[batch_generate_slides] RETRY ${attempts}: "${lesson.title}" — ${msg}`
-              )
+              console.warn(`[batch_generate_slides] RETRY ${attempts}: "${lesson.title}" — ${msg}`)
               ctx.emitEvent({
                 type: 'thinking',
                 data: `Retrying "${lesson.title}" (attempt ${attempts + 1}/${maxAttempts})...`,

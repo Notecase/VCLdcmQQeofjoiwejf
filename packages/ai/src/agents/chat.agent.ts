@@ -9,7 +9,11 @@ import { z } from 'zod'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { streamText, generateText, embed } from 'ai'
 import { selectModel } from '../providers/model-registry'
-import { resolveModelsForTask, isTransientError, getEmbeddingModel } from '../providers/ai-sdk-factory'
+import {
+  resolveModelsForTask,
+  isTransientError,
+  getEmbeddingModel,
+} from '../providers/ai-sdk-factory'
 import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
 
 // ============================================================================
@@ -159,9 +163,13 @@ export class ChatAgent {
         yield { type: 'citation', data: citation }
       }
 
-      yield { type: 'thinking', data: this.state.citations.length > 0
-        ? `Found ${this.state.citations.length} relevant source${this.state.citations.length > 1 ? 's' : ''} from your notes`
-        : 'No matching notes found — answering from general knowledge' }
+      yield {
+        type: 'thinking',
+        data:
+          this.state.citations.length > 0
+            ? `Found ${this.state.citations.length} relevant source${this.state.citations.length > 1 ? 's' : ''} from your notes`
+            : 'No matching notes found — answering from general knowledge',
+      }
     }
 
     // 3. Add user message
@@ -215,7 +223,9 @@ export class ChatAgent {
         return
       } catch (err) {
         if (isTransientError(err) && modelOption === primary && fallback) {
-          console.warn(`[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          console.warn(
+            `[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+          )
           continue
         }
         throw err
@@ -387,7 +397,9 @@ cite it using [1], [2], etc. to reference the source.`
         }
       } catch (err) {
         if (isTransientError(err) && modelOption === primary && fallback) {
-          console.warn(`[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          console.warn(
+            `[ChatAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+          )
           continue
         }
         throw err

@@ -366,7 +366,10 @@ export class PlannerAgent {
     }
 
     // Get AI guidance with fallback
-    const { primary: guidePrimary, fallback: guideFallback } = resolveModelsForTask('planner', this.model)
+    const { primary: guidePrimary, fallback: guideFallback } = resolveModelsForTask(
+      'planner',
+      this.model
+    )
     let result: Awaited<ReturnType<typeof generateText>> | undefined
     for (const modelOption of [guidePrimary, guideFallback]) {
       if (!modelOption) continue
@@ -385,11 +388,17 @@ export class PlannerAgent {
           temperature: 0.7,
           maxOutputTokens: 500,
         })
-        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'planner' }, startTime)
+        recordAISDKUsage(
+          result.usage,
+          { model: modelOption.entry.id, taskType: 'planner' },
+          startTime
+        )
         break
       } catch (err) {
         if (isTransientError(err) && modelOption === guidePrimary && guideFallback) {
-          console.warn(`[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${guideFallback.entry.id}`)
+          console.warn(
+            `[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${guideFallback.entry.id}`
+          )
           continue
         }
         throw err
@@ -450,7 +459,12 @@ export class PlannerAgent {
    */
   private async generatePlanOutput(userContent: string): Promise<{
     summary: string
-    steps: Array<{ id: number; description: string; estimatedTime?: string; dependencies?: number[] }>
+    steps: Array<{
+      id: number
+      description: string
+      estimatedTime?: string
+      dependencies?: number[]
+    }>
   }> {
     const { primary, fallback } = resolveModelsForTask('planner', this.model)
 
@@ -466,7 +480,11 @@ export class PlannerAgent {
           maxOutputTokens: 2000,
           output: Output.object({ schema: PlanOutputSchema }),
         })
-        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'planner' }, startTime)
+        recordAISDKUsage(
+          result.usage,
+          { model: modelOption.entry.id, taskType: 'planner' },
+          startTime
+        )
 
         if (result.output) return result.output
         try {
@@ -476,7 +494,9 @@ export class PlannerAgent {
         }
       } catch (err) {
         if (isTransientError(err) && modelOption === primary && fallback) {
-          console.warn(`[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          console.warn(
+            `[PlannerAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+          )
           continue
         }
         throw err

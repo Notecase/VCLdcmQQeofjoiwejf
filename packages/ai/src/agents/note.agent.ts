@@ -401,7 +401,9 @@ export class NoteAgent {
         break
       } catch (error) {
         if (isTransientError(error) && modelOption === primary && fallback) {
-          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          console.warn(
+            `[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+          )
           continue
         }
         const errMsg = error instanceof Error ? error.message : String(error)
@@ -530,7 +532,10 @@ export class NoteAgent {
     yield { type: 'thinking', data: 'Generating targeted changes...' }
 
     let aiStream
-    const { primary: surgPrimary, fallback: surgFallback } = resolveModelsForTask('note-agent', this.model)
+    const { primary: surgPrimary, fallback: surgFallback } = resolveModelsForTask(
+      'note-agent',
+      this.model
+    )
     for (const modelOption of [surgPrimary, surgFallback]) {
       if (!modelOption) continue
       try {
@@ -545,7 +550,9 @@ export class NoteAgent {
         break
       } catch (error) {
         if (isTransientError(error) && modelOption === surgPrimary && surgFallback) {
-          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${surgFallback.entry.id}`)
+          console.warn(
+            `[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${surgFallback.entry.id}`
+          )
           continue
         }
         const errMsg = error instanceof Error ? error.message : String(error)
@@ -759,7 +766,10 @@ export class NoteAgent {
     const validSystemPrompt = systemPrompt || 'You are a helpful assistant.'
     const validUserInput = userInput || 'Please help with this note.'
 
-    const { primary: genPrimary, fallback: genFallback } = resolveModelsForTask('note-agent', this.model)
+    const { primary: genPrimary, fallback: genFallback } = resolveModelsForTask(
+      'note-agent',
+      this.model
+    )
     for (const modelOption of [genPrimary, genFallback]) {
       if (!modelOption) continue
       try {
@@ -771,11 +781,17 @@ export class NoteAgent {
           temperature: 0.7,
           maxOutputTokens: 4000,
         })
-        recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'note-agent' }, startTime)
+        recordAISDKUsage(
+          result.usage,
+          { model: modelOption.entry.id, taskType: 'note-agent' },
+          startTime
+        )
         return result.text || ''
       } catch (err) {
         if (isTransientError(err) && modelOption === genPrimary && genFallback) {
-          console.warn(`[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${genFallback.entry.id}`)
+          console.warn(
+            `[NoteAgent] ${modelOption.entry.id} unavailable, falling back to ${genFallback.entry.id}`
+          )
           continue
         }
         throw err

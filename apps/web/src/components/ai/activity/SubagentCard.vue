@@ -149,7 +149,9 @@ const isRunning = computed(() => props.subagent.status === 'running')
   border: 1px solid var(--border-subtle, rgba(48, 54, 61, 0.5));
   border-radius: 10px;
   overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .subagent-card.running {
@@ -194,9 +196,15 @@ const isRunning = computed(() => props.subagent.status === 'running')
   align-items: center;
 }
 
-.running .status-icon { color: var(--primary-color, #7c9ef8); }
-.complete .status-icon { color: var(--task-complete-color, #3fb950); }
-.error .status-icon { color: var(--task-failed-color, #f85149); }
+.running .status-icon {
+  color: var(--primary-color, #7c9ef8);
+}
+.complete .status-icon {
+  color: var(--task-complete-color, #3fb950);
+}
+.error .status-icon {
+  color: var(--task-failed-color, #f85149);
+}
 
 .agent-name {
   font-size: 12px;
@@ -282,7 +290,9 @@ const isRunning = computed(() => props.subagent.status === 'running')
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Collapse transition */

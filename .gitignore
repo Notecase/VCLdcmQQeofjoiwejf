@@ -73,6 +73,10 @@ pnpm-debug.log*
 
 # Testing
 coverage/
+playwright-report/
+test-results/
+blob-report/
+load-tests/results/
 
 # Local Supabase
 supabase/.branches/

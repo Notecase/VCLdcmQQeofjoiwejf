@@ -38,7 +38,11 @@ import {
   extractDraftTitle,
 } from './note-draft-artifacts'
 import { selectModel } from '../../providers/model-registry'
-import { resolveModelsForTask, getModelsForTask, isTransientError } from '../../providers/ai-sdk-factory'
+import {
+  resolveModelsForTask,
+  getModelsForTask,
+  isTransientError,
+} from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 
 // =============================================================================
@@ -169,7 +173,9 @@ export class ResearchAgent {
         return
       } catch (err) {
         if (isTransientError(err) && modelOption === primary && fallback) {
-          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`)
+          console.warn(
+            `[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${fallback.entry.id}`
+          )
           continue
         }
         throw err
@@ -386,10 +392,7 @@ export class ResearchAgent {
    * Generate study timer artifact using AI SDK generateText
    * Replaces both generateStudyTimerArtifactWithOllama and generateStudyTimerArtifactWithOpenAI
    */
-  private async generateStudyTimerArtifact(
-    prompt: string,
-    taskType: string
-  ) {
+  private async generateStudyTimerArtifact(prompt: string, taskType: string) {
     const { primary: artModel } = resolveModelsForTask(taskType as any)
     const model = artModel.model
     const entry = artModel.entry
@@ -466,7 +469,9 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
         break
       } catch (err) {
         if (isTransientError(err) && modelOption === mdPrimary && mdFallback) {
-          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${mdFallback.entry.id}`)
+          console.warn(
+            `[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${mdFallback.entry.id}`
+          )
           continue
         }
         throw err
@@ -549,7 +554,9 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
         break
       } catch (err) {
         if (isTransientError(err) && modelOption === resPrimary && resFallback) {
-          console.warn(`[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${resFallback.entry.id}`)
+          console.warn(
+            `[ResearchAgent] ${modelOption.entry.id} unavailable, falling back to ${resFallback.entry.id}`
+          )
           yield { event: 'thinking', data: `Switching to ${resFallback.entry.displayName}...` }
           continue
         }

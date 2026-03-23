@@ -201,7 +201,10 @@ export function createEditorDeepTools(
         return 'No note selected. Ask the user to open or specify a note.'
       }
 
-      ctx.emitEvent({ type: 'custom-progress', data: { step: 'Reading your note to find the answer...' } })
+      ctx.emitEvent({
+        type: 'custom-progress',
+        data: { step: 'Reading your note to find the answer...' },
+      })
 
       const readResult =
         blockIndex !== undefined
@@ -331,10 +334,7 @@ export function createEditorDeepTools(
         .uuid()
         .optional()
         .describe('UUID of the target note. Omit to use the currently open note'),
-      paragraph: z
-        .string()
-        .min(1)
-        .describe('Full markdown content of the new paragraph to insert'),
+      paragraph: z.string().min(1).describe('Full markdown content of the new paragraph to insert'),
       afterBlockIndex: z
         .number()
         .int()
@@ -467,7 +467,10 @@ export function createEditorDeepTools(
       const effectiveBlockIndex = blockIndex ?? getContextBlockIndex(ctx)
 
       if (effectiveBlockIndex === undefined) {
-        ctx.emitEvent({ type: 'custom-progress', data: { step: 'Computing changes to propose...' } })
+        ctx.emitEvent({
+          type: 'custom-progress',
+          data: { step: 'Computing changes to propose...' },
+        })
         const proposed = spliceAtBlockIndex(current, undefined, 'insert-after', newContent.trim())
         return proposeNoteEdit(ctx, effectiveNoteId, proposed, current)
       }
@@ -681,9 +684,7 @@ export function createEditorDeepTools(
         .string()
         .uuid()
         .optional()
-        .describe(
-          'UUID of the note containing the database. Omit to use the currently open note'
-        ),
+        .describe('UUID of the note containing the database. Omit to use the currently open note'),
       databaseId: z
         .string()
         .uuid()

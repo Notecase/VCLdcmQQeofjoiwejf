@@ -44,10 +44,7 @@ export interface ParseSSEOptions {
  * - `[DONE]` sentinel (skipped)
  * - Heartbeat events (skipped)
  */
-export async function parseSSEStream(
-  response: Response,
-  options: ParseSSEOptions
-): Promise<void> {
+export async function parseSSEStream(response: Response, options: ParseSSEOptions): Promise<void> {
   const reader = response.body?.getReader()
   if (!reader) {
     throw new Error('No response body')
@@ -91,9 +88,7 @@ export async function parseSSEStream(
         raw,
       })
     } catch (error) {
-      options.onError?.(
-        error instanceof Error ? error : new Error('Failed to parse SSE data')
-      )
+      options.onError?.(error instanceof Error ? error : new Error('Failed to parse SSE data'))
     }
 
     currentEvent = undefined

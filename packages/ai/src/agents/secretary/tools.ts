@@ -190,8 +190,7 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
   })
 
   const listMemoryFiles = tool({
-    description:
-      'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
+    description: 'List all memory files, optionally filtered by directory prefix (e.g., "Plans/")',
     inputSchema: z.object({
       prefix: z.string().optional().describe('Optional directory prefix filter'),
     }),
@@ -214,8 +213,7 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
   })
 
   const renameMemoryFile = tool({
-    description:
-      'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
+    description: 'Rename/move a memory file. Reads old file, writes to new filename, deletes old.',
     inputSchema: z.object({
       oldFilename: z.string().describe('Current filename'),
       newFilename: z.string().describe('New filename'),
@@ -298,10 +296,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
         .string()
         .optional()
         .describe('Plan.md entry line. If omitted, auto-generated.'),
-      startDate: z
-        .string()
-        .optional()
-        .describe('Start date in YYYY-MM-DD format (default: today)'),
+      startDate: z.string().optional().describe('Start date in YYYY-MM-DD format (default: today)'),
     }),
     execute: async ({ planId, planName, roadmapContent, planMdEntry, startDate }) => {
       // Use provided roadmapContent or fall back to pending roadmap
@@ -387,8 +382,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
   })
 
   const activateRoadmap = tool({
-    description:
-      'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
+    description: 'Activate an existing roadmap archive from Plans/*.md into Plan.md Active Plans.',
     inputSchema: z.object({
       roadmapId: z
         .string()
@@ -772,13 +766,8 @@ Output EXACTLY this format (for parsing):
       shiftMinutes: z
         .number()
         .optional()
-        .describe(
-          'Minutes to shift (positive=later, negative=earlier). Required for shift_after.'
-        ),
-      blockStart: z
-        .string()
-        .optional()
-        .describe('HH:MM — for insert_block: start of blocked time'),
+        .describe('Minutes to shift (positive=later, negative=earlier). Required for shift_after.'),
+      blockStart: z.string().optional().describe('HH:MM — for insert_block: start of blocked time'),
       blockDuration: z
         .number()
         .optional()

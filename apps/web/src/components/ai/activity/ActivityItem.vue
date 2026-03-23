@@ -108,31 +108,51 @@ const duration = computed(() => {
 // Step icon mapping (reused from MessageThinkingSteps)
 function getStepIcon(type: ThinkingStep['type']) {
   switch (type) {
-    case 'thought': return Brain
-    case 'search': return Search
-    case 'read': return BookOpen
-    case 'write': return PenLine
-    case 'create': return Database
-    case 'tool': return Wrench
-    case 'analyze': return Microscope
-    case 'explore': return Compass
-    case 'reasoning': return Sparkles
-    default: return Brain
+    case 'thought':
+      return Brain
+    case 'search':
+      return Search
+    case 'read':
+      return BookOpen
+    case 'write':
+      return PenLine
+    case 'create':
+      return Database
+    case 'tool':
+      return Wrench
+    case 'analyze':
+      return Microscope
+    case 'explore':
+      return Compass
+    case 'reasoning':
+      return Sparkles
+    default:
+      return Brain
   }
 }
 
 function getStepColor(type: ThinkingStep['type']): string {
   switch (type) {
-    case 'thought': return '#a78bfa'
-    case 'search': return '#60a5fa'
-    case 'read': return '#34d399'
-    case 'write': return '#fbbf24'
-    case 'create': return '#f472b6'
-    case 'tool': return '#fb923c'
-    case 'analyze': return '#22d3ee'
-    case 'explore': return '#a3e635'
-    case 'reasoning': return '#c084fc'
-    default: return '#8b949e'
+    case 'thought':
+      return '#a78bfa'
+    case 'search':
+      return '#60a5fa'
+    case 'read':
+      return '#34d399'
+    case 'write':
+      return '#fbbf24'
+    case 'create':
+      return '#f472b6'
+    case 'tool':
+      return '#fb923c'
+    case 'analyze':
+      return '#22d3ee'
+    case 'explore':
+      return '#a3e635'
+    case 'reasoning':
+      return '#c084fc'
+    default:
+      return '#8b949e'
   }
 }
 
@@ -146,7 +166,8 @@ function getToolIcon(toolName: string) {
   if (name.includes('file') || name.includes('document')) return FileText
   if (name.includes('folder') || name.includes('directory')) return Folder
   if (name.includes('code') || name.includes('execute') || name.includes('run')) return Code
-  if (name.includes('terminal') || name.includes('shell') || name.includes('command')) return Terminal
+  if (name.includes('terminal') || name.includes('shell') || name.includes('command'))
+    return Terminal
   if (name.includes('analyze') || name.includes('analysis')) return Microscope
   if (name.includes('explore') || name.includes('navigate')) return Compass
   if (name.includes('setting') || name.includes('config')) return Settings
@@ -359,8 +380,13 @@ function toggleExpand() {
 }
 
 @keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
-  50% { box-shadow: 0 0 0 5px rgba(88, 166, 255, 0.1); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(88, 166, 255, 0.1);
+  }
 }
 
 .dot-spinner {
@@ -369,7 +395,9 @@ function toggleExpand() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .connector-line {

@@ -63,7 +63,11 @@ describe('ai-sdk-usage', () => {
     it('records usage with correct timing', () => {
       const startTime = Date.now() - 500 // 500ms ago
 
-      recordAISDKUsage(makeUsage(200, 100, 300), { model: 'kimi-k2.5', taskType: 'artifact' }, startTime)
+      recordAISDKUsage(
+        makeUsage(200, 100, 300),
+        { model: 'kimi-k2.5', taskType: 'artifact' },
+        startTime
+      )
 
       expect(tokenTracker.record).toHaveBeenCalledTimes(1)
       const event = vi.mocked(tokenTracker.record).mock.calls[0][0]
@@ -76,7 +80,11 @@ describe('ai-sdk-usage', () => {
     })
 
     it('falls back to gemini provider for unknown models', () => {
-      recordAISDKUsage(makeUsage(10, 5, 15), { model: 'unknown-model', taskType: 'chat' }, Date.now())
+      recordAISDKUsage(
+        makeUsage(10, 5, 15),
+        { model: 'unknown-model', taskType: 'chat' },
+        Date.now()
+      )
 
       const event = vi.mocked(tokenTracker.record).mock.calls[0][0]
       expect(event.provider).toBe('gemini')

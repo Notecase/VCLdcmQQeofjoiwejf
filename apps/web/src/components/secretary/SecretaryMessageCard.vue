@@ -52,21 +52,22 @@ const thinkingStepsAsActivity = computed<ThinkingStep[]>(() =>
     id: `sec-${props.message.id}-${i}`,
     type: 'thought' as const,
     description: desc,
-    status: (props.isStreaming && i === arr.length - 1) ? 'running' as const : 'complete' as const,
+    status:
+      props.isStreaming && i === arr.length - 1 ? ('running' as const) : ('complete' as const),
     startedAt: props.message.createdAt,
   }))
 )
 
 // Adapt secretary tool calls with human-readable names
 const toolCallsForActivity = computed<ToolCall[]>(() =>
-  (props.message.toolCalls || []).map(tc => ({
+  (props.message.toolCalls || []).map((tc) => ({
     ...tc,
     toolName: secretaryToolDescriptions[tc.toolName] || tc.toolName.replace(/_/g, ' ') + '...',
   }))
 )
 
-const hasActivityContent = computed(() =>
-  thinkingStepsAsActivity.value.length > 0 || toolCallsForActivity.value.length > 0
+const hasActivityContent = computed(
+  () => thinkingStepsAsActivity.value.length > 0 || toolCallsForActivity.value.length > 0
 )
 </script>
 

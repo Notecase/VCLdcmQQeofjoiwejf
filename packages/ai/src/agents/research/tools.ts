@@ -45,9 +45,7 @@ export function createResearchTools(
     tools.write_file = tool({
       description: 'Write or update a virtual file. Use markdown (.md) for reports and notes.',
       inputSchema: z.object({
-        filename: z
-          .string()
-          .describe('File name (e.g., "research_request.md", "final_report.md")'),
+        filename: z.string().describe('File name (e.g., "research_request.md", "final_report.md")'),
         content: z.string().describe('File content (markdown recommended)'),
       }),
       execute: async ({ filename, content }) => {
@@ -102,9 +100,7 @@ export function createResearchTools(
           updatedAt: f.updatedAt,
         }))
         if (files.length === 0) return 'No files yet.'
-        return files
-          .map((f) => `- ${f.name} (${f.size} chars, updated ${f.updatedAt})`)
-          .join('\n')
+        return files.map((f) => `- ${f.name} (${f.size} chars, updated ${f.updatedAt})`).join('\n')
       },
     })
   }
@@ -166,8 +162,7 @@ export function createResearchTools(
   // ---------- Web Search (Tavily) ----------
 
   tools.web_search = tool({
-    description:
-      'Search the web using Tavily. Returns relevant results with URLs and summaries.',
+    description: 'Search the web using Tavily. Returns relevant results with URLs and summaries.',
     inputSchema: z.object({
       query: z.string().describe('Search query'),
       maxResults: z.number().optional().describe('Max results (default: 5, max: 10)'),

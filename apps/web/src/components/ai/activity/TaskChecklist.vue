@@ -13,9 +13,7 @@ const props = defineProps<{
   tasks: SubTask[]
 }>()
 
-const completedCount = computed(() =>
-  props.tasks.filter((t) => t.status === 'completed').length
-)
+const completedCount = computed(() => props.tasks.filter((t) => t.status === 'completed').length)
 
 const totalCount = computed(() => props.tasks.length)
 
@@ -23,8 +21,10 @@ const percent = computed(() =>
   totalCount.value === 0 ? 0 : Math.round((completedCount.value / totalCount.value) * 100)
 )
 
-const allDone = computed(() =>
-  totalCount.value > 0 && props.tasks.every((t) => t.status === 'completed' || t.status === 'failed')
+const allDone = computed(
+  () =>
+    totalCount.value > 0 &&
+    props.tasks.every((t) => t.status === 'completed' || t.status === 'failed')
 )
 
 function formatDuration(task: SubTask): string {
@@ -40,9 +40,7 @@ function formatDuration(task: SubTask): string {
     <!-- Header -->
     <div class="checklist-header">
       <span class="header-title">Task Plan</span>
-      <span class="header-count">
-        {{ completedCount }}/{{ totalCount }} complete
-      </span>
+      <span class="header-count"> {{ completedCount }}/{{ totalCount }} complete </span>
     </div>
 
     <!-- Progress bar -->
@@ -141,7 +139,9 @@ function formatDuration(task: SubTask): string {
   height: 100%;
   background: var(--task-running-color, #fbbf24);
   border-radius: 2px;
-  transition: width 0.4s ease, background 0.4s ease;
+  transition:
+    width 0.4s ease,
+    background 0.4s ease;
 }
 
 .progress-fill.done {
@@ -220,6 +220,8 @@ function formatDuration(task: SubTask): string {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

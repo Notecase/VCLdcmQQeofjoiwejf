@@ -14,12 +14,7 @@ export { MODEL_REGISTRY, selectModel, selectFallbackModel, getModel } from './mo
 export type { AITaskType, ModelEntry, ModelProvider, ModelCapability } from './model-registry'
 
 // Token Tracker (usage tracking)
-export {
-  tokenTracker,
-  trackGeminiResponse,
-  trackGeminiStream,
-  computeCost,
-} from './token-tracker'
+export { tokenTracker, trackGeminiResponse, trackGeminiStream, computeCost } from './token-tracker'
 export type { TokenUsageEvent, SessionUsage } from './token-tracker'
 
 // Gemini Provider (slides — native SDK)

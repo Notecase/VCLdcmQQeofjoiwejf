@@ -26,6 +26,11 @@ vi.mock('../providers/ai-sdk-factory', () => ({
     model: 'mock-model',
     entry: { id: 'test-model' },
   }),
+  resolveModelsForTask: () => ({
+    primary: { model: 'mock-model', entry: { id: 'test-model', provider: 'openai' } },
+    fallback: null,
+  }),
+  isTransientError: () => false,
   getEmbeddingModel: () => 'mock-embedding-model',
 }))
 

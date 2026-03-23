@@ -19,6 +19,10 @@ export default [
       'packages/editor/src/**/*.js',
       'packages/muya/src/**/*.js',
       'apps/web/src/muya/**/*.js',
+      // k6 load tests (k6 runtime, not Node.js)
+      'load-tests/**',
+      // Standalone scripts (Node.js globals)
+      'scripts/**',
     ],
   },
 

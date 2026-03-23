@@ -1,0 +1,89 @@
+name: Production Verification
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  verify:
+    name: Verify Production
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for deployment propagation
+        run: sleep 90
+
+      - name: Run production verification
+        run: pnpm verify:prod
+        env:
+          API_URL: https://api.noteshell.io
+          WEB_URL: https://app.noteshell.io
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke E2E against production
+        run: pnpm exec playwright test e2e/smoke.spec.ts
+        env:
+          E2E_BASE_URL: https://app.noteshell.io
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: production-playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Create GitHub issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runNumber = context.payload.workflow_run.run_number
+            const commitSha = context.payload.workflow_run.head_sha
+            const runUrl = context.payload.workflow_run.html_url
+            const title = `Production verification failed — ${new Date().toISOString().slice(0, 10)}`
+            const body = [
+              '## Production Verification Failed',
+              '',
+              `**Triggered by**: CI workflow on \`main\` (run #${runNumber})`,
+              `**Commit**: ${commitSha}`,
+              '',
+              'The post-deploy verification detected issues with production services.',
+              '',
+              '### Next steps',
+              `1. Check the [workflow run logs](${runUrl})`,
+              '2. Verify https://api.noteshell.io/health',
+              '3. Verify https://app.noteshell.io loads',
+              '4. Consider rolling back if critical',
+            ].join('\n')
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'production'],
+            })

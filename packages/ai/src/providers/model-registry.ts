@@ -123,12 +123,12 @@ export type AITaskType =
   | 'embedding'
   | 'table'
 
-// Task → model mapping
+// Task → model mapping (primary model, with optional fallback)
 const TASK_MODEL_MAP: Record<AITaskType, string> = {
   chat: 'gemini-2.5-pro',
   'note-agent': 'gemini-2.5-pro',
   planner: 'gemini-2.5-pro',
-  secretary: 'gemini-3-flash-preview',
+  secretary: 'gemini-2.5-pro',
   editor: 'gemini-2.5-pro',
   'editor-deep': 'gemini-2.5-pro',
   completion: 'gemini-2.5-pro',
@@ -145,6 +145,24 @@ const TASK_MODEL_MAP: Record<AITaskType, string> = {
   embedding: 'text-embedding-3-large',
 }
 
+// Fallback model when primary is unavailable (rate limit, high demand, etc.)
+const TASK_FALLBACK_MAP: Partial<Record<AITaskType, string>> = {
+  chat: 'gemini-3-flash-preview',
+  'note-agent': 'gemini-3-flash-preview',
+  planner: 'gemini-3-flash-preview',
+  secretary: 'gemini-3-flash-preview',
+  editor: 'gemini-3-flash-preview',
+  'editor-deep': 'gemini-3-flash-preview',
+  completion: 'gemini-3-flash-preview',
+  rewrite: 'gemini-3-flash-preview',
+  summarize: 'gemini-3-flash-preview',
+  explain: 'gemini-3-flash-preview',
+  table: 'gemini-3-flash-preview',
+  research: 'gemini-3-flash-preview',
+  course: 'gemini-3-flash-preview',
+  slides: 'gemini-2.5-pro',
+}
+
 /**
  * Select the best model for a given task type.
  * Returns a ModelEntry from the registry.
@@ -159,6 +177,16 @@ export function selectModel(taskType: AITaskType): ModelEntry {
     return MODEL_REGISTRY['gemini-2.5-pro']
   }
   return entry
+}
+
+/**
+ * Select a fallback model for a task type.
+ * Returns undefined if no fallback is configured.
+ */
+export function selectFallbackModel(taskType: AITaskType): ModelEntry | undefined {
+  const modelId = TASK_FALLBACK_MAP[taskType]
+  if (!modelId) return undefined
+  return MODEL_REGISTRY[modelId]
 }
 
 /**

@@ -14,7 +14,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import type { LanguageModel, EmbeddingModel } from 'ai'
 import type { ModelEntry, AITaskType } from './model-registry'
-import { selectModel, getModel } from './model-registry'
+import { selectModel, selectFallbackModel, getModel } from './model-registry'
 
 // ============================================================================
 // Provider Singletons (lazy-initialized)
@@ -153,6 +153,29 @@ export function resolveModel(
     ? (getModel(overrideModelId) ?? selectModel(taskType))
     : selectModel(taskType)
   return { model: createAIModel(entry), entry }
+}
+
+/**
+ * Get primary + fallback models for a task type.
+ * Used by agents that want to retry with a different model on failure.
+ *
+ * @example
+ *   const { primary, fallback } = getModelsForTask('secretary')
+ *   try { await streamWith(primary) }
+ *   catch { if (fallback) await streamWith(fallback) }
+ */
+export function getModelsForTask(taskType: AITaskType): {
+  primary: { model: LanguageModel; entry: ModelEntry }
+  fallback: { model: LanguageModel; entry: ModelEntry } | null
+} {
+  const primaryEntry = selectModel(taskType)
+  const fallbackEntry = selectFallbackModel(taskType)
+  return {
+    primary: { model: createAIModel(primaryEntry), entry: primaryEntry },
+    fallback: fallbackEntry
+      ? { model: createAIModel(fallbackEntry), entry: fallbackEntry }
+      : null,
+  }
 }
 
 /**

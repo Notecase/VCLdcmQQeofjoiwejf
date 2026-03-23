@@ -13,7 +13,7 @@ import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
 import { getSecretarySystemPrompt } from './prompts'
 import { adaptSecretaryStream } from './ai-sdk-stream-adapter'
-import { getModelForTask } from '../../providers/ai-sdk-factory'
+import { getModelsForTask } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import type { SharedContextService } from '../../services/shared-context.service'
 
@@ -97,30 +97,11 @@ export class SecretaryAgent {
     const threadId = input.threadId || crypto.randomUUID()
     const pendingEvents: SecretaryStreamEvent[] = []
 
-    // Create AI SDK v6 ToolLoopAgent (replaces deepagents createDeepAgent)
-    const model = getModelForTask('secretary')
-    const agent = new ToolLoopAgent({
-      model,
-      instructions: fullSystemPrompt,
-      tools,
-      stopWhen: stepCountIs(20),
-      onFinish: trackAISDKUsage({ model: 'secretary', taskType: 'secretary' }),
-    })
+    // Get primary + fallback models
+    const { primary, fallback } = getModelsForTask('secretary')
 
     try {
       yield { event: 'thread-id', data: threadId }
-
-      let result
-      try {
-        result = await agent.stream({
-          messages: [{ role: 'user', content: input.message }],
-        })
-      } catch (streamError) {
-        const msg = streamError instanceof Error ? streamError.message : String(streamError)
-        console.error('secretary.agent.stream_init_error', msg, streamError)
-        yield { event: 'error', data: `Agent stream init failed: ${msg}` }
-        return
-      }
 
       // Detect plan/roadmap tool calls for shared context writes
       const detectedContextWrites: Array<{
@@ -129,35 +110,79 @@ export class SecretaryAgent {
         payload: Record<string, unknown>
       }> = []
 
-      for await (const event of adaptSecretaryStream(result.fullStream, pendingEvents)) {
-        // Track tool calls for shared context
-        if (
-          event.event === 'tool_call' &&
-          this.config.sharedContextService &&
-          typeof event.data === 'string'
-        ) {
-          try {
-            const tc = JSON.parse(event.data) as {
-              toolName: string
-              arguments: Record<string, unknown>
-            }
-            if (
-              tc.toolName === 'save_roadmap' ||
-              tc.toolName === 'generate_daily_plan' ||
-              tc.toolName === 'mark_day_complete'
-            ) {
-              detectedContextWrites.push({
-                type: 'active_plan',
-                summary: `Secretary: ${tc.toolName}`,
-                payload: { threadId, tool: tc.toolName, args: tc.arguments },
-              })
-            }
-          } catch {
-            // Ignore JSON parse errors
-          }
-        }
+      // Try primary model, fall back on transient errors (rate limit, high demand)
+      let streamed = false
+      for (const modelOption of [primary, fallback]) {
+        if (!modelOption) continue
+        if (streamed) break
 
-        yield event
+        const agent = new ToolLoopAgent({
+          model: modelOption.model,
+          instructions: fullSystemPrompt,
+          tools,
+          stopWhen: stepCountIs(20),
+          onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'secretary' }),
+        })
+
+        try {
+          const result = await agent.stream({
+            messages: [{ role: 'user', content: input.message }],
+          })
+
+          for await (const event of adaptSecretaryStream(result.fullStream, pendingEvents)) {
+            // Track tool calls for shared context
+            if (
+              event.event === 'tool_call' &&
+              this.config.sharedContextService &&
+              typeof event.data === 'string'
+            ) {
+              try {
+                const tc = JSON.parse(event.data) as {
+                  toolName: string
+                  arguments: Record<string, unknown>
+                }
+                if (
+                  tc.toolName === 'save_roadmap' ||
+                  tc.toolName === 'generate_daily_plan' ||
+                  tc.toolName === 'mark_day_complete'
+                ) {
+                  detectedContextWrites.push({
+                    type: 'active_plan',
+                    summary: `Secretary: ${tc.toolName}`,
+                    payload: { threadId, tool: tc.toolName, args: tc.arguments },
+                  })
+                }
+              } catch {
+                // Ignore JSON parse errors
+              }
+            }
+
+            yield event
+          }
+
+          streamed = true
+        } catch (modelError) {
+          const msg = modelError instanceof Error ? modelError.message : String(modelError)
+          const isTransient =
+            msg.includes('high demand') ||
+            msg.includes('rate limit') ||
+            msg.includes('overloaded') ||
+            msg.includes('503') ||
+            msg.includes('429')
+
+          if (isTransient && modelOption === primary && fallback) {
+            console.warn(
+              `secretary.agent.fallback`,
+              `${modelOption.entry.id} unavailable, trying ${fallback.entry.id}:`,
+              msg
+            )
+            yield { event: 'thinking', data: `Switching to ${fallback.entry.displayName}...` }
+            continue
+          }
+
+          // Non-transient error or no fallback — propagate
+          throw modelError
+        }
       }
 
       // Write detected context entries to shared bus

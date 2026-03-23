@@ -110,9 +110,17 @@ export class SecretaryAgent {
     try {
       yield { event: 'thread-id', data: threadId }
 
-      const result = await agent.stream({
-        messages: [{ role: 'user', content: input.message }],
-      })
+      let result
+      try {
+        result = await agent.stream({
+          messages: [{ role: 'user', content: input.message }],
+        })
+      } catch (streamError) {
+        const msg = streamError instanceof Error ? streamError.message : String(streamError)
+        console.error('secretary.agent.stream_init_error', msg, streamError)
+        yield { event: 'error', data: `Agent stream init failed: ${msg}` }
+        return
+      }
 
       // Detect plan/roadmap tool calls for shared context writes
       const detectedContextWrites: Array<{

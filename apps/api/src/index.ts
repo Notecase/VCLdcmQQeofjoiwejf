@@ -106,6 +106,14 @@ async function startServer() {
   console.log(`   CORS Origin: ${config.cors.origin}`)
   console.log(`   Supabase: ${config.supabase.url ? '✅ Configured' : '❌ Not configured'}`)
 
+  // Reset AI provider singletons so they use the fully-loaded env
+  try {
+    const { resetAIProviders } = await import('@inkdown/ai/providers')
+    resetAIProviders()
+  } catch (err) {
+    console.warn('⚠️  AI provider reset failed:', err)
+  }
+
   // Initialize usage persister (TokenTracker → DB writes + credit deduction)
   try {
     const { initUsagePersister } = await import('@inkdown/ai')

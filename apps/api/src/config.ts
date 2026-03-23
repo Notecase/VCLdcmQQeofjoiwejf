@@ -5,72 +5,77 @@ loadEnv()
 
 /**
  * Application configuration
- * All environment variables are validated and typed here
+ *
+ * Uses getters so process.env is read at access time, not module load time.
+ * This is required for Cloudflare Workers where secrets are injected into
+ * process.env after module evaluation.
  */
 export const config = {
   // Server
-  port: parseInt(process.env.PORT || '3001', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  isDev: process.env.NODE_ENV !== 'production',
+  get port() { return parseInt(process.env.PORT || '3001', 10) },
+  get nodeEnv() { return process.env.NODE_ENV || 'development' },
+  get isDev() { return process.env.NODE_ENV !== 'production' },
 
   // Supabase
   supabase: {
-    url: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
-    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
-    anonKey: process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '',
+    get url() { return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '' },
+    get serviceKey() { return process.env.SUPABASE_SERVICE_KEY || '' },
+    get anonKey() { return process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '' },
   },
 
   // AI Providers
   ai: {
     openai: {
-      apiKey: process.env.OPENAI_API_KEY || '',
+      get apiKey() { return process.env.OPENAI_API_KEY || '' },
     },
     anthropic: {
-      apiKey: process.env.ANTHROPIC_API_KEY || '',
+      get apiKey() { return process.env.ANTHROPIC_API_KEY || '' },
     },
     google: {
-      apiKey: process.env.GOOGLE_AI_API_KEY || '',
+      get apiKey() { return process.env.GOOGLE_AI_API_KEY || '' },
     },
     ollama: {
-      cloudUrl: process.env.OLLAMA_CLOUD_URL || 'https://ollama.com',
-      apiKey: process.env.OLLAMA_API_KEY || '',
-      localUrl: process.env.OLLAMA_LOCAL_URL || 'http://localhost:11434',
+      get cloudUrl() { return process.env.OLLAMA_CLOUD_URL || 'https://ollama.com' },
+      get apiKey() { return process.env.OLLAMA_API_KEY || '' },
+      get localUrl() { return process.env.OLLAMA_LOCAL_URL || 'http://localhost:11434' },
     },
   },
 
   // Model Defaults
   models: {
-    defaultChat: process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro',
-    defaultEmbedding: process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large',
-    embeddingDimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
+    get defaultChat() { return process.env.DEFAULT_CHAT_MODEL || 'gemini-2.5-pro' },
+    get defaultEmbedding() { return process.env.DEFAULT_EMBEDDING_MODEL || 'text-embedding-3-large' },
+    get embeddingDimensions() { return parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10) },
   },
 
   // Rate Limiting
   rateLimit: {
-    requestsPerMinute: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60', 10),
-    tokensPerDay: parseInt(process.env.RATE_LIMIT_TOKENS_PER_DAY || '100000', 10),
+    get requestsPerMinute() { return parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60', 10) },
+    get tokensPerDay() { return parseInt(process.env.RATE_LIMIT_TOKENS_PER_DAY || '100000', 10) },
   },
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    get origin() { return process.env.CORS_ORIGIN || 'http://localhost:5173' },
     credentials: true,
   },
 
   // Base URL for building verification URIs in CLI auth flow
-  baseUrl: process.env.BASE_URL || 'https://app.noteshell.io',
+  get baseUrl() { return process.env.BASE_URL || 'https://app.noteshell.io' },
 
   // Feature flags
   flags: {
-    missionHubV1: !['0', 'false', 'off', 'no'].includes(
-      String(
-        process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true')
+    get missionHubV1() {
+      return !['0', 'false', 'off', 'no'].includes(
+        String(
+          process.env.MISSION_HUB_V1 ?? (process.env.NODE_ENV === 'production' ? 'false' : 'true')
+        )
+          .trim()
+          .toLowerCase()
       )
-        .trim()
-        .toLowerCase()
-    ),
+    },
   },
-} as const
+}
 
 /**
  * Validate required configuration

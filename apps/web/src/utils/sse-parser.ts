@@ -143,11 +143,8 @@ export async function parseSSEStream(
       }
     }
 
-    // Flush any remaining data
-    if (dataLines.length > 0 || buffer.trim()) {
-      if (buffer.trim()) {
-        dataLines.push(buffer)
-      }
+    // Flush any remaining data (but don't push raw buffer — it may be a partial line)
+    if (dataLines.length > 0) {
       flushPendingEvent()
     }
   } finally {

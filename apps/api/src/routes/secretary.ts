@@ -278,6 +278,9 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
         requestId,
         threadId,
         assistantChars: assistantContent.length,
+        hasToolCalls: !!assistantToolCalls,
+        hasThinking: !!assistantThinkingSteps,
+        model: assistantModel || 'none',
       })
 
       // Send threadId in the done event so the frontend can track it

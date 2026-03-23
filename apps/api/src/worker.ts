@@ -54,9 +54,18 @@ app.use(
 
 let initialized = false
 
-app.use('*', async (_c, next) => {
+app.use('*', async (c, next) => {
   if (!initialized) {
     initialized = true
+
+    // CF Workers passes secrets via c.env, not process.env.
+    // Copy bindings into process.env so config.ts getters can read them.
+    const env = c.env as Record<string, string>
+    for (const [key, value] of Object.entries(env)) {
+      if (typeof value === 'string' && !process.env[key]) {
+        process.env[key] = value
+      }
+    }
 
     const validation = validateConfig()
     if (!validation.valid) {
@@ -65,6 +74,14 @@ app.use('*', async (_c, next) => {
 
     const providers = getAvailableProviders()
     console.log('[worker] AI providers:', providers)
+
+    // Reset AI provider singletons so they pick up the freshly-injected keys
+    try {
+      const { resetAIProviders } = await import('@inkdown/ai/providers')
+      resetAIProviders()
+    } catch (err) {
+      console.warn('[worker] AI provider reset failed:', err)
+    }
 
     try {
       const { initUsagePersister } = await import('@inkdown/ai')

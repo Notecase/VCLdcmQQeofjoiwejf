@@ -128,7 +128,7 @@ const TASK_MODEL_MAP: Record<AITaskType, string> = {
   chat: 'gemini-2.5-pro',
   'note-agent': 'gemini-2.5-pro',
   planner: 'gemini-2.5-pro',
-  secretary: 'gemini-2.5-pro',
+  secretary: 'gemini-3-flash-preview',
   editor: 'gemini-2.5-pro',
   'editor-deep': 'gemini-2.5-pro',
   completion: 'gemini-2.5-pro',

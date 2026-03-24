@@ -194,7 +194,7 @@ async function captureAndExecute(
 
   // ── Idempotency check: prevent double execution on Telegram retry ──
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString()
-  const { data: duplicate } = await db
+  const { data: duplicates } = await db
     .from('inbox_proposals')
     .select('id')
     .eq('user_id', userId)
@@ -202,9 +202,8 @@ async function captureAndExecute(
     .eq('source', message.channel)
     .gte('created_at', oneMinuteAgo)
     .limit(1)
-    .single()
 
-  if (duplicate && !clarificationContext) {
+  if (duplicates && duplicates.length > 0 && !clarificationContext) {
     // Already processed this exact message recently
     return
   }

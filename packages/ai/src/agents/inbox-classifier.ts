@@ -193,5 +193,5 @@ function buildUserContent(input: ClassifyMessageInput): string {
 "${input.text}"
 ${filesList}
 
-Return a JSON object with: actionType, category, targetFile, payload, proposedContent, previewText, confidence, botReplyText.`
+Return a JSON object with: actionType, category, targetFile, payload, proposedContent, previewText, confidence, botReplyText, and optionally clarificationQuestion (if actionType is needs_clarification).`
 }

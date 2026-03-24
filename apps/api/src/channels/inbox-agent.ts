@@ -229,10 +229,17 @@ export async function runInboxAgent(
         ],
       })
 
-      // Extract tool results from the agent result
-      if (result.toolResults.length > 0) {
-        const lastTool = result.toolResults[result.toolResults.length - 1]
-        const toolOutput = lastTool.output as Record<string, unknown>
+      // Extract tool results across ALL steps (result.toolResults is last-step only)
+      const allToolResults = result.steps.flatMap((step) =>
+        step.toolResults.map((tr) => ({
+          toolName: tr.toolName,
+          output: tr.output as Record<string, unknown>,
+        }))
+      )
+
+      if (allToolResults.length > 0) {
+        const lastTool = allToolResults[allToolResults.length - 1]
+        const toolOutput = lastTool.output
 
         // Map tool name → action type and category
         const actionType = lastTool.toolName
@@ -242,7 +249,7 @@ export async function runInboxAgent(
         return {
           actionType,
           success: (toolOutput.success as boolean) ?? false,
-          message: (toolOutput.message as string) || 'Done',
+          message: (toolOutput.message as string) || result.text || 'Done',
           category,
           targetFile,
           noteId: toolOutput.noteId as string | undefined,

@@ -156,11 +156,19 @@ export async function classifyInboxMessage(
         startTime
       )
 
-      if (result.output) {
-        return result.output
+      // output getter throws NoOutputGeneratedError if model didn't produce valid JSON
+      try {
+        if (result.output) {
+          return result.output
+        }
+      } catch {
+        // No valid output — try fallback model
+        continue
       }
     } catch (err) {
-      if (isTransientError(err) && fallback) continue
+      // Retry with fallback on transient errors OR when model fails to produce valid output
+      const isNoOutput = err instanceof Error && err.name === 'AI_NoOutputGeneratedError'
+      if ((isTransientError(err) || isNoOutput) && fallback) continue
       // Don't throw — return null so caller falls back gracefully
       console.error('[inbox-classifier] Classification failed:', err)
       return null

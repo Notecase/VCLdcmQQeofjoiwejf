@@ -7,23 +7,13 @@
  */
 
 import { getServiceClient } from '../lib/supabase'
-import { classifyInboxMessage } from '@inkdown/ai/agents/inbox-classifier'
 import type { ChannelMessage, ChannelReplyHandle } from './types'
 import { parseCommand } from './types'
-import { executeAction, executeNoteCreationStreaming } from './executor'
-import type { SmartClassificationResult } from '@inkdown/shared/types'
+import { runInboxAgent } from './inbox-agent'
 
-/** Clarification session stored in user_channel_links.config */
-interface PendingClarification {
-  proposalId: string
-  question: string
-  originalText: string
-  partialClassification: Partial<SmartClassificationResult>
-  expiresAt: string
-}
-
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ChannelLinkConfig {
-  pendingClarification?: PendingClarification
+  // Reserved for future use (clarification sessions removed with agent approach)
 }
 
 /**
@@ -145,52 +135,22 @@ async function handlePairing(
 }
 
 /**
- * Autonomous capture + classify + execute flow.
+ * Autonomous capture + agent execution flow.
  *
- * 1. Check for pending clarification session
+ * 1. Idempotency check
  * 2. Insert raw row (status: 'executing')
- * 3. Smart classify (8s timeout)
- * 4. Execute action immediately
- * 5. Update proposal with result
- * 6. Reply via ChannelReplyHandle
+ * 3. Run inbox agent (classifies AND executes in one call)
+ * 4. Update proposal with result
+ * 5. Reply via ChannelReplyHandle
  */
 async function captureAndExecute(
   userId: string,
-  linkId: string,
-  linkConfig: ChannelLinkConfig | null,
+  _linkId: string,
+  _linkConfig: ChannelLinkConfig | null,
   message: ChannelMessage,
   reply: ChannelReplyHandle
 ): Promise<void> {
   const db = getServiceClient()
-
-  // ── Check for pending clarification session ──────────────────────
-  const pending = linkConfig?.pendingClarification
-  let clarificationContext: string | null = null
-
-  if (pending) {
-    const isExpired = new Date(pending.expiresAt) < new Date()
-
-    // Clear the pending clarification regardless
-    await db
-      .from('user_channel_links')
-      .update({
-        config: { ...(linkConfig || {}), pendingClarification: null },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', linkId)
-
-    if (!isExpired) {
-      // This message is a clarification reply — enrich the context
-      clarificationContext = `Original: "${pending.originalText}"\nUser clarified: "${message.text}"`
-
-      // Update the original proposal status from awaiting_clarification to executing
-      await db
-        .from('inbox_proposals')
-        .update({ status: 'executing', updated_at: new Date().toISOString() })
-        .eq('id', pending.proposalId)
-    }
-    // If expired, treat as fresh message (fall through)
-  }
 
   // ── Idempotency check: prevent double execution on Telegram retry ──
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString()
@@ -203,211 +163,72 @@ async function captureAndExecute(
     .gte('created_at', oneMinuteAgo)
     .limit(1)
 
-  if (duplicates && duplicates.length > 0 && !clarificationContext) {
-    // Already processed this exact message recently
+  if (duplicates && duplicates.length > 0) {
     return
   }
 
   // ── Insert raw proposal (status: 'executing') ──────────────────
-  let proposalId: string
-
-  if (clarificationContext && pending) {
-    // Reuse the original proposal
-    proposalId = pending.proposalId
-  } else {
-    const { data: inserted, error } = await db
-      .from('inbox_proposals')
-      .insert({
-        user_id: userId,
-        source: message.channel,
-        raw_text: message.text,
-        status: 'executing',
-        metadata: {
-          displayName: message.displayName,
-          timestamp: message.timestamp.toISOString(),
-          mediaType: message.mediaType || 'text',
-        },
-      })
-      .select('id')
-      .single()
-
-    if (error || !inserted) {
-      await reply.send('Failed to capture. Please try again.')
-      return
-    }
-    proposalId = inserted.id
-  }
-
-  // ── Smart classify (8s timeout) ────────────────────────────────
-  let classification: SmartClassificationResult | null = null
-
-  try {
-    const { data: memoryFiles } = await db
-      .from('secretary_memory')
-      .select('filename')
-      .eq('user_id', userId)
-
-    const existingFiles = (memoryFiles ?? []).map((f: { filename: string }) => f.filename)
-
-    classification = await Promise.race([
-      classifyInboxMessage({
-        text: clarificationContext || message.text,
-        source: message.channel,
-        existingFiles,
-      }),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 30000)),
-    ])
-  } catch {
-    // Classification failed — fall through to fallback
-  }
-
-  // ── Handle needs_clarification ─────────────────────────────────
-  if (classification?.actionType === 'needs_clarification') {
-    const question = classification.clarificationQuestion || classification.botReplyText
-
-    // Save clarification session to link config
-    const newConfig: ChannelLinkConfig = {
-      ...(linkConfig || {}),
-      pendingClarification: {
-        proposalId,
-        question,
-        originalText: message.text,
-        partialClassification: classification,
-        expiresAt: new Date(Date.now() + 2 * 60_000).toISOString(), // 2 minutes
+  const { data: inserted, error } = await db
+    .from('inbox_proposals')
+    .insert({
+      user_id: userId,
+      source: message.channel,
+      raw_text: message.text,
+      status: 'executing',
+      metadata: {
+        displayName: message.displayName,
+        timestamp: message.timestamp.toISOString(),
+        mediaType: message.mediaType || 'text',
       },
-    }
+    })
+    .select('id')
+    .single()
 
-    await db
-      .from('user_channel_links')
-      .update({ config: newConfig, updated_at: new Date().toISOString() })
-      .eq('id', linkId)
-
-    // Update proposal status
-    await db
-      .from('inbox_proposals')
-      .update({
-        status: 'awaiting_clarification',
-        action_type: 'needs_clarification',
-        preview_text: question,
-        confidence: classification.confidence,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', proposalId)
-
-    await reply.send(question)
+  if (error || !inserted) {
+    await reply.send('Failed to capture. Please try again.')
     return
   }
+  const proposalId = inserted.id
 
-  // ── Execute action ─────────────────────────────────────────────
-  if (classification) {
-    // Update proposal with classification data
+  // ── Run inbox agent (classifies AND executes in one call) ──────
+  const agentResult = await Promise.race([
+    runInboxAgent(userId, message.text, message.channel),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
+  ])
+
+  if (agentResult) {
     await db
       .from('inbox_proposals')
       .update({
-        action_type: classification.actionType,
-        category: classification.category,
-        target_file: classification.targetFile,
-        proposed_content: classification.proposedContent,
-        payload: classification.payload,
-        preview_text: classification.previewText,
-        confidence: classification.confidence,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', proposalId)
-
-    // For create_note: use streaming variant with progress updates
-    if (classification.actionType === 'create_note') {
-      await reply.send(
-        `Creating note about '${(classification.payload as { title?: string }).title || 'your topic'}'...`
-      )
-
-      let lastEditTime = 0
-      const THROTTLE_MS = 800
-
-      const result = await executeNoteCreationStreaming(
-        userId,
-        classification,
-        (progressMessage) => {
-          const now = Date.now()
-          if (now - lastEditTime >= THROTTLE_MS) {
-            lastEditTime = now
-            reply.edit(progressMessage).catch(() => {})
-          }
-        }
-      )
-
-      // Update proposal with execution result
-      await db
-        .from('inbox_proposals')
-        .update({
-          status: result.status,
-          execution_result: {
-            noteId: result.noteId,
-            updatedFile: result.updatedFile,
-            error: result.error,
-            durationMs: result.durationMs,
-          },
-          metadata: result.noteId
-            ? { displayName: message.displayName, noteId: result.noteId }
-            : undefined,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', proposalId)
-
-      await reply.edit(result.resultMessage)
-      return
-    }
-
-    // For simple appends: execute instantly
-    const result = await executeAction(userId, classification)
-
-    // Update proposal with execution result
-    await db
-      .from('inbox_proposals')
-      .update({
-        status: result.status,
+        action_type: agentResult.actionType,
+        category: agentResult.category,
+        target_file: agentResult.targetFile,
+        status: agentResult.success ? 'applied' : 'failed',
         execution_result: {
-          noteId: result.noteId,
-          updatedFile: result.updatedFile,
-          error: result.error,
-          durationMs: result.durationMs,
+          noteId: agentResult.noteId,
+          updatedFile: agentResult.updatedFile,
+          error: agentResult.error,
         },
         updated_at: new Date().toISOString(),
       })
       .eq('id', proposalId)
 
-    await reply.send(result.resultMessage)
+    await reply.send(agentResult.message)
     return
   }
 
-  // ── Fallback: no classification → save as thought to Inbox.md ──
-  const fallbackResult = await executeAction(userId, {
-    actionType: 'add_thought',
-    category: 'thought',
-    targetFile: 'Inbox.md',
-    payload: { text: message.text },
-    proposedContent: `- ${message.text}`,
-    previewText: message.text,
-    confidence: 0,
-    botReplyText: '📝 Captured to your Inbox.',
-  })
-
+  // ── Fallback: agent timed out → save as thought to Inbox.md ────
   await db
     .from('inbox_proposals')
     .update({
-      status: fallbackResult.status,
+      status: 'applied',
       action_type: 'add_thought',
       category: 'thought',
       target_file: 'Inbox.md',
       proposed_content: `- ${message.text}`,
-      execution_result: {
-        updatedFile: fallbackResult.updatedFile,
-        error: fallbackResult.error,
-        durationMs: fallbackResult.durationMs,
-      },
       updated_at: new Date().toISOString(),
     })
     .eq('id', proposalId)
 
-  await reply.send('📝 Captured to your Inbox.')
+  await reply.send('Captured to your Inbox.')
 }

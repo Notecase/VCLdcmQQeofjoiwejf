@@ -54,18 +54,14 @@ if (botToken) {
     await handleIncomingMessage(message, replyHandle)
   })
 
-  // Webhook endpoint
-  telegram.post('/webhook', async (c) => {
-    // Verify webhook secret if configured
-    const secret = config.telegram.webhookSecret
-    if (secret) {
-      const headerSecret = c.req.header('X-Telegram-Bot-Api-Secret-Token')
-      if (headerSecret !== secret) {
-        return c.json({ error: 'Invalid secret' }, 403)
-      }
-    }
+  // Webhook endpoint — Grammy handles secret verification natively
+  const secret = config.telegram.webhookSecret
+  const handler = webhookCallback(bot!, 'hono', {
+    timeoutMilliseconds: 55_000,
+    secretToken: secret || undefined,
+  })
 
-    const handler = webhookCallback(bot!, 'hono')
+  telegram.post('/webhook', async (c) => {
     return handler(c)
   })
 } else {

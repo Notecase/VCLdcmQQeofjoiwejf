@@ -16,6 +16,7 @@
     "@inkdown/ai": "workspace:*",
     "@inkdown/shared": "workspace:*",
     "@supabase/supabase-js": "^2.90.1",
+    "ai": "^6.0.0",
     "dotenv": "^16.4.0",
     "grammy": "^1.41.1",
     "hono": "^4.6.0",

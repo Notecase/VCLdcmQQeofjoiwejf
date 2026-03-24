@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { authFetch } from '@/utils/api'
 import {
   Inbox,
@@ -137,6 +137,18 @@ function statusIcon(status: string) {
   }
 }
 
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const seconds = Math.floor(diff / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
 function isExpiredClarification(proposal: InboxProposal): boolean {
   if (proposal.status !== 'awaiting_clarification') return false
   // Clarification sessions expire after 2 minutes
@@ -188,7 +200,16 @@ async function categorize() {
   }
 }
 
-onMounted(loadProposals)
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  loadProposals()
+  refreshInterval = setInterval(loadProposals, 15_000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval)
+})
 
 defineExpose({ totalCount, loadProposals })
 </script>
@@ -336,6 +357,9 @@ defineExpose({ totalCount, loadProposals })
           >
             {{ proposal.targetFile }}
           </span>
+          <span class="timestamp">{{
+            relativeTime(proposal.createdAt || proposal.updatedAt)
+          }}</span>
         </div>
 
         <div class="proposal-body">
@@ -492,6 +516,14 @@ defineExpose({ totalCount, loadProposals })
               {{ Math.round((getExecutionResult(proposal)?.durationMs || 0) / 1000) }}s
             </span>
           </div>
+        </div>
+
+        <!-- Bot reply -->
+        <div
+          v-if="proposal.previewText && proposal.status === 'applied'"
+          class="bot-reply"
+        >
+          {{ proposal.previewText }}
         </div>
 
         <!-- Status badge -->
@@ -671,10 +703,16 @@ defineExpose({ totalCount, loadProposals })
 }
 
 .target-file {
-  margin-left: auto;
   color: var(--text-color-secondary, #94a3b8);
   font-family: monospace;
   font-size: 10px;
+}
+
+.timestamp {
+  margin-left: auto;
+  color: var(--text-color-secondary, #64748b);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 .proposal-body {
@@ -842,6 +880,17 @@ defineExpose({ totalCount, loadProposals })
 .result-duration {
   color: var(--text-color-secondary, #64748b);
   margin-left: auto;
+}
+
+/* ── Bot reply ────────────────────────────────────────────────── */
+
+.bot-reply {
+  font-size: 12px;
+  color: #6ee7b7;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(16, 185, 129, 0.06);
+  border-left: 2px solid rgba(16, 185, 129, 0.3);
 }
 
 /* ── Status badge ──────────────────────────────────────────────── */

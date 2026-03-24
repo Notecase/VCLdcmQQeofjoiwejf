@@ -82,7 +82,7 @@ export const useAuthStore = defineStore('auth', {
     /**
      * Sign up with email and password
      */
-    async signUp(email: string, password: string) {
+    async signUp(email: string, password: string): Promise<{ confirmationRequired: boolean }> {
       this.isLoading = true
       this.error = null
 
@@ -91,8 +91,12 @@ export const useAuthStore = defineStore('auth', {
         const result = await auth.signUp({ email, password })
 
         if (result.error) {
+          if (result.error.code === 'EMAIL_CONFIRMATION_REQUIRED') {
+            return { confirmationRequired: true }
+          }
           throw new Error(result.error.message)
         }
+        return { confirmationRequired: false }
       } catch (e: any) {
         this.error = e.message
         throw e

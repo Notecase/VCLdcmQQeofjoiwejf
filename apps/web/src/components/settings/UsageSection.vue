@@ -15,6 +15,11 @@ const store = useCreditsStore()
 const inviteCode = ref('')
 const showRedeemInput = ref(false)
 
+function cancelRedeem() {
+  showRedeemInput.value = false
+  inviteCode.value = ''
+}
+
 async function handleRedeem() {
   if (!inviteCode.value.trim()) return
   const success = await store.redeemCode(inviteCode.value)
@@ -271,10 +276,7 @@ async function refresh() {
           </button>
           <button
             class="invite-cancel-btn"
-            @click="
-              showRedeemInput = false
-              inviteCode = ''
-            "
+            @click="cancelRedeem"
           >
             Cancel
           </button>

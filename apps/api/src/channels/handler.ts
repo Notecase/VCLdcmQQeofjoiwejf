@@ -255,7 +255,7 @@ async function captureAndExecute(
         source: message.channel,
         existingFiles,
       }),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 30000)),
     ])
   } catch {
     // Classification failed — fall through to fallback

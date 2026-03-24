@@ -44,7 +44,7 @@ function handleKeydown(e: KeyboardEvent) {
       :class="{ shake: isShaking }"
     >
       <div class="gate-header">
-        <h1 class="brand-name">NoteShell</h1>
+        <h1 class="brand-name">Noteshell</h1>
         <p class="brand-tagline">AI-powered learning workspace</p>
       </div>
 

@@ -1,7 +1,7 @@
 /**
  * Demo Mode Utilities
  *
- * Controls the NoteShell demo experience.
+ * Controls the Noteshell demo experience.
  * When demo mode is active, stores load static fixtures instead of API calls.
  */
 

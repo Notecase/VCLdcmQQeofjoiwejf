@@ -6,6 +6,9 @@
 /* JetBrains Mono - Code font (Google Fonts CDN) */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* Playfair Display - Serif display font (Google Fonts CDN) */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+
 /* Open Sans - Editor font */
 @font-face {
   font-family: 'Open Sans';

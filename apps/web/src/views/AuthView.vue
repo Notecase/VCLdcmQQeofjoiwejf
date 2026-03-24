@@ -82,54 +82,111 @@ watch(
   <div class="auth-view">
     <!-- Left: Brand Panel -->
     <div class="brand-panel">
-      <div class="brand-orb brand-orb--purple" />
-      <div class="brand-orb brand-orb--amber" />
+      <!-- Blue horizon arc — spans full width, bleeds into auth panel -->
+      <svg
+        class="horizon-arc"
+        viewBox="0 0 1400 800"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none"
+      >
+        <!-- Main horizon line — bold, sweeping left-to-right with strong curve -->
+        <path
+          d="M -100 620 C 200 100, 800 100, 1500 500"
+          stroke="rgba(60,130,246,0.25)"
+          stroke-width="1.5"
+          fill="none"
+        />
+        <!-- Subtle glow echo -->
+        <path
+          d="M -100 620 C 200 100, 800 100, 1500 500"
+          stroke="rgba(60,130,246,0.08)"
+          stroke-width="6"
+          fill="none"
+        />
+        <!-- Scatter dots along the arc -->
+        <circle
+          cx="180"
+          cy="430"
+          r="2"
+          fill="rgba(60,130,246,0.30)"
+        />
+        <circle
+          cx="420"
+          cy="340"
+          r="1.5"
+          fill="rgba(60,130,246,0.20)"
+        />
+        <circle
+          cx="700"
+          cy="350"
+          r="2.5"
+          fill="rgba(60,130,246,0.35)"
+        />
+        <circle
+          cx="950"
+          cy="380"
+          r="1.5"
+          fill="rgba(60,130,246,0.18)"
+        />
+        <circle
+          cx="1150"
+          cy="400"
+          r="2"
+          fill="rgba(60,130,246,0.22)"
+        />
+        <!-- A few ambient dots off the arc -->
+        <circle
+          cx="300"
+          cy="200"
+          r="1"
+          fill="rgba(60,130,246,0.10)"
+        />
+        <circle
+          cx="550"
+          cy="550"
+          r="1"
+          fill="rgba(60,130,246,0.08)"
+        />
+        <circle
+          cx="800"
+          cy="180"
+          r="1.5"
+          fill="rgba(60,130,246,0.10)"
+        />
+        <circle
+          cx="350"
+          cy="620"
+          r="1"
+          fill="rgba(60,130,246,0.08)"
+        />
+        <circle
+          cx="650"
+          cy="150"
+          r="1"
+          fill="rgba(60,130,246,0.06)"
+        />
+      </svg>
 
-      <div class="brand-top">
-        <div class="brand-logo">
-          <div class="brand-icon">N</div>
-          <span class="brand-name">NoteShell</span>
+      <!-- Brand content -->
+      <div class="brand-content">
+        <div class="brand-logo-row">
+          <img
+            src="/logo.svg"
+            alt="Noteshell"
+            class="brand-logo-img"
+          />
+          <span class="brand-dot" />
+          <span class="brand-name-text">Noteshell</span>
         </div>
-        <p class="brand-subtitle">AI-powered learning workspace</p>
-      </div>
 
-      <div class="brand-screenshot">
-        <div class="screenshot-window">
-          <div class="screenshot-titlebar">
-            <span class="dot dot--red" />
-            <span class="dot dot--yellow" />
-            <span class="dot dot--green" />
-          </div>
-          <div class="screenshot-content">
-            <div class="screenshot-sidebar">
-              <div class="skel skel--heading" />
-              <div class="skel skel--item" />
-              <div class="skel skel--item skel--active" />
-              <div class="skel skel--item" />
-              <div class="skel skel--item" />
-              <div class="skel skel--item skel--short" />
-            </div>
-            <div class="screenshot-main">
-              <div class="skel skel--title" />
-              <div class="skel skel--line" />
-              <div class="skel skel--line skel--90" />
-              <div class="skel skel--line skel--95" />
-              <div class="ai-block">
-                <div class="ai-block-header">
-                  <div class="ai-dot" />
-                  <div class="skel skel--label" />
-                </div>
-                <div class="skel skel--line skel--85" />
-                <div class="skel skel--line skel--70" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <div class="brand-badge">agent-first learning platform</div>
 
-      <div class="brand-bottom">
-        <h2 class="brand-tagline">Write. Think. Learn.</h2>
-        <p class="brand-desc">AI that helps you understand, not just answer</p>
+        <h1 class="brand-tagline-serif">Follow<br />Curiosity.</h1>
+
+        <p class="brand-subtitle-mono">Let Noteshell build your learning path.</p>
+
+        <p class="brand-desc-text">More than notes — an AI workspace that learns how you think.</p>
       </div>
     </div>
 
@@ -174,7 +231,7 @@ watch(
         <template v-else>
           <div class="auth-header">
             <h2>{{ isLogin ? 'Welcome back' : 'Create account' }}</h2>
-            <p>{{ isLogin ? 'Sign in to continue to NoteShell' : 'Get started with NoteShell' }}</p>
+            <p>{{ isLogin ? 'Sign in to continue to Noteshell' : 'Get started with Noteshell' }}</p>
           </div>
 
           <div class="auth-tabs">
@@ -302,248 +359,104 @@ watch(
 .auth-view {
   display: flex;
   min-height: 100vh;
-  background: #111;
+  background: #0d0d0f;
 }
 
 /* ── Brand Panel (Left) ── */
 .brand-panel {
   flex: 1;
-  background: linear-gradient(135deg, #1a0a20 0%, #2d1030 25%, #3d1a20 55%, #2d1a0a 100%);
+  background: #0d0d0f;
   padding: 48px 40px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
 
-.brand-orb {
+.horizon-arc {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
+  top: 0;
+  left: 0;
+  width: 150%;
+  height: 100%;
   pointer-events: none;
 }
 
-.brand-orb--purple {
-  top: 5%;
-  left: 15%;
-  width: 200px;
-  height: 200px;
-  background: rgba(168, 85, 247, 0.1);
-}
-
-.brand-orb--amber {
-  bottom: 10%;
-  right: 10%;
-  width: 180px;
-  height: 180px;
-  background: rgba(245, 158, 11, 0.08);
-}
-
-.brand-top {
+.brand-content {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px;
 }
 
-.brand-logo {
+.brand-logo-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
 }
 
-.brand-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #a855f7, #f59e0b);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 800;
-  color: #fff;
-}
-
-.brand-name {
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.5px;
-}
-
-.brand-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0 0 0 46px;
-}
-
-/* ── Product Screenshot ── */
-.brand-screenshot {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 0;
-}
-
-.screenshot-window {
-  width: 92%;
-  background: rgba(30, 30, 30, 0.6);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-}
-
-.screenshot-titlebar {
+.brand-logo-img {
   height: 28px;
-  background: rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 6px;
+  width: auto;
 }
 
-.dot {
+.brand-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
 }
 
-.dot--red {
-  background: #ff5f57;
-}
-.dot--yellow {
-  background: #febc2e;
-}
-.dot--green {
-  background: #28c840;
-}
-
-.screenshot-content {
-  padding: 16px;
-  display: flex;
-  gap: 16px;
-}
-
-.screenshot-sidebar {
-  width: 120px;
-}
-
-.screenshot-main {
-  flex: 1;
-}
-
-.skel {
-  border-radius: 4px;
-  margin-bottom: 6px;
-}
-
-.skel--heading {
-  height: 8px;
-  width: 60%;
-  background: rgba(255, 255, 255, 0.15);
-  margin-bottom: 12px;
-}
-
-.skel--item {
-  height: 6px;
-  width: 80%;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.skel--active {
-  width: 90%;
-  background: rgba(168, 85, 247, 0.2);
-  border-left: 2px solid #a855f7;
-}
-
-.skel--short {
-  width: 65%;
-}
-
-.skel--title {
-  height: 10px;
-  width: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  margin-bottom: 12px;
-}
-
-.skel--line {
-  height: 5px;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  margin-bottom: 5px;
-}
-
-.skel--90 {
-  width: 90%;
-}
-.skel--95 {
-  width: 95%;
-}
-.skel--85 {
-  width: 85%;
-}
-.skel--70 {
-  width: 70%;
-}
-
-.skel--label {
-  height: 5px;
-  width: 40px;
-  background: rgba(168, 85, 247, 0.3);
-}
-
-.ai-block {
-  padding: 10px;
-  background: rgba(168, 85, 247, 0.06);
-  border: 1px solid rgba(168, 85, 247, 0.15);
-  border-radius: 6px;
-  margin-top: 12px;
-}
-
-.ai-block-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.ai-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #a855f7, #f59e0b);
-}
-
-/* ── Brand Bottom ── */
-.brand-bottom {
-  position: relative;
-  z-index: 1;
-}
-
-.brand-tagline {
-  font-size: 16px;
+.brand-name-text {
+  font-size: 22px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0 0 6px;
+  color: #fff;
+  letter-spacing: -0.3px;
 }
 
-.brand-desc {
+.brand-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 24px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.3px;
+}
+
+.brand-tagline-serif {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #e8e8e8;
+  margin: 32px 0 0;
+}
+
+.brand-subtitle-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 16px 0 0;
+}
+
+.brand-desc-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.3);
+  margin: 8px 0 0;
 }
 
 /* ── Auth Panel (Right) ── */
 .auth-panel {
   width: 480px;
   min-width: 480px;
-  background: #141414;
+  background: #111112;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -569,7 +482,7 @@ watch(
 
 .auth-header p {
   font-size: 13px;
-  color: #888;
+  color: #777;
   margin: 0;
 }
 
@@ -598,8 +511,8 @@ watch(
 
 .auth-tabs button.active {
   color: #fff;
-  background: rgba(168, 85, 247, 0.15);
-  border-color: rgba(168, 85, 247, 0.2);
+  background: rgba(217, 119, 6, 0.15);
+  border-color: rgba(217, 119, 6, 0.2);
 }
 
 /* ── Google Button ── */
@@ -700,7 +613,7 @@ watch(
 }
 
 .form-group input:focus {
-  border-color: rgba(168, 85, 247, 0.5);
+  border-color: rgba(217, 119, 6, 0.4);
 }
 
 .toggle-password {
@@ -734,7 +647,7 @@ watch(
 .btn-primary {
   width: 100%;
   height: 44px;
-  background: linear-gradient(135deg, #a855f7, #d97706);
+  background: #d97706;
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -742,9 +655,9 @@ watch(
   color: #fff;
   cursor: pointer;
   transition:
-    opacity 0.2s,
+    background 0.2s,
     box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.2);
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -752,8 +665,8 @@ watch(
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
-  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.3);
+  background: #b45309;
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.3);
 }
 
 .btn-primary:disabled {
@@ -866,14 +779,22 @@ watch(
   .brand-panel {
     padding: 24px 20px;
     flex: none;
+    justify-content: flex-start;
   }
 
-  .brand-screenshot {
+  .horizon-arc,
+  .brand-tagline-serif,
+  .brand-subtitle-mono,
+  .brand-desc-text {
     display: none;
   }
 
-  .brand-bottom {
-    display: none;
+  .brand-content {
+    padding: 0;
+  }
+
+  .brand-badge {
+    margin-top: 12px;
   }
 
   .auth-panel {

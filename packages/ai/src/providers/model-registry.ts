@@ -144,7 +144,7 @@ const TASK_MODEL_MAP: Record<AITaskType, string> = {
   course: 'gemini-2.5-pro',
   'deep-research': 'deep-research-pro-preview-12-2025',
   embedding: 'text-embedding-3-large',
-  'inbox-classifier': 'gemini-2.5-pro',
+  'inbox-classifier': 'gemini-3-flash-preview',
 }
 
 // Fallback model when primary is unavailable (rate limit, high demand, etc.)

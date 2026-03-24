@@ -58,6 +58,16 @@ function resetToForm() {
   error.value = ''
 }
 
+function switchToSignIn() {
+  isLogin.value = true
+  error.value = ''
+}
+
+function switchToSignUp() {
+  isLogin.value = false
+  error.value = ''
+}
+
 watch(
   () => authStore.isAuthenticated,
   (isAuth) => {
@@ -170,19 +180,13 @@ watch(
           <div class="auth-tabs">
             <button
               :class="{ active: isLogin }"
-              @click="
-                isLogin = true
-                error = ''
-              "
+              @click="switchToSignIn"
             >
               Sign In
             </button>
             <button
               :class="{ active: !isLogin }"
-              @click="
-                isLogin = false
-                error = ''
-              "
+              @click="switchToSignUp"
             >
               Sign Up
             </button>

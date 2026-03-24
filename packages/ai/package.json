@@ -61,6 +61,10 @@
     "./agents/research": {
       "import": "./dist/agents/research/index.js",
       "types": "./dist/agents/research/index.d.ts"
+    },
+    "./agents/inbox-categorizer": {
+      "import": "./dist/agents/inbox-categorizer.js",
+      "types": "./dist/agents/inbox-categorizer.d.ts"
     }
   },
   "scripts": {

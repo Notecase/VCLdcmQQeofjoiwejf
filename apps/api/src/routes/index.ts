@@ -19,6 +19,9 @@ import settings from './settings'
 import inbox from './inbox'
 import integrations from './integrations'
 import cliAuth from './cli-auth'
+import channels from './channels'
+import proposals from './proposals'
+import { channelRoutes } from '../channels'
 import { config } from '../config'
 
 /**
@@ -73,6 +76,12 @@ routes.route('/api/inbox', inbox)
 routes.route('/api/integrations', integrations)
 // CLI device auth (public start/poll + auth-gated approve/deny)
 routes.route('/api/cli/auth', cliAuth)
+// Channel webhooks (public — each adapter verifies its own requests)
+routes.route('/api/channels', channelRoutes)
+// Channel pairing + management (JWT auth)
+routes.route('/api/channels', channels)
+// Inbox proposals (JWT auth)
+routes.route('/api/inbox/proposals', proposals)
 if (config.flags.missionHubV1) {
   routes.route('/api/missions', missions)
 }

@@ -12,6 +12,9 @@ import {
   BookOpen,
   ArrowLeft,
   AlertCircle,
+  MessageSquare,
+  Link2Off,
+  ExternalLink,
 } from 'lucide-vue-next'
 import UsageSection from '@/components/settings/UsageSection.vue'
 import SettingsNav from '@/components/settings/SettingsNav.vue'
@@ -211,13 +214,112 @@ async function connectNotion() {
   }
 }
 
+// ── Channel Links ───────────────────────────────────────────────────────────
+
+interface ChannelLink {
+  id: string
+  channel: string
+  displayName: string | null
+  status: string
+  createdAt: string
+}
+
+const channelLinks = ref<ChannelLink[]>([])
+const channelsLoading = ref(false)
+const pairingCode = ref<string | null>(null)
+const pairingDeepLink = ref<string | null>(null)
+const pairingChannel = ref<string | null>(null)
+const pairingPollTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const copiedCode = ref(false)
+
+async function loadChannelLinks() {
+  channelsLoading.value = true
+  try {
+    const res = await authFetch(`${apiBase}/api/channels/status`)
+    if (res.ok) {
+      const data = await res.json()
+      channelLinks.value = data.channels
+    }
+  } catch {
+    // silently fail
+  } finally {
+    channelsLoading.value = false
+  }
+}
+
+function getChannelLink(channel: string): ChannelLink | undefined {
+  return channelLinks.value.find((l) => l.channel === channel && l.status === 'active')
+}
+
+async function startPairing(channel: string) {
+  pairingCode.value = null
+  pairingDeepLink.value = null
+  pairingChannel.value = channel
+  try {
+    const res = await authFetch(`${apiBase}/api/channels/pair`, {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: 'Failed' }))
+      if (body.error === 'Channel already linked') {
+        await loadChannelLinks()
+        return
+      }
+      throw new Error(body.error)
+    }
+    const data = await res.json()
+    pairingCode.value = data.code
+    pairingDeepLink.value = data.deepLink || null
+
+    // Poll for completion
+    if (pairingPollTimer.value) clearInterval(pairingPollTimer.value)
+    pairingPollTimer.value = setInterval(async () => {
+      await loadChannelLinks()
+      if (getChannelLink(channel)) {
+        stopPairingPoll()
+        pairingCode.value = null
+        pairingDeepLink.value = null
+        pairingChannel.value = null
+      }
+    }, 3000)
+  } catch {
+    pairingChannel.value = null
+  }
+}
+
+function stopPairingPoll() {
+  if (pairingPollTimer.value) {
+    clearInterval(pairingPollTimer.value)
+    pairingPollTimer.value = null
+  }
+}
+
+function copyPairingCode() {
+  if (!pairingCode.value) return
+  navigator.clipboard.writeText(pairingCode.value)
+  copiedCode.value = true
+  setTimeout(() => {
+    copiedCode.value = false
+  }, 2000)
+}
+
+async function unlinkChannel(channel: string) {
+  try {
+    await authFetch(`${apiBase}/api/channels/${channel}`, { method: 'DELETE' })
+    channelLinks.value = channelLinks.value.filter((l) => l.channel !== channel)
+  } catch {
+    // silently fail
+  }
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return 'Never'
   return new Date(iso).toLocaleString()
 }
 
 onMounted(async () => {
-  await Promise.all([loadTokens(), loadIntegrations()])
+  await Promise.all([loadTokens(), loadIntegrations(), loadChannelLinks()])
 
   // Handle OAuth callback query params
   if (route.query.integration === 'gcal') {
@@ -410,6 +512,106 @@ onMounted(async () => {
                 <li>Add to Home Screen or use as a Share Sheet extension</li>
               </ol>
             </details>
+          </div>
+
+          <!-- Messaging Channels Section -->
+          <div
+            v-show="activeSection === 'channels'"
+            class="content-section"
+          >
+            <div class="section-intro">
+              <h2>Messaging Channels</h2>
+              <p>Link messaging platforms to capture notes directly from your phone.</p>
+            </div>
+
+            <div
+              v-if="channelsLoading"
+              class="loading-text"
+            >
+              Loading channels...
+            </div>
+
+            <!-- Telegram -->
+            <div class="connector-row">
+              <div class="connector-icon telegram">
+                <MessageSquare :size="18" />
+              </div>
+              <div class="connector-info">
+                <div class="connector-name">Telegram</div>
+                <div class="connector-desc">
+                  Send messages to a bot to capture tasks, vocab, ideas
+                </div>
+              </div>
+              <div class="connector-end">
+                <template v-if="getChannelLink('telegram')">
+                  <div class="connector-status">
+                    <span class="status-dot active"></span>
+                    <span class="status-text">Linked</span>
+                    <span
+                      v-if="getChannelLink('telegram')!.displayName"
+                      class="status-meta"
+                    >
+                      {{ getChannelLink('telegram')!.displayName }}
+                    </span>
+                  </div>
+                  <div class="connector-actions">
+                    <button
+                      class="btn btn-ghost danger"
+                      @click="unlinkChannel('telegram')"
+                    >
+                      <Link2Off :size="14" />
+                      Unlink
+                    </button>
+                  </div>
+                </template>
+                <template v-else-if="pairingChannel === 'telegram' && pairingCode">
+                  <div class="pairing-flow">
+                    <div class="pairing-code-row">
+                      <code class="pairing-code">{{ pairingCode }}</code>
+                      <button
+                        class="btn btn-icon"
+                        :title="copiedCode ? 'Copied!' : 'Copy'"
+                        @click="copyPairingCode"
+                      >
+                        <Check
+                          v-if="copiedCode"
+                          :size="14"
+                        />
+                        <Copy
+                          v-else
+                          :size="14"
+                        />
+                      </button>
+                    </div>
+                    <a
+                      v-if="pairingDeepLink"
+                      :href="pairingDeepLink"
+                      target="_blank"
+                      class="btn btn-primary pairing-link"
+                    >
+                      <ExternalLink :size="14" />
+                      Open in Telegram
+                    </a>
+                    <p class="pairing-hint">
+                      Or send <code>/start {{ pairingCode }}</code> to the bot. Expires in 10
+                      minutes.
+                    </p>
+                  </div>
+                </template>
+                <template v-else>
+                  <button
+                    class="btn btn-primary"
+                    @click="startPairing('telegram')"
+                  >
+                    Link Telegram
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Future channels placeholder -->
+            <hr class="row-divider" />
+            <p class="empty-text">Discord and WhatsApp support coming soon.</p>
           </div>
 
           <!-- Connectors Section -->
@@ -863,6 +1065,11 @@ onMounted(async () => {
   color: #4285f4;
 }
 
+.connector-icon.telegram {
+  background: rgba(0, 136, 204, 0.15);
+  color: #29b6f6;
+}
+
 .connector-icon.notion {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-color, #e2e8f0);
@@ -944,6 +1151,51 @@ onMounted(async () => {
 }
 
 .error-text.small {
+  font-size: 11px;
+}
+
+/* ── Pairing flow ─────────────────────────────────────────────────── */
+
+.pairing-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.pairing-code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pairing-code {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(0, 0, 0, 0.3);
+  color: #6ee7b7;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  user-select: all;
+}
+
+.pairing-link {
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.pairing-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-color-secondary, #94a3b8);
+  text-align: right;
+}
+
+.pairing-hint code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
   font-size: 11px;
 }
 

@@ -56,6 +56,11 @@ const router = createRouter({
       component: () => import('./views/SecretaryView.vue'),
     },
     {
+      path: '/calendar/inbox',
+      name: 'secretary-inbox',
+      component: () => import('./views/SecretaryView.vue'),
+    },
+    {
       path: '/calendar/plan/new',
       name: 'plan-create',
       component: () => import('./views/PlanCreateView.vue'),

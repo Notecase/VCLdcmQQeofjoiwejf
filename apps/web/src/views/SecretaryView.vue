@@ -16,6 +16,7 @@ import SkeletonLoader from '@/components/secretary/SkeletonLoader.vue'
 import FloatingChatFab from '@/components/secretary/FloatingChatFab.vue'
 import ChatDrawer from '@/components/secretary/ChatDrawer.vue'
 import SecretaryActionSheet from '@/components/secretary/SecretaryActionSheet.vue'
+import InboxProposals from '@/components/secretary/InboxProposals.vue'
 import type { ScheduledTask } from '@inkdown/shared/types'
 const secretaryStore = useSecretaryStore()
 const layoutStore = useLayoutStore()
@@ -28,10 +29,13 @@ const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
 }))
 
-const routeSection = computed<'dashboard' | 'history' | 'plans' | 'calendar'>(() => {
+const inboxRef = ref<InstanceType<typeof InboxProposals> | null>(null)
+
+const routeSection = computed<'dashboard' | 'history' | 'plans' | 'calendar' | 'inbox'>(() => {
   if (route.name === 'secretary-history') return 'history'
   if (route.name === 'secretary-plans') return 'plans'
   if (route.name === 'secretary-calendar') return 'calendar'
+  if (route.name === 'secretary-inbox') return 'inbox'
   return 'dashboard'
 })
 
@@ -59,7 +63,7 @@ onUnmounted(() => {
   secretaryStore.stopTaskNotifications()
 })
 
-function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar') {
+function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar' | 'inbox') {
   secretaryStore.selectedFilename = null
   if (section === 'history') {
     router.push('/calendar/history')
@@ -71,6 +75,10 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   }
   if (section === 'calendar') {
     router.push('/calendar/view')
+    return
+  }
+  if (section === 'inbox') {
+    router.push('/calendar/inbox')
     return
   }
   router.push('/calendar')
@@ -95,7 +103,12 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
       <nav class="section-nav">
         <button
           class="section-chip"
-          :class="{ active: routeSection !== 'calendar' }"
+          :class="{
+            active:
+              routeSection === 'dashboard' ||
+              routeSection === 'history' ||
+              routeSection === 'plans',
+          }"
           @click="navigateSection('dashboard')"
         >
           Dashboard
@@ -106,6 +119,18 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
           @click="navigateSection('calendar')"
         >
           Calendar
+        </button>
+        <button
+          class="section-chip"
+          :class="{ active: routeSection === 'inbox' }"
+          @click="navigateSection('inbox')"
+        >
+          Inbox
+          <span
+            v-if="inboxRef?.pendingCount && inboxRef.pendingCount > 0"
+            class="chip-badge"
+            >{{ inboxRef.pendingCount }}</span
+          >
         </button>
       </nav>
     </header>
@@ -119,7 +144,13 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
       v-if="isReady"
       class="secretary-body"
     >
-      <template v-if="routeSection === 'calendar'">
+      <template v-if="routeSection === 'inbox'">
+        <main class="main-content inbox-main">
+          <InboxProposals ref="inboxRef" />
+        </main>
+      </template>
+
+      <template v-else-if="routeSection === 'calendar'">
         <main class="main-content calendar-main">
           <CalendarTimelineView />
         </main>
@@ -307,7 +338,23 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   border-radius: 999px;
 }
 
-.calendar-main {
+.chip-badge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+
+.calendar-main,
+.inbox-main {
   max-width: 100%;
 }
 

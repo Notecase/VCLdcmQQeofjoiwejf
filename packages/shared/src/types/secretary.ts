@@ -467,3 +467,55 @@ export interface PlanWorkspaceState {
   projectId?: string
   projectNotes?: Array<{ id: string; title: string; updatedAt: string }>
 }
+
+// =============================================================================
+// Inbox Proposal Types (Messaging Capture)
+// =============================================================================
+
+/** Supported messaging channels */
+export type ChannelType = 'telegram' | 'discord' | 'whatsapp'
+
+/** Category for inbox items */
+export type ProposalCategory = 'task' | 'vocabulary' | 'calendar' | 'note' | 'reading' | 'thought'
+
+/** Status of an inbox proposal */
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied'
+
+/** Source of an inbox capture */
+export type ProposalSource = 'telegram' | 'discord' | 'whatsapp' | 'shortcut' | 'web' | 'manual'
+
+/** A linked messaging channel */
+export interface ChannelLink {
+  id: string
+  channel: ChannelType
+  displayName: string | null
+  status: 'pending' | 'active' | 'revoked'
+  createdAt: string
+}
+
+/** An inbox proposal from any capture source */
+export interface InboxProposal {
+  id: string
+  userId: string
+  source: ProposalSource
+  rawText: string
+  category: ProposalCategory | null
+  targetFile: string | null
+  proposedContent: string | null
+  confidence: number
+  status: ProposalStatus
+  batchId: string | null
+  metadata: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+/** AI categorization result for a single item */
+export interface CategorizationResult {
+  id: string
+  category: ProposalCategory
+  targetFile: string
+  proposedContent: string
+  confidence: number
+  metadata: Record<string, unknown>
+}

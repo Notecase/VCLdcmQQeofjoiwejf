@@ -99,6 +99,19 @@ export const config = {
     return process.env.BASE_URL || 'https://app.noteshell.io'
   },
 
+  // Telegram
+  telegram: {
+    get botToken() {
+      return process.env.TELEGRAM_BOT_TOKEN || ''
+    },
+    get webhookSecret() {
+      return process.env.TELEGRAM_WEBHOOK_SECRET || ''
+    },
+    get botUsername() {
+      return process.env.TELEGRAM_BOT_USERNAME || ''
+    },
+  },
+
   // Feature flags
   flags: {
     get missionHubV1() {

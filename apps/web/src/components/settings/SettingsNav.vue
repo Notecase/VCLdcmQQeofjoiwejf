@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BarChart3, Key, Link2, Terminal } from 'lucide-vue-next'
+import { BarChart3, Key, Link2, Terminal, MessageSquare } from 'lucide-vue-next'
 import { useCreditsStore } from '@/stores/credits'
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const creditsStore = useCreditsStore()
 const sections = [
   { id: 'usage', label: 'Usage', icon: BarChart3 },
   { id: 'tokens', label: 'Capture Tokens', icon: Key },
+  { id: 'channels', label: 'Messaging', icon: MessageSquare },
   { id: 'connectors', label: 'Connectors', icon: Link2 },
   { id: 'api-keys', label: 'API Keys', icon: Terminal },
 ]

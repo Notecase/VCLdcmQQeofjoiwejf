@@ -432,6 +432,48 @@ settings.get('/transactions', async (c) => {
 })
 
 /**
+ * POST /api/settings/credits/redeem
+ * Redeem an invite code (email-locked)
+ */
+settings.post(
+  '/credits/redeem',
+  zValidator(
+    'json',
+    z.object({
+      code: z
+        .string()
+        .min(1)
+        .max(100)
+        .transform((s) => s.trim().toUpperCase()),
+    })
+  ),
+  async (c) => {
+    const auth = requireAuth(c)
+    const { code } = c.req.valid('json')
+
+    const { data, error } = await auth.supabase.rpc('redeem_invite_code', {
+      p_code: code,
+    })
+
+    if (error) {
+      return c.json({ error: 'Failed to redeem code' }, 500)
+    }
+
+    const result = data?.[0] ?? { success: false, message: 'Unknown error', new_balance: 0 }
+
+    if (!result.success) {
+      return c.json({ error: result.message }, 400)
+    }
+
+    return c.json({
+      success: true,
+      message: result.message,
+      new_balance: result.new_balance,
+    })
+  }
+)
+
+/**
  * POST /api/settings/credits/grant
  * Admin-only: grant credits to a user
  */

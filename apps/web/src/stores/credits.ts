@@ -250,6 +250,36 @@ export const useCreditsStore = defineStore('credits', () => {
     }
   }
 
+  const redeemLoading = ref(false)
+  const redeemError = ref<string | null>(null)
+  const redeemSuccess = ref(false)
+
+  async function redeemCode(code: string): Promise<boolean> {
+    redeemLoading.value = true
+    redeemError.value = null
+    redeemSuccess.value = false
+    try {
+      const res = await authFetch(`${apiBase}/api/settings/credits/redeem`, {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        redeemError.value = data.error || 'Failed to redeem code'
+        return false
+      }
+      redeemSuccess.value = true
+      // Refresh all data to reflect new plan
+      await fetchAll()
+      return true
+    } catch {
+      redeemError.value = 'Network error. Please try again.'
+      return false
+    } finally {
+      redeemLoading.value = false
+    }
+  }
+
   return {
     // State
     credits,
@@ -277,6 +307,11 @@ export const useCreditsStore = defineStore('credits', () => {
     isExhausted,
     usagePercent,
     remainingPercent,
+    // Redeem
+    redeemLoading,
+    redeemError,
+    redeemSuccess,
+    redeemCode,
     // Actions
     fetchCredits,
     fetchWeeklyUsage,

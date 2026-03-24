@@ -127,7 +127,7 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
         >
           Inbox
           <span
-            v-if="inboxRef?.pendingCount && inboxRef.pendingCount > 0"
+            v-if="inboxRef?.totalCount && inboxRef.pendingCount > 0"
             class="chip-badge"
             >{{ inboxRef.pendingCount }}</span
           >

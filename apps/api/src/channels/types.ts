@@ -24,6 +24,12 @@ export interface ChannelResponse {
   parseMode?: 'Markdown' | 'HTML'
 }
 
+/** Callback handle for sending/editing replies in a channel */
+export interface ChannelReplyHandle {
+  send(text: string, parseMode?: 'Markdown' | 'HTML'): Promise<void>
+  edit(text: string, parseMode?: 'Markdown' | 'HTML'): Promise<void>
+}
+
 /** Command parsed from a channel message */
 export interface ParsedCommand {
   command: string // 'start', 'status', 'help'

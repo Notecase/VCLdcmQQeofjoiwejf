@@ -9,7 +9,7 @@ import { Hono } from 'hono'
 import { Bot, webhookCallback } from 'grammy'
 import { config } from '../config'
 import { handleIncomingMessage } from './handler'
-import type { ChannelMessage } from './types'
+import type { ChannelMessage, ChannelReplyHandle } from './types'
 
 const telegram = new Hono()
 
@@ -31,8 +31,27 @@ if (botToken) {
       mediaType: 'text',
     }
 
-    const response = await handleIncomingMessage(message)
-    await ctx.reply(response.text, { parse_mode: response.parseMode || undefined })
+    // Build reply handle for streaming send/edit
+    let sentMessageId: number | null = null
+    const replyHandle: ChannelReplyHandle = {
+      async send(text, parseMode) {
+        const sent = await ctx.reply(text, { parse_mode: parseMode || undefined })
+        sentMessageId = sent.message_id
+      },
+      async edit(text, parseMode) {
+        if (sentMessageId) {
+          try {
+            await ctx.api.editMessageText(ctx.chat.id, sentMessageId, text, {
+              parse_mode: parseMode || undefined,
+            })
+          } catch {
+            // Edit may fail if message content unchanged — ignore
+          }
+        }
+      },
+    }
+
+    await handleIncomingMessage(message, replyHandle)
   })
 
   // Webhook endpoint

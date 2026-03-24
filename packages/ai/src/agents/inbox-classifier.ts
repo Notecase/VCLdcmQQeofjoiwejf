@@ -35,6 +35,7 @@ const ClassificationOutputSchema = z.object({
     'add_vocabulary',
     'add_reading',
     'add_thought',
+    'needs_clarification',
   ]),
   category: z.enum(['task', 'vocabulary', 'calendar', 'note', 'reading', 'thought']),
   targetFile: z.string(),
@@ -43,6 +44,7 @@ const ClassificationOutputSchema = z.object({
   previewText: z.string(),
   confidence: z.number().min(0).max(1),
   botReplyText: z.string(),
+  clarificationQuestion: z.string().optional(),
 })
 
 // ============================================================================
@@ -91,6 +93,13 @@ Given a single message captured from a messaging channel, classify it into exact
    Target file: Inbox.md
    Example: "I wonder if black holes emit information" → text: captured thought
 
+7. **needs_clarification** — The message is ambiguous or missing critical information.
+   Triggers: Multiple valid interpretations, missing key details, confidence < 0.5.
+   Payload: {} (empty)
+   Target file: "" (empty)
+   clarificationQuestion: A short, conversational question offering 2-3 options.
+   Example: "meeting" → clarificationQuestion: "Is this a calendar event or a task? And when is it?"
+
 ## Rules
 
 1. Pick the MOST specific action type. Only use add_thought as a last resort.
@@ -100,16 +109,19 @@ Given a single message captured from a messaging channel, classify it into exact
 5. Set confidence 0.9+ for clear matches, 0.5-0.8 for ambiguous ones.
 6. proposedContent = the formatted text that will be appended to the target file.
 7. previewText = short human-readable summary for the Inbox UI card.
+8. Use needs_clarification ONLY when truly ambiguous (multiple valid interpretations) or critical info is missing. Keep clarification questions short and offer 2-3 options.
+9. When confidence < 0.5, prefer needs_clarification over guessing.
 
 ## Bot Reply
 
-Generate a friendly, concise botReplyText like:
-- "Got it — I'll propose creating a note about quantum mechanics. Review it in your Inbox."
-- "Got it — I'll propose adding 'Buy groceries' to your Today tasks."
-- "Got it — I'll propose adding 'serendipity' to your vocabulary."
-- "Got it — I'll propose scheduling 'Meeting with John' for tomorrow 3pm."
-- "Got it — I'll propose saving this link to your reading list."
-- "Captured your thought. Review it in your Inbox."`
+Generate a friendly, concise botReplyText. Actions execute immediately — use past tense:
+- "✅ Created note 'Quantum Mechanics'"
+- "✅ Added 'Buy groceries' to Today.md"
+- "✅ Added 'serendipity' to your vocabulary"
+- "✅ Scheduled 'Meeting with John' for tomorrow 3pm"
+- "✅ Saved link to your reading list"
+- "📝 Captured to your Inbox"
+- For needs_clarification: use the clarificationQuestion as botReplyText`
 
 // ============================================================================
 // Main Function

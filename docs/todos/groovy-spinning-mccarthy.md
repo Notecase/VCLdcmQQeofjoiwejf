@@ -1,394 +1,369 @@
-# Smart Agentic Inbox (Phase 2)
+# Autonomous Inbox Agent — Phase 2a/2b/2c
 
 ## Context
 
-Phase 1 (Telegram bot + dumb capture + proposals UI) shipped and works. But the current flow is: message → raw insert → user clicks "Categorize" → batch AI → user reviews → approve → append text to file. This is slow and limited — the AI only classifies text into categories, it can't propose rich actions like "create a note about quantum mechanics."
+Phase 2 smart classifier shipped and works: Telegram messages are classified into 6 action types with rich payloads. But the flow still requires manual approval in the web UI before anything executes. The user wants to eliminate the approval step — the AI should **classify and execute immediately**, then show results in an activity feed. Additionally, the Telegram bot should stream progress for long operations (NoteAgent) and support multi-turn clarifying questions.
 
-**Goal**: Upgrade to a smart per-message classifier that instantly detects what the user wants, proposes rich actions (create notes, schedule events, add vocabulary), gives smart bot replies in Telegram, and shows rich previews in the Inbox UI. User still approves everything — nothing auto-executes.
-
-**Inspiration**: OpenClaw's two-tier classification (cheap fast check → full agent only when needed), selective skill injection, and per-peer session isolation. We adopt the cheap-first-classify pattern but keep our approval-based model.
+**Inspired by OpenClaw**: Autonomous execution model (act first, inform after), two-tier cost optimization (cheap classify → expensive execute), per-user session isolation, inline clarification within same message thread.
 
 ---
 
-## Architecture Overview
-
-### New Message Flow
+## New Message Flow
 
 ```
 Telegram message arrives
   │
-  ├─► Insert raw row into inbox_proposals (instant, no AI)
+  ├─► Insert raw row (status: 'executing') — data never lost
   │
-  ├─► Call smart classifier (single generateText, ~1-2s, ~$0.003)
-  │   Returns: actionType, payload, previewText, botReplyText
+  ├─► Check for pending clarification session
+  │   ├─ YES (within 2min): re-classify with combined context → execute
+  │   └─ NO: fresh classification
   │
-  ├─► Update proposal row with rich action data
+  ├─► Smart classify (~1-2s, ~$0.003)
+  │   ├─ Returns actionType + payload + confidence
+  │   ├─ If needs_clarification → ask question, save session, wait
+  │   └─ If clear action → execute immediately
   │
-  ├─► Bot replies: "Got it — I'll propose creating a note about quantum mechanics. Review it in your Inbox."
+  ├─► Execute action:
+  │   ├─ create_note → NoteAgent (stream progress to Telegram)
+  │   ├─ add_task/calendar/vocab/reading/thought → memory file append
+  │   └─ On failure → fallback to add_thought in Inbox.md
   │
-  ▼ (User opens Inbox tab)
+  ├─► Update proposal row (status: 'applied'/'failed', execution_result)
   │
-  Rich preview cards show exactly what each action will DO
-  │
-  User approves/rejects each proposal
-  │
-  ├─► "Apply" dispatches to correct agent:
-  │   - create_note → NoteAgent creates Inkdown note
-  │   - add_task → append to Today.md / Tomorrow.md
-  │   - add_calendar_event → append to Calendar.md
-  │   - add_vocabulary → append to Vocabulary.md
-  │   - add_reading → append to Reading.md
-  │   - add_thought → append to Inbox.md
-  └─► Rejected items archived
+  └─► Bot reply: "✅ Created note 'Newton's First Law'" (done, not proposed)
 ```
-
-### What Stays Unchanged
-
-- Inbox.md shortcut capture flow (Pipeline B via heartbeat)
-- Pairing flow (channels.ts)
-- Channel management routes
-- Existing proposal statuses (pending/approved/rejected/applied)
-- Batch categorizer (kept for "Categorize" button on legacy items)
 
 ---
 
-## Step 1: Shared Types Enhancement
+## Phase 2a: Auto-Execute + Activity Feed
 
-**File**: `packages/shared/src/types/secretary.ts`
-**Effort**: 30 min
+### Step 1: Types & Migration
 
-Add to the existing "Inbox Proposal Types" section:
+**File: `packages/shared/src/types/secretary.ts`**
 
-### New Types
+Add new statuses and execution tracking:
 
 ```typescript
-/** Action types the smart classifier can propose */
+// Expand ProposalStatus
+export type ProposalStatus = 'pending' | 'executing' | 'awaiting_clarification' | 'approved' | 'rejected' | 'applied' | 'failed'
+
+// Add needs_clarification to action types
 export type ProposalActionType =
-  | 'create_note'
-  | 'add_task'
-  | 'add_calendar_event'
-  | 'add_vocabulary'
-  | 'add_reading'
-  | 'add_thought'
+  | 'create_note' | 'add_task' | 'add_calendar_event'
+  | 'add_vocabulary' | 'add_reading' | 'add_thought'
+  | 'needs_clarification'
 
-/** Typed payloads per action type */
-export interface CreateNotePayload {
-  title: string
-  content: string
-  projectId?: string
-}
-export interface AddTaskPayload {
-  taskLine: string
-  targetFile: 'Today.md' | 'Tomorrow.md'
-  dueDate?: string
-}
-export interface AddCalendarEventPayload {
-  eventTitle: string
-  dateTime?: string
-  description?: string
-}
-export interface AddVocabularyPayload {
-  word: string
-  definition: string
-  context?: string
-}
-export interface AddReadingPayload {
-  title: string
-  url?: string
-  description?: string
-}
-export interface AddThoughtPayload {
-  text: string
-}
+// Add to SmartClassificationResult
+clarificationQuestion?: string
 
-export type ProposalPayload =
-  | CreateNotePayload
-  | AddTaskPayload
-  | AddCalendarEventPayload
-  | AddVocabularyPayload
-  | AddReadingPayload
-  | AddThoughtPayload
+// Add to InboxProposal
+executionResult: ExecutionResultData | null
+
+// New interface
+export interface ExecutionResultData {
+  noteId?: string
+  updatedFile?: string
+  error?: string
+  durationMs?: number
+}
 ```
 
-### Enhance Existing `InboxProposal`
-
-Add three optional fields (nullable for backward compat with existing rows):
-
-```typescript
-actionType: ProposalActionType | null
-payload: ProposalPayload | null
-previewText: string | null
-```
-
-### Enhance `CategorizationResult`
-
-Add fields for per-message classification:
-
-```typescript
-actionType: ProposalActionType
-payload: Record<string, unknown>
-previewText: string
-botReplyText: string
-```
-
----
-
-## Step 2: Database Migration
-
-**New file**: `supabase/migrations/033_inbox_proposals_smart_actions.sql`
-**Effort**: 15 min
+**File: `supabase/migrations/035_inbox_autonomous_execution.sql`**
 
 ```sql
-ALTER TABLE inbox_proposals
-  ADD COLUMN action_type TEXT,
-  ADD COLUMN payload JSONB DEFAULT '{}',
-  ADD COLUMN preview_text TEXT;
-
-CREATE INDEX idx_proposals_action_type
-  ON inbox_proposals(user_id, action_type) WHERE status = 'pending';
+ALTER TABLE inbox_proposals ADD COLUMN execution_result JSONB DEFAULT NULL;
+CREATE INDEX idx_proposals_activity_feed
+  ON inbox_proposals(user_id, created_at DESC) WHERE status IN ('applied', 'failed');
 ```
 
-Why `payload` separate from `metadata`: `metadata` holds channel-level info (displayName, timestamp); `payload` holds AI-classified action data. Clean separation.
+Note: No status constraint change needed — the `status` column is TEXT without a CHECK constraint.
 
----
+### Step 2: Create Action Executor Module
 
-## Step 3: Smart Classifier Agent
+**New file: `apps/api/src/channels/executor.ts`**
 
-**New file**: `packages/ai/src/agents/inbox-classifier.ts`
-**Effort**: 1 hour
-
-### Design
-
-Single `generateText` + `Output.object()` call per message. No ToolLoopAgent, no multi-step reasoning. This is the cheapest possible AI call.
-
-### Model Selection
-
-- Register `'inbox-classifier'` in model registry (`packages/ai/src/providers/model-registry.ts`)
-- Primary: `gemini-3-flash-preview` (~$0.003 per classification)
-- Fallback: `gemini-2.5-pro`
-- Reversed from other tasks (flash primary, pro fallback) because cost matters most
-
-### Output Schema (Zod)
+Extract execution logic from `proposals.ts POST /apply` into a reusable module:
 
 ```typescript
-z.object({
-  actionType: z.enum([
-    'create_note',
-    'add_task',
-    'add_calendar_event',
-    'add_vocabulary',
-    'add_reading',
-    'add_thought',
-  ]),
-  category: z.enum(['task', 'vocabulary', 'calendar', 'note', 'reading', 'thought']),
-  targetFile: z.string(),
-  payload: z.record(z.unknown()),
-  proposedContent: z.string(),
-  previewText: z.string(),
-  confidence: z.number().min(0).max(1),
-  botReplyText: z.string(),
-})
+export interface ExecutionResult {
+  success: boolean
+  status: 'applied' | 'failed'
+  resultMessage: string // "Created note 'Newton's First Law'"
+  noteId?: string
+  updatedFile?: string
+  error?: string
+  durationMs?: number
+}
+
+export async function executeAction(
+  userId: string,
+  classification: SmartClassificationResult
+): Promise<ExecutionResult>
 ```
 
-### System Prompt
+**Logic per action type:**
 
-Defines the 6 action types with examples:
+- `create_note`: `createNoteAgent({ supabase: getServiceClient(), userId }).run({ action: 'create', input })` — returns noteId, title
+- `add_task`/`add_calendar_event`/`add_vocabulary`/`add_reading`/`add_thought`: Read `secretary_memory` for target file → append `proposedContent` → upsert back. **Reuse exact pattern from `proposals.ts` lines 247-265.**
+- On any failure: return `{ success: false, status: 'failed', error }`. Never throw.
 
-- `create_note`: "create a note about X", "write about X" → generates title + content outline
-- `add_task`: "buy groceries", "remind me to X" → formats as `- [ ] task`
-- `add_calendar_event`: "meeting with John tomorrow 3pm" → extracts event details
-- `add_vocabulary`: "ephemeral - lasting briefly" → formats word + definition
-- `add_reading`: URLs or "read about X" → formats as reading list entry
-- `add_thought`: anything else → captures as thought
-
-Bot reply template: `Got it — I'll propose [action]. Review it in your Inbox.`
-
-### Context
-
-Minimal — only the list of existing memory filenames (same as current categorizer). No Plan.md, no AI.md, no full context loading. Speed > intelligence for classification.
-
-### Fallback
-
-3-second timeout. If AI call fails → fall back to inserting raw proposal with `action_type: null`, reply "Captured." Data is never lost.
-
-### Reuse
-
-- `resolveModelsForTask()` + `isTransientError()` from `ai-sdk-factory.ts`
-- `recordAISDKUsage()` from `ai-sdk-usage.ts`
-- `selectModel()` from `model-registry.ts`
-- Same `generateText` + `Output.object()` pattern as `planner.agent.ts` line 475-481
-
-### Export
-
-Add `"./agents/inbox-classifier"` export to `packages/ai/package.json`
-
----
-
-## Step 4: Channel Handler & Routes Upgrade
-
-**Effort**: 1.5 hours
-
-### 4a. Upgrade `handleIncomingMessage()` in `apps/api/src/channels/handler.ts`
-
-Replace `captureToProposals()` (lines 119-142):
-
-**New flow:**
-
-1. Insert raw proposal immediately (`status: 'pending'`, `action_type: null`)
-2. Call `classifyInboxMessage()` with 3-second timeout
-3. On success: update proposal row with `action_type`, `payload`, `category`, `target_file`, `proposed_content`, `preview_text`, `confidence`
-4. Return `ChannelResponse` with `result.botReplyText`
-5. On failure/timeout: return `{ text: 'Captured.' }` (existing behavior)
-
-### 4b. Upgrade apply logic in `apps/api/src/routes/proposals.ts`
-
-Replace the `POST /apply` handler (lines 182-245) with action-aware dispatch:
-
-```
-for each approved proposal:
-  switch (proposal.action_type):
-    'create_note':
-      → Import NoteAgent, call agent.run({ action: 'create', ... })
-      → Store resulting noteId in proposal metadata
-    'add_task' | 'add_calendar_event' | 'add_vocabulary' | 'add_reading' | 'add_thought':
-      → Append proposed_content to target_file (existing upsert pattern)
-    null (legacy):
-      → Fall through to existing append behavior
-```
-
-Only `create_note` needs a full agent call. Everything else is the same memory file append we already have.
-
-### 4c. Update PATCH schema
-
-Add `actionType` and `payload` to `UpdateProposalSchema` (line 123 of proposals.ts).
-
-### 4d. Update `mapProposal()` helper
-
-Add `actionType: row.action_type`, `payload: row.payload`, `previewText: row.preview_text` to output mapping.
-
----
-
-## Step 5: Frontend Inbox UI Enhancement
-
-**File**: `apps/web/src/components/secretary/InboxProposals.vue`
-**Effort**: 1.5-2 hours
-
-### Rich Preview Cards
-
-Each proposal card now shows action-specific previews:
-
-| Action Type          | Preview                                                          |
-| -------------------- | ---------------------------------------------------------------- |
-| `create_note`        | Title in bold + first 3 lines of content, FileText icon          |
-| `add_task`           | Formatted `- [ ] task` line, target file badge, CheckSquare icon |
-| `add_calendar_event` | Event title + date/time in mini calendar card, Calendar icon     |
-| `add_vocabulary`     | Word in bold + definition in italic, BookOpen icon               |
-| `add_reading`        | Linked title + description, Link icon                            |
-| `add_thought`        | Thought text (same as current), MessageCircle icon               |
-| `null` (legacy)      | Current raw text + proposed content layout (fallback)            |
-
-### Template Changes
-
-Replace the proposal card body section with conditional rendering based on `proposal.actionType`:
-
-```html
-<!-- Rich preview based on action type -->
-<div v-if="proposal.actionType === 'create_note'" class="preview-note">
-  <FileText :size="14" />
-  <strong>{{ proposal.payload?.title }}</strong>
-  <p>{{ truncate(proposal.payload?.content, 120) }}</p>
-</div>
-<!-- ... similar blocks for each action type ... -->
-<!-- Fallback for legacy unclassified -->
-<div v-else class="preview-raw">
-  <p>{{ proposal.rawText }}</p>
-</div>
-```
-
-### New Helpers
-
-- `actionTypeLabel(type)` — maps `'create_note'` → `'Create Note'`
-- `actionTypeIcon(type)` — maps to Lucide icon component
-- `truncate(text, maxLength)` — truncates preview content
-
-### No New Components
-
-All rendering stays inline in InboxProposals.vue, consistent with current pattern.
-
----
-
-## Step 6: Bot Reply Enhancement
-
-**Effort**: 30 min (mostly handled by Steps 3 + 4)
-
-### 6a. Telegram parse mode
-
-Update `apps/api/src/channels/telegram.ts` line 35:
+**Also export a streaming variant for Phase 2b:**
 
 ```typescript
-await ctx.reply(response.text, { parse_mode: response.parseMode || undefined })
+export async function executeNoteCreationStreaming(
+  userId: string,
+  classification: SmartClassificationResult,
+  onProgress: (message: string) => void
+): Promise<ExecutionResult>
 ```
 
-The `ChannelResponse.parseMode` already exists in the type. The classifier returns `parseMode: 'Markdown'`.
+### Step 3: Upgrade Channel Handler
 
-### 6b. Reply examples
+**File: `apps/api/src/channels/handler.ts`**
 
-The classifier prompt teaches the AI to generate replies like:
+Rename `captureToProposals()` → `captureAndExecute()`. New flow:
 
-- "Got it — I'll propose creating a note about quantum mechanics. Review it in your Inbox."
-- "Got it — I'll propose adding 'Buy groceries' to your Today tasks."
-- "Got it — I'll propose adding 'serendipity' to your vocabulary."
-- "Got it — I'll propose scheduling 'Meeting with John' for tomorrow 3pm."
+1. Insert raw row with `status: 'executing'`
+2. Classify with 8s timeout (same as now)
+3. If classification succeeds → call `executeAction()` → update row with `status: 'applied'` + `execution_result`
+4. If classification fails → fallback: append raw text to Inbox.md as `add_thought`, mark `applied`
+5. Return result message (not "I'll propose..." but "Done — created...")
+
+**Bot reply changes:**
+
+- Success: `"✅ Added 'Buy groceries' to Today.md"`
+- Note created: `"✅ Created note 'Newton's First Law'"`
+- Fallback: `"📝 Captured to your Inbox."`
+- Error: `"❌ Failed to process. Saved to Inbox."`
+
+### Step 4: Update Frontend — Activity Feed
+
+**File: `apps/web/src/components/secretary/InboxProposals.vue`**
+
+Convert from approval UI to activity feed:
+
+1. **Remove**: Approve/Reject action buttons, "Approve All" button, "Apply" button
+2. **Remove**: `approveAll()`, `applyApproved()`, approval-related computed props
+3. **Keep**: "Categorize" button (for any legacy unclassified items)
+4. **Keep**: Category filters, rich preview cards, source icons
+5. **Change default filter**: `statusFilter` default from `'pending'` to `'all'`
+6. **Add status badges**: `applied` (green ✅), `failed` (red ❌), `executing` (spinner)
+7. **Add execution result display**: Show noteId link, updated file, or error message below each card
+8. **Add**: `Undo` button stub (future — just UI placeholder for now)
+
+### Step 5: Clean Up Proposals Routes
+
+**File: `apps/api/src/routes/proposals.ts`**
+
+- Keep: `GET /` (serves the activity feed), `PATCH /:id`, `POST /categorize`
+- Deprecate: `POST /approve-all`, `POST /apply` — can keep them as no-ops or remove entirely
+- Update `mapProposal()` to include `executionResult`
 
 ---
 
-## Critical Files
+## Phase 2b: Streaming Bot Replies
 
-| File                                                        | Action                                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `packages/shared/src/types/secretary.ts`                    | Extend: add `ProposalActionType`, payload types, enhance `InboxProposal` |
-| `supabase/migrations/033_inbox_proposals_smart_actions.sql` | New: add `action_type`, `payload`, `preview_text` columns                |
-| `packages/ai/src/agents/inbox-classifier.ts`                | New: smart per-message classifier                                        |
-| `packages/ai/src/providers/model-registry.ts`               | Modify: add `'inbox-classifier'` task type                               |
-| `packages/ai/package.json`                                  | Modify: add `./agents/inbox-classifier` export                           |
-| `apps/api/src/channels/handler.ts`                          | Modify: upgrade `captureToProposals()` to classify-then-insert           |
-| `apps/api/src/routes/proposals.ts`                          | Modify: action-aware apply dispatch, update PATCH schema, update mapper  |
-| `apps/web/src/components/secretary/InboxProposals.vue`      | Modify: rich preview cards per action type                               |
+### Step 6: Channel Reply Handle Pattern
+
+**File: `apps/api/src/channels/types.ts`**
+
+Add a callback interface so the handler can send/edit messages without knowing the channel:
+
+```typescript
+export interface ChannelReplyHandle {
+  send(text: string, parseMode?: 'Markdown' | 'HTML'): Promise<void>
+  edit(text: string, parseMode?: 'Markdown' | 'HTML'): Promise<void>
+}
+```
+
+### Step 7: Upgrade Telegram Adapter
+
+**File: `apps/api/src/channels/telegram.ts`**
+
+Instead of: `const response = await handleIncomingMessage(message); ctx.reply(response.text)`
+
+Do:
+
+```typescript
+let sentMessageId: number | null = null
+const replyHandle: ChannelReplyHandle = {
+  async send(text, parseMode) {
+    const sent = await ctx.reply(text, { parse_mode: parseMode || undefined })
+    sentMessageId = sent.message_id
+  },
+  async edit(text, parseMode) {
+    if (sentMessageId) {
+      await ctx.api.editMessageText(ctx.chat.id, sentMessageId, text, {
+        parse_mode: parseMode || undefined,
+      })
+    }
+  },
+}
+await handleIncomingMessage(message, replyHandle)
+```
+
+### Step 8: Streaming Execution in Handler
+
+**File: `apps/api/src/channels/handler.ts`**
+
+Change signature: `handleIncomingMessage(message, reply: ChannelReplyHandle): Promise<void>`
+
+For `create_note` (takes 10-15s):
+
+1. `reply.send("Creating note about Newton's First Law...")`
+2. Call `executeNoteCreationStreaming()` with progress callback
+3. Throttle edits to every ~800ms (track `lastEditTime`)
+4. On finish: `reply.edit("✅ Created note 'Newton's First Law' — 3 sections")`
+
+For simple appends (< 100ms):
+
+1. Execute instantly
+2. `reply.send("✅ Added 'Buy groceries' to Today.md")`
+
+### Step 9: Streaming Executor
+
+**File: `apps/api/src/channels/executor.ts`**
+
+Add `executeNoteCreationStreaming()`:
+
+- Creates NoteAgent, calls `agent.stream({ action: 'create', input })`
+- On `title` chunk: `onProgress("Writing 'Newton's First Law'...")`
+- On `text-delta` (accumulated): `onProgress("Writing... (section 2/3)")`
+- On `finish`: return `ExecutionResult` with noteId, title, word count
+
+---
+
+## Phase 2c: Clarifying Questions + Session State
+
+### Step 10: Classifier Enhancement
+
+**File: `packages/ai/src/agents/inbox-classifier.ts`**
+
+Add `needs_clarification` to actionType enum in Zod schema. Add `clarificationQuestion` field (optional string). Update system prompt with rules:
+
+- Ask clarification when ambiguous (multiple valid interpretations)
+- Ask when critical info is missing ("buy groceries" — today or tomorrow?)
+- Low confidence (< 0.5) should trigger clarification instead of guessing
+- Keep questions short, conversational, offer 2-3 options
+
+### Step 11: Session State in Channel Link Config
+
+**Storage**: Use existing `user_channel_links.config` JSONB column. No new table.
+
+```typescript
+interface ChannelSessionState {
+  pendingClarification?: {
+    proposalId: string
+    question: string
+    originalText: string
+    partialClassification: Partial<SmartClassificationResult>
+    expiresAt: string // ISO, 2 minutes from creation
+  }
+}
+```
+
+### Step 12: Handler Clarification Flow
+
+**File: `apps/api/src/channels/handler.ts`**
+
+At the top of `handleIncomingMessage()`, after link lookup:
+
+1. Read `link.config.pendingClarification`
+2. If exists AND not expired:
+   - This message is a clarification reply
+   - Re-classify with enriched input: `"Original: '${original}'\nUser clarified: '${reply}'"`
+   - Execute the resulting action
+   - Clear `pendingClarification` from config
+   - Reply with result
+3. If expired: clear it, treat message as fresh
+4. If no pending clarification: normal flow
+5. If classifier returns `needs_clarification`:
+   - Insert proposal with `status: 'awaiting_clarification'`
+   - Save `pendingClarification` to `user_channel_links.config`
+   - `reply.send("Buy groceries — for today's tasks or tomorrow's?")`
+
+### Step 13: Frontend Clarification Card
+
+**File: `apps/web/src/components/secretary/InboxProposals.vue`**
+
+Add card variant for `awaiting_clarification` status:
+
+- Shows original message + the question asked
+- Badge: "Awaiting reply" (yellow) or "Timed out" (gray)
+
+---
+
+## Critical Files Summary
+
+| File                                                     | Action                                                         | Phase      |
+| -------------------------------------------------------- | -------------------------------------------------------------- | ---------- |
+| `packages/shared/src/types/secretary.ts`                 | MODIFY: new statuses, ExecutionResultData, needs_clarification | 2a, 2c     |
+| `supabase/migrations/035_inbox_autonomous_execution.sql` | CREATE: execution_result column, activity feed index           | 2a         |
+| `apps/api/src/channels/executor.ts`                      | CREATE: executeAction + executeNoteCreationStreaming           | 2a, 2b     |
+| `apps/api/src/channels/handler.ts`                       | MODIFY: captureAndExecute, streaming, clarification            | 2a, 2b, 2c |
+| `apps/api/src/channels/types.ts`                         | MODIFY: add ChannelReplyHandle                                 | 2b         |
+| `apps/api/src/channels/telegram.ts`                      | MODIFY: reply handle pattern                                   | 2b         |
+| `packages/ai/src/agents/inbox-classifier.ts`             | MODIFY: needs_clarification, clarificationQuestion             | 2c         |
+| `apps/web/src/components/secretary/InboxProposals.vue`   | MODIFY: activity feed, remove approval, add execution status   | 2a, 2c     |
+| `apps/api/src/routes/proposals.ts`                       | MODIFY: deprecate approve/apply, add executionResult to mapper | 2a         |
+
+## Parallel Agent Assignment
+
+**Agent 1 — Types + Migration + Classifier** (no dependencies, runs first):
+
+- `packages/shared/src/types/secretary.ts`
+- `supabase/migrations/035_inbox_autonomous_execution.sql`
+- `packages/ai/src/agents/inbox-classifier.ts`
+
+**Agent 2 — Backend Core** (depends on Agent 1 types):
+
+- `apps/api/src/channels/executor.ts` (CREATE)
+- `apps/api/src/channels/handler.ts` (MODIFY)
+- `apps/api/src/channels/types.ts` (MODIFY)
+- `apps/api/src/channels/telegram.ts` (MODIFY)
+
+**Agent 3 — Frontend + Routes** (depends on Agent 1 types):
+
+- `apps/web/src/components/secretary/InboxProposals.vue`
+- `apps/api/src/routes/proposals.ts`
+
+**Execution order**: Agent 1 first, then Agent 2 + Agent 3 in parallel.
+
+---
 
 ## Patterns to Reuse
 
-| Pattern                             | Source                     | Reuse In                                        |
-| ----------------------------------- | -------------------------- | ----------------------------------------------- |
-| `generateText` + `Output.object()`  | `planner.agent.ts:475-481` | inbox-classifier.ts                             |
-| `resolveModelsForTask()` + fallback | `planner.agent.ts:469`     | inbox-classifier.ts                             |
-| `recordAISDKUsage()`                | `planner.agent.ts:483-486` | inbox-classifier.ts                             |
-| Memory upsert                       | `proposals.ts:212-233`     | Apply dispatch (unchanged for non-note actions) |
-| NoteAgent.run()                     | `note.agent.ts`            | Apply dispatch for `create_note`                |
-| `getServiceClient()`                | `lib/supabase.ts`          | Channel handler (already used)                  |
-
-## Dependency Graph
-
-```
-Step 1 (Types) ──┬──→ Step 3 (Classifier) ──→ Step 4 (Handler + Routes)
-                 │                                      │
-Step 2 (Migration)┘                                     ↓
-                                               Step 5 (Frontend UI)
-                                                        │
-                                                        ↓
-                                               Step 6 (Bot Reply polish)
-```
-
-Steps 1+2 in parallel. Step 3 depends on 1. Step 4 depends on 2+3. Step 5 depends on 1+4. Step 6 is a polish pass.
+| Pattern                            | Source                   | Reuse In                                |
+| ---------------------------------- | ------------------------ | --------------------------------------- |
+| Memory file append                 | `proposals.ts:247-265`   | `executor.ts`                           |
+| NoteAgent create                   | `proposals.ts:215-235`   | `executor.ts`                           |
+| NoteAgent streaming                | `note.agent.ts:stream()` | `executor.ts` streaming variant         |
+| `getServiceClient()`               | `lib/supabase.ts`        | `executor.ts` (already used in handler) |
+| `classifyInboxMessage()`           | `inbox-classifier.ts`    | handler (unchanged)                     |
+| Grammy `ctx.api.editMessageText()` | Grammy API               | `telegram.ts` reply handle              |
 
 ---
 
-## Cost & Performance
+## Cost Analysis
 
-- **Per-message cost**: ~$0.003-0.006 (Gemini Flash, ~200 tokens input)
-- **Daily cap**: 100 messages/day (already enforced) = max $0.60/day
-- **Classification latency**: 1-2 seconds, 3-second timeout with fallback
-- **Apply latency**: <1s for memory append, 3-5s for NoteAgent create
-- **No cost increase for Inbox UI**: frontend reads from DB, no AI calls
+| Action                                  | Classification | Execution             | Total   |
+| --------------------------------------- | -------------- | --------------------- | ------- |
+| create_note                             | ~$0.003        | ~$0.02 (NoteAgent)    | ~$0.023 |
+| add_task/calendar/vocab/reading/thought | ~$0.003        | $0 (DB upsert)        | ~$0.003 |
+| needs_clarification                     | ~$0.003        | ~$0.003 (re-classify) | ~$0.006 |
+
+Daily cap: 100 messages/day = max ~$0.60/day worst case.
+
+---
+
+## Risks & Mitigations
+
+1. **Telegram webhook timeout (60s)**: NoteAgent takes 10-15s — well within limit.
+2. **Double execution on Telegram retry**: Add idempotency check — match `raw_text + externalUserId + timestamp` within 1-minute window before inserting.
+3. **NoteAgent failure mid-stream**: Raw row already saved. Mark `failed`, edit message to show error, fallback to saving as thought in Inbox.md.
+4. **Wrong classification executed**: Activity feed shows everything. Future: add "Undo" button per card.
+5. **Telegram edit rate limits (~30/sec)**: Throttle to 1 edit per 800ms.
 
 ---
 
@@ -398,40 +373,26 @@ Steps 1+2 in parallel. Step 3 depends on 1. Step 4 depends on 2+3. Step 5 depend
 
 - [ ] `pnpm build && pnpm typecheck && pnpm lint` pass
 
-### Smart Classification
+### Phase 2a: Auto-Execute
 
-- [ ] Send "create a note about quantum mechanics" → bot replies with note proposal, Inbox shows "Create Note" card with title + content preview
-- [ ] Send "buy groceries" → bot replies with task proposal, Inbox shows "Add Task" card with `- [ ] Buy groceries`
-- [ ] Send "meeting with John tomorrow 3pm" → bot replies with calendar proposal, Inbox shows event details
-- [ ] Send "ephemeral - lasting briefly" → bot replies with vocabulary proposal
-- [ ] Send "https://arxiv.org/abs/..." → bot replies with reading proposal
-- [ ] AI failure → bot falls back to "Captured.", proposal has `action_type: null`
+- [ ] Send "buy groceries" via Telegram → bot replies "✅ Added to Today.md" → Today.md has new task line
+- [ ] Send "create a note about quantum mechanics" → bot replies "✅ Created note..." → note exists in Inkdown
+- [ ] Send garbled text → bot replies "📝 Captured to Inbox" → Inbox.md has the text
+- [ ] Web Inbox shows activity feed with green ✅ badges, no approve/reject buttons
+- [ ] Old unclassified proposals still render with fallback UI
 
-### Apply Actions
+### Phase 2b: Streaming
 
-- [ ] Approve note proposal → Apply → NoteAgent creates Inkdown note
-- [ ] Approve task → Apply → appended to Today.md
-- [ ] Approve calendar → Apply → appended to Calendar.md
-- [ ] Approve vocabulary → Apply → appended to Vocabulary.md
-- [ ] Legacy unclassified proposals still work with "Categorize" button
+- [ ] Send "create a note about Newton's laws" → bot shows "Creating note..." → edits to "Writing 'Newton's Laws'..." → final "✅ Created note..."
+- [ ] Simple appends (tasks, vocab) → instant single reply, no streaming
+
+### Phase 2c: Clarification
+
+- [ ] Send "meeting" → bot asks "Is this a calendar event or a task?" → reply "calendar" → bot creates calendar entry
+- [ ] Send "buy groceries" → bot asks "For today or tomorrow?" → wait 3 min → send new message → treated as fresh capture, stale clarification shown as "timed out" in UI
 
 ### Backward Compatibility
 
 - [ ] Existing Inbox.md shortcut captures unaffected
 - [ ] Heartbeat evening processing still works
-- [ ] Old proposals (no action_type) render correctly with fallback UI
-
----
-
-## Implementation Order
-
-| Step | What                                                               | Effort      |
-| ---- | ------------------------------------------------------------------ | ----------- |
-| 1    | Shared types (ProposalActionType, payloads, enhance InboxProposal) | 30 min      |
-| 2    | Migration 033 (action_type, payload, preview_text columns)         | 15 min      |
-| 3    | Smart classifier agent + model registry entry + package export     | 1 hour      |
-| 4    | Handler upgrade + apply dispatch + route updates                   | 1.5 hours   |
-| 5    | Frontend rich preview cards                                        | 1.5-2 hours |
-| 6    | Bot reply polish (parse mode, prompt tuning)                       | 30 min      |
-
-**Total**: ~5-6 hours
+- [ ] Pairing flow unchanged

@@ -479,7 +479,14 @@ export type ChannelType = 'telegram' | 'discord' | 'whatsapp'
 export type ProposalCategory = 'task' | 'vocabulary' | 'calendar' | 'note' | 'reading' | 'thought'
 
 /** Status of an inbox proposal */
-export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied'
+export type ProposalStatus =
+  | 'pending'
+  | 'executing'
+  | 'awaiting_clarification'
+  | 'approved'
+  | 'rejected'
+  | 'applied'
+  | 'failed'
 
 /** Source of an inbox capture */
 export type ProposalSource = 'telegram' | 'discord' | 'whatsapp' | 'shortcut' | 'web' | 'manual'
@@ -492,6 +499,7 @@ export type ProposalActionType =
   | 'add_vocabulary'
   | 'add_reading'
   | 'add_thought'
+  | 'needs_clarification'
 
 /** Typed payloads per action type */
 export interface CreateNotePayload {
@@ -556,6 +564,7 @@ export interface InboxProposal {
   actionType: ProposalActionType | null
   payload: ProposalPayload | null
   previewText: string | null
+  executionResult: ExecutionResultData | null
   createdAt: string
   updatedAt: string
 }
@@ -580,4 +589,13 @@ export interface SmartClassificationResult {
   previewText: string
   confidence: number
   botReplyText: string
+  clarificationQuestion?: string
+}
+
+/** Result data stored after autonomous execution */
+export interface ExecutionResultData {
+  noteId?: string
+  updatedFile?: string
+  error?: string
+  durationMs?: number
 }

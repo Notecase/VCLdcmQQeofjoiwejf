@@ -3,11 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { authFetch } from '@/utils/api'
 import {
   Inbox,
-  Check,
-  X,
   Sparkles,
-  CheckCheck,
-  Play,
   Filter,
   MessageSquare,
   Smartphone,
@@ -18,22 +14,31 @@ import {
   BookOpen,
   Link,
   MessageCircle,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  HelpCircle,
+  Clock,
 } from 'lucide-vue-next'
-import type { InboxProposal, ProposalCategory, ProposalActionType } from '@inkdown/shared/types'
+import type {
+  InboxProposal,
+  ProposalCategory,
+  ProposalActionType,
+  ExecutionResultData,
+} from '@inkdown/shared/types'
 
 const apiBase = import.meta.env.VITE_API_URL || ''
 
 const proposals = ref<InboxProposal[]>([])
 const isLoading = ref(false)
 const isCategorizing = ref(false)
-const isApplying = ref(false)
 const activeFilter = ref<ProposalCategory | 'all'>('all')
-const statusFilter = ref<'pending' | 'all'>('pending')
+const statusFilter = ref<'all' | 'applied' | 'failed'>('all')
 
 const filteredProposals = computed(() => {
   let items = proposals.value
-  if (statusFilter.value === 'pending') {
-    items = items.filter((p) => p.status === 'pending' || p.status === 'approved')
+  if (statusFilter.value !== 'all') {
+    items = items.filter((p) => p.status === statusFilter.value)
   }
   if (activeFilter.value !== 'all') {
     items = items.filter((p) => p.category === activeFilter.value)
@@ -41,15 +46,11 @@ const filteredProposals = computed(() => {
   return items
 })
 
-const pendingCount = computed(
-  () => proposals.value.filter((p) => p.status === 'pending' || p.status === 'approved').length
-)
+const totalCount = computed(() => proposals.value.length)
 
 const uncategorizedCount = computed(
   () => proposals.value.filter((p) => p.status === 'pending' && !p.category).length
 )
-
-const approvedCount = computed(() => proposals.value.filter((p) => p.status === 'approved').length)
 
 const categories: { value: ProposalCategory | 'all'; label: string; color: string }[] = [
   { value: 'all', label: 'All', color: '' },
@@ -91,6 +92,8 @@ function actionTypeIcon(type: ProposalActionType | null) {
       return Link
     case 'add_thought':
       return MessageCircle
+    case 'needs_clarification':
+      return HelpCircle
     default:
       return null
   }
@@ -110,9 +113,35 @@ function actionTypeLabel(type: ProposalActionType | null): string {
       return 'Reading'
     case 'add_thought':
       return 'Thought'
+    case 'needs_clarification':
+      return 'Clarification'
     default:
       return ''
   }
+}
+
+function statusIcon(status: string) {
+  switch (status) {
+    case 'applied':
+      return CheckCircle2
+    case 'failed':
+      return XCircle
+    case 'executing':
+      return Loader2
+    case 'awaiting_clarification':
+      return HelpCircle
+    case 'pending':
+      return Clock
+    default:
+      return null
+  }
+}
+
+function isExpiredClarification(proposal: InboxProposal): boolean {
+  if (proposal.status !== 'awaiting_clarification') return false
+  // Clarification sessions expire after 2 minutes
+  const twoMinAgo = Date.now() - 2 * 60_000
+  return new Date(proposal.updatedAt).getTime() < twoMinAgo
 }
 
 function truncate(text: string | undefined | null, maxLength: number): string {
@@ -122,6 +151,10 @@ function truncate(text: string | undefined | null, maxLength: number): string {
 
 function getPayload(proposal: InboxProposal): Record<string, unknown> {
   return (proposal.payload ?? {}) as Record<string, unknown>
+}
+
+function getExecutionResult(proposal: InboxProposal): ExecutionResultData | null {
+  return proposal.executionResult ?? null
 }
 
 async function loadProposals() {
@@ -155,53 +188,9 @@ async function categorize() {
   }
 }
 
-async function updateProposal(id: string, updates: Record<string, unknown>) {
-  try {
-    await authFetch(`${apiBase}/api/inbox/proposals/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    })
-    const idx = proposals.value.findIndex((p) => p.id === id)
-    if (idx >= 0) {
-      proposals.value[idx] = { ...proposals.value[idx], ...updates } as InboxProposal
-    }
-  } catch {
-    // silently fail
-  }
-}
-
-async function approveAll() {
-  try {
-    const res = await authFetch(`${apiBase}/api/inbox/proposals/approve-all`, {
-      method: 'POST',
-    })
-    if (res.ok) {
-      await loadProposals()
-    }
-  } catch {
-    // silently fail
-  }
-}
-
-async function applyApproved() {
-  isApplying.value = true
-  try {
-    const res = await authFetch(`${apiBase}/api/inbox/proposals/apply`, {
-      method: 'POST',
-    })
-    if (res.ok) {
-      await loadProposals()
-    }
-  } catch {
-    // silently fail
-  } finally {
-    isApplying.value = false
-  }
-}
-
 onMounted(loadProposals)
 
-defineExpose({ pendingCount, loadProposals })
+defineExpose({ totalCount, loadProposals })
 </script>
 
 <template>
@@ -210,12 +199,12 @@ defineExpose({ pendingCount, loadProposals })
     <div class="inbox-header">
       <div class="inbox-title">
         <Inbox :size="18" />
-        <h2>Inbox</h2>
+        <h2>Activity Feed</h2>
         <span
-          v-if="pendingCount > 0"
+          v-if="totalCount > 0"
           class="badge"
         >
-          {{ pendingCount }}
+          {{ totalCount }}
         </span>
       </div>
 
@@ -231,23 +220,6 @@ defineExpose({ pendingCount, loadProposals })
             :class="{ spinning: isCategorizing }"
           />
           {{ isCategorizing ? 'Categorizing...' : `Categorize (${uncategorizedCount})` }}
-        </button>
-        <button
-          v-if="filteredProposals.some((p) => p.status === 'pending' && p.category)"
-          class="btn btn-ghost"
-          @click="approveAll"
-        >
-          <CheckCheck :size="14" />
-          Approve All
-        </button>
-        <button
-          v-if="approvedCount > 0"
-          class="btn btn-primary"
-          :disabled="isApplying"
-          @click="applyApproved"
-        >
-          <Play :size="14" />
-          {{ isApplying ? 'Applying...' : `Apply (${approvedCount})` }}
         </button>
       </div>
     </div>
@@ -269,14 +241,32 @@ defineExpose({ pendingCount, loadProposals })
         {{ cat.label }}
       </button>
 
-      <button
-        class="filter-pill status-toggle"
-        :class="{ active: statusFilter === 'all' }"
-        @click="statusFilter = statusFilter === 'pending' ? 'all' : 'pending'"
-      >
-        <Filter :size="12" />
-        {{ statusFilter === 'pending' ? 'Pending' : 'All' }}
-      </button>
+      <div class="status-filters">
+        <button
+          class="filter-pill"
+          :class="{ active: statusFilter === 'all' }"
+          @click="statusFilter = 'all'"
+        >
+          <Filter :size="12" />
+          All
+        </button>
+        <button
+          class="filter-pill"
+          :class="{ active: statusFilter === 'applied' }"
+          @click="statusFilter = statusFilter === 'applied' ? 'all' : 'applied'"
+        >
+          <CheckCircle2 :size="12" />
+          Done
+        </button>
+        <button
+          class="filter-pill"
+          :class="{ active: statusFilter === 'failed' }"
+          @click="statusFilter = statusFilter === 'failed' ? 'all' : 'failed'"
+        >
+          <XCircle :size="12" />
+          Failed
+        </button>
+      </div>
     </div>
 
     <!-- Proposals List -->
@@ -284,7 +274,7 @@ defineExpose({ pendingCount, loadProposals })
       v-if="isLoading"
       class="loading-text"
     >
-      Loading inbox...
+      Loading activity...
     </div>
 
     <div
@@ -295,8 +285,8 @@ defineExpose({ pendingCount, loadProposals })
         :size="32"
         class="empty-icon"
       />
-      <p>No pending items</p>
-      <span>Send messages to your Telegram bot to capture notes, tasks, and ideas.</span>
+      <p>No activity yet</p>
+      <span>Send messages to your Telegram bot — they'll be processed automatically.</span>
     </div>
 
     <div
@@ -307,10 +297,7 @@ defineExpose({ pendingCount, loadProposals })
         v-for="proposal in filteredProposals"
         :key="proposal.id"
         class="proposal-card"
-        :class="{
-          approved: proposal.status === 'approved',
-          rejected: proposal.status === 'rejected',
-        }"
+        :class="proposal.status"
       >
         <div class="proposal-header">
           <component
@@ -441,6 +428,21 @@ defineExpose({ pendingCount, loadProposals })
             </div>
           </div>
 
+          <!-- Rich preview: needs_clarification -->
+          <div
+            v-else-if="proposal.actionType === 'needs_clarification'"
+            class="preview-rich"
+          >
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-clarification">
+              <HelpCircle
+                :size="14"
+                class="clarification-icon"
+              />
+              <span>{{ proposal.previewText }}</span>
+            </div>
+          </div>
+
           <!-- Rich preview: add_thought -->
           <div
             v-else-if="proposal.actionType === 'add_thought'"
@@ -465,38 +467,47 @@ defineExpose({ pendingCount, loadProposals })
               {{ proposal.proposedContent }}
             </p>
           </div>
+
+          <!-- Execution result details -->
+          <div
+            v-if="getExecutionResult(proposal)"
+            class="execution-result"
+          >
+            <span
+              v-if="getExecutionResult(proposal)?.updatedFile"
+              class="result-detail"
+            >
+              → {{ getExecutionResult(proposal)?.updatedFile }}
+            </span>
+            <span
+              v-if="getExecutionResult(proposal)?.error"
+              class="result-error"
+            >
+              Error: {{ getExecutionResult(proposal)?.error }}
+            </span>
+            <span
+              v-if="getExecutionResult(proposal)?.durationMs"
+              class="result-duration"
+            >
+              {{ Math.round((getExecutionResult(proposal)?.durationMs || 0) / 1000) }}s
+            </span>
+          </div>
         </div>
 
+        <!-- Status badge -->
         <div
-          v-if="proposal.status === 'pending' || proposal.status === 'approved'"
-          class="proposal-actions"
-        >
-          <button
-            class="action-btn approve"
-            :class="{ active: proposal.status === 'approved' }"
-            title="Approve"
-            @click="
-              updateProposal(proposal.id, {
-                status: proposal.status === 'approved' ? 'pending' : 'approved',
-              })
-            "
-          >
-            <Check :size="14" />
-          </button>
-          <button
-            class="action-btn reject"
-            title="Reject"
-            @click="updateProposal(proposal.id, { status: 'rejected' })"
-          >
-            <X :size="14" />
-          </button>
-        </div>
-        <div
-          v-else
           class="proposal-status-badge"
           :class="proposal.status"
         >
-          {{ proposal.status }}
+          <component
+            :is="statusIcon(proposal.status)"
+            :size="12"
+            :class="{ spinning: proposal.status === 'executing' }"
+          />
+          <span v-if="proposal.status === 'awaiting_clarification'">
+            {{ isExpiredClarification(proposal) ? 'Timed out' : 'Awaiting reply' }}
+          </span>
+          <span v-else>{{ proposal.status }}</span>
         </div>
       </div>
     </div>
@@ -557,6 +568,13 @@ defineExpose({ pendingCount, loadProposals })
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.status-filters {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .filter-pill {
@@ -584,10 +602,6 @@ defineExpose({ pendingCount, loadProposals })
   color: #aaf2d2;
 }
 
-.status-toggle {
-  margin-left: auto;
-}
-
 /* ── Proposals ────────────────────────────────────────────────────── */
 
 .proposals-list {
@@ -611,9 +625,20 @@ defineExpose({ pendingCount, loadProposals })
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-.proposal-card.approved {
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.04);
+.proposal-card.applied {
+  border-color: rgba(34, 197, 94, 0.15);
+}
+
+.proposal-card.failed {
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.proposal-card.executing {
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.proposal-card.awaiting_clarification {
+  border-color: rgba(234, 179, 8, 0.2);
 }
 
 .proposal-card.rejected {
@@ -718,6 +743,25 @@ defineExpose({ pendingCount, loadProposals })
   font-size: 12px;
 }
 
+.preview-clarification {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(234, 179, 8, 0.06);
+  border: 1px solid rgba(234, 179, 8, 0.15);
+  font-size: 12px;
+  color: var(--text-color, #e2e8f0);
+  line-height: 1.4;
+}
+
+.clarification-icon {
+  color: #eab308;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .preview-note strong,
 .preview-event strong,
 .preview-reading strong {
@@ -775,48 +819,38 @@ defineExpose({ pendingCount, loadProposals })
   white-space: nowrap;
 }
 
-.proposal-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
+/* ── Execution result ─────────────────────────────────────────── */
 
-.action-btn {
+.execution-result {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm, 6px);
-  border: 1px solid var(--sec-glass-border, rgba(255, 255, 255, 0.08));
-  background: transparent;
-  cursor: pointer;
-  transition: all 150ms ease;
+  gap: 8px;
+  font-size: 11px;
+  margin-top: 2px;
 }
 
-.action-btn.approve {
+.result-detail {
   color: var(--text-color-secondary, #94a3b8);
+  font-family: monospace;
 }
 
-.action-btn.approve:hover,
-.action-btn.approve.active {
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.action-btn.reject {
-  color: var(--text-color-secondary, #94a3b8);
-}
-
-.action-btn.reject:hover {
+.result-error {
   color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
+  font-size: 11px;
 }
+
+.result-duration {
+  color: var(--text-color-secondary, #64748b);
+  margin-left: auto;
+}
+
+/* ── Status badge ──────────────────────────────────────────────── */
 
 .proposal-status-badge {
   align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 10px;
@@ -827,6 +861,26 @@ defineExpose({ pendingCount, loadProposals })
 .proposal-status-badge.applied {
   color: #22c55e;
   background: rgba(34, 197, 94, 0.1);
+}
+
+.proposal-status-badge.failed {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.proposal-status-badge.executing {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.proposal-status-badge.awaiting_clarification {
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.proposal-status-badge.pending {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
 }
 
 .proposal-status-badge.rejected {
@@ -887,16 +941,6 @@ defineExpose({ pendingCount, loadProposals })
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.btn-primary {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6ee7b7;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.25);
 }
 
 .btn-ghost {

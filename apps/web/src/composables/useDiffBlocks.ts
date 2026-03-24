@@ -960,6 +960,118 @@ ${JSON.stringify(
     console.debug(`[useDiffBlocks] Rejected all ${edits.length} edit(s) via setMarkdown`)
   }
 
+  /**
+   * Accept a single edit by ID — used by EditProposalCard tick button.
+   * If this is the only pending edit, delegates to acceptAllDiffs().
+   * If there are multiple, applies just this one edit's proposed content.
+   */
+  function acceptSingleEdit(editId: string) {
+    const muya = muyaRef.value
+    const noteId = noteIdRef.value
+    if (!muya || !noteId) return
+
+    const edit = aiStore.pendingEdits.find((e) => e.id === editId && e.status === 'pending')
+    if (!edit) return
+
+    const allPending = aiStore.pendingEdits.filter(
+      (e) => e.noteId === noteId && e.status === 'pending'
+    )
+
+    // If this is the only pending edit (or all edits), use acceptAllDiffs for full logic
+    if (allPending.length <= 1 || allPending.every((e) => e.id === editId)) {
+      acceptAllDiffs()
+      return
+    }
+
+    // Apply just this edit's proposed content
+    muya.setMarkdown(edit.proposedContent)
+
+    // Mark this edit's hunks as accepted
+    edit.diffHunks.forEach((hunk) => {
+      if (hunk.status === 'pending') {
+        aiStore.acceptHunk(edit.id, hunk.id)
+      }
+    })
+    aiStore.acceptEdit(edit.id)
+
+    // Update diff block pairs/blocks for this edit
+    aiStore.diffBlockPairs
+      .filter((p) => p.editId === edit.id && p.status === 'pending')
+      .forEach((pair) => {
+        aiStore.updateDiffBlockPair(pair.id, 'accepted')
+      })
+    aiStore.diffBlocks
+      .filter((b) => b.editId === edit.id && b.status === 'pending')
+      .forEach((block) => {
+        aiStore.updateDiffBlock(block.id, 'accepted')
+      })
+
+    // Clear diff visualization and sync
+    clearAllDiffs()
+    nextTick(() => {
+      syncEditorContent()
+      // Re-apply remaining pending edits' diff visualization
+      checkAndApplyPendingEdits()
+    })
+
+    console.debug(`[useDiffBlocks] Accepted single edit ${editId}`)
+  }
+
+  /**
+   * Reject a single edit by ID — used by EditProposalCard X button.
+   */
+  function rejectSingleEdit(editId: string) {
+    const muya = muyaRef.value
+    const noteId = noteIdRef.value
+    if (!muya || !noteId) return
+
+    const edit = aiStore.pendingEdits.find((e) => e.id === editId && e.status === 'pending')
+    if (!edit) return
+
+    const allPending = aiStore.pendingEdits.filter(
+      (e) => e.noteId === noteId && e.status === 'pending'
+    )
+
+    // If this is the only pending edit, use rejectAllDiffs for full logic
+    if (allPending.length <= 1) {
+      rejectAllDiffs()
+      return
+    }
+
+    // Restore original content for this edit
+    muya.setMarkdown(edit.originalContent)
+
+    // Mark this edit's hunks as rejected
+    edit.diffHunks.forEach((hunk) => {
+      if (hunk.status === 'pending') {
+        aiStore.rejectHunk(edit.id, hunk.id)
+      }
+    })
+    aiStore.rejectEdit(edit.id)
+
+    // Update diff block pairs/blocks for this edit
+    aiStore.diffBlockPairs
+      .filter((p) => p.editId === edit.id && p.status === 'pending')
+      .forEach((pair) => {
+        aiStore.updateDiffBlockPair(pair.id, 'rejected')
+      })
+    aiStore.diffBlocks
+      .filter((b) => b.editId === edit.id && b.status === 'pending')
+      .forEach((block) => {
+        aiStore.updateDiffBlock(block.id, 'rejected')
+      })
+
+    // Clear diff visualization and sync
+    clearAllDiffs()
+    nextTick(() => {
+      syncEditorContent()
+      // Re-apply remaining pending edits
+      checkAndApplyPendingEdits()
+    })
+
+    console.debug(`[useDiffBlocks] Rejected single edit ${editId}`)
+  }
+
   // Watch for new pending edits
   watch(
     () => aiStore.pendingEdits,
@@ -1003,6 +1115,8 @@ ${JSON.stringify(
     checkAndApplyPendingEdits,
     acceptAllDiffs,
     rejectAllDiffs,
+    acceptSingleEdit,
+    rejectSingleEdit,
     isDiffInjecting,
   }
 }

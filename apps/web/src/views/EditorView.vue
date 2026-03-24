@@ -102,6 +102,24 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
+// Watch for edit action requests from EditProposalCard (sidebar tick/X buttons)
+watch(
+  () => aiStore.editActionRequest,
+  (request) => {
+    if (!request) return
+    const editorArea = editorAreaRef.value as any
+    if (!editorArea) return
+
+    if (request.action === 'accept' && typeof editorArea.acceptSingleEdit === 'function') {
+      editorArea.acceptSingleEdit(request.editId)
+    } else if (request.action === 'reject' && typeof editorArea.rejectSingleEdit === 'function') {
+      editorArea.rejectSingleEdit(request.editId)
+    }
+
+    aiStore.clearEditActionRequest()
+  }
+)
+
 onMounted(async () => {
   window.addEventListener('keydown', handleGlobalKeydown)
 

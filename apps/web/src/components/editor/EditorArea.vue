@@ -83,10 +83,8 @@ const currentNoteId = computed(() => editorStore.currentDocument?.id)
 
 // Initialize true inline diff system
 // The composable watches for pending edits and injects diff blocks directly into Muya's DOM
-const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs } = useDiffBlocks(
-  muyaInstance as unknown as Parameters<typeof useDiffBlocks>[0],
-  currentNoteId
-)
+const { clearAllDiffs, acceptAllDiffs, rejectAllDiffs, acceptSingleEdit, rejectSingleEdit } =
+  useDiffBlocks(muyaInstance as unknown as Parameters<typeof useDiffBlocks>[0], currentNoteId)
 const autoSaveTimer = ref<ReturnType<typeof setTimeout>>()
 const tocUpdateTimer = ref<ReturnType<typeof setTimeout>>()
 const isEditorReady = ref(false)
@@ -504,7 +502,15 @@ onUnmounted(() => {
 
 // Expose Muya instance for parent components (e.g., format toolbar)
 const getMuya = () => muyaInstance.value
-defineExpose({ getMuya, isEditorReady, isUploadingImage, acceptAllDiffs, rejectAllDiffs })
+defineExpose({
+  getMuya,
+  isEditorReady,
+  isUploadingImage,
+  acceptAllDiffs,
+  rejectAllDiffs,
+  acceptSingleEdit,
+  rejectSingleEdit,
+})
 </script>
 
 <template>

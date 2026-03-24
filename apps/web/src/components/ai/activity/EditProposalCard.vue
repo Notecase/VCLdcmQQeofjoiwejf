@@ -50,11 +50,11 @@ const diffLines = computed(() => {
 
 function handleAccept() {
   store.setActiveEdit(props.edit.id)
-  store.acceptEdit(props.edit.id)
+  store.requestEditAction(props.edit.id, 'accept')
 }
 
 function handleReject() {
-  store.rejectEdit(props.edit.id)
+  store.requestEditAction(props.edit.id, 'reject')
 }
 </script>
 

@@ -484,6 +484,53 @@ export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied'
 /** Source of an inbox capture */
 export type ProposalSource = 'telegram' | 'discord' | 'whatsapp' | 'shortcut' | 'web' | 'manual'
 
+/** Action types the smart classifier can propose */
+export type ProposalActionType =
+  | 'create_note'
+  | 'add_task'
+  | 'add_calendar_event'
+  | 'add_vocabulary'
+  | 'add_reading'
+  | 'add_thought'
+
+/** Typed payloads per action type */
+export interface CreateNotePayload {
+  title: string
+  content: string
+  projectId?: string
+}
+export interface AddTaskPayload {
+  taskLine: string
+  targetFile: 'Today.md' | 'Tomorrow.md'
+  dueDate?: string
+}
+export interface AddCalendarEventPayload {
+  eventTitle: string
+  dateTime?: string
+  description?: string
+}
+export interface AddVocabularyPayload {
+  word: string
+  definition: string
+  context?: string
+}
+export interface AddReadingPayload {
+  title: string
+  url?: string
+  description?: string
+}
+export interface AddThoughtPayload {
+  text: string
+}
+
+export type ProposalPayload =
+  | CreateNotePayload
+  | AddTaskPayload
+  | AddCalendarEventPayload
+  | AddVocabularyPayload
+  | AddReadingPayload
+  | AddThoughtPayload
+
 /** A linked messaging channel */
 export interface ChannelLink {
   id: string
@@ -506,11 +553,14 @@ export interface InboxProposal {
   status: ProposalStatus
   batchId: string | null
   metadata: Record<string, unknown>
+  actionType: ProposalActionType | null
+  payload: ProposalPayload | null
+  previewText: string | null
   createdAt: string
   updatedAt: string
 }
 
-/** AI categorization result for a single item */
+/** AI categorization result for a single item (batch categorizer) */
 export interface CategorizationResult {
   id: string
   category: ProposalCategory
@@ -518,4 +568,16 @@ export interface CategorizationResult {
   proposedContent: string
   confidence: number
   metadata: Record<string, unknown>
+}
+
+/** Smart per-message classification result */
+export interface SmartClassificationResult {
+  actionType: ProposalActionType
+  category: ProposalCategory
+  targetFile: string
+  payload: Record<string, unknown>
+  proposedContent: string
+  previewText: string
+  confidence: number
+  botReplyText: string
 }

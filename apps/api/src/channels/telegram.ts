@@ -32,7 +32,7 @@ if (botToken) {
     }
 
     const response = await handleIncomingMessage(message)
-    await ctx.reply(response.text)
+    await ctx.reply(response.text, { parse_mode: response.parseMode || undefined })
   })
 
   // Webhook endpoint

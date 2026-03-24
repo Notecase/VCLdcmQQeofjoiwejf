@@ -65,6 +65,10 @@
     "./agents/inbox-categorizer": {
       "import": "./dist/agents/inbox-categorizer.js",
       "types": "./dist/agents/inbox-categorizer.d.ts"
+    },
+    "./agents/inbox-classifier": {
+      "import": "./dist/agents/inbox-classifier.js",
+      "types": "./dist/agents/inbox-classifier.d.ts"
     }
   },
   "scripts": {

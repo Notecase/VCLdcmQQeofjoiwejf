@@ -629,8 +629,8 @@ export class MemoryService {
   /**
    * Check if Today.md is stale and perform day transition:
    * 1. Archive stale Today.md to History/YYYY-MM-DD.md
-   * 2. Promote Tomorrow.md to Today.md if it matches today's date
-   * 3. Clear Tomorrow.md
+   * 2. Promote Tomorrow.md to Today.md if its date is today or earlier (handles multi-day gaps)
+   * 3. If Tomorrow.md is for a future date, keep it and reset Today.md
    */
   async performDayTransition(): Promise<DayTransitionResult> {
     const todayDate = getTodayDate(this.timezone)
@@ -666,13 +666,16 @@ export class MemoryService {
 
     if (tomorrowFile && tomorrowFile.content.trim()) {
       const tomorrowDateMatch = tomorrowFile.content.match(/(\d{4}-\d{2}-\d{2})/)
-      if (tomorrowDateMatch && tomorrowDateMatch[1] === todayDate) {
-        // Tomorrow.md has today's date — promote it
+      if (tomorrowDateMatch && tomorrowDateMatch[1] <= todayDate) {
+        // Tomorrow.md date is today or past (e.g. user didn't open app for days) — promote it
         await this.writeFile('Today.md', tomorrowFile.content)
         await this.writeFile('Tomorrow.md', '')
         promotedTomorrow = true
+      } else if (tomorrowDateMatch && tomorrowDateMatch[1] > todayDate) {
+        // Tomorrow.md is for a future date — keep it, just reset Today.md
+        await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
       } else {
-        // Tomorrow.md doesn't match today — clear both
+        // No date found in Tomorrow.md — clear both
         await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
         await this.writeFile('Tomorrow.md', '')
       }

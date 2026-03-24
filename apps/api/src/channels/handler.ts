@@ -2,10 +2,11 @@
  * Channel Message Handler
  *
  * Shared logic that all channel adapters call after normalizing messages.
- * Handles: account linking, pairing flow, and message capture to inbox_proposals.
+ * Handles: account linking, pairing flow, smart classification, and message capture.
  */
 
 import { getServiceClient } from '../lib/supabase'
+import { classifyInboxMessage } from '@inkdown/ai/agents/inbox-classifier'
 import type { ChannelMessage, ChannelResponse } from './types'
 import { parseCommand } from './types'
 
@@ -114,7 +115,8 @@ async function handlePairing(message: ChannelMessage, code: string): Promise<Cha
 }
 
 /**
- * Insert message into inbox_proposals as a raw capture
+ * Insert raw proposal, then smart-classify and update with rich action data.
+ * Returns a bot reply based on classification (or fallback "Captured.").
  */
 async function captureToProposals(
   userId: string,
@@ -122,20 +124,69 @@ async function captureToProposals(
 ): Promise<ChannelResponse> {
   const db = getServiceClient()
 
-  const { error } = await db.from('inbox_proposals').insert({
-    user_id: userId,
-    source: message.channel,
-    raw_text: message.text,
-    status: 'pending',
-    metadata: {
-      displayName: message.displayName,
-      timestamp: message.timestamp.toISOString(),
-      mediaType: message.mediaType || 'text',
-    },
-  })
+  // 1. Insert raw proposal immediately (data is never lost)
+  const { data: inserted, error } = await db
+    .from('inbox_proposals')
+    .insert({
+      user_id: userId,
+      source: message.channel,
+      raw_text: message.text,
+      status: 'pending',
+      metadata: {
+        displayName: message.displayName,
+        timestamp: message.timestamp.toISOString(),
+        mediaType: message.mediaType || 'text',
+      },
+    })
+    .select('id')
+    .single()
 
-  if (error) {
+  if (error || !inserted) {
     return { text: 'Failed to capture. Please try again.' }
+  }
+
+  // 2. Smart classify with 3-second timeout
+  try {
+    const { data: memoryFiles } = await db
+      .from('secretary_memory')
+      .select('filename')
+      .eq('user_id', userId)
+
+    const existingFiles = (memoryFiles ?? []).map((f: { filename: string }) => f.filename)
+
+    const classification = await Promise.race([
+      classifyInboxMessage({
+        text: message.text,
+        source: message.channel,
+        existingFiles,
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+    ])
+
+    if (classification) {
+      // 3. Update proposal with rich action data
+      await db
+        .from('inbox_proposals')
+        .update({
+          action_type: classification.actionType,
+          category: classification.category,
+          target_file: classification.targetFile,
+          proposed_content: classification.proposedContent,
+          payload: classification.payload,
+          preview_text: classification.previewText,
+          confidence: classification.confidence,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', inserted.id)
+
+      // 4. Return smart bot reply
+      return {
+        text: classification.botReplyText,
+        parseMode: 'Markdown',
+      }
+    }
+  } catch {
+    // Classification failed — fall through to default reply
   }
 
   return { text: 'Captured.' }

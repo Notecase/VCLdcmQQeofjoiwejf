@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { usePreferencesStore, useLayoutStore } from './stores'
+import { authFetch } from './utils/api'
+import { isDemoMode } from './utils/demo'
 import CommandPalette from './components/ui/CommandPalette.vue'
 import NotificationToast from './components/ui/NotificationToast.vue'
 
@@ -13,6 +15,19 @@ const appClasses = computed(() => ({
   'source-code-mode': layoutStore.isSourceMode,
   'zen-mode': layoutStore.isZenMode,
 }))
+
+// Run secretary day-transition on every app load (fire-and-forget).
+// This ensures Tomorrow.md → Today.md promotion happens regardless of which page the user lands on.
+onMounted(() => {
+  if (isDemoMode()) return
+  const apiUrl = import.meta.env.VITE_API_URL || ''
+  authFetch(`${apiUrl}/api/secretary/day-transition`, {
+    method: 'POST',
+    headers: { 'X-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone },
+  }).catch(() => {
+    // Non-critical — don't block app initialization
+  })
+})
 </script>
 
 <template>

@@ -346,6 +346,18 @@ export const useAIStore = defineStore('ai', () => {
   const previewNoteId = ref<string | null>(null)
   const previewPanelVisible = ref(false)
 
+  // Edit action request — bridges EditProposalCard → EditorView → useDiffBlocks
+  // When EditProposalCard sets this, EditorView watches it and calls the real diff logic
+  const editActionRequest = ref<{ editId: string; action: 'accept' | 'reject' } | null>(null)
+
+  function requestEditAction(editId: string, action: 'accept' | 'reject') {
+    editActionRequest.value = { editId, action }
+  }
+
+  function clearEditActionRequest() {
+    editActionRequest.value = null
+  }
+
   // ---------------------------------------------------------------------------
   // Computed
   // ---------------------------------------------------------------------------
@@ -1430,6 +1442,9 @@ export const useAIStore = defineStore('ai', () => {
     acceptEdit,
     rejectEdit,
     clearPendingEdits,
+    editActionRequest,
+    requestEditAction,
+    clearEditActionRequest,
 
     // Hunk-level actions
     setActiveEdit,

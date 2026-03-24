@@ -12,8 +12,14 @@ import {
   MessageSquare,
   Smartphone,
   Globe,
+  FileText,
+  CheckSquare,
+  Calendar,
+  BookOpen,
+  Link,
+  MessageCircle,
 } from 'lucide-vue-next'
-import type { InboxProposal, ProposalCategory } from '@inkdown/shared/types'
+import type { InboxProposal, ProposalCategory, ProposalActionType } from '@inkdown/shared/types'
 
 const apiBase = import.meta.env.VITE_API_URL || ''
 
@@ -69,6 +75,53 @@ function sourceIcon(source: string) {
 function categoryColor(category: string | null): string {
   const cat = categories.find((c) => c.value === category)
   return cat?.color || '#64748b'
+}
+
+function actionTypeIcon(type: ProposalActionType | null) {
+  switch (type) {
+    case 'create_note':
+      return FileText
+    case 'add_task':
+      return CheckSquare
+    case 'add_calendar_event':
+      return Calendar
+    case 'add_vocabulary':
+      return BookOpen
+    case 'add_reading':
+      return Link
+    case 'add_thought':
+      return MessageCircle
+    default:
+      return null
+  }
+}
+
+function actionTypeLabel(type: ProposalActionType | null): string {
+  switch (type) {
+    case 'create_note':
+      return 'Create Note'
+    case 'add_task':
+      return 'Add Task'
+    case 'add_calendar_event':
+      return 'Calendar Event'
+    case 'add_vocabulary':
+      return 'Vocabulary'
+    case 'add_reading':
+      return 'Reading'
+    case 'add_thought':
+      return 'Thought'
+    default:
+      return ''
+  }
+}
+
+function truncate(text: string | undefined | null, maxLength: number): string {
+  if (!text) return ''
+  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
+}
+
+function getPayload(proposal: InboxProposal): Record<string, unknown> {
+  return (proposal.payload ?? {}) as Record<string, unknown>
 }
 
 async function loadProposals() {
@@ -267,7 +320,21 @@ defineExpose({ pendingCount, loadProposals })
           />
           <span class="source-label">{{ proposal.source }}</span>
           <span
-            v-if="proposal.category"
+            v-if="proposal.actionType"
+            class="action-type-pill"
+            :style="{
+              borderColor: categoryColor(proposal.category),
+              color: categoryColor(proposal.category),
+            }"
+          >
+            <component
+              :is="actionTypeIcon(proposal.actionType)"
+              :size="10"
+            />
+            {{ actionTypeLabel(proposal.actionType) }}
+          </span>
+          <span
+            v-else-if="proposal.category"
             class="category-pill"
             :style="{
               borderColor: categoryColor(proposal.category),
@@ -285,13 +352,119 @@ defineExpose({ pendingCount, loadProposals })
         </div>
 
         <div class="proposal-body">
-          <p class="raw-text">{{ proposal.rawText }}</p>
-          <p
-            v-if="proposal.proposedContent"
-            class="proposed-content"
+          <!-- Rich preview: create_note -->
+          <div
+            v-if="proposal.actionType === 'create_note'"
+            class="preview-rich"
           >
-            {{ proposal.proposedContent }}
-          </p>
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-note">
+              <strong>{{ getPayload(proposal).title }}</strong>
+              <p class="preview-detail">
+                {{ truncate(getPayload(proposal).content as string, 120) }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Rich preview: add_task -->
+          <div
+            v-else-if="proposal.actionType === 'add_task'"
+            class="preview-rich"
+          >
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-task">
+              <code>{{ getPayload(proposal).taskLine || proposal.proposedContent }}</code>
+              <span
+                v-if="getPayload(proposal).targetFile"
+                class="target-badge"
+              >
+                {{ getPayload(proposal).targetFile }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Rich preview: add_calendar_event -->
+          <div
+            v-else-if="proposal.actionType === 'add_calendar_event'"
+            class="preview-rich"
+          >
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-event">
+              <strong>{{ getPayload(proposal).eventTitle }}</strong>
+              <span
+                v-if="getPayload(proposal).dateTime"
+                class="event-time"
+              >
+                {{ getPayload(proposal).dateTime }}
+              </span>
+              <p
+                v-if="getPayload(proposal).description"
+                class="preview-detail"
+              >
+                {{ getPayload(proposal).description }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Rich preview: add_vocabulary -->
+          <div
+            v-else-if="proposal.actionType === 'add_vocabulary'"
+            class="preview-rich"
+          >
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-vocab">
+              <strong>{{ getPayload(proposal).word }}</strong>
+              <em>{{ getPayload(proposal).definition }}</em>
+            </div>
+          </div>
+
+          <!-- Rich preview: add_reading -->
+          <div
+            v-else-if="proposal.actionType === 'add_reading'"
+            class="preview-rich"
+          >
+            <p class="raw-text-muted">{{ proposal.rawText }}</p>
+            <div class="preview-reading">
+              <strong>{{ getPayload(proposal).title }}</strong>
+              <span
+                v-if="getPayload(proposal).url"
+                class="reading-url"
+              >
+                {{ getPayload(proposal).url }}
+              </span>
+              <p
+                v-if="getPayload(proposal).description"
+                class="preview-detail"
+              >
+                {{ getPayload(proposal).description }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Rich preview: add_thought -->
+          <div
+            v-else-if="proposal.actionType === 'add_thought'"
+            class="preview-rich"
+          >
+            <p class="raw-text">{{ proposal.rawText }}</p>
+            <p
+              v-if="proposal.previewText && proposal.previewText !== proposal.rawText"
+              class="preview-detail"
+            >
+              {{ proposal.previewText }}
+            </p>
+          </div>
+
+          <!-- Fallback: legacy unclassified -->
+          <div v-else>
+            <p class="raw-text">{{ proposal.rawText }}</p>
+            <p
+              v-if="proposal.proposedContent"
+              class="proposed-content"
+            >
+              {{ proposal.proposedContent }}
+            </p>
+          </div>
         </div>
 
         <div
@@ -501,6 +674,105 @@ defineExpose({ pendingCount, loadProposals })
   border-radius: var(--radius-sm, 6px);
   background: rgba(0, 0, 0, 0.2);
   white-space: pre-wrap;
+}
+
+/* ── Action type pill ───────────────────────────────────────────── */
+
+.action-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Rich previews ──────────────────────────────────────────────── */
+
+.preview-rich {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.raw-text-muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-color-secondary, #64748b);
+  line-height: 1.4;
+}
+
+.preview-note,
+.preview-task,
+.preview-event,
+.preview-vocab,
+.preview-reading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+}
+
+.preview-note strong,
+.preview-event strong,
+.preview-reading strong {
+  color: var(--text-color, #e2e8f0);
+  font-size: 13px;
+}
+
+.preview-vocab strong {
+  color: var(--text-color, #e2e8f0);
+  font-size: 14px;
+}
+
+.preview-vocab em {
+  color: var(--text-color-secondary, #94a3b8);
+  font-style: italic;
+}
+
+.preview-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-color-secondary, #94a3b8);
+  line-height: 1.4;
+}
+
+.preview-task code {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-color, #e2e8f0);
+}
+
+.target-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color-secondary, #94a3b8);
+  font-size: 10px;
+  font-family: monospace;
+  width: fit-content;
+}
+
+.event-time {
+  color: #4285f4;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reading-url {
+  color: var(--text-color-secondary, #94a3b8);
+  font-size: 11px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .proposal-actions {

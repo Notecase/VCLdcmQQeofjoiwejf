@@ -125,6 +125,17 @@ const UpdateProposalSchema = z.object({
   category: z.enum(['task', 'vocabulary', 'calendar', 'note', 'reading', 'thought']).optional(),
   targetFile: z.string().optional(),
   proposedContent: z.string().optional(),
+  actionType: z
+    .enum([
+      'create_note',
+      'add_task',
+      'add_calendar_event',
+      'add_vocabulary',
+      'add_reading',
+      'add_thought',
+    ])
+    .optional(),
+  payload: z.record(z.unknown()).optional(),
 })
 
 proposals.patch('/:id', zValidator('json', UpdateProposalSchema), async (c) => {
@@ -139,6 +150,8 @@ proposals.patch('/:id', zValidator('json', UpdateProposalSchema), async (c) => {
   if (updates.category) updateData.category = updates.category
   if (updates.targetFile) updateData.target_file = updates.targetFile
   if (updates.proposedContent) updateData.proposed_content = updates.proposedContent
+  if (updates.actionType) updateData.action_type = updates.actionType
+  if (updates.payload) updateData.payload = updates.payload
 
   const { error } = await auth.supabase
     .from('inbox_proposals')
@@ -183,32 +196,67 @@ proposals.post('/apply', async (c) => {
   const auth = requireAuth(c)
   const db = getServiceClient()
 
-  // Fetch approved proposals
+  // Fetch approved proposals (both smart-classified and legacy)
   const { data: approved, error } = await auth.supabase
     .from('inbox_proposals')
     .select('*')
     .eq('user_id', auth.userId)
     .eq('status', 'approved')
-    .not('target_file', 'is', null)
-    .not('proposed_content', 'is', null)
     .order('created_at', { ascending: true })
 
   if (error || !approved || approved.length === 0) {
-    return c.json({ applied: 0, updatedFiles: [] })
+    return c.json({ applied: 0, updatedFiles: [], createdNotes: [] })
   }
 
-  // Group by target file
+  const updatedFiles: string[] = []
+  const createdNotes: string[] = []
+  const appliedIds: string[] = []
+
+  // Separate create_note proposals from file-append proposals
+  const noteProposals = approved.filter((p) => p.action_type === 'create_note')
+  const appendProposals = approved.filter(
+    (p) => p.action_type !== 'create_note' && p.target_file && p.proposed_content
+  )
+
+  // Handle create_note proposals via NoteAgent
+  for (const proposal of noteProposals) {
+    try {
+      const payload = (proposal.payload || {}) as { title?: string; content?: string }
+      const title = payload.title || 'Untitled'
+      const content = payload.content || proposal.proposed_content || ''
+
+      const { createNoteAgent } = await import('@inkdown/ai/agents')
+      const agent = createNoteAgent({ supabase: db, userId: auth.userId })
+      const result = await agent.run({
+        action: 'create',
+        input: `Create a note titled "${title}":\n\n${content}`,
+      })
+
+      if (result?.noteId) {
+        createdNotes.push(result.noteId)
+        await db
+          .from('inbox_proposals')
+          .update({
+            metadata: { ...(proposal.metadata as Record<string, unknown>), noteId: result.noteId },
+          })
+          .eq('id', proposal.id)
+      }
+      appliedIds.push(proposal.id)
+    } catch {
+      console.error(`[proposals/apply] Failed to create note for proposal ${proposal.id}`)
+    }
+  }
+
+  // Handle file-append proposals (tasks, calendar, vocabulary, reading, thoughts, legacy)
   const fileGroups = new Map<string, string[]>()
-  for (const item of approved) {
+  for (const item of appendProposals) {
     const file = item.target_file as string
     const content = item.proposed_content as string
     if (!fileGroups.has(file)) fileGroups.set(file, [])
     fileGroups.get(file)!.push(content)
+    appliedIds.push(item.id)
   }
 
-  const updatedFiles: string[] = []
-
-  // Append content to each target file
   for (const [filename, contents] of fileGroups) {
     const { data: existing } = await db
       .from('secretary_memory')
@@ -233,15 +281,16 @@ proposals.post('/apply', async (c) => {
     updatedFiles.push(filename)
   }
 
-  // Mark all as applied
-  const ids = approved.map((p) => p.id)
-  await db
-    .from('inbox_proposals')
-    .update({ status: 'applied', updated_at: new Date().toISOString() })
-    .in('id', ids)
-    .eq('user_id', auth.userId)
+  // Mark applied proposals
+  if (appliedIds.length > 0) {
+    await db
+      .from('inbox_proposals')
+      .update({ status: 'applied', updated_at: new Date().toISOString() })
+      .in('id', appliedIds)
+      .eq('user_id', auth.userId)
+  }
 
-  return c.json({ applied: ids.length, updatedFiles })
+  return c.json({ applied: appliedIds.length, updatedFiles, createdNotes })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -260,6 +309,9 @@ function mapProposal(row: Record<string, unknown>) {
     status: row.status,
     batchId: row.batch_id,
     metadata: row.metadata,
+    actionType: row.action_type ?? null,
+    payload: row.payload ?? null,
+    previewText: row.preview_text ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

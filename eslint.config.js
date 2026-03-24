@@ -23,6 +23,8 @@ export default [
       'load-tests/**',
       // Standalone scripts (Node.js globals)
       'scripts/**',
+      // MCP package scripts (Node.js globals, pre-existing)
+      'packages/mcp/scripts/**',
     ],
   },
 

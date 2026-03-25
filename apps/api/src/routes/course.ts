@@ -26,6 +26,7 @@ import { handleError, ErrorCode } from '@inkdown/shared'
 import type { CourseOrchestrator } from '@inkdown/ai/agents'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
 import { getServiceClient } from '../lib/supabase'
 import type { CourseOutline, CourseSettings } from '@inkdown/shared/types'
 import {
@@ -39,6 +40,7 @@ const course = new Hono()
 course.use('*', authMiddleware)
 course.use('*', creditGuard)
 course.use('*', requestContextMiddleware)
+course.use('*', rateLimitMiddleware())
 
 // ============================================================================
 // Orchestrator Registry (like research.ts agentRegistry)
@@ -119,6 +121,19 @@ const GenerateSchema = z.object({
 course.post('/generate', zValidator('json', GenerateSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
+
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const injectionCheck = detectInjection(body.topic)
+  if (injectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: injectionCheck.patterns,
+      route: 'course-generate',
+      inputLength: body.topic.length,
+    })
+  }
 
   const openaiApiKey = process.env.OPENAI_API_KEY
   const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY

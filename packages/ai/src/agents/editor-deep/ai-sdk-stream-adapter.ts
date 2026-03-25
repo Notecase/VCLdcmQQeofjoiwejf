@@ -11,6 +11,8 @@
 
 import type { TextStreamPart, ToolSet } from 'ai'
 import type { EditorDeepAgentEvent } from './types'
+import { sanitizeOutput } from '../../safety/output-guard'
+import { aiSafetyLog } from '../../observability/logger'
 
 /**
  * Adapt an AI SDK fullStream to EditorDeepAgentEvent async generator.
@@ -116,9 +118,13 @@ export async function* adaptAISDKStream(
     }
   }
 
-  // Final events
+  // Final events — sanitize accumulated text before emitting
   if (fullText) {
-    yield { type: 'assistant-final', data: fullText, seq: seq++ }
+    const { text: sanitizedText, stripped } = sanitizeOutput(fullText)
+    if (stripped.length > 0) {
+      aiSafetyLog('output_sanitized', { stripped, textLength: fullText.length })
+    }
+    yield { type: 'assistant-final', data: sanitizedText, seq: seq++ }
   }
 
   // Drain any remaining pending events

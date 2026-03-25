@@ -7,6 +7,8 @@
 
 import type { TextStreamPart, ToolSet } from 'ai'
 import type { SecretaryStreamEvent } from '@inkdown/shared/types'
+import { sanitizeOutput } from '../../safety/output-guard'
+import { aiSafetyLog } from '../../observability/logger'
 
 /**
  * Adapt an AI SDK fullStream to SecretaryStreamEvent async generator.
@@ -106,6 +108,16 @@ export async function* adaptSecretaryStream(
   while (pendingEvents.length > 0) {
     const event = pendingEvents.shift()!
     yield { ...event, seq: seq++ }
+  }
+
+  // Sanitize final output — strip XSS, secrets, prompt leakage
+  if (fullText) {
+    const { text: sanitizedText, stripped } = sanitizeOutput(fullText)
+    if (stripped.length > 0) {
+      aiSafetyLog('output_sanitized', { stripped, textLength: fullText.length, agent: 'secretary' })
+      // Emit sanitized replacement — frontend uses last complete text
+      yield { event: 'text', data: sanitizedText, seq: seq++, isDelta: false }
+    }
   }
 
   yield { event: 'done', data: '', seq: seq++ }

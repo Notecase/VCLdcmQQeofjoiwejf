@@ -12,6 +12,7 @@ import { usePreferencesStore, useEditorStore } from '@/stores'
 import { useDiffBlocks } from '@/composables/useDiffBlocks'
 import { registerMuyaPlugins } from '@/utils/muyaPlugins'
 import DiffActionBar from '@/components/ai/DiffActionBar.vue'
+import SourceChips from '@/components/ai/activity/SourceChips.vue'
 import * as notesService from '@/services/notes.service'
 import { X, FileText, Check } from 'lucide-vue-next'
 
@@ -55,6 +56,18 @@ const previewNoteId = computed(() => aiStore.previewNoteId)
 const wordCountDisplay = computed(() => {
   const w = wordCount.value.words
   return `${w} word${w !== 1 ? 's' : ''}`
+})
+
+// Source citations for the current edit (web sources shown above diff action bar)
+const currentEditCitations = computed(() => {
+  if (!previewNoteId.value) return []
+  const edits = aiStore.allPendingEdits.filter(
+    (e) => e.noteId === previewNoteId.value && e.status === 'pending' && e.messageId
+  )
+  if (edits.length === 0) return []
+  // Use the first pending edit's messageId to find web citations
+  const messageId = edits[0].messageId!
+  return aiStore.getCitationsForMessage(messageId).filter((c) => c.source === 'web')
 })
 
 // Auto-save timer
@@ -395,6 +408,12 @@ onUnmounted(() => {
         <p>Loading note...</p>
       </div>
     </div>
+
+    <!-- Source Attribution -->
+    <SourceChips
+      v-if="currentEditCitations.length > 0"
+      :citations="currentEditCitations"
+    />
 
     <!-- Diff Action Bar -->
     <DiffActionBar

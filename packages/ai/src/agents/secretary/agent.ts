@@ -15,6 +15,8 @@ import { getSecretarySystemPrompt } from './prompts'
 import { adaptSecretaryStream } from './ai-sdk-stream-adapter'
 import { getModelsForTask } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import { getGoogleProviderOptions } from '../../providers/safety'
+import { buildSystemPrompt } from '../../safety/content-policy'
 import type { SharedContextService } from '../../services/shared-context.service'
 
 // ============================================================================
@@ -98,7 +100,9 @@ export class SecretaryAgent {
       data: contextParts.length ? `Found ${contextParts.join(', ')}` : 'Ready',
     }
 
-    const fullSystemPrompt = systemPrompt + '\n\n' + contextSummary + pendingInfo + sharedCtxSection
+    const fullSystemPrompt = buildSystemPrompt(
+      systemPrompt + '\n\n' + contextSummary + pendingInfo + sharedCtxSection
+    )
 
     const threadId = input.threadId || crypto.randomUUID()
     const pendingEvents: SecretaryStreamEvent[] = []
@@ -127,6 +131,7 @@ export class SecretaryAgent {
           instructions: fullSystemPrompt,
           tools,
           stopWhen: stepCountIs(20),
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'secretary' }),
         })
 

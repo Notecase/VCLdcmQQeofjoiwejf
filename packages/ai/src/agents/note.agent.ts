@@ -16,7 +16,9 @@ import { streamText, generateText } from 'ai'
 import type { SharedContextService } from '../services/shared-context.service'
 import { selectModel } from '../providers/model-registry'
 import { resolveModelsForTask, isTransientError } from '../providers/ai-sdk-factory'
+import { getGoogleProviderOptions } from '../providers/safety'
 import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
+import { buildSystemPrompt } from '../safety/content-policy'
 import {
   EDIT_START_MARKER,
   EDIT_END_MARKER,
@@ -392,10 +394,11 @@ export class NoteAgent {
       try {
         aiStream = streamText({
           model: modelOption.model,
-          system: validatedSystemPrompt,
+          system: buildSystemPrompt(validatedSystemPrompt),
           messages: [{ role: 'user' as const, content: validatedUserContent }],
           temperature: 0.7,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'note-agent' }),
         })
         break
@@ -541,10 +544,11 @@ export class NoteAgent {
       try {
         aiStream = streamText({
           model: modelOption.model,
-          system: systemPrompt,
+          system: buildSystemPrompt(systemPrompt),
           messages: [{ role: 'user' as const, content: config.focusedContent }],
           temperature: 0.7,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'note-agent' }),
         })
         break
@@ -776,10 +780,11 @@ export class NoteAgent {
         const startTime = Date.now()
         const result = await generateText({
           model: modelOption.model,
-          system: validSystemPrompt,
+          system: buildSystemPrompt(validSystemPrompt),
           messages: [{ role: 'user' as const, content: validUserInput }],
           temperature: 0.7,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
         })
         recordAISDKUsage(
           result.usage,

@@ -8,7 +8,10 @@ import { EditorConversationHistoryService, type EditorThreadMessage } from './hi
 import type { EditorDeepAgentEvent, EditorDeepAgentRequest, EditorRunState } from './types'
 import { executeTool } from '../../tools'
 import { getModelsForTask, isTransientError } from '../../providers/ai-sdk-factory'
+import { getGoogleProviderOptions } from '../../providers/safety'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import { buildSystemPrompt } from '../../safety/content-policy'
+import { sanitizeOutput } from '../../safety/output-guard'
 import type { SharedContextService } from '../../services/shared-context.service'
 
 export interface EditorDeepAgentConfig {
@@ -143,7 +146,9 @@ export class EditorDeepAgent {
         })
       : ''
     const sharedCtxSection = sharedCtx ? `\n\n${sharedCtx}` : ''
-    const systemPrompt = `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
+    const systemPrompt = buildSystemPrompt(
+      `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
+    )
 
     // Build messages from conversation history (structured, preserves turn roles)
     const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
@@ -162,6 +167,7 @@ export class EditorDeepAgent {
           tools,
           temperature: 0.3,
           stopWhen: stepCountIs(20),
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'editor-deep' }),
         })
 

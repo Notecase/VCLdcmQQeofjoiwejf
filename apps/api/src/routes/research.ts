@@ -19,6 +19,7 @@ import { handleError, ErrorCode } from '@inkdown/shared'
 import type { ResearchAgent } from '@inkdown/ai/agents'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
 
 const research = new Hono()
 
@@ -26,6 +27,7 @@ const research = new Hono()
 research.use('*', authMiddleware)
 research.use('*', creditGuard)
 research.use('*', requestContextMiddleware)
+research.use('*', rateLimitMiddleware())
 
 // =============================================================================
 // In-Memory Agent Registry (for interrupt resolution)
@@ -76,6 +78,20 @@ const ChatSchema = z.object({
 research.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
+
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const injectionCheck = detectInjection(body.message)
+  if (injectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: injectionCheck.patterns,
+      route: 'research-chat',
+      inputLength: body.message.length,
+    })
+  }
+
   const openaiApiKey = process.env.OPENAI_API_KEY
   const researchModel = process.env.RESEARCH_MODEL
 

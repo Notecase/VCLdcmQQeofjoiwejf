@@ -12,6 +12,7 @@
 
 import { tool, generateText } from 'ai'
 import { z } from 'zod'
+import { getGoogleProviderOptions } from '../../providers/safety'
 import type {
   Course,
   CourseModule,
@@ -280,6 +281,7 @@ export function createOrchestratorTools(ctx: CourseToolContext): Record<string, 
         model,
         prompt,
         temperature: 0.4,
+        providerOptions: getGoogleProviderOptions(),
         onFinish: trackAISDKUsage({ model: entry.id, taskType: 'course' }),
       })
 
@@ -744,6 +746,7 @@ export function createLessonWriterTools(ctx: CourseToolContext): Record<string, 
               model,
               prompt,
               temperature: 0.7,
+              providerOptions: getGoogleProviderOptions(),
               onFinish: trackAISDKUsage({ model: entry.id, taskType: 'course' }),
             })
             lastResponseText = text
@@ -951,6 +954,7 @@ export function createQuizWriterTools(ctx: CourseToolContext): Record<string, an
               model,
               prompt,
               temperature: 0.7,
+              providerOptions: getGoogleProviderOptions(),
               onFinish: trackAISDKUsage({ model: entry.id, taskType: 'course' }),
             })
             lastResponseText = text

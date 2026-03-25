@@ -8,6 +8,7 @@ import type { SlideData } from '@inkdown/shared/types'
 import { sanitizeJSONString } from './tools'
 import { resolveModel } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import { getGoogleProviderOptions } from '../../providers/safety'
 
 export async function generateSlidesWithModel(
   lessonTitle: string,
@@ -60,6 +61,7 @@ Return ONLY the JSON array, no additional text.`
     model,
     prompt,
     temperature: 0.7,
+    providerOptions: getGoogleProviderOptions(),
     onFinish: trackAISDKUsage({ model: entry.id, taskType: 'slides' }),
   })
 

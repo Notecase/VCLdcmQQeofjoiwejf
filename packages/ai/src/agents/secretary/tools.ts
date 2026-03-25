@@ -22,6 +22,8 @@ import { PLANNER_SUBAGENT_PROMPT } from './prompts'
 import { parseRoadmapCandidatesFromFiles, type ParsedRoadmapCandidate } from './roadmap-candidates'
 import { resolveModel } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import { getGoogleProviderOptions } from '../../providers/safety'
+import { buildSystemPrompt } from '../../safety/content-policy'
 
 // ============================================================================
 // Pending Roadmap Cache (module-level, keyed by userId)
@@ -249,9 +251,10 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
 
       const { text: content } = await generateText({
         model,
-        system: PLANNER_SUBAGENT_PROMPT,
+        system: buildSystemPrompt(PLANNER_SUBAGENT_PROMPT),
         prompt: userPrompt,
         temperature: 0.4,
+        providerOptions: getGoogleProviderOptions(),
         onFinish: trackAISDKUsage({ model: entry.id, taskType: 'secretary' }),
       })
 
@@ -568,10 +571,12 @@ Output EXACTLY this format (for parsing):
 
       const { text: planContent } = await generateText({
         model: scheduleModel,
-        system:
-          'You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.',
+        system: buildSystemPrompt(
+          'You are a schedule planner. Generate precise time-blocked study plans following the exact format requested.'
+        ),
         prompt,
         temperature: 0.4,
+        providerOptions: getGoogleProviderOptions(),
         onFinish: trackAISDKUsage({ model: scheduleEntry.id, taskType: 'secretary' }),
       })
 

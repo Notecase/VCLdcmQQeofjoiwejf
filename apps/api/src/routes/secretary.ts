@@ -25,6 +25,7 @@ import { handleError, ErrorCode } from '@inkdown/shared'
 import { getTodayDate } from '@inkdown/shared/secretary'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
 
 const secretary = new Hono()
 
@@ -68,6 +69,7 @@ function inferUpdatedFiles(toolName: string, args?: Record<string, unknown>): st
 secretary.use('*', authMiddleware)
 secretary.use('*', creditGuard)
 secretary.use('*', requestContextMiddleware)
+secretary.use('*', rateLimitMiddleware())
 
 // ============================================================================
 // Chat (Streaming SSE)
@@ -88,6 +90,19 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const body = c.req.valid('json')
   const openaiApiKey = process.env.OPENAI_API_KEY
   const hardeningEnabled = isHardeningEnabled()
+
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const injectionCheck = detectInjection(body.message)
+  if (injectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: injectionCheck.patterns,
+      route: 'secretary-chat',
+      inputLength: body.message.length,
+    })
+  }
 
   console.info('secretary.chat.start', {
     requestId,

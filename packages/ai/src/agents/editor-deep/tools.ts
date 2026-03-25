@@ -2,6 +2,7 @@ import { tool, type ToolSet } from 'ai'
 import { z } from 'zod'
 import { executeTool, type ToolContext } from '../../tools'
 import { parseMarkdownStructure, findBlocksByHeading } from '../../utils/structureParser'
+import { createWebSearchTool } from '../../tools/web-search'
 import type { EditorToolContext } from './types'
 import type { EditorLongTermMemory } from './memory'
 
@@ -844,6 +845,27 @@ export function createEditorDeepTools(
     },
   })
 
+  const web_search = createWebSearchTool({
+    maxResults: 3,
+    onSearchStart: (query) =>
+      ctx.emitEvent({
+        type: 'web-search-start',
+        data: { query },
+      }),
+    onSearchComplete: (results) =>
+      ctx.emitEvent({
+        type: 'web-search-result',
+        data: {
+          sources: results.map((r) => ({
+            title: r.title,
+            url: r.url,
+            content: r.content?.slice(0, 150) || '',
+            publishedDate: r.publishedDate,
+          })),
+        },
+      }),
+  })
+
   return {
     answer_question_about_note,
     read_note_structure,
@@ -857,5 +879,6 @@ export function createEditorDeepTools(
     read_memory,
     write_memory,
     ask_user_preference,
+    web_search,
   }
 }

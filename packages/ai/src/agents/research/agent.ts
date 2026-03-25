@@ -44,6 +44,8 @@ import {
   isTransientError,
 } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
+import { getGoogleProviderOptions } from '../../providers/safety'
+import { buildSystemPrompt } from '../../safety/content-policy'
 
 // =============================================================================
 // Types
@@ -160,10 +162,13 @@ export class ResearchAgent {
       try {
         const result = streamText({
           model: modelOption.model,
-          system: 'You are a concise and helpful assistant for note-taking and learning.',
+          system: buildSystemPrompt(
+            'You are a concise and helpful assistant for note-taking and learning.'
+          ),
           prompt: message,
           temperature: 0.5,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
         })
 
@@ -240,18 +245,21 @@ export class ResearchAgent {
 
     const result = streamText({
       model: draftModel.model,
-      system: [
-        'You are an expert note-writing assistant.',
-        'Return markdown only with a clear H1 title on the first line.',
-        'Include markdown tables when the user requests ranked/tabular data.',
-        'Use concise headings and actionable bullet points.',
-        includeStudyTimerArtifact
-          ? 'When a timer artifact is requested, keep timer description to at most 1-2 short lines.'
-          : '',
-      ].join(' '),
+      system: buildSystemPrompt(
+        [
+          'You are an expert note-writing assistant.',
+          'Return markdown only with a clear H1 title on the first line.',
+          'Include markdown tables when the user requests ranked/tabular data.',
+          'Use concise headings and actionable bullet points.',
+          includeStudyTimerArtifact
+            ? 'When a timer artifact is requested, keep timer description to at most 1-2 short lines.'
+            : '',
+        ].join(' ')
+      ),
       prompt,
       temperature: 0.5,
       maxOutputTokens: 4000,
+      providerOptions: getGoogleProviderOptions(),
       onFinish: trackAISDKUsage({ model: draftModel.entry.id, taskType: 'research' }),
     })
 
@@ -423,6 +431,7 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
       prompt,
       temperature: 0.3,
       maxOutputTokens: 20000,
+      providerOptions: getGoogleProviderOptions(),
       onFinish: trackAISDKUsage({ model: entry.id, taskType: 'artifact' }),
     })
 
@@ -455,14 +464,17 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
       try {
         const result = await generateText({
           model: modelOption.model,
-          system: [
-            'You write complete long-form markdown deliverables.',
-            'Return markdown only (no code fences, no prose outside markdown).',
-            'Use clear headings and actionable detail.',
-          ].join(' '),
+          system: buildSystemPrompt(
+            [
+              'You write complete long-form markdown deliverables.',
+              'Return markdown only (no code fences, no prose outside markdown).',
+              'Use clear headings and actionable detail.',
+            ].join(' ')
+          ),
           prompt: message,
           temperature: 0.4,
           maxOutputTokens: 3000,
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
         })
         text = result.text

@@ -14,7 +14,12 @@ import {
   isTransientError,
   getEmbeddingModel,
 } from '../providers/ai-sdk-factory'
+import { getGoogleProviderOptions } from '../providers/safety'
 import { trackAISDKUsage, recordAISDKUsage } from '../providers/ai-sdk-usage'
+import { buildSystemPrompt } from '../safety/content-policy'
+import { verifyCitations } from '../safety/citation-verifier'
+import { sanitizeOutput } from '../safety/output-guard'
+import { aiSafetyLog } from '../observability/logger'
 
 // ============================================================================
 // Types
@@ -204,6 +209,7 @@ export class ChatAgent {
           messages: chatMessages,
           temperature: 0.7,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'chat' }),
         })
 
@@ -212,10 +218,27 @@ export class ChatAgent {
           yield { type: 'text-delta', data: chunk }
         }
 
+        // Post-process: sanitize output and verify citations
+        const { text: sanitizedContent, stripped } = sanitizeOutput(fullContent)
+        if (stripped.length > 0) {
+          aiSafetyLog('output_sanitized', { agent: 'chat', stripped })
+        }
+
+        const citationResult = verifyCitations(sanitizedContent, this.state.retrievedChunks.length)
+        if (citationResult.strippedCitations.length > 0) {
+          aiSafetyLog('citation_stripped', {
+            agent: 'chat',
+            strippedCitations: citationResult.strippedCitations,
+            maxValid: this.state.retrievedChunks.length,
+          })
+        }
+
+        const finalContent = citationResult.text
+
         // 5. Add assistant message to state
         this.state.messages.push({
           role: 'assistant',
-          content: fullContent,
+          content: finalContent,
           createdAt: new Date(),
         })
 
@@ -310,7 +333,8 @@ export class ChatAgent {
       return
     }
 
-    // Map to our types
+    // Map to our types and filter by similarity threshold
+    const SIMILARITY_THRESHOLD = 0.7
     this.state.retrievedChunks = (
       chunks as Array<{
         note_id: string
@@ -318,12 +342,14 @@ export class ChatAgent {
         chunk_text: string
         similarity: number
       }>
-    ).map((chunk) => ({
-      noteId: chunk.note_id,
-      noteTitle: chunk.note_title,
-      chunkText: chunk.chunk_text,
-      similarity: chunk.similarity,
-    }))
+    )
+      .filter((chunk) => chunk.similarity >= SIMILARITY_THRESHOLD)
+      .map((chunk) => ({
+        noteId: chunk.note_id,
+        noteTitle: chunk.note_title,
+        chunkText: chunk.chunk_text,
+        similarity: chunk.similarity,
+      }))
 
     // Create citations
     this.state.citations = this.state.retrievedChunks.map((chunk, i) => ({
@@ -346,9 +372,12 @@ cite it using [1], [2], etc. to reference the source.`
         const chunk = this.state.retrievedChunks[i]
         prompt += `[${i + 1}] From "${chunk.noteTitle}":\n${chunk.chunkText}\n\n`
       }
+    } else {
+      prompt +=
+        "\n\nNo relevant content was found in the user's notes. Only answer from general knowledge and clearly state that this is not from their notes."
     }
 
-    return prompt
+    return buildSystemPrompt(prompt)
   }
 
   private buildChatMessages(): Array<{ role: 'user' | 'assistant'; content: string }> {
@@ -382,11 +411,16 @@ cite it using [1], [2], etc. to reference the source.`
           messages: this.buildChatMessages(),
           temperature: 0.7,
           maxOutputTokens: 4000,
+          providerOptions: getGoogleProviderOptions(),
         })
         recordAISDKUsage(result.usage, { model: modelOption.entry.id, taskType: 'chat' }, startTime)
 
+        // Post-process: sanitize and verify citations
+        const { text: sanitizedText } = sanitizeOutput(result.text)
+        const citationResult = verifyCitations(sanitizedText, this.state.retrievedChunks.length)
+
         return {
-          content: result.text,
+          content: citationResult.text,
           citations: this.state.citations,
           usage: result.usage
             ? {

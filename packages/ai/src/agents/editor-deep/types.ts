@@ -38,6 +38,8 @@ export type EditorDeepAgentEventType =
   | 'custom-progress'
   | 'action-summary'
   | 'synthesis-start'
+  | 'web-search-start'
+  | 'web-search-result'
 
 export interface SubagentEventData {
   id: string

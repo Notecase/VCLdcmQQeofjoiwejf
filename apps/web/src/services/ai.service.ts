@@ -80,6 +80,8 @@ export interface StreamChunk {
     | 'custom-progress'
     | 'action-summary'
     | 'synthesis-start'
+    | 'web-search-start'
+    | 'web-search-result'
   data: unknown
 }
 
@@ -857,7 +859,68 @@ async function processSSEResponse(
             const lastMessage = session?.messages[session.messages.length - 1]
             const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
             if (messageId) {
-              store.addMessageCitation({ ...citationData, messageId })
+              store.addMessageCitation({ ...citationData, messageId, source: 'note' })
+            }
+            break
+          }
+
+          case 'web-search-start': {
+            const { query } = chunk.data as { query: string }
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+
+            // Complete previous non-tool running steps
+            const runningThoughts = store.thinkingSteps.filter(
+              (step) => step.status === 'running' && step.type !== 'tool'
+            )
+            const lastRunningThought = runningThoughts[runningThoughts.length - 1]
+            if (lastRunningThought) {
+              store.completeThinkingStep(lastRunningThought.id)
+            }
+
+            store.addThinkingStep({
+              type: 'search',
+              description: `Searching: ${query}`,
+              status: 'running',
+              messageId,
+            })
+            break
+          }
+
+          case 'web-search-result': {
+            const { sources } = chunk.data as {
+              sources: Array<{
+                title: string
+                url: string
+                content: string
+                publishedDate?: string
+              }>
+            }
+
+            // Complete the running search thinking step
+            const searchStep = store.thinkingSteps.find(
+              (s) => s.type === 'search' && s.status === 'running'
+            )
+            if (searchStep) store.completeThinkingStep(searchStep.id)
+
+            // Add each source as a web citation
+            const sessionId = store.activeSessionId
+            const session = sessionId ? store.sessions[sessionId] : null
+            const lastMessage = session?.messages[session.messages.length - 1]
+            const messageId = lastMessage?.role === 'assistant' ? lastMessage.id : undefined
+            if (messageId) {
+              for (const source of sources) {
+                store.addMessageCitation({
+                  url: source.url,
+                  title: source.title,
+                  snippet: source.content?.slice(0, 150) || '',
+                  messageId,
+                  source: 'web',
+                  publishedDate: source.publishedDate,
+                })
+              }
             }
             break
           }

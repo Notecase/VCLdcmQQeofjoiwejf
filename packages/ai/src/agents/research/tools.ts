@@ -8,6 +8,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import type { VirtualFile, TodoItem, InterruptData, InterruptResponse } from '@inkdown/shared/types'
+import { createWebSearchTool } from '../../tools/web-search'
 
 // =============================================================================
 // State interface for tool context
@@ -159,57 +160,11 @@ export function createResearchTools(
     },
   })
 
-  // ---------- Web Search (Tavily) ----------
+  // ---------- Web Search (Tavily) — shared factory with sanitization ----------
 
-  tools.web_search = tool({
-    description: 'Search the web using Tavily. Returns relevant results with URLs and summaries.',
-    inputSchema: z.object({
-      query: z.string().describe('Search query'),
-      maxResults: z.number().optional().describe('Max results (default: 5, max: 10)'),
-    }),
-    execute: async ({ query, maxResults }) => {
-      const apiKey = ctx.tavilyApiKey || process.env.TAVILY_API_KEY
-      if (!apiKey) {
-        return 'Web search unavailable: TAVILY_API_KEY not configured. Proceeding with available knowledge.'
-      }
-
-      try {
-        const response = await fetch('https://api.tavily.com/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: apiKey,
-            query,
-            max_results: maxResults || 5,
-            include_answer: true,
-            include_raw_content: false,
-          }),
-        })
-
-        if (!response.ok) {
-          return `Search failed: ${response.status} ${response.statusText}`
-        }
-
-        const data = (await response.json()) as {
-          answer?: string
-          results?: Array<{ title: string; url: string; content: string }>
-        }
-
-        const results: string[] = []
-        if (data.answer) {
-          results.push(`**Summary:** ${data.answer}\n`)
-        }
-        if (data.results) {
-          for (const r of data.results) {
-            results.push(`### ${r.title}\n**URL:** ${r.url}\n${r.content}\n`)
-          }
-        }
-
-        return results.join('\n---\n') || 'No results found.'
-      } catch (err) {
-        return `Search error: ${err instanceof Error ? err.message : String(err)}`
-      }
-    },
+  tools.web_search = createWebSearchTool({
+    tavilyApiKey: ctx.tavilyApiKey,
+    maxResults: 5,
   })
 
   // ---------- Think Tool ----------

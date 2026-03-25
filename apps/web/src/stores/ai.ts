@@ -221,14 +221,17 @@ export interface CompletedArtifact {
 }
 
 /**
- * MessageCitation - Links a RAG citation to a specific chat message
+ * MessageCitation - Links a RAG or web citation to a specific chat message
  */
 export interface MessageCitation {
   id: string
-  noteId: string
+  noteId?: string
+  url?: string
   title: string
   snippet: string
   messageId: string
+  source: 'note' | 'web'
+  publishedDate?: string
 }
 
 /**
@@ -1297,13 +1300,16 @@ export const useAIStore = defineStore('ai', () => {
   // ---------------------------------------------------------------------------
 
   /**
-   * Add a citation linked to a chat message (deduplicated by noteId + messageId)
+   * Add a citation linked to a chat message (deduplicated by noteId/url + messageId)
    */
   function addMessageCitation(data: Omit<MessageCitation, 'id'>) {
-    if (
-      messageCitations.value.some((c) => c.noteId === data.noteId && c.messageId === data.messageId)
-    )
-      return
+    const isDuplicate = messageCitations.value.some((c) => {
+      if (c.messageId !== data.messageId) return false
+      if (data.source === 'web' && data.url) return c.url === data.url
+      if (data.source === 'note' && data.noteId) return c.noteId === data.noteId
+      return false
+    })
+    if (isDuplicate) return
     messageCitations.value.push({ id: crypto.randomUUID(), ...data })
   }
 

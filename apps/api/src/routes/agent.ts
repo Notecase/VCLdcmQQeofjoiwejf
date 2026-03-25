@@ -11,6 +11,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
 
 const agent = new Hono()
 
@@ -18,6 +19,7 @@ const agent = new Hono()
 agent.use('*', authMiddleware)
 agent.use('*', creditGuard)
 agent.use('*', requestContextMiddleware)
+agent.use('*', rateLimitMiddleware())
 
 // ============================================================================
 // Editor-Deep Runtime Controls
@@ -167,6 +169,19 @@ const PlannerSchema = z.object({
 agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
+
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const injectionCheck = detectInjection(body.input)
+  if (injectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: injectionCheck.patterns,
+      route: 'secretary',
+      inputLength: body.input.length,
+    })
+  }
 
   const startTime = Date.now()
   const historyWindowTurns = readIntegerEnv('EDITOR_DEEP_AGENT_HISTORY_WINDOW_TURNS', 12)
@@ -535,6 +550,19 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const chatInjectionCheck = detectInjection(body.input)
+  if (chatInjectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: chatInjectionCheck.patterns,
+      route: 'chat',
+      inputLength: body.input.length,
+    })
+  }
+
   const { ChatAgent } = await import('@inkdown/ai/agents')
   const { SharedContextService: SharedCtxService } = await import('@inkdown/ai/services')
 
@@ -595,6 +623,19 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
 agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
+
+  // Safety: detect potential prompt injection (log only, no hard block)
+  const { detectInjection } = await import('@inkdown/ai/safety')
+  const { aiSafetyLog } = await import('@inkdown/ai/observability')
+  const noteInjectionCheck = detectInjection(body.input)
+  if (noteInjectionCheck.detected) {
+    aiSafetyLog('injection_detected', {
+      userId: auth.userId,
+      patterns: noteInjectionCheck.patterns,
+      route: 'note-action',
+      inputLength: body.input.length,
+    })
+  }
 
   const { NoteAgent } = await import('@inkdown/ai/agents')
 

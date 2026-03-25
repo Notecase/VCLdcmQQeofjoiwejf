@@ -157,7 +157,7 @@ function buildInboxTools(userId: string) {
 }
 
 // ============================================================================
-// File Append Helper (reuses pattern from executor.ts)
+// File Append Helper
 // ============================================================================
 
 async function appendToFile(
@@ -203,10 +203,11 @@ async function appendToFile(
 export async function runInboxAgent(
   userId: string,
   messageText: string,
-  source: string
+  source: string,
+  onProgress?: (message: string) => void
 ): Promise<InboxAgentResult> {
   const tools = buildInboxTools(userId)
-  const { primary, fallback } = getModelsForTask('inbox-classifier')
+  const { primary, fallback } = getModelsForTask('inbox-agent')
 
   for (const modelOption of [primary, fallback]) {
     if (!modelOption) continue
@@ -216,10 +217,19 @@ export async function runInboxAgent(
       instructions: SYSTEM_PROMPT,
       tools,
       stopWhen: stepCountIs(2),
-      onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'inbox-classifier' }),
+      onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'inbox-agent' }),
     })
 
     try {
+      const progressLabels: Record<string, string> = {
+        create_note: 'Creating note...',
+        add_task: 'Adding task...',
+        add_calendar_event: 'Adding event...',
+        add_vocabulary: 'Adding vocabulary...',
+        add_reading: 'Saving to reading list...',
+        add_thought: 'Capturing thought...',
+      }
+
       const result = await agent.generate({
         messages: [
           {
@@ -227,6 +237,13 @@ export async function runInboxAgent(
             content: `From ${source}: "${messageText}"`,
           },
         ],
+        onStepFinish: (step) => {
+          if (onProgress && step.toolCalls?.length) {
+            const toolName = step.toolCalls[0].toolName
+            const label = progressLabels[toolName]
+            if (label) onProgress(label)
+          }
+        },
       })
 
       // Extract tool results across ALL steps (result.toolResults is last-step only)

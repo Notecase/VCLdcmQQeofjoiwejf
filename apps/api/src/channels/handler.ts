@@ -11,11 +11,6 @@ import type { ChannelMessage, ChannelReplyHandle } from './types'
 import { parseCommand } from './types'
 import { runInboxAgent } from './inbox-agent'
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface ChannelLinkConfig {
-  // Reserved for future use (clarification sessions removed with agent approach)
-}
-
 /**
  * Handle an incoming message from any channel.
  * Uses ChannelReplyHandle for streaming send/edit.
@@ -29,7 +24,7 @@ export async function handleIncomingMessage(
   // Look up linked account
   const { data: link } = await db
     .from('user_channel_links')
-    .select('id, user_id, status, config')
+    .select('user_id')
     .eq('channel', message.channel)
     .eq('external_id', message.externalUserId)
     .eq('status', 'active')
@@ -76,13 +71,7 @@ export async function handleIncomingMessage(
   }
 
   // Autonomous capture + execute
-  await captureAndExecute(
-    link.user_id,
-    link.id,
-    link.config as ChannelLinkConfig | null,
-    message,
-    reply
-  )
+  await captureAndExecute(link.user_id, message, reply)
 }
 
 /**
@@ -145,8 +134,6 @@ async function handlePairing(
  */
 async function captureAndExecute(
   userId: string,
-  _linkId: string,
-  _linkConfig: ChannelLinkConfig | null,
   message: ChannelMessage,
   reply: ChannelReplyHandle
 ): Promise<void> {
@@ -190,9 +177,14 @@ async function captureAndExecute(
   }
   const proposalId = inserted.id
 
+  // ── Send initial "Processing..." message, then stream progress ──
+  await reply.send('Processing...')
+
   // ── Run inbox agent (classifies AND executes in one call) ──────
   const agentResult = await Promise.race([
-    runInboxAgent(userId, message.text, message.channel),
+    runInboxAgent(userId, message.text, message.channel, (progress) => {
+      reply.edit(progress).catch(() => {})
+    }),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000)),
   ])
 
@@ -213,11 +205,15 @@ async function captureAndExecute(
       })
       .eq('id', proposalId)
 
-    await reply.send(agentResult.message)
+    await reply.edit(agentResult.message)
     return
   }
 
   // ── Fallback: agent timed out → save as thought to Inbox.md ────
+  console.warn(
+    `[inbox-agent] Timeout after 45s for user=${userId}, text="${message.text.slice(0, 80)}"`
+  )
+
   await db
     .from('inbox_proposals')
     .update({
@@ -230,5 +226,5 @@ async function captureAndExecute(
     })
     .eq('id', proposalId)
 
-  await reply.send('Captured to your Inbox.')
+  await reply.edit('Captured to your Inbox.')
 }

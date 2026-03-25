@@ -122,7 +122,7 @@ export type AITaskType =
   | 'course'
   | 'embedding'
   | 'table'
-  | 'inbox-classifier'
+  | 'inbox-agent'
 
 // Task → model mapping (primary model, with optional fallback)
 const TASK_MODEL_MAP: Record<AITaskType, string> = {
@@ -144,7 +144,7 @@ const TASK_MODEL_MAP: Record<AITaskType, string> = {
   course: 'gemini-2.5-pro',
   'deep-research': 'deep-research-pro-preview-12-2025',
   embedding: 'text-embedding-3-large',
-  'inbox-classifier': 'gemini-3-flash-preview',
+  'inbox-agent': 'gemini-3-flash-preview',
 }
 
 // Fallback model when primary is unavailable (rate limit, high demand, etc.)
@@ -163,7 +163,7 @@ const TASK_FALLBACK_MAP: Partial<Record<AITaskType, string>> = {
   research: 'gemini-3-flash-preview',
   course: 'gemini-3-flash-preview',
   slides: 'gemini-2.5-pro',
-  'inbox-classifier': 'gemini-2.5-pro',
+  'inbox-agent': 'gemini-2.5-pro',
 }
 
 /**

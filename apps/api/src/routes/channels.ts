@@ -35,7 +35,7 @@ function generatePairingCode(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PairSchema = z.object({
-  channel: z.enum(['telegram', 'discord', 'whatsapp']),
+  channel: z.enum(['telegram']),
 })
 
 channels.post('/pair', zValidator('json', PairSchema), async (c) => {

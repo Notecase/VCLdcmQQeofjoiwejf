@@ -211,7 +211,7 @@ onUnmounted(() => {
   if (refreshInterval) clearInterval(refreshInterval)
 })
 
-defineExpose({ totalCount, loadProposals })
+defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 </script>
 
 <template>

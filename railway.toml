@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
 buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm turbo build --filter=@inkdown/api..."
+watchPatterns = ["apps/api/**", "packages/ai/**", "packages/shared/**", "packages/editor/**", "pnpm-lock.yaml", "railway.toml"]
 
 [deploy]
 startCommand = "apps/api/node_modules/.bin/tsx apps/api/src/index.ts"

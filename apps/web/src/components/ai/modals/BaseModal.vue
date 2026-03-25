@@ -9,7 +9,7 @@
  * - Content area
  * - Footer with actions
  */
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onBeforeUnmount } from 'vue'
 import { X } from 'lucide-vue-next'
 
 // Props
@@ -36,7 +36,7 @@ onMounted(() => {
   document.body.style.overflow = 'hidden'
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown)
   document.body.style.overflow = ''
 })

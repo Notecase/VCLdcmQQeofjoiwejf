@@ -108,20 +108,27 @@ function closeUserMenu() {
   showUserMenu.value = false
 }
 
-// Click outside to close user menu
+// Click outside to close user menu and context menu
 function handleClickOutside(e: MouseEvent) {
   if (showUserMenu.value && userMenuRef.value && !userMenuRef.value.contains(e.target as Node)) {
     showUserMenu.value = false
   }
+  // Close context menu when clicking anywhere outside it
+  if (contextMenu.value.show) {
+    const target = e.target as HTMLElement
+    if (!target.closest('.context-menu')) {
+      contextMenu.value.show = false
+    }
+  }
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('click', handleClickOutside, true) // capture phase to run before @click.stop
   creditsStore.fetchCredits()
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
 })
 
 function goToSettings() {

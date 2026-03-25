@@ -124,6 +124,24 @@ router.beforeEach((to) => {
   }
 })
 
+// Clean up orphaned overlays on every route change.
+// Element Plus dialogs (ElMessageBox) and modals append overlays directly to
+// document.body. If a component unmounts while a dialog is open, the overlay
+// can persist and block ALL clicks on the page.
+router.afterEach(() => {
+  // Remove orphaned Element Plus overlays
+  document.querySelectorAll('.el-overlay').forEach((el) => el.remove())
+
+  // Reset body styles that modals may have leaked
+  document.body.style.overflow = ''
+  document.body.style.paddingRight = ''
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+
+  // Remove any Element Plus body classes left by modals
+  document.body.classList.remove('el-popup-parent--hidden')
+})
+
 // Create app
 const app = createApp(App)
 

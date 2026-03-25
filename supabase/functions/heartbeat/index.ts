@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         // Still check for stale Today.md (no LLM cost)
         const isStale = await checkStaleTodayMd(supabase, user.user_id, timezone)
         if (isStale) {
-          const archiveResult = await archiveStaleTodayMd(supabase, user.user_id)
+          const archiveResult = await archiveStaleTodayMd(supabase, user.user_id, timezone)
 
           // Log the archive action
           await supabase.from('agent_heartbeat_log').insert({

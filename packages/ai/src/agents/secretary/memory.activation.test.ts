@@ -569,4 +569,87 @@ describe('performDayTransition', () => {
     const today = mem.getFileContent('Today.md')
     expect(today).toContain('No tasks scheduled yet')
   })
+
+  // Death-spiral regression tests
+
+  it('promotes Tomorrow.md when Today.md is empty', async () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const mem = new TestableMemoryService(
+      [
+        {
+          filename: 'Today.md',
+          content: '',
+        },
+        {
+          filename: 'Tomorrow.md',
+          content: `# Tomorrow's Plan — ${todayStr}\n\nStatus: Approved\n\n- [ ] 09:00 (60min) Morning review\n`,
+        },
+      ],
+      'UTC'
+    )
+
+    const result = await mem.performDayTransition()
+
+    expect(result.transitioned).toBe(true)
+    expect(result.promotedTomorrow).toBe(true)
+
+    const today = mem.getFileContent('Today.md')
+    expect(today).toContain('Morning review')
+    expect(today).toContain(todayStr)
+
+    const tomorrow = mem.getFileContent('Tomorrow.md')
+    expect(tomorrow).toBe('')
+  })
+
+  it('promotes Tomorrow.md when Today.md is a dateless template (death spiral state)', async () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const mem = new TestableMemoryService(
+      [
+        {
+          filename: 'Today.md',
+          content: `# Today's Plan\n\n*No tasks scheduled yet.*\n`,
+        },
+        {
+          filename: 'Tomorrow.md',
+          content: `# Tomorrow's Plan — ${todayStr}\n\nStatus: Approved\n\n- [ ] 09:00 (45min) Study RL\n- [ ] 10:00 (30min) Code review\n`,
+        },
+      ],
+      'UTC'
+    )
+
+    const result = await mem.performDayTransition()
+
+    expect(result.transitioned).toBe(true)
+    expect(result.promotedTomorrow).toBe(true)
+
+    const today = mem.getFileContent('Today.md')
+    expect(today).toContain('Study RL')
+    expect(today).toContain(todayStr)
+
+    const tomorrow = mem.getFileContent('Tomorrow.md')
+    expect(tomorrow).toBe('')
+  })
+
+  it('writes dated empty template when Today.md is dateless and no Tomorrow.md exists', async () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const mem = new TestableMemoryService(
+      [
+        {
+          filename: 'Today.md',
+          content: `# Today's Plan\n\n*No tasks scheduled yet.*\n`,
+        },
+      ],
+      'UTC'
+    )
+
+    const result = await mem.performDayTransition()
+
+    expect(result.transitioned).toBe(true)
+    expect(result.promotedTomorrow).toBe(false)
+
+    const today = mem.getFileContent('Today.md')
+    expect(today).toContain('No tasks scheduled yet')
+    // The key assertion: the template now includes a date, breaking the death spiral
+    expect(today).toContain(todayStr)
+  })
 })

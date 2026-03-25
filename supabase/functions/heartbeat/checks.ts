@@ -164,10 +164,10 @@ export async function checkStaleTodayMd(
     .eq('filename', 'Today.md')
     .single()
 
-  if (!data?.content) return false
+  if (!data?.content) return true // No content = stale, needs transition
 
   const dateMatch = data.content.match(/(\d{4}-\d{2}-\d{2})/)
-  if (!dateMatch) return false
+  if (!dateMatch) return true // No date = death spiral state, needs transition
 
   const todayDate = getUserDate(timezone)
   return dateMatch[1] !== todayDate

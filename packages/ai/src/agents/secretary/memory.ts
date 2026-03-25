@@ -636,31 +636,25 @@ export class MemoryService {
     const todayDate = getTodayDate(this.timezone)
     const todayFile = await this.readFile('Today.md')
 
-    if (!todayFile || !todayFile.content.trim()) {
-      return { transitioned: false }
-    }
+    // Extract date from Today.md (may be null if empty or dateless)
+    const todayContent = todayFile?.content?.trim() ?? ''
+    const dateMatch = todayContent ? todayContent.match(/(\d{4}-\d{2}-\d{2})/) : null
+    const todayFileDate = dateMatch?.[1] ?? null
 
-    // Extract the date from Today.md header (e.g., "# Today's Plan — 2026-01-15" or "**Date:** 2026-01-15")
-    const dateMatch = todayFile.content.match(/(\d{4}-\d{2}-\d{2})/)
-    if (!dateMatch) {
-      return { transitioned: false }
-    }
-
-    const todayFileDate = dateMatch[1]
+    // Only valid early return: Today.md already has today's date
     if (todayFileDate === todayDate) {
-      // Today.md is current, no transition needed
       return { transitioned: false }
     }
 
-    // Today.md is stale — archive it
-    const archiveFilename = `History/${todayFileDate}.md`
-    await this.writeFile(archiveFilename, todayFile.content)
-    await this.updatePlanProgress(todayFile.content)
+    // Archive Today.md if it has content WITH a stale date
+    if (todayContent && todayFileDate) {
+      const archiveFilename = `History/${todayFileDate}.md`
+      await this.writeFile(archiveFilename, todayFile!.content)
+      await this.updatePlanProgress(todayFile!.content)
+      await this.saveCarryoverTasks(todayFile!.content, todayFileDate)
+    }
 
-    // Auto carry-over: save incomplete tasks to Carryover.md
-    await this.saveCarryoverTasks(todayFile.content, todayFileDate)
-
-    // Check if Tomorrow.md should be promoted
+    // ALWAYS check Tomorrow.md for promotion (the core fix — no longer gated behind Today.md)
     const tomorrowFile = await this.readFile('Tomorrow.md')
     let promotedTomorrow = false
 
@@ -672,21 +666,30 @@ export class MemoryService {
         await this.writeFile('Tomorrow.md', '')
         promotedTomorrow = true
       } else if (tomorrowDateMatch && tomorrowDateMatch[1] > todayDate) {
-        // Tomorrow.md is for a future date — keep it, just reset Today.md
-        await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
+        // Tomorrow.md is for a future date — keep it, just reset Today.md with date
+        await this.writeFile(
+          'Today.md',
+          `# Today's Plan — ${todayDate}\n\n*No tasks scheduled yet.*\n`
+        )
       } else {
-        // No date found in Tomorrow.md — clear both
-        await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
+        // No date found in Tomorrow.md — clear both, write dated template
+        await this.writeFile(
+          'Today.md',
+          `# Today's Plan — ${todayDate}\n\n*No tasks scheduled yet.*\n`
+        )
         await this.writeFile('Tomorrow.md', '')
       }
     } else {
-      // No tomorrow plan — reset Today.md
-      await this.writeFile('Today.md', `# Today's Plan\n\n*No tasks scheduled yet.*\n`)
+      // No tomorrow plan — write dated empty template
+      await this.writeFile(
+        'Today.md',
+        `# Today's Plan — ${todayDate}\n\n*No tasks scheduled yet.*\n`
+      )
     }
 
     return {
       transitioned: true,
-      archivedDate: todayFileDate,
+      archivedDate: todayFileDate ?? undefined,
       promotedTomorrow,
     }
   }

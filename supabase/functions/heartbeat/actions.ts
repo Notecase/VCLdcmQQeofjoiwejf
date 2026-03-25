@@ -101,9 +101,19 @@ async function checkDailyCap(
  */
 export async function archiveStaleTodayMd(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  timezone = 'UTC'
 ): Promise<ActionResult> {
   const start = Date.now()
+
+  // Get today's date in user's timezone
+  let todayDate: string
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
+    todayDate = formatter.format(new Date())
+  } catch {
+    todayDate = new Date().toISOString().slice(0, 10)
+  }
 
   try {
     const { data: today } = await supabase
@@ -113,49 +123,104 @@ export async function archiveStaleTodayMd(
       .eq('filename', 'Today.md')
       .single()
 
-    if (!today?.content) {
-      return { success: true, tokens_used: 0, cost_usd: 0, duration_ms: Date.now() - start }
-    }
+    const todayContent = today?.content?.trim() ?? ''
+    const dateMatch = todayContent ? todayContent.match(/(\d{4}-\d{2}-\d{2})/) : null
+    const todayFileDate = dateMatch?.[1] ?? null
 
-    // Extract date from header
-    const dateMatch = today.content.match(/(\d{4}-\d{2}-\d{2})/)
-    if (!dateMatch) {
-      return { success: true, tokens_used: 0, cost_usd: 0, duration_ms: Date.now() - start }
-    }
-
-    const archiveFilename = `History/${dateMatch[1]}.md`
-
-    // Archive
-    await supabase.from('secretary_memory').upsert(
-      {
-        user_id: userId,
-        filename: archiveFilename,
-        content: today.content,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,filename' }
-    )
-
-    // Carry over incomplete tasks to Tomorrow.md
-    const taskPattern = /^- \[[ >]\] .+$/gm
-    const incomplete = today.content.match(taskPattern)
-
-    if (incomplete && incomplete.length > 0) {
-      const { data: tomorrow } = await supabase
-        .from('secretary_memory')
-        .select('content')
-        .eq('user_id', userId)
-        .eq('filename', 'Tomorrow.md')
-        .single()
-
-      const tomorrowContent = tomorrow?.content ?? ''
-      const carryoverSection = `\n\n## Carried Over\n${incomplete.join('\n')}\n`
-
+    // Archive Today.md if it has content WITH a stale date
+    if (todayContent && todayFileDate) {
+      const archiveFilename = `History/${todayFileDate}.md`
       await supabase.from('secretary_memory').upsert(
         {
           user_id: userId,
-          filename: 'Tomorrow.md',
-          content: tomorrowContent + carryoverSection,
+          filename: archiveFilename,
+          content: today!.content,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,filename' }
+      )
+
+      // Carry over incomplete tasks to Carryover.md (not Tomorrow.md — prevents corrupting it before promotion)
+      const taskPattern = /^- \[[ >]\] .+$/gm
+      const incomplete = today!.content.match(taskPattern)
+
+      if (incomplete && incomplete.length > 0) {
+        const carryoverContent = `# Carried Over Tasks (from ${todayFileDate})\n\n${incomplete.join('\n')}\n`
+        await supabase.from('secretary_memory').upsert(
+          {
+            user_id: userId,
+            filename: 'Carryover.md',
+            content: carryoverContent,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,filename' }
+        )
+      }
+    }
+
+    // ALWAYS check Tomorrow.md for promotion (core fix — mirrors memory.ts logic)
+    const { data: tomorrow } = await supabase
+      .from('secretary_memory')
+      .select('content')
+      .eq('user_id', userId)
+      .eq('filename', 'Tomorrow.md')
+      .single()
+
+    const tomorrowContent = tomorrow?.content?.trim() ?? ''
+
+    if (tomorrowContent) {
+      const tomorrowDateMatch = tomorrowContent.match(/(\d{4}-\d{2}-\d{2})/)
+      if (tomorrowDateMatch && tomorrowDateMatch[1] <= todayDate) {
+        // Promote Tomorrow.md to Today.md
+        await supabase.from('secretary_memory').upsert(
+          {
+            user_id: userId,
+            filename: 'Today.md',
+            content: tomorrow!.content,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,filename' }
+        )
+        await supabase.from('secretary_memory').upsert(
+          {
+            user_id: userId,
+            filename: 'Tomorrow.md',
+            content: '',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,filename' }
+        )
+      } else {
+        // Tomorrow.md is for a future date or dateless — reset Today.md with dated template
+        await supabase.from('secretary_memory').upsert(
+          {
+            user_id: userId,
+            filename: 'Today.md',
+            content: `# Today's Plan — ${todayDate}\n\n*No tasks scheduled yet.*\n`,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,filename' }
+        )
+        if (!tomorrowDateMatch) {
+          // Dateless Tomorrow.md — clear it
+          await supabase.from('secretary_memory').upsert(
+            {
+              user_id: userId,
+              filename: 'Tomorrow.md',
+              content: '',
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,filename' }
+          )
+        }
+      }
+    } else {
+      // No tomorrow plan — write dated empty template
+      await supabase.from('secretary_memory').upsert(
+        {
+          user_id: userId,
+          filename: 'Today.md',
+          content: `# Today's Plan — ${todayDate}\n\n*No tasks scheduled yet.*\n`,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,filename' }

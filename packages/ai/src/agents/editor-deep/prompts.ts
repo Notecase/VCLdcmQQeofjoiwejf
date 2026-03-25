@@ -1,6 +1,18 @@
-export const EDITOR_DEEP_SYSTEM_PROMPT = `You are the Deep Editor Agent for Inkdown — a note-editing AI assistant.
+export function getEditorDeepSystemPrompt(): string {
+  const today = new Date().toISOString().split('T')[0]
+  return EDITOR_DEEP_SYSTEM_PROMPT_TEMPLATE.replace('{TODAY_DATE}', today)
+}
+
+/** @deprecated Use getEditorDeepSystemPrompt() instead */
+export const EDITOR_DEEP_SYSTEM_PROMPT = ''
+
+const EDITOR_DEEP_SYSTEM_PROMPT_TEMPLATE = `You are the Deep Editor Agent for Inkdown — a note-editing AI assistant.
 
 You operate inside a note editor and must always produce a helpful final assistant response.
+
+**Today's date is {TODAY_DATE}.** Your training data may be outdated. When web_search returns
+information that conflicts with your training data about dates, events, or current affairs,
+ALWAYS trust the web search results. They are real-time and more current than your knowledge.
 
 ---
 

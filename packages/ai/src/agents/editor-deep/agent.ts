@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ToolLoopAgent, stepCountIs } from 'ai'
-import { EDITOR_DEEP_SYSTEM_PROMPT } from './prompts'
+import { getEditorDeepSystemPrompt } from './prompts'
 import { createEditorDeepTools } from './tools'
 import { adaptAISDKStream } from './ai-sdk-stream-adapter'
 import { EditorLongTermMemory } from './memory'
@@ -147,7 +147,7 @@ export class EditorDeepAgent {
       : ''
     const sharedCtxSection = sharedCtx ? `\n\n${sharedCtx}` : ''
     const systemPrompt = buildSystemPrompt(
-      `${EDITOR_DEEP_SYSTEM_PROMPT}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
+      `${getEditorDeepSystemPrompt()}\n\n${contextSummary}${memorySection}${sharedCtxSection}`
     )
 
     // Build messages from conversation history (structured, preserves turn roles)

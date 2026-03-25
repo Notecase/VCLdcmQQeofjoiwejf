@@ -846,7 +846,7 @@ export function createEditorDeepTools(
   })
 
   const web_search = createWebSearchTool({
-    maxResults: 3,
+    maxResults: 5,
     onSearchStart: (query) =>
       ctx.emitEvent({
         type: 'web-search-start',

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * SourceChips - Compact row of citation chips above AI responses.
+ * SourceChips - Expandable source attribution panel above AI responses.
  *
- * Shows note sources (file icon) and web sources (globe icon) as clickable chips.
+ * Shows favicons + "N sources" in collapsed state.
+ * Expands to show all sources with domain names on click.
  * Note chips navigate to the note; web chips open the URL in a new tab.
- * Max 3 visible, with "+N more" pill for overflow.
  */
-import { computed } from 'vue'
-import { FileText, Globe } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { FileText, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import type { MessageCitation } from '@/stores/ai'
 import { useEditorStore } from '@/stores/editor'
 
@@ -16,18 +16,41 @@ const props = defineProps<{
 }>()
 
 const editorStore = useEditorStore()
+const expanded = ref(false)
 
 const noteCitations = computed(() => props.citations.filter((c) => c.source === 'note'))
 const webCitations = computed(() => props.citations.filter((c) => c.source === 'web'))
 const allCitations = computed(() => [...noteCitations.value, ...webCitations.value])
-const visibleCitations = computed(() => allCitations.value.slice(0, 3))
-const overflowCount = computed(() => Math.max(0, allCitations.value.length - 3))
+
+// Unique favicons for collapsed preview (max 5)
+const previewFavicons = computed(() => {
+  const seen = new Set<string>()
+  const favicons: Array<{ domain: string; url: string }> = []
+  for (const c of webCitations.value) {
+    if (!c.url) continue
+    const domain = getDomain(c.url)
+    if (seen.has(domain)) continue
+    seen.add(domain)
+    favicons.push({ domain, url: getFaviconUrl(c.url) })
+    if (favicons.length >= 5) break
+  }
+  return favicons
+})
 
 function getDomain(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '')
   } catch {
     return url
+  }
+}
+
+function getFaviconUrl(url: string): string {
+  try {
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+  } catch {
+    return ''
   }
 }
 
@@ -38,29 +61,58 @@ function handleChipClick(citation: MessageCitation) {
     editorStore.loadDocument(citation.noteId)
   }
 }
+
+function toggleExpand() {
+  expanded.value = !expanded.value
+}
 </script>
 
 <template>
   <div
     v-if="allCitations.length > 0"
     class="source-chips"
+    :class="{ expanded }"
   >
-    <div class="chips-label">
-      <FileText
-        v-if="noteCitations.length > 0"
-        :size="11"
-        class="label-icon"
+    <!-- Collapsed header: favicons + "N sources" -->
+    <button
+      class="chips-header"
+      type="button"
+      @click="toggleExpand"
+    >
+      <div class="favicon-row">
+        <img
+          v-for="fav in previewFavicons"
+          :key="fav.domain"
+          :src="fav.url"
+          :alt="fav.domain"
+          class="favicon-preview"
+          loading="lazy"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
+        />
+        <FileText
+          v-for="nc in noteCitations.slice(0, 2)"
+          :key="nc.id"
+          :size="14"
+          class="note-icon-preview"
+        />
+      </div>
+      <span class="sources-count"
+        >{{ allCitations.length }} source{{ allCitations.length > 1 ? 's' : '' }}</span
+      >
+      <component
+        :is="expanded ? ChevronUp : ChevronDown"
+        :size="14"
+        class="expand-icon"
       />
-      <Globe
-        v-else
-        :size="11"
-        class="label-icon"
-      />
-      <span>{{ allCitations.length }} source{{ allCitations.length > 1 ? 's' : '' }}</span>
-    </div>
-    <div class="chips-list">
+    </button>
+
+    <!-- Expanded: full list of sources -->
+    <div
+      v-if="expanded"
+      class="chips-grid"
+    >
       <button
-        v-for="citation in visibleCitations"
+        v-for="citation in allCitations"
         :key="citation.id"
         class="chip"
         :class="{ 'chip--web': citation.source === 'web' }"
@@ -68,84 +120,121 @@ function handleChipClick(citation: MessageCitation) {
         type="button"
         @click="handleChipClick(citation)"
       >
-        <FileText
-          v-if="citation.source === 'note'"
-          :size="10"
-          class="chip-icon"
+        <img
+          v-if="citation.source === 'web' && citation.url"
+          :src="getFaviconUrl(citation.url)"
+          :alt="getDomain(citation.url)"
+          class="chip-favicon"
+          loading="lazy"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
-        <Globe
+        <FileText
           v-else
-          :size="10"
+          :size="12"
           class="chip-icon"
         />
         <span class="chip-label">
           {{ citation.source === 'web' && citation.url ? getDomain(citation.url) : citation.title }}
         </span>
       </button>
-      <span
-        v-if="overflowCount > 0"
-        class="overflow-pill"
-        >+{{ overflowCount }} more</span
-      >
     </div>
   </div>
 </template>
 
 <style scoped>
 .source-chips {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-1);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.source-chips.expanded {
+  background: var(--surface-2);
+}
+
+.chips-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
-  margin-bottom: 4px;
+  padding: 8px 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background var(--transition-fast) ease;
 }
 
-.chips-label {
+.chips-header:hover {
+  background: var(--surface-2);
+}
+
+.favicon-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
+  gap: 2px;
+}
+
+.favicon-preview {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   flex-shrink: 0;
 }
 
-.label-icon {
+.note-icon-preview {
   color: var(--text-muted);
-  opacity: 0.7;
+  flex-shrink: 0;
 }
 
-.chips-list {
+.sources-count {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.expand-icon {
+  margin-left: auto;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.chips-grid {
   display: flex;
-  align-items: center;
-  gap: 4px;
   flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 12px 10px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  font-size: 11px;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
+  background: none;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: all var(--transition-fast) ease;
-  max-width: 180px;
+  max-width: 200px;
 }
 
 .chip:hover {
   background: var(--surface-3);
   color: var(--text-primary);
-  border-color: var(--stream-cursor);
 }
 
-.chip--web:hover {
-  border-color: var(--accent-green, var(--stream-cursor));
+.chip-favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .chip-icon {
@@ -157,13 +246,5 @@ function handleChipClick(citation: MessageCitation) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.overflow-pill {
-  font-size: 10px;
-  color: var(--text-muted);
-  padding: 2px 6px;
-  background: var(--surface-2);
-  border-radius: 6px;
 }
 </style>

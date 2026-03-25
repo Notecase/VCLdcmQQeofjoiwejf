@@ -70,6 +70,11 @@ results for the user.
 
 ### Group 7: Web Research
 12. **web_search** — Search the web for current information.
+   - **MANDATORY**: ALWAYS call web_search when the user asks about current events, news, conferences,
+     "latest" information, recent developments, or anything that requires up-to-date data beyond your
+     training cutoff. NEVER answer from training data alone for time-sensitive queries.
+   - **MANDATORY**: ALWAYS call web_search when the user explicitly asks you to search, look up, or
+     find information on the web.
    - USE for: expanding content with external research, fact-checking claims,
      adding current data/statistics, answering questions about topics not in user's notes
    - DO NOT use for: editing existing text, fixing grammar, reformatting,

@@ -1,6 +1,8 @@
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { ZodError } from 'zod'
+import { isAppError, ErrorCode } from '@inkdown/shared'
 import { config } from '../config'
 
 /**
@@ -14,11 +16,45 @@ export interface ErrorResponse {
   }
 }
 
+const appErrorStatusMap: Record<string, number> = {
+  [ErrorCode.AUTH_REQUIRED]: 401,
+  [ErrorCode.AUTH_EXPIRED]: 401,
+  [ErrorCode.AUTH_INVALID]: 401,
+  [ErrorCode.VALIDATION_FAILED]: 400,
+  [ErrorCode.INVALID_INPUT]: 400,
+  [ErrorCode.DB_NOT_FOUND]: 404,
+  [ErrorCode.DB_DUPLICATE]: 409,
+  [ErrorCode.DB_CONNECTION_FAILED]: 503,
+  [ErrorCode.DB_QUERY_FAILED]: 500,
+  [ErrorCode.AI_PROVIDER_ERROR]: 502,
+  [ErrorCode.AI_RATE_LIMIT]: 429,
+  [ErrorCode.AI_CONTEXT_TOO_LONG]: 413,
+  [ErrorCode.NETWORK_ERROR]: 502,
+  [ErrorCode.TIMEOUT]: 504,
+  [ErrorCode.INTERNAL]: 500,
+  [ErrorCode.UNKNOWN]: 500,
+}
+
 /**
  * Global error handler for the API
  */
 export function errorHandler(err: Error, c: Context): Response {
   console.error('[API Error]', err)
+
+  // Handle AppError (from @inkdown/shared)
+  if (isAppError(err)) {
+    const status = appErrorStatusMap[err.code] ?? 500
+    return c.json(
+      {
+        error: {
+          message: err.userMessage,
+          code: err.code,
+          details: config.isDev ? err.context : undefined,
+        },
+      } satisfies ErrorResponse,
+      (status || 500) as ContentfulStatusCode
+    )
+  }
 
   // Handle Hono HTTP exceptions
   if (err instanceof HTTPException) {

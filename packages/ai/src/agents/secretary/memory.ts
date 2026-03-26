@@ -323,6 +323,7 @@ export class MemoryService {
     // Lifecycle checks — run before reading state
     await this.performDayTransition()
     await this.checkAndExpandWeek()
+    await this.autoArchiveExpiredPlans()
 
     const files = await this.listFiles()
     const fileMap = new Map(files.map((f) => [f.filename, f.content]))
@@ -837,6 +838,88 @@ export class MemoryService {
 
     await this.writeFile('Plan.md', updatedContent)
     return true
+  }
+
+  // ==========================================================================
+  // Auto-Archive Expired Plans
+  // ==========================================================================
+
+  /**
+   * Move active plans past their end date to the Archived section.
+   * - endDate < today → archive (user gets full last day)
+   * - progress >= total → status "completed"
+   * - progress < total → status "expired" (time ran out)
+   * - No end date → never auto-archive
+   *
+   * Returns IDs of newly archived plans (empty if none).
+   */
+  async autoArchiveExpiredPlans(): Promise<string[]> {
+    const planFile = await this.readFile('Plan.md')
+    if (!planFile || !planFile.content.trim()) return []
+
+    const todayDate = getTodayDate(this.timezone)
+    const parsed = parsePlanMarkdown(planFile.content)
+    const toArchive = parsed.activePlans.filter(
+      (p) => p.dateRange.end && p.dateRange.end < todayDate
+    )
+
+    if (toArchive.length === 0) return []
+
+    let content = planFile.content
+
+    for (const plan of toArchive) {
+      const newStatus =
+        plan.progress.currentDay >= plan.progress.totalDays ? 'completed' : 'expired'
+
+      // Match the full heading line for this plan in the Active Plans section
+      // e.g.: ### [QUA] Quantum Computing Roadmap (active)
+      const headingPattern = new RegExp(`^(###\\s*\\[${plan.id}\\]\\s*.+?)\\(active\\)`, 'im')
+      content = content.replace(headingPattern, `$1(${newStatus})`)
+    }
+
+    // Move archived entries from Active Plans to Archived section
+    // Strategy: re-parse to find the updated entries, extract their full blocks,
+    // remove from Active, append to Archived
+    const activeSectionPattern = /##\s*Active Plans[^\n]*\n([\s\S]*?)(?=\n---|\n##\s|$)/i
+    const activeMatch = content.match(activeSectionPattern)
+
+    if (activeMatch) {
+      const activeBody = activeMatch[1]
+      let cleanedActive = activeBody
+      const archivedBlocks: string[] = []
+
+      for (const plan of toArchive) {
+        // Extract the full plan block (heading + bullet lines until next ### or end)
+        const blockPattern = new RegExp(`(###\\s*\\[${plan.id}\\][\\s\\S]*?)(?=###\\s*\\[|$)`, 'i')
+        const blockMatch = cleanedActive.match(blockPattern)
+        if (blockMatch) {
+          archivedBlocks.push(blockMatch[1].trim())
+          cleanedActive = cleanedActive.replace(blockPattern, '')
+        }
+      }
+
+      // Replace active section body with cleaned version
+      content = content.replace(
+        activeSectionPattern,
+        `## Active Plans\n${cleanedActive.trim() ? '\n' + cleanedActive.trim() + '\n' : '\n'}`
+      )
+
+      // Append to Archived section (create if missing)
+      const archivedText = archivedBlocks.join('\n\n')
+      const archivedSectionPattern = /##\s*Archived[^\n]*\n/i
+      const archivedMatch = content.match(archivedSectionPattern)
+
+      if (archivedMatch && archivedMatch.index !== undefined) {
+        const insertPos = archivedMatch.index + archivedMatch[0].length
+        content =
+          content.slice(0, insertPos) + '\n' + archivedText + '\n' + content.slice(insertPos)
+      } else {
+        content = content.trimEnd() + '\n\n## Archived\n\n' + archivedText + '\n'
+      }
+    }
+
+    await this.writeFile('Plan.md', content)
+    return toArchive.map((p) => p.id)
   }
 
   // ==========================================================================

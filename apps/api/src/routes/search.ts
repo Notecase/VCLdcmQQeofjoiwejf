@@ -2,11 +2,17 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
+import { handleError, ErrorCode } from '@inkdown/shared'
 
 const search = new Hono()
 
 // Apply auth middleware
 search.use('*', authMiddleware)
+search.use('*', creditGuard)
+search.use('*', requestContextMiddleware)
+search.use('*', rateLimitMiddleware())
 
 /**
  * Semantic search request schema
@@ -51,7 +57,7 @@ search.post('/semantic', zValidator('json', SemanticSearchSchema), async (c) => 
     .limit(body.limit)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   // Format as search results
@@ -99,7 +105,7 @@ search.post('/hybrid', zValidator('json', HybridSearchSchema), async (c) => {
   const { data: notes, error } = await query.limit(body.limit)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   // Format as hybrid search results

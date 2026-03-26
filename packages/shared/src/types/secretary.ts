@@ -59,7 +59,7 @@ export interface MemoryFile {
 export interface LearningRoadmap {
   id: string // Short ID like 'OPT', 'AWS', 'AI'
   name: string // "11-Day Optics Roadmap"
-  status: 'active' | 'completed' | 'paused' | 'archived'
+  status: 'active' | 'completed' | 'paused' | 'archived' | 'expired'
   dateRange: {
     start: string // YYYY-MM-DD
     end: string

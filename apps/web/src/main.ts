@@ -150,6 +150,29 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
+// Global Vue error handler
+app.config.errorHandler = (err, _instance, info) => {
+  console.error(`[Vue Error] ${info}:`, err)
+  import('./stores')
+    .then(({ useNotificationsStore }) => {
+      const notifications = useNotificationsStore()
+      notifications.error(err instanceof Error ? err.message : 'An unexpected error occurred')
+    })
+    .catch(() => {})
+}
+
+// Catch unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Unhandled Rejection]', event.reason)
+  if (event.reason?.name === 'TypeError' && event.reason?.message?.includes('fetch')) return
+  import('./stores')
+    .then(({ useNotificationsStore }) => {
+      const notifications = useNotificationsStore()
+      notifications.error('Something went wrong. Please try again.')
+    })
+    .catch(() => {})
+})
+
 /**
  * Initialize application
  */

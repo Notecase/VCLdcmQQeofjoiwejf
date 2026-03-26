@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server'
+import type { ServerType } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
@@ -7,8 +8,11 @@ import { secureHeaders } from 'hono/secure-headers'
 
 import { config, validateConfig, getAvailableProviders } from './config'
 import { errorHandler, notFoundHandler } from './middleware/error'
+import { requestIdMiddleware } from './middleware/request-id'
 import routes from './routes'
 import { getServiceClient } from './lib/supabase'
+
+let server: ServerType | undefined
 
 // Create Hono app
 const app = new Hono()
@@ -19,6 +23,9 @@ const app = new Hono()
 
 // Security headers
 app.use('*', secureHeaders())
+
+// Request ID
+app.use('*', requestIdMiddleware)
 
 // Request logging
 app.use('*', logger())
@@ -125,7 +132,7 @@ async function startServer() {
   console.log('\n' + '='.repeat(60))
 
   // Start server
-  serve(
+  server = serve(
     {
       fetch: app.fetch,
       port: config.port,
@@ -141,6 +148,23 @@ async function startServer() {
 
 // Start the server
 startServer()
+
+function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received — shutting down gracefully...`)
+  if (server) {
+    server.close(() => {
+      console.log('All connections closed. Exiting.')
+      process.exit(0)
+    })
+  }
+  setTimeout(() => {
+    console.warn('Forced exit after 10s timeout')
+    process.exit(1)
+  }, 10_000).unref()
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // Export for testing
 export default app

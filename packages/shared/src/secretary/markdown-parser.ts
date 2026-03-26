@@ -122,7 +122,13 @@ function parseTaskArtifacts(line: string): TaskArtifactLink[] {
 
 function normalizeStatus(status: string | undefined): LearningRoadmap['status'] {
   const lower = (status || '').toLowerCase()
-  if (lower === 'active' || lower === 'paused' || lower === 'completed' || lower === 'archived') {
+  if (
+    lower === 'active' ||
+    lower === 'paused' ||
+    lower === 'completed' ||
+    lower === 'archived' ||
+    lower === 'expired'
+  ) {
     return lower
   }
   return 'active'
@@ -154,7 +160,7 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
   }
 
   const headingPattern =
-    /^###\s*\[([^\]]+)\]\s*(.+?)(?:\s*\((active|paused|completed|archived)\))?\s*$/gim
+    /^###\s*\[([^\]]+)\]\s*(.+?)(?:\s*\((active|paused|completed|archived|expired)\))?\s*$/gim
   const headings = [...source.matchAll(headingPattern)]
   const plans: LearningRoadmap[] = []
 

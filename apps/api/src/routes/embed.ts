@@ -2,11 +2,17 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
+import { creditGuard, requestContextMiddleware } from '../middleware/credits'
+import { rateLimitMiddleware } from '../middleware/rate-limit'
+import { handleError, ErrorCode } from '@inkdown/shared'
 
 const embed = new Hono()
 
 // Apply auth middleware
 embed.use('*', authMiddleware)
+embed.use('*', creditGuard)
+embed.use('*', requestContextMiddleware)
+embed.use('*', rateLimitMiddleware())
 
 /**
  * Embed text request schema
@@ -85,7 +91,7 @@ embed.post('/note', zValidator('json', EmbedNoteSchema), async (c) => {
     .single()
 
   if (queueError) {
-    throw new Error(queueError.message)
+    throw handleError(queueError, ErrorCode.INTERNAL)
   }
 
   return c.json(
@@ -122,7 +128,7 @@ embed.get('/note/:noteId/status', async (c) => {
     .eq('note_id', noteId)
 
   if (embeddingsError) {
-    throw new Error(embeddingsError.message)
+    throw handleError(embeddingsError, ErrorCode.INTERNAL)
   }
 
   const hasEmbeddings = embeddings && embeddings.length > 0
@@ -164,7 +170,7 @@ embed.get('/queue', async (c) => {
     .limit(100)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   // Count by status
@@ -205,7 +211,7 @@ embed.post('/queue/retry', async (c) => {
     .select()
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   return c.json({

@@ -12,6 +12,7 @@ import { zValidator } from '@hono/zod-validator'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 import { rateLimitMiddleware } from '../middleware/rate-limit'
+import { handleError, ErrorCode } from '@inkdown/shared'
 
 const agent = new Hono()
 
@@ -819,7 +820,7 @@ agent.post('/course/generate', zValidator('json', CourseAgentSchema), async (c) 
     .eq('is_deleted', false)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   if (!notes || notes.length === 0) {

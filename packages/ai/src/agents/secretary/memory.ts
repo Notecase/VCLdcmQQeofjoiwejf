@@ -867,13 +867,18 @@ export class MemoryService {
 
     let content = planFile.content
 
+    const escId = (id: string) => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
     for (const plan of toArchive) {
       const newStatus =
         plan.progress.currentDay >= plan.progress.totalDays ? 'completed' : 'expired'
 
       // Match the full heading line for this plan in the Active Plans section
       // e.g.: ### [QUA] Quantum Computing Roadmap (active)
-      const headingPattern = new RegExp(`^(###\\s*\\[${plan.id}\\]\\s*.+?)\\(active\\)`, 'im')
+      const headingPattern = new RegExp(
+        `^(###\\s*\\[${escId(plan.id)}\\]\\s*.+?)\\(active\\)`,
+        'im'
+      )
       content = content.replace(headingPattern, `$1(${newStatus})`)
     }
 
@@ -890,7 +895,10 @@ export class MemoryService {
 
       for (const plan of toArchive) {
         // Extract the full plan block (heading + bullet lines until next ### or end)
-        const blockPattern = new RegExp(`(###\\s*\\[${plan.id}\\][\\s\\S]*?)(?=###\\s*\\[|$)`, 'i')
+        const blockPattern = new RegExp(
+          `(###\\s*\\[${escId(plan.id)}\\][\\s\\S]*?)(?=###\\s*\\[|$)`,
+          'i'
+        )
         const blockMatch = cleanedActive.match(blockPattern)
         if (blockMatch) {
           archivedBlocks.push(blockMatch[1].trim())

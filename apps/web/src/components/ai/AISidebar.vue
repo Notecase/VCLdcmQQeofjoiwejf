@@ -12,6 +12,7 @@
  */
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useAIStore } from '@/stores/ai'
+import { useDeepAgentStore } from '@/stores/deepAgent'
 import { useRecommendationsStore } from '@/stores/recommendations'
 import { useAIChat } from '@/services/ai.service'
 import { useEditorStore, useLayoutStore } from '@/stores'
@@ -30,7 +31,7 @@ import ExercisesModal from './modals/ExercisesModal.vue'
 import ResourcesModal from './modals/ResourcesModal.vue'
 import SlidesModal from './modals/SlidesModal.vue'
 
-import { Search, Minimize2, Plus, Loader2, ArrowUp, FileText } from 'lucide-vue-next'
+import { Search, Minimize2, Plus, Loader2, ArrowUp, FileText, FlaskConical } from 'lucide-vue-next'
 
 // Props
 defineProps<{
@@ -42,10 +43,14 @@ defineProps<{
 
 // Store and composable
 const store = useAIStore()
+const deepAgent = useDeepAgentStore()
 const recommendStore = useRecommendationsStore()
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
 const { sendMessage, isProcessing } = useAIChat()
+
+// Research mode — shared state from deepAgent store
+const sidebarResearchMode = computed(() => deepAgent.activeMode === 'research')
 
 // Tab state
 type TabId = 'agent' | 'recommend' | 'workflows' | 'resources'
@@ -117,14 +122,19 @@ async function handleSubmit() {
   const msg = inputValue.value
   inputValue.value = ''
 
-  // Pass current note context so the AI can read the note content
-  const context = activeNote.value
-    ? {
-        currentNoteId: activeNote.value.id,
-      }
-    : undefined
+  if (sidebarResearchMode.value) {
+    // Route to research agent via deepAgent store
+    await deepAgent.sendChatMessage(msg)
+  } else {
+    // Pass current note context so the AI can read the note content
+    const context = activeNote.value
+      ? {
+          currentNoteId: activeNote.value.id,
+        }
+      : undefined
 
-  await sendMessage(msg, 'secretary', context)
+    await sendMessage(msg, 'secretary', context)
+  }
 }
 
 // Handle enter key
@@ -406,7 +416,16 @@ function handleClarificationCancel() {
         </div>
 
         <div class="input-footer">
-          <div class="footer-left"></div>
+          <div class="footer-left">
+            <button
+              class="research-toggle-btn"
+              :class="{ active: sidebarResearchMode }"
+              title="Toggle research mode"
+              @click="deepAgent.setActiveMode(sidebarResearchMode ? 'default' : 'research')"
+            >
+              <FlaskConical :size="12" />
+            </button>
+          </div>
 
           <button
             class="send-cirle-btn"
@@ -1034,6 +1053,31 @@ function handleClarificationCancel() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.research-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color-secondary, #6e7681);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.research-toggle-btn:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
+}
+
+.research-toggle-btn.active {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
 }
 
 /* Send Button - GREEN when active */

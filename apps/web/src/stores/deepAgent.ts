@@ -102,6 +102,12 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   const lastStreamSeq = ref<number>(0)
   const lastReceivedThreadId = ref<string | null>(null)
 
+  // ---- Mode toggle ----
+  const activeMode = ref<'default' | 'research'>('default')
+  function setActiveMode(mode: 'default' | 'research') {
+    activeMode.value = mode
+  }
+
   // ---- Research-specific state ----
   const todos = ref<TodoItem[]>([])
   const files = ref<VirtualFile[]>([])
@@ -373,13 +379,22 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
         }
 
         try {
-          const res = await authFetchSSE(`${RESEARCH_API}/chat`, {
+          // Route based on active mode: 'default' → EditorDeep, 'research' → Research
+          const apiUrl =
+            activeMode.value === 'default'
+              ? `${API_URL}/api/agent/secretary`
+              : `${RESEARCH_API}/chat`
+          const bodyPayload =
+            activeMode.value === 'default'
+              ? { message }
+              : {
+                  message,
+                  threadId: activeThreadId.value || undefined,
+                  outputPreference: options.outputDestination || undefined,
+                }
+          const res = await authFetchSSE(apiUrl, {
             method: 'POST',
-            body: JSON.stringify({
-              message,
-              threadId: activeThreadId.value || undefined,
-              outputPreference: options.outputDestination || undefined,
-            }),
+            body: JSON.stringify(bodyPayload),
           })
 
           if (!res.ok) {
@@ -1006,6 +1021,10 @@ export const useDeepAgentStore = defineStore('deepAgent', () => {
   }
 
   return {
+    // Mode toggle
+    activeMode,
+    setActiveMode,
+
     // Thread management
     threads,
     activeThreadId,

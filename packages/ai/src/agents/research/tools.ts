@@ -9,6 +9,8 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import type { VirtualFile, TodoItem, InterruptData, InterruptResponse } from '@inkdown/shared/types'
 import { createWebSearchTool } from '../../tools/web-search'
+import { generateDelegationTools } from '../../registry'
+import type { CapabilityContext } from '../../registry/types'
 
 // =============================================================================
 // State interface for tool context
@@ -269,6 +271,21 @@ export function createResearchTools(
       return data.map((n: any) => `**${n.title}**: ${n.content?.slice(0, 500)}...`).join('\n\n')
     },
   })
+
+  // Build delegation tools from capability registry
+  if (ctx.supabase && ctx.userId) {
+    const capCtx: CapabilityContext = {
+      userId: ctx.userId,
+      supabase: ctx.supabase,
+      emitEvent: ctx.emitEvent,
+    }
+    const delegationTools = generateDelegationTools(
+      'research',
+      ['notes.search', 'schedule.read', 'notes.create', 'context.time', 'planning.decompose'],
+      capCtx
+    )
+    Object.assign(tools, delegationTools)
+  }
 
   return tools
 }

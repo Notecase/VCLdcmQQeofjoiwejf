@@ -70,6 +70,7 @@ export interface ThinkingStep {
     | 'analyze' // Analysis operations
     | 'explore' // Exploration
     | 'reasoning' // Extended reasoning
+    | 'delegation' // Cross-agent delegation
   description: string
   status: 'running' | 'complete' | 'error'
   startedAt: Date

@@ -29,7 +29,7 @@ import MarkdownContent from '@/components/deepagent/MarkdownContent.vue'
 import InlineTasksFiles from '@/components/deepagent/InlineTasksFiles.vue'
 import FileViewerModal from '@/components/deepagent/FileViewerModal.vue'
 import NoteDraftResponseCard from '@/components/deepagent/NoteDraftResponseCard.vue'
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2, FlaskConical, MessageSquare } from 'lucide-vue-next'
 
 const aiStore = useAIStore()
 const deepAgent = useDeepAgentStore()
@@ -43,7 +43,10 @@ const showFileViewer = ref(false)
 
 const hasMessages = computed(() => deepAgent.chatMessages.length > 0)
 const showInlinePanel = computed(
-  () => !deepAgent.hasActiveNoteDraft && (deepAgent.files.length > 0 || deepAgent.todos.length > 0)
+  () =>
+    deepAgent.activeMode === 'research' &&
+    !deepAgent.hasActiveNoteDraft &&
+    (deepAgent.files.length > 0 || deepAgent.todos.length > 0)
 )
 const showComposerTop = computed(() =>
   Boolean(
@@ -140,6 +143,8 @@ watch(
 )
 
 onMounted(async () => {
+  // HomePage defaults to research mode
+  deepAgent.setActiveMode('research')
   await editorStore.loadDocuments()
   await deepAgent.loadThreads()
 })
@@ -172,12 +177,36 @@ onMounted(async () => {
               deepAgent.hasActiveInterrupt
                 ? 'Awaiting Input'
                 : deepAgent.isChatStreaming
-                  ? 'Researching'
+                  ? deepAgent.activeMode === 'research'
+                    ? 'Researching'
+                    : 'Thinking'
                   : deepAgent.threadStatus === 'error'
                     ? 'Error'
                     : 'Ready'
             }}
           </div>
+          <button
+            class="mode-toggle"
+            :class="{ active: deepAgent.activeMode === 'research' }"
+            :title="
+              deepAgent.activeMode === 'research'
+                ? 'Switch to Chat mode'
+                : 'Switch to Research mode'
+            "
+            @click="
+              deepAgent.setActiveMode(deepAgent.activeMode === 'research' ? 'default' : 'research')
+            "
+          >
+            <FlaskConical
+              v-if="deepAgent.activeMode === 'research'"
+              :size="14"
+            />
+            <MessageSquare
+              v-else
+              :size="14"
+            />
+            {{ deepAgent.activeMode === 'research' ? 'Research' : 'Chat' }}
+          </button>
           <button
             class="ghost-action"
             @click="handleNewSession"
@@ -333,7 +362,9 @@ onMounted(async () => {
                     :size="14"
                     class="spin"
                   />
-                  <span>Researching...</span>
+                  <span>{{
+                    deepAgent.activeMode === 'research' ? 'Researching...' : 'Thinking...'
+                  }}</span>
                 </div>
 
                 <div ref="messagesEndRef" />
@@ -516,6 +547,35 @@ onMounted(async () => {
 
 .ghost-action:hover {
   background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+}
+
+.mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #30363d);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #8b949e);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mode-toggle:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
+}
+
+.mode-toggle.active {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.mode-toggle.active:hover {
+  background: rgba(251, 191, 36, 0.08);
 }
 
 .home-body {

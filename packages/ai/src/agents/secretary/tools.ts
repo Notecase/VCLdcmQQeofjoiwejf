@@ -24,6 +24,8 @@ import { resolveModel } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import { getGoogleProviderOptions } from '../../providers/safety'
 import { buildSystemPrompt } from '../../safety/content-policy'
+import { generateDelegationTools } from '../../registry'
+import type { CapabilityContext } from '../../registry/types'
 
 // ============================================================================
 // Pending Roadmap Cache (module-level, keyed by userId)
@@ -163,6 +165,7 @@ export interface SecretaryToolsConfig {
   supabase?: SupabaseClient
   model?: string
   timezone?: string
+  emitEvent?: (event: { type: string; data: unknown }) => void
 }
 
 export function createSecretaryTools(memoryService: MemoryService, config: SecretaryToolsConfig) {
@@ -1087,6 +1090,22 @@ Output EXACTLY this format (for parsing):
     },
   })
 
+  // Build delegation tools from capability registry
+  let delegationTools: Record<string, unknown> = {}
+  if (config.supabase) {
+    const capCtx: CapabilityContext = {
+      userId: config.userId,
+      supabase: config.supabase,
+      emitEvent: config.emitEvent,
+      timezone: config.timezone,
+    }
+    delegationTools = generateDelegationTools(
+      'secretary',
+      ['notes.search', 'notes.read', 'context.time', 'research.quick'],
+      capCtx
+    )
+  }
+
   return {
     read_memory_file: readMemoryFile,
     write_memory_file: writeMemoryFile,
@@ -1103,5 +1122,6 @@ Output EXACTLY this format (for parsing):
     carry_over_tasks: carryOverTasks,
     manage_recurring_blocks: manageRecurringBlocks,
     log_activity: logActivity,
+    ...delegationTools,
   }
 }

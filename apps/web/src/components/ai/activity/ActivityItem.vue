@@ -21,6 +21,7 @@ import {
   Microscope,
   Compass,
   Sparkles,
+  Link2,
   Globe,
   FileText,
   Folder,
@@ -126,6 +127,8 @@ function getStepIcon(type: ThinkingStep['type']) {
       return Compass
     case 'reasoning':
       return Sparkles
+    case 'delegation':
+      return Link2
     default:
       return Brain
   }
@@ -151,6 +154,8 @@ function getStepColor(type: ThinkingStep['type']): string {
       return '#a3e635'
     case 'reasoning':
       return '#c084fc'
+    case 'delegation':
+      return '#fbbf24'
     default:
       return '#8b949e'
   }

@@ -35,7 +35,7 @@ pnpm build && pnpm typecheck && pnpm lint && pnpm test:run
 ### Packages (build order matters)
 
 1. **packages/shared** — Foundation: types (`src/types/`), errors (`AppError`, `ErrorCode`), utilities. ZERO internal deps.
-2. **packages/ai** — AI provider abstraction (OpenAI, Anthropic, Google, Ollama) via `providers/factory.ts`. Agent system: `editor.agent.ts` (inline editing), `deep-agent.ts` (compound requests), `note.agent.ts` (CRUD), `chat.agent.ts`, `secretary/`, `research/`, `course/`. All agents use async generators for streaming.
+2. **packages/ai** — AI provider abstraction (OpenAI, Anthropic, Google, Ollama) via `providers/factory.ts`. **Unified Agent Mesh**: 3 active agents (EditorDeep, Secretary, Research) + Capability Registry (`registry/`) with 7 shared capabilities. Agents in `agents/`: `editor-deep/` (compound requests), `secretary/` (planning), `research/` (deep research), `planner.agent.ts` (kept for `planning.decompose` capability). ChatAgent and NoteAgent are deprecated (capabilities extracted).
 3. **packages/editor** — Shared editor types and assets. Exports raw TypeScript (no compilation step).
 4. **packages/muya** — Local fork of Muya markdown editor. DOM-based, NOT a Vue component. **Read `packages/muya/MUYA.md` before touching Muya code.**
 

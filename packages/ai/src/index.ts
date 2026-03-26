@@ -219,3 +219,21 @@ export type {
   TimelineResult,
   ActionProgress,
 } from './workflows'
+
+// =============================================================================
+// Capability Registry
+// =============================================================================
+
+export {
+  registerCapability,
+  getCapability,
+  listCapabilities,
+  generateDelegationTools,
+  getDelegationLogs,
+  clearDelegationLogs,
+} from './registry'
+
+export type { Capability, CapabilityContext, DelegationLog } from './registry/types'
+
+// Register all built-in capabilities (side-effect import)
+import './registry/capabilities'

@@ -173,103 +173,8 @@ export async function sendToSecretary(options: AgentRequestOptions): Promise<str
   }
 }
 
-/**
- * Send a message to the Chat agent
- */
-export async function sendToChat(options: AgentRequestOptions): Promise<string> {
-  const store = useAIStore()
-
-  try {
-    store.setStatus('streaming')
-
-    if (options.stream !== false) {
-      return await streamFromAgent('chat', options)
-    }
-
-    const response = await authFetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      body: JSON.stringify({
-        input: options.input,
-        context: options.context,
-        sessionId: options.sessionId,
-        stream: false,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const result = await response.json()
-    store.setStatus('idle')
-    return result.content
-  } catch (err) {
-    store.setError(err instanceof Error ? err.message : 'Unknown error')
-    throw err
-  }
-}
-
-/**
- * Execute a note action
- */
-export async function sendToNoteAgent(
-  action: 'create' | 'update' | 'organize' | 'summarize' | 'expand',
-  input: string,
-  noteId?: string,
-  projectId?: string
-): Promise<string> {
-  const store = useAIStore()
-
-  try {
-    store.setStatus('streaming')
-
-    const response = await authFetchSSE(`${API_BASE}/note/action`, {
-      method: 'POST',
-      body: JSON.stringify({
-        action,
-        input,
-        noteId,
-        projectId,
-        stream: true,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    // Stream the response
-    return await processSSEResponse(response, store)
-  } catch (err) {
-    store.setError(err instanceof Error ? err.message : 'Unknown error')
-    throw err
-  }
-}
-
-/**
- * Create a plan with the Planner agent
- */
-export async function createPlan(
-  goal: string,
-  context?: string,
-  constraints?: string[]
-): Promise<{ success: boolean; plan?: unknown; message: string }> {
-  const response = await authFetch(`${API_BASE}/planner/plan`, {
-    method: 'POST',
-    body: JSON.stringify({
-      goal,
-      context,
-      constraints,
-      stream: false,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`)
-  }
-
-  return response.json()
-}
+// sendToChat, sendToNoteAgent, createPlan removed —
+// capabilities are now accessed via EditorDeep delegation tools
 
 /**
  * Get agent capabilities
@@ -1074,7 +979,7 @@ async function processSSEResponse(
             }
 
             store.addThinkingStep({
-              type: 'thought',
+              type: progressData.delegation ? 'delegation' : 'thought',
               description: progressData.step || 'Processing...',
               status: 'running',
               messageId,
@@ -1124,7 +1029,7 @@ export function useAIChat() {
 
   async function sendMessage(
     message: string,
-    agentType: 'secretary' | 'chat' = 'secretary',
+    _agentType: 'secretary' = 'secretary',
     context?: AgentRequestOptions['context']
   ) {
     if (isDemoMode()) return
@@ -1137,10 +1042,10 @@ export function useAIChat() {
     const activeSessionId = store.activeSessionId
     const activeSession = activeSessionId ? store.sessions[activeSessionId] : null
     const reusableSessionId =
-      activeSession && activeSession.agentType === agentType ? activeSessionId : undefined
+      activeSession && activeSession.agentType === 'secretary' ? activeSessionId : undefined
 
     // Get or create session and capture the ID to use consistently
-    const session = store.getOrCreateSession(reusableSessionId, { agentType })
+    const session = store.getOrCreateSession(reusableSessionId, { agentType: 'secretary' })
     const sessionId = session.id
 
     // Ensure activeSessionId is set correctly before streaming
@@ -1158,25 +1063,16 @@ export function useAIChat() {
       content: '',
     })
 
-    // Send to agent
+    // Send to EditorDeep agent (the only active agent)
     try {
-      let streamedResponse = ''
-      if (agentType === 'chat') {
-        streamedResponse = await sendToChat({
-          input: message,
-          context,
-          sessionId,
-        })
-      } else {
-        streamedResponse = await sendToSecretary({
-          input: message,
-          runtime: 'editor-deep',
-          threadId: sessionId,
-          context,
-          editorContext: context,
-          sessionId,
-        })
-      }
+      const streamedResponse = await sendToSecretary({
+        input: message,
+        runtime: 'editor-deep',
+        threadId: sessionId,
+        context,
+        editorContext: context,
+        sessionId,
+      })
 
       // After streaming completes, check if the assistant message is empty
       // This can happen if the API returned no text-delta chunks

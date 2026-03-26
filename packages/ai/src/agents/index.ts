@@ -87,34 +87,24 @@ export interface CourseAgentState extends BaseAgentState {
 }
 
 // ============================================================================
-// Chat Agent
+// Chat Agent (DEPRECATED — RAG pipeline extracted to notes.search capability)
 // ============================================================================
 
+// ChatAgent and NoteAgent classes are kept for backwards compatibility
+// but their routes have been removed. Use EditorDeep delegation tools instead.
 export {
   ChatAgent,
   createChatAgent,
-  ChatAgentInputSchema,
   type ChatAgentConfig,
-  type ChatAgentInput,
-  type ChatAgentResponse,
-  type ChatAgentMessage,
   type RetrievedChunk,
   type Citation,
 } from './chat.agent'
 
 // ============================================================================
-// Note Agent
+// Note Agent (DEPRECATED — capabilities extracted to notes.read/notes.create)
 // ============================================================================
 
-export {
-  NoteAgent,
-  createNoteAgent,
-  NoteAgentInputSchema,
-  type NoteAgentConfig,
-  type NoteAgentInput,
-  type NoteAgentResponse,
-  type NoteAction,
-} from './note.agent'
+export { NoteAgent, createNoteAgent, type NoteAgentConfig } from './note.agent'
 
 // ============================================================================
 // Editor Deep Agent (AI SDK v6 ToolLoopAgent)
@@ -233,43 +223,46 @@ import { SecretaryAgent } from './secretary'
 import { ResearchAgent } from './research'
 import { ExplainAgent } from './explain'
 
-export type AgentType = 'chat' | 'note' | 'planner' | 'secretary' | 'research' | 'explain'
+/** Active agent types (Unified Agent Mesh) */
+export type AgentType = 'secretary' | 'research' | 'explain'
+
+/** @deprecated Legacy types kept for backwards compat */
+export type LegacyAgentType = 'chat' | 'note' | 'planner'
 
 export interface AgentConfig {
   supabase: SupabaseClient
   userId: string
   model?: string
-  /** @deprecated Only needed by Secretary/Research until Phase B migration completes */
-  openaiApiKey?: string
 }
 
 /**
  * Create an agent by type
  */
 export function createAgent(
-  type: AgentType,
+  type: AgentType | LegacyAgentType,
   config: AgentConfig
-): ChatAgent | NoteAgent | PlannerAgent | SecretaryAgent | ResearchAgent | ExplainAgent {
+): SecretaryAgent | ResearchAgent | ExplainAgent | ChatAgent | NoteAgent | PlannerAgent {
   switch (type) {
-    case 'chat':
-      return new ChatAgent(config)
-    case 'note':
-      return new NoteAgent(config)
-    case 'planner':
-      return new PlannerAgent(config)
     case 'secretary':
       return new SecretaryAgent(config)
     case 'research':
       return new ResearchAgent(config)
     case 'explain':
       return new ExplainAgent({ model: config.model })
+    // Legacy agents — kept for backwards compat but no active routes
+    case 'chat':
+      return new ChatAgent(config)
+    case 'note':
+      return new NoteAgent(config)
+    case 'planner':
+      return new PlannerAgent(config)
     default:
       throw new Error(`Unknown agent type: ${type}`)
   }
 }
 
 /**
- * Agent metadata for UI
+ * Agent metadata for UI — Unified Agent Mesh (3 active agents + 8 capabilities)
  */
 export const AGENT_METADATA: Record<
   AgentType,
@@ -279,21 +272,6 @@ export const AGENT_METADATA: Record<
     capabilities: string[]
   }
 > = {
-  chat: {
-    name: 'Chat Agent',
-    description: 'Conversational AI with RAG and citations',
-    capabilities: ['chat', 'rag', 'citations', 'context'],
-  },
-  note: {
-    name: 'Note Agent',
-    description: 'Create, update, and organize notes',
-    capabilities: ['create', 'update', 'organize', 'summarize', 'expand'],
-  },
-  planner: {
-    name: 'Planner Agent',
-    description: 'Goal decomposition and task planning',
-    capabilities: ['plan', 'decompose', 'track', 'guide'],
-  },
   secretary: {
     name: 'Secretary Agent',
     description: 'AI daily planner, roadmap manager, and learning assistant',

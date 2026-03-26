@@ -29,6 +29,7 @@ export interface SecretaryAgentConfig {
   model?: string
   timezone?: string
   sharedContextService?: SharedContextService
+  emitEvent?: (event: { type: string; data: unknown }) => void
 }
 
 // ============================================================================
@@ -57,11 +58,21 @@ export class SecretaryAgent {
     const context = await this.memoryService.getFullContext()
     const tz = this.config.timezone || context.preferences?.timezone || undefined
 
+    // pendingEvents buffer — delegation tools push progress events here,
+    // adaptSecretaryStream drains them into the SSE output.
+    const pendingEvents: SecretaryStreamEvent[] = []
+
     const tools = createSecretaryTools(this.memoryService, {
       userId: this.config.userId,
       supabase: this.config.supabase,
       model: this.config.model,
       timezone: tz,
+      emitEvent: (evt) => {
+        pendingEvents.push({
+          event: evt.type as SecretaryStreamEvent['event'],
+          data: typeof evt.data === 'string' ? evt.data : JSON.stringify(evt.data),
+        })
+      },
     })
 
     // Build system prompt with current date context
@@ -105,7 +116,6 @@ export class SecretaryAgent {
     )
 
     const threadId = input.threadId || crypto.randomUUID()
-    const pendingEvents: SecretaryStreamEvent[] = []
 
     // Get primary + fallback models
     const { primary, fallback } = getModelsForTask('secretary')

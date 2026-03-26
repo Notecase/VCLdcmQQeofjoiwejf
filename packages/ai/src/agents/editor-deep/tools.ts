@@ -3,7 +3,10 @@ import { z } from 'zod'
 import { executeTool, type ToolContext } from '../../tools'
 import { parseMarkdownStructure, findBlocksByHeading } from '../../utils/structureParser'
 import { createWebSearchTool } from '../../tools/web-search'
-import type { EditorToolContext } from './types'
+import { generateDelegationTools } from '../../registry'
+import '../../registry/capabilities' // Ensure capabilities are registered
+import type { CapabilityContext } from '../../registry/types'
+import type { EditorToolContext, EditorDeepAgentEvent } from './types'
 import type { EditorLongTermMemory } from './memory'
 
 function toToolContext(ctx: EditorToolContext): ToolContext {
@@ -876,6 +879,18 @@ export function createEditorDeepTools(
       }),
   })
 
+  // Build delegation tools from capability registry
+  const capCtx: CapabilityContext = {
+    userId: ctx.userId,
+    supabase: ctx.supabase,
+    emitEvent: (evt) => ctx.emitEvent({ type: evt.type, data: evt.data } as EditorDeepAgentEvent),
+  }
+  const delegationTools = generateDelegationTools(
+    'editor-deep',
+    ['notes.search', 'schedule.read', 'context.time', 'research.quick', 'planning.decompose'],
+    capCtx
+  )
+
   return {
     answer_question_about_note,
     read_note_structure,
@@ -890,5 +905,6 @@ export function createEditorDeepTools(
     write_memory,
     ask_user_preference,
     web_search,
+    ...delegationTools,
   }
 }

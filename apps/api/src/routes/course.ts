@@ -122,17 +122,29 @@ course.post('/generate', zValidator('json', GenerateSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const injectionCheck = detectInjection(body.topic)
   if (injectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(injectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: injectionCheck.patterns,
       route: 'course-generate',
       inputLength: body.topic.length,
     })
+    if (injectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   const openaiApiKey = process.env.OPENAI_API_KEY
@@ -1099,8 +1111,12 @@ course.delete('/:id', async (c) => {
   // Delete generation threads
   await auth.supabase.from('course_generation_threads').delete().eq('course_id', courseId)
 
-  // Delete the course
-  const { error: deleteError } = await auth.supabase.from('courses').delete().eq('id', courseId)
+  // Delete the course (user_id filter for defense-in-depth beyond RLS)
+  const { error: deleteError } = await auth.supabase
+    .from('courses')
+    .delete()
+    .eq('id', courseId)
+    .eq('user_id', auth.userId)
 
   if (deleteError) {
     return c.json({ error: `Failed to delete course: ${deleteError.message}` }, 500)

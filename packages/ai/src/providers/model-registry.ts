@@ -5,7 +5,7 @@
  * Single source of truth for model names, endpoints, pricing, and capabilities.
  */
 
-export type ModelProvider = 'gemini' | 'ollama-cloud' | 'ollama-local' | 'openai'
+export type ModelProvider = 'gemini' | 'ollama-cloud' | 'ollama-local' | 'openai' | 'external'
 export type ModelCapability =
   | 'chat'
   | 'tool-calling'
@@ -123,6 +123,7 @@ export type AITaskType =
   | 'embedding'
   | 'table'
   | 'inbox-agent'
+  | 'tool-call'
 
 // Task → model mapping (primary model, with optional fallback)
 const TASK_MODEL_MAP: Record<AITaskType, string> = {
@@ -145,6 +146,7 @@ const TASK_MODEL_MAP: Record<AITaskType, string> = {
   'deep-research': 'deep-research-pro-preview-12-2025',
   embedding: 'text-embedding-3-large',
   'inbox-agent': 'gemini-3-flash-preview',
+  'tool-call': 'gemini-2.5-pro', // placeholder — tool-call events use direct cost, not model pricing
 }
 
 // Fallback model when primary is unavailable (rate limit, high demand, etc.)

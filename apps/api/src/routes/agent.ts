@@ -170,17 +170,29 @@ agent.post('/secretary', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const injectionCheck = detectInjection(body.input)
   if (injectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(injectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: injectionCheck.patterns,
       route: 'secretary',
       inputLength: body.input.length,
     })
+    if (injectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   const startTime = Date.now()
@@ -550,17 +562,29 @@ agent.post('/chat', zValidator('json', AgentRequestSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const chatInjectionCheck = detectInjection(body.input)
   if (chatInjectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(chatInjectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: chatInjectionCheck.patterns,
       route: 'chat',
       inputLength: body.input.length,
     })
+    if (chatInjectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   const { ChatAgent } = await import('@inkdown/ai/agents')
@@ -624,17 +648,29 @@ agent.post('/note/action', zValidator('json', NoteAgentSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const noteInjectionCheck = detectInjection(body.input)
   if (noteInjectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(noteInjectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: noteInjectionCheck.patterns,
       route: 'note-action',
       inputLength: body.input.length,
     })
+    if (noteInjectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   const { NoteAgent } = await import('@inkdown/ai/agents')

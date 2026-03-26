@@ -36,12 +36,12 @@ export interface AIUsageRecord {
 /**
  * Supported AI providers
  */
-export type AIProvider = 'openai' | 'anthropic' | 'google' | 'ollama'
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'external'
 
 /**
  * Types of AI actions
  */
-export type AIActionType = 'chat' | 'complete' | 'embed' | 'agent'
+export type AIActionType = 'chat' | 'complete' | 'embed' | 'agent' | 'tool-call'
 
 /**
  * Monthly usage statistics

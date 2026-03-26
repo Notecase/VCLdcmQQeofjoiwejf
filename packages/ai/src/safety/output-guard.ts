@@ -84,11 +84,12 @@ export function sanitizeOutput(text: string): { text: string; stripped: string[]
     }
   }
 
-  // Check for prompt leakage (log but don't strip — these are informational)
+  // Strip prompt leakage — system prompt internals must never reach the user
   for (const pattern of PROMPT_LEAKAGE_PATTERNS) {
-    if (pattern.test(result)) {
-      stripped.push('prompt-leakage-detected')
-      break // One flag is enough
+    const replaced = result.replace(pattern, '')
+    if (replaced !== result) {
+      stripped.push('prompt-leakage-stripped')
+      result = replaced
     }
   }
 

@@ -4,6 +4,7 @@ import {
   getModelForTask,
   getEmbeddingModel,
   resetAIProviders,
+  isTransientError,
 } from './ai-sdk-factory'
 import { MODEL_REGISTRY } from './model-registry'
 import type { ModelEntry } from './model-registry'
@@ -83,5 +84,39 @@ describe('ai-sdk-factory', () => {
 
     // createOpenAI should only be called once (singleton)
     expect(createOpenAI).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ============================================================================
+// isTransientError (ED-06)
+// ============================================================================
+
+describe('isTransientError', () => {
+  it.each([
+    ['rate limit exceeded', true],
+    ['503 Service Unavailable', true],
+    ['429 Too Many Requests', true],
+    ['high demand', true],
+    ['Resource exhausted', true],
+    ['Server is overloaded, please retry', true],
+  ])('"%s" → %s', (message, expected) => {
+    expect(isTransientError(new Error(message))).toBe(expected)
+  })
+
+  it.each([
+    ['Invalid API key', false],
+    ['Network timeout', false],
+    ['Permission denied', false],
+    ['Model not found', false],
+    ['Bad request: invalid JSON', false],
+  ])('"%s" → %s', (message, expected) => {
+    expect(isTransientError(new Error(message))).toBe(expected)
+  })
+
+  it('handles non-Error values', () => {
+    expect(isTransientError('429 rate limit')).toBe(true)
+    expect(isTransientError('just a string')).toBe(false)
+    expect(isTransientError(null)).toBe(false)
+    expect(isTransientError(undefined)).toBe(false)
   })
 })

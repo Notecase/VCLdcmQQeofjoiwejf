@@ -61,7 +61,8 @@ function emitClarification(ctx: EditorToolContext, reason: string): void {
  * This preserves original whitespace (unlike the old splitToStructuralBlocks + join approach
  * which normalized all inter-block spacing to \n\n, causing diff mismatches).
  */
-function spliceAtBlockIndex(
+/** @internal Exported for testing */
+export function spliceAtBlockIndex(
   original: string,
   blockIndex: number | undefined,
   operation: 'insert-after' | 'replace' | 'remove',
@@ -114,7 +115,11 @@ function spliceAtBlockIndex(
 /**
  * Resolve afterHeading to a block index for insertion.
  */
-function resolveAfterHeadingIndex(content: string, afterHeading: string): number | undefined {
+/** @internal Exported for testing */
+export function resolveAfterHeadingIndex(
+  content: string,
+  afterHeading: string
+): number | undefined {
   const parsed = parseMarkdownStructure(content)
   const matches = findBlocksByHeading(parsed, afterHeading)
   if (matches.length > 0) return parsed.blocks.indexOf(matches[0])
@@ -155,7 +160,12 @@ async function proposeNoteEdit(
   return 'Edit proposed for review.'
 }
 
-function buildMarkdownTable(headers: string[], rows: string[][], title?: string | null): string {
+/** @internal Exported for testing */
+export function buildMarkdownTable(
+  headers: string[],
+  rows: string[][],
+  title?: string | null
+): string {
   const lines: string[] = []
   if (title) {
     lines.push(`### ${title}`, '')
@@ -613,7 +623,7 @@ export function createEditorDeepTools(
       try {
         if (rows) parsedRows = JSON.parse(rows)
       } catch {
-        parsedRows = []
+        return 'Failed to parse table rows: invalid JSON. Provide rows as a JSON array of arrays, e.g. [["Alice","25"],["Bob","30"]].'
       }
 
       const current = (readResult.data as { content?: string }).content || ''

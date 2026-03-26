@@ -67,6 +67,12 @@ class TokenTracker {
       event.userId = getCurrentUserId()
     }
 
+    const MAX_EVENTS = 10_000
+    if (this.events.length >= MAX_EVENTS) {
+      // Evict oldest 20% to avoid frequent shifts
+      this.events = this.events.slice(Math.floor(MAX_EVENTS * 0.2))
+    }
+
     this.events.push(event)
 
     // Log for visibility

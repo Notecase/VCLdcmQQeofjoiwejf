@@ -8,6 +8,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { sanitizeWebContent, type WebSearchResult } from '../safety/input-guard'
+import { tokenTracker } from '../providers/token-tracker'
 
 export type { WebSearchResult }
 
@@ -50,6 +51,7 @@ export function createWebSearchTool(options: WebSearchToolOptions = {}) {
       onSearchStart?.(query)
 
       try {
+        const searchStartTime = Date.now()
         const response = await fetch('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,6 +83,18 @@ export function createWebSearchTool(options: WebSearchToolOptions = {}) {
 
         const results = sanitizeWebContent(rawResults)
         onSearchComplete?.(results)
+
+        // Track web search cost (1 cent per search)
+        tokenTracker.record({
+          model: 'tavily-search',
+          provider: 'external',
+          taskType: 'tool-call',
+          inputTokens: 0,
+          outputTokens: 0,
+          costCents: 1.0,
+          durationMs: Date.now() - searchStartTime,
+          timestamp: Date.now(),
+        })
 
         // Format for LLM context with safe delimiters
         const formatted: string[] = []

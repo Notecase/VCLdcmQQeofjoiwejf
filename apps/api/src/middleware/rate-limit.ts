@@ -43,7 +43,8 @@ function cleanupOldEntries() {
 export function rateLimitMiddleware() {
   return async (c: Context, next: Next) => {
     // Extract userId from auth context (set by authMiddleware)
-    const userId = c.get('userId') as string | undefined
+    const auth = c.get('auth') as { userId: string } | undefined
+    const userId = auth?.userId
     if (!userId) {
       // No auth context — skip rate limiting (auth middleware will reject)
       return next()

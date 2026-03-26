@@ -28,8 +28,8 @@ export function initUsagePersister(supabase: SupabaseClient): void {
 }
 
 async function persistUsage(supabase: SupabaseClient, event: TokenUsageEvent): Promise<void> {
-  // Skip events with no tokens (e.g. failed calls)
-  if (event.inputTokens === 0 && event.outputTokens === 0) return
+  // Skip events with no tokens and no cost (e.g. failed calls)
+  if (event.inputTokens === 0 && event.outputTokens === 0 && event.costCents <= 0) return
 
   // 1. Insert into ai_usage
   const { data: usageRow, error: usageError } = await supabase
@@ -56,15 +56,33 @@ async function persistUsage(supabase: SupabaseClient, event: TokenUsageEvent): P
 
   // 2. Deduct credits if userId present and cost > 0
   if (event.userId && event.costCents > 0) {
-    const { error: deductError } = await supabase.rpc('deduct_credits', {
-      p_user_id: event.userId,
-      p_amount: event.costCents,
-      p_description: `${event.taskType} (${event.model})`,
-      p_ai_usage_id: usageRow?.id || null,
-    })
+    let deductError = await tryDeductCredits(supabase, event, usageRow?.id ?? null)
 
+    // Retry once on failure (covers transient DB timeouts)
     if (deductError) {
-      console.error('[UsagePersister] deduct_credits failed:', deductError.message)
+      console.warn(
+        '[UsagePersister] deduct_credits failed, retrying in 500ms:',
+        deductError.message
+      )
+      await new Promise((r) => setTimeout(r, 500))
+      deductError = await tryDeductCredits(supabase, event, usageRow?.id ?? null)
+      if (deductError) {
+        console.error('[UsagePersister] deduct_credits retry failed:', deductError.message)
+      }
     }
   }
+}
+
+async function tryDeductCredits(
+  supabase: SupabaseClient,
+  event: TokenUsageEvent,
+  aiUsageId: string | null
+): Promise<{ message: string } | null> {
+  const { error } = await supabase.rpc('deduct_credits', {
+    p_user_id: event.userId,
+    p_amount: event.costCents,
+    p_description: `${event.taskType} (${event.model})`,
+    p_ai_usage_id: aiUsageId,
+  })
+  return error
 }

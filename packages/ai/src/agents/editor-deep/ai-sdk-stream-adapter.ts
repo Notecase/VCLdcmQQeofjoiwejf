@@ -66,11 +66,11 @@ export async function* adaptAISDKStream(
           seq: seq++,
         }
 
-        // Drain side-channel events from tool execution
-        // Tools push edit-proposal, note-navigate, artifact, clarification-requested,
-        // pre-action-question, and custom-progress events to this array
-        while (pendingEvents.length > 0) {
-          const event = pendingEvents.shift()!
+        // Drain side-channel events from tool execution atomically.
+        // splice(0) snapshots and clears in one step, preventing interleave
+        // if a tool ever pushes events concurrently.
+        const drained = pendingEvents.splice(0)
+        for (const event of drained) {
           yield { ...event, seq: seq++ }
         }
         break
@@ -127,9 +127,9 @@ export async function* adaptAISDKStream(
     yield { type: 'assistant-final', data: sanitizedText, seq: seq++ }
   }
 
-  // Drain any remaining pending events
-  while (pendingEvents.length > 0) {
-    const event = pendingEvents.shift()!
+  // Drain any remaining pending events atomically
+  const remaining = pendingEvents.splice(0)
+  for (const event of remaining) {
     yield { ...event, seq: seq++ }
   }
 

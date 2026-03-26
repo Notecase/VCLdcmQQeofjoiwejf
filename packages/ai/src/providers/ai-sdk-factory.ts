@@ -95,6 +95,9 @@ export function createAIModel(model: ModelEntry): LanguageModel {
     case 'ollama-local':
       return getOllamaLocalProvider()(model.id)
 
+    case 'external':
+      throw new Error(`Provider "external" does not support AI SDK language models`)
+
     default: {
       const _exhaustive: never = model.provider
       throw new Error(`Unknown provider: ${_exhaustive}`)

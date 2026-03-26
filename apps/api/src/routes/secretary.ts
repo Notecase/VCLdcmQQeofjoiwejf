@@ -91,17 +91,29 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const openaiApiKey = process.env.OPENAI_API_KEY
   const hardeningEnabled = isHardeningEnabled()
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const injectionCheck = detectInjection(body.message)
   if (injectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(injectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: injectionCheck.patterns,
       route: 'secretary-chat',
       inputLength: body.message.length,
     })
+    if (injectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   console.info('secretary.chat.start', {
@@ -375,6 +387,19 @@ secretary.get('/threads/:threadId/messages', async (c) => {
 secretary.delete('/threads/:threadId', async (c) => {
   const auth = requireAuth(c)
   const threadId = c.req.param('threadId')
+
+  // Ownership pre-check (defense-in-depth beyond RLS)
+  const { data: thread, error: checkError } = await auth.supabase
+    .from('secretary_threads')
+    .select('id')
+    .or(`thread_id.eq.${threadId},id.eq.${threadId}`)
+    .eq('user_id', auth.userId)
+    .maybeSingle()
+
+  if (checkError || !thread) {
+    return c.json({ error: 'Thread not found' }, 404)
+  }
+
   const { ChatPersistenceService } = await import('@inkdown/ai/agents')
   const service = new ChatPersistenceService(auth.supabase)
   try {
@@ -402,6 +427,19 @@ secretary.patch('/threads/:threadId', zValidator('json', UpdateThreadSchema), as
   const auth = requireAuth(c)
   const threadId = c.req.param('threadId')
   const { title } = c.req.valid('json')
+
+  // Ownership pre-check (defense-in-depth beyond RLS)
+  const { data: thread, error: checkError } = await auth.supabase
+    .from('secretary_threads')
+    .select('id')
+    .or(`thread_id.eq.${threadId},id.eq.${threadId}`)
+    .eq('user_id', auth.userId)
+    .maybeSingle()
+
+  if (checkError || !thread) {
+    return c.json({ error: 'Thread not found' }, 404)
+  }
+
   const { ChatPersistenceService } = await import('@inkdown/ai/agents')
   const service = new ChatPersistenceService(auth.supabase)
   try {

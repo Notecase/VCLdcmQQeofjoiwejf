@@ -79,17 +79,29 @@ research.post('/chat', zValidator('json', ChatSchema), async (c) => {
   const auth = requireAuth(c)
   const body = c.req.valid('json')
 
-  // Safety: detect potential prompt injection (log only, no hard block)
+  // Safety: detect potential prompt injection
   const { detectInjection } = await import('@inkdown/ai/safety')
   const { aiSafetyLog } = await import('@inkdown/ai/observability')
   const injectionCheck = detectInjection(body.message)
   if (injectionCheck.detected) {
-    aiSafetyLog('injection_detected', {
+    aiSafetyLog(injectionCheck.shouldBlock ? 'injection_blocked' : 'injection_detected', {
       userId: auth.userId,
       patterns: injectionCheck.patterns,
       route: 'research-chat',
       inputLength: body.message.length,
     })
+    if (injectionCheck.shouldBlock) {
+      return c.json(
+        {
+          error: {
+            message:
+              'Your message was flagged by our safety system. Please rephrase and try again.',
+            code: 'INJECTION_BLOCKED',
+          },
+        },
+        400
+      )
+    }
   }
 
   const openaiApiKey = process.env.OPENAI_API_KEY
@@ -535,7 +547,11 @@ research.delete('/threads/:threadId', async (c) => {
     return c.json({ error: 'Thread not found' }, 404)
   }
 
-  const { error } = await auth.supabase.from('research_threads').delete().eq('id', threadId)
+  const { error } = await auth.supabase
+    .from('research_threads')
+    .delete()
+    .eq('id', threadId)
+    .eq('user_id', auth.userId)
 
   if (error) {
     throw handleError(error, ErrorCode.INTERNAL)
@@ -579,6 +595,7 @@ research.patch('/threads/:threadId', zValidator('json', UpdateThreadSchema), asy
       updated_at: new Date().toISOString(),
     })
     .eq('id', threadId)
+    .eq('user_id', auth.userId)
 
   if (error) {
     throw handleError(error, ErrorCode.INTERNAL)

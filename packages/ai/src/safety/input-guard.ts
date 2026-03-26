@@ -7,50 +7,71 @@
 
 export interface InjectionDetectionResult {
   detected: boolean
+  /** All matched pattern labels */
   patterns: string[]
+  /** True if any HIGH confidence pattern matched — caller should block the request */
+  shouldBlock: boolean
+  /** Only the high-confidence pattern labels that triggered blocking */
+  blockingPatterns: string[]
 }
+
+type Confidence = 'high' | 'low'
 
 /**
  * Common prompt injection patterns (case-insensitive).
- * Each entry: [regex, label for logging].
+ * Each entry: [regex, label, confidence].
+ *
+ * HIGH confidence: clearly adversarial, unlikely to appear in legitimate input.
+ * LOW confidence: could appear in code discussion or creative writing — log only.
  */
-const INJECTION_PATTERNS: Array<[RegExp, string]> = [
-  [/ignore\s+(all\s+)?previous\s+instructions/i, 'ignore-previous'],
-  [/ignore\s+(all\s+)?above\s+instructions/i, 'ignore-above'],
-  [/disregard\s+(all\s+)?previous/i, 'disregard-previous'],
-  [/forget\s+(all\s+)?previous/i, 'forget-previous'],
-  [/new\s+system\s+prompt/i, 'new-system-prompt'],
-  [/\bSYSTEM\s*:/i, 'system-colon'],
-  [/<\|endoftext\|>/i, 'endoftext-token'],
-  [/<\|im_start\|>/i, 'im-start-token'],
-  [/<\|im_end\|>/i, 'im-end-token'],
-  [/```\s*(?:system|instructions|prompt)\b/i, 'code-fence-instructions'],
-  [/\{\{.*\}\}/s, 'template-braces'],
-  [/\$\{[^}]+\}/s, 'template-literal'],
-  [/you\s+are\s+now\s+(?:a|an|in)\s+/i, 'role-override'],
-  [/act\s+as\s+(?:a|an|if)\s+/i, 'act-as-override'],
-  [/pretend\s+(?:you\s+are|to\s+be)\s+/i, 'pretend-override'],
+const INJECTION_PATTERNS: Array<[RegExp, string, Confidence]> = [
+  // HIGH — classic instruction override attacks
+  [/ignore\s+(all\s+)?previous\s+instructions/i, 'ignore-previous', 'high'],
+  [/ignore\s+(all\s+)?above\s+instructions/i, 'ignore-above', 'high'],
+  [/disregard\s+(all\s+)?previous/i, 'disregard-previous', 'high'],
+  [/forget\s+(all\s+)?previous/i, 'forget-previous', 'high'],
+  [/new\s+system\s+prompt/i, 'new-system-prompt', 'high'],
+  // HIGH — model token manipulation
+  [/<\|endoftext\|>/i, 'endoftext-token', 'high'],
+  [/<\|im_start\|>/i, 'im-start-token', 'high'],
+  [/<\|im_end\|>/i, 'im-end-token', 'high'],
+  // HIGH — instruction injection via code fence
+  [/```\s*(?:system|instructions|prompt)\b/i, 'code-fence-instructions', 'high'],
+  // LOW — could be legitimate code or creative writing
+  [/\bSYSTEM\s*:/i, 'system-colon', 'low'],
+  [/\{\{.*\}\}/s, 'template-braces', 'low'],
+  [/\$\{[^}]+\}/s, 'template-literal', 'low'],
+  [/you\s+are\s+now\s+(?:a|an|in)\s+/i, 'role-override', 'low'],
+  [/act\s+as\s+(?:a|an|if)\s+/i, 'act-as-override', 'low'],
+  [/pretend\s+(?:you\s+are|to\s+be)\s+/i, 'pretend-override', 'low'],
 ]
 
 /**
  * Detect potential prompt injection patterns in text.
- * Returns matched pattern labels for logging — does NOT hard-block.
+ * Returns matched patterns and whether the request should be blocked.
  */
 export function detectInjection(text: string): InjectionDetectionResult {
   if (!text || typeof text !== 'string') {
-    return { detected: false, patterns: [] }
+    return { detected: false, patterns: [], shouldBlock: false, blockingPatterns: [] }
   }
 
   const matched: string[] = []
-  for (const [regex, label] of INJECTION_PATTERNS) {
+  const blockingPatterns: string[] = []
+
+  for (const [regex, label, confidence] of INJECTION_PATTERNS) {
     if (regex.test(text)) {
       matched.push(label)
+      if (confidence === 'high') {
+        blockingPatterns.push(label)
+      }
     }
   }
 
   return {
     detected: matched.length > 0,
     patterns: matched,
+    shouldBlock: blockingPatterns.length > 0,
+    blockingPatterns,
   }
 }
 

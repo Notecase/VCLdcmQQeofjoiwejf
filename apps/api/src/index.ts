@@ -33,7 +33,7 @@ app.use(
     origin: config.cors.origin,
     credentials: config.cors.credentials,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Timezone'],
     exposeHeaders: ['X-Response-Time'],
     maxAge: 86400, // 24 hours
   })

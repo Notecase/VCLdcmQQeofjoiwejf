@@ -51,9 +51,12 @@ describe('sanitizeOutput', () => {
     expect(stripped).toContain('potential-secret')
   })
 
-  it('detects prompt leakage markers', () => {
-    const { stripped } = sanitizeOutput('As stated in the rules: YOU ARE THE DEEP EDITOR AGENT')
-    expect(stripped).toContain('prompt-leakage-detected')
+  it('strips prompt leakage markers', () => {
+    const { text, stripped } = sanitizeOutput(
+      'As stated in the rules: YOU ARE THE DEEP EDITOR AGENT'
+    )
+    expect(stripped).toContain('prompt-leakage-stripped')
+    expect(text).not.toContain('YOU ARE THE DEEP EDITOR AGENT')
   })
 
   it('handles empty input', () => {

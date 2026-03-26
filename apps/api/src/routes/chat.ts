@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
+import { handleError, ErrorCode } from '@inkdown/shared'
 import { authMiddleware, requireAuth } from '../middleware/auth'
 import { creditGuard, requestContextMiddleware } from '../middleware/credits'
 
@@ -65,7 +66,7 @@ chat.get('/sessions', async (c) => {
     .limit(50)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   return c.json({ sessions })
@@ -98,7 +99,7 @@ chat.get('/sessions/:sessionId', async (c) => {
     .order('created_at', { ascending: true })
 
   if (messagesError) {
-    throw new Error(messagesError.message)
+    throw handleError(messagesError, ErrorCode.INTERNAL)
   }
 
   return c.json({ session, messages })
@@ -136,7 +137,7 @@ chat.post(
       .single()
 
     if (error) {
-      throw new Error(error.message)
+      throw handleError(error, ErrorCode.INTERNAL)
     }
 
     return c.json({ session }, 201)
@@ -151,10 +152,14 @@ chat.delete('/sessions/:sessionId', async (c) => {
   const auth = requireAuth(c)
   const sessionId = c.req.param('sessionId')
 
-  const { error } = await auth.supabase.from('chat_sessions').delete().eq('id', sessionId)
+  const { error } = await auth.supabase
+    .from('chat_sessions')
+    .delete()
+    .eq('id', sessionId)
+    .eq('user_id', auth.userId)
 
   if (error) {
-    throw new Error(error.message)
+    throw handleError(error, ErrorCode.INTERNAL)
   }
 
   return c.json({ success: true })

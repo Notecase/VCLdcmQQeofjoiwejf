@@ -20,7 +20,7 @@ This document describes the architecture of the Inkdown application. It is the s
 12. [Database Schema](#database-schema)
 13. [Authentication](#authentication)
 14. [AI Architecture](#ai-architecture)
-15. [Mission Hub](#mission-hub)
+15. [Mission Hub (Deferred)](#mission-hub-feature-flagged--deferred)
 16. [Editor Architecture](#editor-architecture)
 17. [Environment Configuration](#environment-configuration)
 
@@ -165,30 +165,35 @@ Central error handling with `AppError` class:
 
 All agents and services use AI SDK v6 (`streamText`, `generateText`, `embed`, `ToolLoopAgent`). The legacy OpenAI SDK has been removed.
 
-| Provider         | Models                                 | Routed Tasks                                                                    |
-| ---------------- | -------------------------------------- | ------------------------------------------------------------------------------- |
-| **OpenAI**       | GPT-5.2 (chat), text-embedding-3-large | chat, note-agent, planner, secretary, completion, rewrite, summarize, embedding |
-| **Gemini**       | gemini-3.1-pro-preview                 | slides (native SDK for image gen), artifacts                                    |
-| **Ollama Cloud** | kimi-k2.5:cloud                        | artifact, code, html, css, javascript                                           |
+| Provider         | Models                                              | Routed Tasks                                                                                      |
+| ---------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Gemini**       | gemini-2.5-pro (primary), gemini-3-flash (fallback) | chat, note-agent, planner, secretary, editor, editor-deep, completion, rewrite, summarize, course |
+| **Gemini**       | gemini-3.1-pro-preview                              | slides                                                                                            |
+| **Gemini**       | gemini-3-flash-preview                              | inbox-agent                                                                                       |
+| **Gemini**       | deep-research-pro-preview                           | deep-research                                                                                     |
+| **Ollama Cloud** | kimi-k2.5                                           | artifact, code                                                                                    |
+| **OpenAI**       | text-embedding-3-large                              | embedding                                                                                         |
 
-`resolveModel(taskType)` returns an AI SDK `LanguageModel` + `ModelEntry` for the optimal provider. Providers are lazy-initialized singletons via `@ai-sdk/openai` and `@ai-sdk/google`.
+`selectModel(taskType)` returns a `ModelEntry` from the registry; `createAIModel(entry)` produces an AI SDK `LanguageModel`. Providers are lazy-initialized singletons via `@ai-sdk/openai`, `@ai-sdk/google`, and OpenAI-compatible Ollama endpoints.
 
 Gemini's native SDK (`@google/generative-ai`, `@google/genai`) is retained only for slide image generation, which requires features not available through AI SDK.
 
 ### Agent System (AI SDK v6 — 8 agents)
 
-| Agent                  | Purpose                           | AI SDK Pattern                                           |
-| ---------------------- | --------------------------------- | -------------------------------------------------------- |
-| **SecretaryAgent**     | Intent classification and routing | `ToolLoopAgent` with 15 tools                            |
-| **EditorDeepAgent**    | Full editor AI with tool loop     | `ToolLoopAgent` with 12 tools + stream adapter           |
-| **ChatAgent**          | Conversational AI with RAG        | `streamText()` with document context                     |
-| **NoteAgent**          | Note manipulation                 | `streamText()` / `generateText()`                        |
-| **PlannerAgent**       | Goal decomposition                | `generateText()` with structured output                  |
-| **ResearchAgent**      | Deep research workflow            | `ToolLoopAgent` for deep mode, `streamText()` for simple |
-| **ExplainAgent**       | Course AI tutor                   | `streamText()` with course context                       |
-| **CourseOrchestrator** | AI course generation pipeline     | `ToolLoopAgent` with merged subagent tools               |
+| Agent                  | Purpose                           | AI SDK Pattern                                           | Status     |
+| ---------------------- | --------------------------------- | -------------------------------------------------------- | ---------- |
+| **SecretaryAgent**     | Intent classification and routing | `ToolLoopAgent` with 15 tools                            | Active     |
+| **EditorDeepAgent**    | Full editor AI with tool loop     | `ToolLoopAgent` with 12 tools + stream adapter           | Active     |
+| **NoteAgent**          | Note manipulation                 | `streamText()` / `generateText()`                        | Active     |
+| **PlannerAgent**       | Goal decomposition                | `generateText()` with structured output                  | Active     |
+| **ResearchAgent**      | Deep research workflow            | `ToolLoopAgent` for deep mode, `streamText()` for simple | Active     |
+| **ChatAgent**          | Conversational AI with RAG        | `streamText()` with document context                     | Not routed |
+| **ExplainAgent**       | Course AI tutor                   | `streamText()` with course context                       | Deferred   |
+| **CourseOrchestrator** | AI course generation pipeline     | `ToolLoopAgent` with merged subagent tools               | Deferred   |
 
-All agents use `resolveModel()` from `ai-sdk-factory.ts` and `trackAISDKUsage()` from `ai-sdk-usage.ts` for usage tracking.
+**Note:** ChatAgent exists in code but is not currently routed to from any API endpoint. ExplainAgent and CourseOrchestrator are deferred for ~8 months post-launch.
+
+All agents use `selectModel()` / `createAIModel()` from `ai-sdk-factory.ts` and `trackAISDKUsage()` from `ai-sdk-usage.ts` for usage tracking.
 
 ### EditorDeepAgent Architecture (Compound Requests)
 
@@ -465,7 +470,7 @@ Plugins receive the Muya instance and can hook into events and extend UI.
 | ----------------------- | -------------------------------------------------------------------- |
 | **MemoryService**       | AI memory persistence (preferences, plans, context) via Supabase RPC |
 | **RoadmapService**      | Learning roadmap CRUD and week advancement                           |
-| **AgentSessionService** | LangGraph state persistence for multi-turn conversations             |
+| **AgentSessionService** | Agent state persistence for multi-turn conversations                 |
 
 ### Streaming
 
@@ -660,7 +665,7 @@ AI proposes edit via edit-proposal SSE chunk
 | `embedding_queue`         | Async embedding jobs (status, priority, attempts)                                |
 | `note_learning_resources` | Saved learning materials (type, data, item_count)                                |
 | `learning_roadmaps`       | Learning roadmaps (topic, status, current_week, content)                         |
-| `agent_sessions`          | LangGraph state persistence (thread_id, state, checkpoint_id)                    |
+| `agent_sessions`          | Agent state persistence (thread_id, state, checkpoint_id)                        |
 | `ai_memory`               | AI memory storage (memory_type, content, metadata) - accessed via RPC            |
 | `user_profiles`           | User profile data (display_name, plan, storage_used)                             |
 | `user_context_entries`    | Shared context bus logbook (agent, type, summary, payload, expires_at)           |
@@ -689,12 +694,15 @@ AI proposes edit via edit-proposal SSE chunk
 
 ### Provider Routing
 
-The `createProvider(taskType)` factory routes to the optimal provider:
+The `selectModel(taskType)` + `createAIModel(entry)` factory routes to the optimal provider:
 
 ```
-chat/note-agent/planner/secretary -> Gemini (gemini-3.1-pro-preview)
-slides/research/course             -> Gemini (gemini-2.0-flash-exp / deep-research-pro)
-artifact/code/html/css/js          -> Ollama Cloud (kimi-k2.5)
+chat/note-agent/planner/secretary/editor/editor-deep/completion/rewrite/summarize/course
+                                   -> Gemini (gemini-2.5-pro, fallback: gemini-3-flash)
+slides                             -> Gemini (gemini-3.1-pro-preview)
+inbox-agent                        -> Gemini (gemini-3-flash-preview)
+deep-research                      -> Gemini (deep-research-pro-preview)
+artifact/code                      -> Ollama Cloud (kimi-k2.5)
 embedding                          -> OpenAI (text-embedding-3-large, 1536 dims)
 heartbeat (BYOK)                   -> User's preferred provider via createBYOKProvider()
 ```
@@ -703,7 +711,7 @@ heartbeat (BYOK)                   -> User's preferred provider via createBYOKPr
 
 1. **Secretary** receives all user messages, classifies intent
 2. Routes to specialized agent or tool execution
-3. Agents use LangGraph for state management
+3. Agents use AI SDK v6 `ToolLoopAgent` / `streamText` / `generateText` patterns
 4. Tools execute against Supabase via `ToolContext` (userId + supabase client)
 5. All responses support SSE streaming
 
@@ -777,7 +785,9 @@ Orchestrated workflows shipped with `@noteshell/mcp`:
 
 ---
 
-## Mission Hub
+## Mission Hub (Feature-Flagged — Deferred)
+
+> **Status:** Feature-flagged behind `VITE_MISSION_HUB_V1` / `MISSION_HUB_V1`. Not active for launch. Code exists but is not exposed to users.
 
 The Mission Hub is an autonomous learning orchestration system. A user enters a high-level goal, and the system orchestrates multiple agents through a four-stage pipeline with approval gates.
 

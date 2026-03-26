@@ -41,7 +41,7 @@ app.use(
     credentials: config.cors.credentials,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Timezone'],
-    exposeHeaders: ['X-Response-Time'],
+    exposeHeaders: ['X-Response-Time', 'X-Request-Id'],
     maxAge: 86400, // 24 hours
   })
 )

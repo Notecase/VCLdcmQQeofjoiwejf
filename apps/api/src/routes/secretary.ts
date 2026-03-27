@@ -744,14 +744,8 @@ secretary.get('/plan/:planId', async (c) => {
   const { MemoryService } = await import('@inkdown/ai/agents')
   const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
 
-  // Read roadmap and instructions files in parallel
-  const [roadmapFile, instructionsFile, planMd] = await Promise.all([
-    memService.readFile(`Plans/${planId.toLowerCase()}-roadmap.md`),
-    memService.readFile(`Plans/${planId.toLowerCase()}-instructions.md`),
-    memService.readFile('Plan.md'),
-  ])
-
-  // Parse plan data from Plan.md to find matching plan
+  // Parse Plan.md first to find the plan and its archiveFilename
+  const planMd = await memService.readFile('Plan.md')
   const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
   const parsed = parsePlanMarkdown(planMd?.content || '')
   const plan = parsed.plans.find((p) => p.id === planId) || null
@@ -759,6 +753,26 @@ secretary.get('/plan/:planId', async (c) => {
   if (!plan) {
     return c.json({ error: 'Plan not found' }, 404)
   }
+
+  // Try the canonical archive path first, then search Plans/ for a matching file
+  const canonicalPath = plan.archiveFilename || `Plans/${planId.toLowerCase()}-roadmap.md`
+  let roadmapFile = await memService.readFile(canonicalPath)
+
+  // Fallback: search Plans/ folder for any file containing the planId
+  if (!roadmapFile?.content) {
+    const planFiles = await memService.listFiles('Plans/')
+    const match = planFiles.find(
+      (f) =>
+        f.filename.toLowerCase().includes(planId.toLowerCase()) &&
+        f.filename.endsWith('-roadmap.md')
+    )
+    if (match) {
+      roadmapFile = { content: match.content } as typeof roadmapFile
+    }
+  }
+
+  const instructionsPath = canonicalPath.replace('-roadmap.md', '-instructions.md')
+  const instructionsFile = await memService.readFile(instructionsPath)
 
   // Load schedules and plan-project link in parallel
   const [schedulesResult, linkResult] = await Promise.all([

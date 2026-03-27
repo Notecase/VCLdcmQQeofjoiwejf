@@ -316,14 +316,19 @@ export const useSecretaryStore = defineStore('secretary', () => {
       }
 
       const res = await authFetch(`${SECRETARY_API}/memory`)
+      if (!res.ok) {
+        throw new Error(`Memory fetch failed: ${res.status}`)
+      }
       const data = await res.json()
 
       if (data.files && data.files.length > 0) {
         memoryFiles.value = data.files
       } else {
         const initRes = await authFetch(`${SECRETARY_API}/initialize`, { method: 'POST' })
-        const initData = await initRes.json()
-        memoryFiles.value = initData.files || []
+        if (initRes.ok) {
+          const initData = await initRes.json()
+          memoryFiles.value = initData.files || []
+        }
       }
 
       parsePlanData()
@@ -354,13 +359,18 @@ export const useSecretaryStore = defineStore('secretary', () => {
   async function refreshMemoryFiles() {
     try {
       const res = await authFetch(`${SECRETARY_API}/memory`)
+      if (!res.ok) {
+        // Don't overwrite existing data on error (e.g. 429 rate limit)
+        console.warn(`[Secretary] refreshMemoryFiles failed: ${res.status}`)
+        return
+      }
       const data = await res.json()
       memoryFiles.value = data.files || []
       parsePlanData()
       await loadHeartbeatState()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to refresh memory files'
-      notifications.error(msg)
+      console.warn(`[Secretary] ${msg}`)
     }
   }
 

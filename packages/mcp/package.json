@@ -1,6 +1,7 @@
 {
   "name": "@noteshell/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "description": "Noteshell MCP Server — 43 pure-data tools for notes, planning, and learning. Zero AI calls.",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -13,9 +14,11 @@
   ],
   "bin": {
     "noteshell": "scripts/noteshell.mjs",
-    "mcp": "scripts/noteshell.mjs",
     "noteshell-mcp": "dist/index.js",
     "noteshell-setup": "scripts/setup.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

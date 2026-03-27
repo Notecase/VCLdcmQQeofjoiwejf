@@ -53,9 +53,8 @@ export function loadConfig(): NoteshellConfig {
     return ConfigSchema.parse(fromEnv)
   } catch {
     throw new Error(
-      'Missing Noteshell config. Create ~/.noteshell.json with {supabase_url, supabase_anon_key, access_token} ' +
-        'or {supabase_url, supabase_anon_key, service_key, user_id}. ' +
-        'Alternatively set SUPABASE_URL, SUPABASE_ANON_KEY, and either NOTESHELL_ACCESS_TOKEN or SUPABASE_SERVICE_KEY + NOTESHELL_USER_ID env vars.'
+      'Missing Noteshell config. Run `npx @noteshell/mcp login` to authenticate, ' +
+        'or set SUPABASE_URL, SUPABASE_ANON_KEY, and either NOTESHELL_ACCESS_TOKEN or SUPABASE_SERVICE_KEY + NOTESHELL_USER_ID env vars.'
     )
   }
 }

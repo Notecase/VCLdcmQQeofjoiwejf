@@ -69,7 +69,9 @@ export async function createDbClient(config: NoteshellConfig): Promise<DbClient>
           config = updatedConfig
         }
       } catch {
-        // Refresh failed — proceed with existing token
+        console.error(
+          'Noteshell: token refresh failed — run `npx @noteshell/mcp login` to re-authenticate'
+        )
       }
     }
   }

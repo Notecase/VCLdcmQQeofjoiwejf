@@ -12,7 +12,7 @@ import { registerAllTools } from './tools/index.js'
 export function createServer(db: DbClient): McpServer {
   const server = new McpServer({
     name: 'noteshell',
-    version: '0.1.0',
+    version: '0.3.0',
   })
 
   registerAllTools(server, db)

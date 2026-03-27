@@ -1,6 +1,6 @@
 # @noteshell/mcp
 
-> Noteshell MCP Server — Access your notes, tasks, and learning plans from Claude Code and any MCP-compatible client. 40 pure-data tools, zero AI calls, 2-minute setup.
+> Noteshell MCP Server — Access your notes, tasks, and learning plans from Claude Code and any MCP-compatible client. 43 pure-data tools, zero AI calls, 2-minute setup.
 
 ## What is Noteshell?
 
@@ -11,10 +11,14 @@ Noteshell is an agent-first learning OS for students, researchers, and lifelong 
 ### 1. Authenticate
 
 ```bash
+# Recommended: browser-based login
+npx @noteshell/mcp login
+
+# Legacy alternative: email/password
 npx @noteshell/mcp setup <your-email> <your-password>
 ```
 
-This logs you into Noteshell and saves your credentials to `~/.noteshell.json`. No Supabase account needed — you just need a [Noteshell account](https://noteshell.app).
+This logs you into Noteshell and saves your credentials to `~/.noteshell.json`. You need a [Noteshell account](https://noteshell.app).
 
 ### 2. Add to Claude Code
 
@@ -35,13 +39,13 @@ Reload Claude Code — done.
 
 ---
 
-## Available Tools (40 total)
+## Available Tools (43 total)
 
 | Prefix                 | Count | What it does                                      |
 | ---------------------- | ----- | ------------------------------------------------- |
-| `notes_*`              | 12    | Create, read, update, search, organize notes      |
+| `notes_*`              | 13    | Create, read, update, search, organize notes      |
 | `projects_*`           | 1     | List your projects/folders                        |
-| `secretary_*`          | 18    | Daily tasks, study plans, memory files, analytics |
+| `secretary_*`          | 20    | Daily tasks, study plans, memory files, analytics |
 | `context_*` / `soul_*` | 5     | Cross-agent context bus, user goals & preferences |
 | `calendar_*`           | 3     | Calendar events                                   |
 | `search_*`             | 2     | Full-text search across notes and memory          |
@@ -81,6 +85,18 @@ Your Noteshell data (cloud, secured by your account)
 ```
 
 No AI runs inside the MCP server. Claude does the thinking; Noteshell provides the data.
+
+---
+
+## Skill (Methodology Workflows)
+
+For structured workflows (morning routine, evening reflection, weekly review, study planning), install the companion skill:
+
+```bash
+npx skills add Notecase/noteshell-mcp
+```
+
+This teaches your AI agent **how** to use the MCP tools effectively — slash commands like `/plan-my-day`, `/morning-routine`, `/evening-reflection`, `/weekly-review`.
 
 ---
 

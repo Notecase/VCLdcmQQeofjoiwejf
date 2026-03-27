@@ -1,6 +1,6 @@
 ---
 name: noteshell
-description: Noteshell MCP Server — Access Inkdown notes, secretary, context, and search from Claude Code / Codex CLI. 40 pure-data tools, zero AI calls.
+description: Noteshell MCP Server — Access Inkdown notes, secretary, context, and search from Claude Code / Codex CLI. 43 pure-data tools, zero AI calls.
 ---
 
 # Noteshell MCP Server
@@ -13,9 +13,9 @@ description: Noteshell MCP Server — Access Inkdown notes, secretary, context, 
 
 | Prefix                 | Count | Purpose                                        |
 | ---------------------- | ----- | ---------------------------------------------- |
-| `notes_*`              | 11    | Note CRUD, search, structure analysis          |
+| `notes_*`              | 13    | Note CRUD, search, artifacts, structure        |
 | `projects_*`           | 1     | List projects/folders                          |
-| `secretary_*`          | 18    | Memory files, plans, daily tasks, analytics    |
+| `secretary_*`          | 20    | Memory files, plans, daily tasks, analytics    |
 | `context_*` / `soul_*` | 5     | Cross-agent context bus, user soul/preferences |
 | `calendar_*`           | 3     | Calendar events via memory files               |
 | `search_*`             | 2     | Full-text search across notes + memory         |
@@ -112,6 +112,10 @@ For deeper workflows, see the specialized skill files:
 ### Setup (run once)
 
 ```bash
+# Recommended: browser-based login
+npx @noteshell/mcp login
+
+# Legacy alternative: email/password
 npx @noteshell/mcp setup <email> <password>
 ```
 

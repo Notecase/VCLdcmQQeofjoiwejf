@@ -20,9 +20,9 @@ npx @noteshell/mcp setup <your-email> <your-password>
 
 This logs you into Noteshell and saves your credentials to `~/.noteshell.json`. You need a [Noteshell account](https://noteshell.app).
 
-### 2. Add to Claude Code
+### 2. Add to your AI coding tool
 
-Add to your `~/.claude.json` or `.mcp.json`:
+Add to your `~/.claude.json`, `.mcp.json`, or equivalent MCP config:
 
 ```json
 {
@@ -35,7 +35,7 @@ Add to your `~/.claude.json` or `.mcp.json`:
 }
 ```
 
-Reload Claude Code — done.
+Reload your AI coding tool — done. Works with Claude Code, Cursor, Codex CLI, and any MCP-compatible client.
 
 ---
 
@@ -54,21 +54,24 @@ Reload Claude Code — done.
 
 ## Skills
 
-Noteshell ships with **methodology skills** — step-by-step workflows that tell Claude how to use the tools effectively:
+Noteshell ships with **7 methodology skills** — step-by-step workflows that teach your AI agent how to use the tools effectively:
 
-| Skill                 | Purpose                                                  |
-| --------------------- | -------------------------------------------------------- |
-| **Daily Workflow**    | Morning routines, activity logging, evening reflection   |
-| **Study Planning**    | Create roadmaps, break down subjects, track progress     |
-| **Note Organization** | Structure projects, enrich notes, convert tasks to notes |
-| **Research to Notes** | Capture research findings as structured knowledge        |
+| Skill                  | Purpose                                                |
+| ---------------------- | ------------------------------------------------------ |
+| **Morning Routine**    | Review yesterday, archive, pick focus, generate plan   |
+| **Evening Reflection** | Capture mood, carry over tasks, prepare tomorrow       |
+| **Weekly Review**      | 7-day analytics, plan progress, mood trends            |
+| **Study Planning**     | Create roadmaps, break down subjects, track progress   |
+| **Note Organization**  | Structure projects, enrich notes, task-to-note pattern |
+| **Research to Notes**  | Capture research findings as structured knowledge      |
+| **Daily Workflow**     | Activity logging, quick task updates during the day    |
 
-Once the MCP server is running, just talk to Claude naturally:
+Once the MCP server is running, just talk to your AI agent naturally:
 
 - _"Plan my day"_
 - _"What have I been working on?"_
 - _"Create a study plan for algorithms"_
-- _"Save my research findings as a note"_
+- _"How am I doing this week?"_
 
 ---
 

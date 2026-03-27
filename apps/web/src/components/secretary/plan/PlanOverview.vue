@@ -12,9 +12,16 @@ const props = defineProps<{
 
 const isExpanded = ref(false)
 
+/** Strip outer markdown code fences (```...```) that some AI generations include */
+function stripOuterCodeFence(text: string): string {
+  const trimmed = text.trim()
+  const m = trimmed.match(/^```\w*\n([\s\S]*?)\n```\s*$/)
+  return m ? m[1] : trimmed
+}
+
 const renderedRoadmap = computed(() => {
   if (!props.roadmapContent) return ''
-  return renderMathMarkdown(props.roadmapContent)
+  return renderMathMarkdown(stripOuterCodeFence(props.roadmapContent))
 })
 
 const emit = defineEmits<{
@@ -48,8 +55,8 @@ function onInstructionsBlur() {
   }
 }
 
-// Build a structured summary from typed plan fields + phase headings
-function extractDescription(): string {
+// Build structured summary pieces from typed plan fields + phase headings
+const metaParts = computed(() => {
   const p = props.plan
   const parts: string[] = []
   if (p.progress?.totalDays) parts.push(`${p.progress.totalDays} days`)
@@ -58,22 +65,20 @@ function extractDescription(): string {
     const days = p.schedule.studyDays
     parts.push(days.length === 1 ? days[0] : days.join(', '))
   }
+  return parts
+})
 
-  // Extract phase names from ## headings (only if roadmap content exists)
+const phaseSummary = computed(() => {
+  const content = props.roadmapContent ? stripOuterCodeFence(props.roadmapContent) : ''
   const phases: string[] = []
-  if (props.roadmapContent) {
-    for (const line of props.roadmapContent.split('\n')) {
+  if (content) {
+    for (const line of content.split('\n')) {
       const m = line.trim().match(/^##\s+(?:Phase\s+\d+:\s*)?(.+?)(?:\s*\(Days?\s+[\d–-]+\))?\s*$/)
       if (m) phases.push(m[1].trim())
     }
   }
-
-  let summary = parts.join(' · ')
-  if (phases.length > 0) {
-    summary += (summary ? '. ' : '') + `Covers: ${phases.join(', ')}`
-  }
-  return summary || p.name
-}
+  return phases.length > 0 ? `Covers: ${phases.join(', ')}` : ''
+})
 </script>
 
 <template>
@@ -95,12 +100,34 @@ function extractDescription(): string {
           </button>
         </div>
 
-        <p
+        <div
           v-if="!isExpanded"
-          class="description-text"
+          class="description-summary"
         >
-          {{ extractDescription() }}
-        </p>
+          <div
+            v-if="metaParts.length"
+            class="meta-pills"
+          >
+            <span
+              v-for="part in metaParts"
+              :key="part"
+              class="meta-pill"
+              >{{ part }}</span
+            >
+          </div>
+          <p
+            v-if="phaseSummary"
+            class="phase-summary"
+          >
+            {{ phaseSummary }}
+          </p>
+          <p
+            v-if="!metaParts.length && !phaseSummary"
+            class="phase-summary"
+          >
+            {{ plan.name }}
+          </p>
+        </div>
 
         <div
           v-else
@@ -254,8 +281,29 @@ function extractDescription(): string {
   background: transparent;
 }
 
-.description-text {
-  font-size: 14px;
+.description-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-pill {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--sec-surface-1, rgba(255, 255, 255, 0.05));
+  color: var(--text-color-secondary, #94a3b8);
+  border: 1px solid var(--sec-glass-border, rgba(255, 255, 255, 0.06));
+}
+
+.phase-summary {
+  font-size: 13px;
   line-height: 1.6;
   color: var(--text-color, #e2e8f0);
   margin: 0;

@@ -557,8 +557,8 @@ When given a subject/topic, create a comprehensive study plan that includes:
 5. Estimated hours per day
 6. Review and practice sessions interspersed
 
-Output format (markdown):
-\`\`\`
+Output format (raw markdown, do NOT wrap in code fences):
+
 # [ID] Plan Name
 **Duration:** X days
 **Hours/day:** Y
@@ -571,7 +571,6 @@ Output format (markdown):
 
 ## Phase 2: Intermediate (Days 4-7)
 ...
-\`\`\`
 
 Be specific about topics — not just "learn X" but "X: specific subtopic with practical exercises".`
 

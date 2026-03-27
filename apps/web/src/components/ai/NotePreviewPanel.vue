@@ -61,7 +61,7 @@ const wordCountDisplay = computed(() => {
 // Source citations for the current edit (web sources shown above diff action bar)
 const currentEditCitations = computed(() => {
   if (!previewNoteId.value) return []
-  const edits = aiStore.allPendingEdits.filter(
+  const edits = (aiStore.pendingEdits || []).filter(
     (e) => e.noteId === previewNoteId.value && e.status === 'pending' && e.messageId
   )
   if (edits.length === 0) return []

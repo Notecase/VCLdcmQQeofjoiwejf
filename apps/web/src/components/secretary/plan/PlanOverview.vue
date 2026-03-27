@@ -48,47 +48,31 @@ function onInstructionsBlur() {
   }
 }
 
-// Build a structured summary from roadmap metadata and phase headings
+// Build a structured summary from typed plan fields + phase headings
 function extractDescription(): string {
-  if (!props.roadmapContent) return props.plan.name
-  const lines = props.roadmapContent.split('\n')
-
-  const meta: Record<string, string> = {}
-  const phases: string[] = []
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-    // Parse **Key:** Value metadata
-    const metaMatch = trimmed.match(/^\*\*(.+?):\*\*\s*(.+)/)
-    if (metaMatch) {
-      meta[metaMatch[1].toLowerCase()] = metaMatch[2].trim()
-      continue
-    }
-    // Collect phase names from ## headings (strip "Phase N:" prefix and day ranges)
-    const phaseMatch = trimmed.match(
-      /^##\s+(?:Phase\s+\d+:\s*)?(.+?)(?:\s*\(Days?\s+[\d–-]+\))?\s*$/
-    )
-    if (phaseMatch) {
-      phases.push(phaseMatch[1].trim())
-    }
-  }
-
+  const p = props.plan
   const parts: string[] = []
-  const duration = meta['duration']
-  const hoursPerDay = meta['hours/day'] || meta['hours per day']
-  const schedule = meta['schedule']
-
-  if (duration) parts.push(duration)
-  if (hoursPerDay && schedule) parts.push(`${hoursPerDay}h/day, ${schedule.toLowerCase()}`)
-  else if (hoursPerDay) parts.push(`${hoursPerDay}h/day`)
-  else if (schedule) parts.push(schedule.toLowerCase())
-
-  let summary = parts.join('. ')
-  if (phases.length > 0) {
-    summary += `. Covers: ${phases.join(', ')}`
+  if (p.progress?.totalDays) parts.push(`${p.progress.totalDays} days`)
+  if (p.schedule?.hoursPerDay) parts.push(`${p.schedule.hoursPerDay}h/day`)
+  if (p.schedule?.studyDays?.length) {
+    const days = p.schedule.studyDays
+    parts.push(days.length === 1 ? days[0] : days.join(', '))
   }
 
-  return summary || props.plan.name
+  // Extract phase names from ## headings (only if roadmap content exists)
+  const phases: string[] = []
+  if (props.roadmapContent) {
+    for (const line of props.roadmapContent.split('\n')) {
+      const m = line.trim().match(/^##\s+(?:Phase\s+\d+:\s*)?(.+?)(?:\s*\(Days?\s+[\d–-]+\))?\s*$/)
+      if (m) phases.push(m[1].trim())
+    }
+  }
+
+  let summary = parts.join(' · ')
+  if (phases.length > 0) {
+    summary += (summary ? '. ' : '') + `Covers: ${phases.join(', ')}`
+  }
+  return summary || p.name
 }
 </script>
 
@@ -120,7 +104,7 @@ function extractDescription(): string {
 
         <div
           v-else
-          class="roadmap-full prose"
+          class="roadmap-full"
           v-html="renderedRoadmap"
         />
 
@@ -222,7 +206,9 @@ function extractDescription(): string {
   overflow-y: auto;
   overflow-x: hidden;
   word-break: break-word;
+  overflow-wrap: anywhere;
   padding-right: 8px;
+  background: transparent;
 }
 
 .roadmap-full :deep(h1),
@@ -255,6 +241,17 @@ function extractDescription(): string {
 
 .roadmap-full :deep(strong) {
   color: var(--sec-primary, #10b981);
+}
+
+.roadmap-full :deep(pre) {
+  background: var(--sec-surface-1, rgba(255, 255, 255, 0.03));
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.roadmap-full :deep(pre code) {
+  background: transparent;
 }
 
 .description-text {

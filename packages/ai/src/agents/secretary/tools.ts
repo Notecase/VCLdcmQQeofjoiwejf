@@ -331,29 +331,8 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
       const currentTopic =
         planMdEntry?.match(/-\s*Current:\s*(.+)/i)?.[1]?.trim() || 'Week 1 - Getting started'
 
-      // Normalize to canonical Plan.md format to prevent stale or conflicting summaries.
-      planMdEntry = renderPlanEntryMarkdown({
-        planId,
-        planName,
-        status: 'active',
-        progressCurrent: 0,
-        progressTotal: meta.durationDays,
-        startDate: start,
-        endDate: end,
-        schedule: meta.schedule,
-        currentTopic,
-      })
-
-      // Update Plan.md with the new entry
-      const planFile = await memoryService.readFile('Plan.md')
-      const currentContent = planFile?.content || ''
-      const updatedContent = insertPlanEntry(currentContent, planMdEntry ?? '')
-      await memoryService.writeFile('Plan.md', updatedContent)
-
-      // Clear pending roadmap
-      clearPendingRoadmap(config.userId)
-
       // Auto-create linked project folder if supabase is available
+      let linkedProjectId: string | undefined
       if (config.supabase) {
         try {
           const { data: existingLink } = await config.supabase
@@ -363,7 +342,9 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
             .eq('plan_id', planId)
             .maybeSingle()
 
-          if (!existingLink) {
+          if (existingLink) {
+            linkedProjectId = existingLink.project_id
+          } else {
             const { data: project } = await config.supabase
               .from('projects')
               .insert({ name: planName, icon: '📋', color: '#10b981', user_id: config.userId })
@@ -371,6 +352,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
               .single()
 
             if (project) {
+              linkedProjectId = project.id
               await config.supabase
                 .from('plan_project_links')
                 .insert({ user_id: config.userId, plan_id: planId, project_id: project.id })
@@ -383,6 +365,29 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
           })
         }
       }
+
+      // Normalize to canonical Plan.md format to prevent stale or conflicting summaries.
+      planMdEntry = renderPlanEntryMarkdown({
+        planId,
+        planName,
+        status: 'active',
+        progressCurrent: 0,
+        progressTotal: meta.durationDays,
+        startDate: start,
+        endDate: end,
+        schedule: meta.schedule,
+        currentTopic,
+        projectId: linkedProjectId,
+      })
+
+      // Update Plan.md with the new entry
+      const planFile = await memoryService.readFile('Plan.md')
+      const currentContent = planFile?.content || ''
+      const updatedContent = insertPlanEntry(currentContent, planMdEntry ?? '')
+      await memoryService.writeFile('Plan.md', updatedContent)
+
+      // Clear pending roadmap
+      clearPendingRoadmap(config.userId)
 
       return `Roadmap saved: ${archiveFilename} and Plan.md updated with [${planId}] ${planName}`
     },

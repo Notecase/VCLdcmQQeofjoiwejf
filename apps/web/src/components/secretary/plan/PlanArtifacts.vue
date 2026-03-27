@@ -8,7 +8,7 @@ const props = withDefaults(
   defineProps<{
     artifacts: TaskArtifactLink[]
     planId: string
-    projectNotes?: Array<{ id: string; title: string; updatedAt: string }>
+    projectNotes?: Array<{ id: string; title: string; updatedAt: string; sourceTask?: string }>
   }>(),
   { projectNotes: () => [] }
 )
@@ -44,6 +44,7 @@ const mergedArtifacts = computed((): TaskArtifactLink[] => {
       targetId: n.id,
       createdByAgent: 'project',
       createdAt: n.updatedAt,
+      sourceTask: n.sourceTask,
     }))
 
   return [...props.artifacts, ...noteArtifacts]
@@ -173,6 +174,12 @@ function handleGenerate(workflowId: string) {
           >
         </div>
         <span class="card-title">{{ artifact.label }}</span>
+        <span
+          v-if="artifact.sourceTask"
+          class="card-source-task"
+        >
+          From: {{ artifact.sourceTask }}
+        </span>
         <div class="card-footer">
           <span class="card-date">{{
             new Date(artifact.createdAt).toLocaleDateString('en-US', {
@@ -363,6 +370,16 @@ function handleGenerate(workflowId: string) {
   color: var(--text-color, #e2e8f0);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-source-task {
+  font-size: 11px;
+  color: var(--text-color-secondary, #94a3b8);
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

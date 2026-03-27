@@ -780,20 +780,27 @@ secretary.get('/plan/:planId', async (c) => {
   const projectId = linkResult.data?.project_id || undefined
 
   // If linked, load notes from the project folder
-  let projectNotes: Array<{ id: string; title: string; updatedAt: string }> = []
+  let projectNotes: Array<{ id: string; title: string; updatedAt: string; sourceTask?: string }> =
+    []
   if (projectId) {
     const { data: notes } = await auth.supabase
       .from('notes')
-      .select('id, title, updated_at')
+      .select('id, title, updated_at, tags')
       .eq('project_id', projectId)
       .order('updated_at', { ascending: false })
       .limit(50)
     if (notes) {
-      projectNotes = notes.map((n: { id: string; title: string; updated_at: string }) => ({
-        id: n.id,
-        title: n.title,
-        updatedAt: n.updated_at,
-      }))
+      projectNotes = notes.map(
+        (n: { id: string; title: string; updated_at: string; tags: string[] | null }) => {
+          const planTaskTag = (n.tags || []).find((t: string) => t.startsWith('plan-task:'))
+          return {
+            id: n.id,
+            title: n.title,
+            updatedAt: n.updated_at,
+            sourceTask: planTaskTag ? planTaskTag.slice('plan-task:'.length) : undefined,
+          }
+        }
+      )
     }
   }
 

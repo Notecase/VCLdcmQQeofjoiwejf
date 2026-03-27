@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { renderMathContent } from '@/utils/mathRenderer'
 import type { LearningRoadmap } from '@inkdown/shared/types'
 
 const props = defineProps<{
@@ -7,6 +9,13 @@ const props = defineProps<{
   instructions: string
   roadmapContent: string
 }>()
+
+const isExpanded = ref(false)
+
+const renderedRoadmap = computed(() => {
+  if (!props.roadmapContent) return ''
+  return renderMathContent(props.roadmapContent)
+})
 
 const emit = defineEmits<{
   'update:instructions': [content: string]
@@ -64,11 +73,36 @@ function extractDescription(): string {
   <section class="plan-overview">
     <div class="overview-grid">
       <div class="overview-left">
-        <span class="section-label">Description</span>
-        <p class="description-text">{{ extractDescription() }}</p>
+        <div class="description-header">
+          <span class="section-label">Description</span>
+          <button
+            v-if="roadmapContent"
+            class="expand-toggle"
+            @click="isExpanded = !isExpanded"
+          >
+            <component
+              :is="isExpanded ? ChevronUp : ChevronDown"
+              :size="14"
+            />
+            {{ isExpanded ? 'Collapse' : 'Show full plan' }}
+          </button>
+        </div>
+
+        <p
+          v-if="!isExpanded"
+          class="description-text"
+        >
+          {{ extractDescription() }}
+        </p>
 
         <div
-          v-if="plan.currentTopic"
+          v-else
+          class="roadmap-full prose"
+          v-html="renderedRoadmap"
+        />
+
+        <div
+          v-if="plan.currentTopic && !isExpanded"
           class="current-topic-block"
         >
           <span class="topic-label">Current topic</span>
@@ -121,10 +155,80 @@ function extractDescription(): string {
   }
 }
 
+.description-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.description-header .section-label {
+  margin-bottom: 0;
+}
+
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--sec-glass-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color-secondary, #94a3b8);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--sec-transition-fast) ease;
+}
+
+.expand-toggle:hover {
+  border-color: var(--sec-glass-border-hover);
+  color: var(--text-color, #e2e8f0);
+}
+
 .overview-left {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.roadmap-full {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color, #e2e8f0);
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.roadmap-full :deep(h1),
+.roadmap-full :deep(h2),
+.roadmap-full :deep(h3) {
+  color: var(--text-color, #e2e8f0);
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.roadmap-full :deep(h1) {
+  font-size: 18px;
+}
+.roadmap-full :deep(h2) {
+  font-size: 15px;
+}
+.roadmap-full :deep(h3) {
+  font-size: 14px;
+}
+
+.roadmap-full :deep(ul),
+.roadmap-full :deep(ol) {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.roadmap-full :deep(li) {
+  margin-bottom: 4px;
+}
+
+.roadmap-full :deep(strong) {
+  color: var(--sec-primary, #10b981);
 }
 
 .description-text {

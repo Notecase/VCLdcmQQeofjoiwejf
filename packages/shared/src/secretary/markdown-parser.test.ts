@@ -29,6 +29,43 @@ describe('parsePlanMarkdown', () => {
     expect(result.warnings.some((w) => w.severity === 'error')).toBe(false)
   })
 
+  it('parses projectId from plan entry', () => {
+    const content = [
+      '# Learning Plans',
+      '',
+      '## Active Plans',
+      '',
+      '### [RE] Reinforcement Learning (active)',
+      '- Progress: 16/120',
+      '- Date: 2026-02-06 - 2026-06-06',
+      '- Schedule: Daily 2h/day',
+      '- Current: Week 6 - Function Approximation',
+      '- ProjectId: 550e8400-e29b-41d4-a716-446655440000',
+    ].join('\n')
+
+    const result = parsePlanMarkdown(content)
+    expect(result.plans).toHaveLength(1)
+    expect(result.plans[0].projectId).toBe('550e8400-e29b-41d4-a716-446655440000')
+  })
+
+  it('handles missing projectId gracefully', () => {
+    const content = [
+      '# Learning Plans',
+      '',
+      '## Active Plans',
+      '',
+      '### [DL] Deep Learning (active)',
+      '- Progress: 5/90',
+      '- Date: 2026-01-01 - 2026-03-30',
+      '- Schedule: MWF 2h/day',
+      '- Current: Week 2 - CNNs',
+    ].join('\n')
+
+    const result = parsePlanMarkdown(content)
+    expect(result.plans).toHaveLength(1)
+    expect(result.plans[0].projectId).toBeUndefined()
+  })
+
   it('tolerates missing status and still parses plan with warning', () => {
     const content = [
       '# Learning Plans',

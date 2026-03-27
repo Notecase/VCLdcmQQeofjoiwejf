@@ -15,6 +15,7 @@ export interface RenderPlanEntryInput {
   endDate: string
   schedule: string
   currentTopic?: string
+  projectId?: string
 }
 
 function encodeArtifactValue(value: string | undefined): string {
@@ -104,11 +105,15 @@ export function renderPlanEntryMarkdown(input: RenderPlanEntryInput): string {
   const total = input.progressTotal ?? 14
   const topic = input.currentTopic || 'Week 1 - Getting started'
 
-  return [
+  const lines = [
     `### [${input.planId}] ${input.planName} (${status})`,
     `- Progress: ${current}/${total}`,
     `- Date: ${input.startDate} - ${input.endDate}`,
     `- Schedule: ${input.schedule}`,
     `- Current: ${topic}`,
-  ].join('\n')
+  ]
+  if (input.projectId) {
+    lines.push(`- ProjectId: ${input.projectId}`)
+  }
+  return lines.join('\n')
 }

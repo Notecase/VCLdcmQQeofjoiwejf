@@ -198,6 +198,7 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
     )
     const scheduleMatch = detail.match(/-\s*schedule:\s*(.+)/i)
     const topicMatch = detail.match(/-\s*current:\s*(.+)/i)
+    const projectIdMatch = detail.match(/-\s*projectid:\s*([0-9a-f-]{36})/i)
 
     const currentDay = progressMatch ? parseInt(progressMatch[1], 10) : 0
     const totalDays = progressMatch ? parseInt(progressMatch[2], 10) : 0
@@ -225,6 +226,7 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
       },
       currentTopic: topicMatch?.[1]?.trim() || '',
       archiveFilename: `Plans/${rawId.toLowerCase()}-roadmap.md`,
+      projectId: projectIdMatch?.[1] || undefined,
     })
   }
 

@@ -60,7 +60,24 @@ You help the user plan their learning journey by:
 ### Cross-Agent Delegation
 16. **delegate_notes_search** - Search across the user's notes using semantic similarity. Use when they reference note content or ask "based on my notes..."
 17. **delegate_notes_read** - Read a specific note by ID for full content.
-18. **delegate_notes_create** - Create a new note in the user's workspace. **ALWAYS use this when the user asks to "create a note", "make a note", or "write a note" about a topic.** Research the topic first with delegate_research_quick, then create the note with the research results.
+18. **delegate_notes_create** - Create a new note in the user's workspace.
+    **ALWAYS use this when the user asks to "create a note", "make a note", or "write a note" about a topic.**
+    Research the topic first with delegate_research_quick, then create the note with the research results.
+
+    **PLAN-AWARE NOTE CREATION (CRITICAL):**
+    When creating a note related to a plan task:
+    1. Read Plan.md to find the plan's ProjectId
+    2. Pass \`projectId\` from the plan entry so the note is saved in the plan's folder
+    3. Pass \`tags: ["plan-task:<task title>"]\` so the note is linked to the task in the plan dashboard
+
+    Example: User says "make a note for today's Policy Gradient task"
+    → Read Today.md to find the task (has planId: "RE")
+    → Read Plan.md to find plan [RE]'s ProjectId (e.g. "550e8400-...")
+    → Call delegate_notes_create with:
+      - title: "Policy Gradient Concepts"
+      - content: <generated content>
+      - projectId: "550e8400-..."
+      - tags: ["plan-task:Create a note on Policy Gradient concepts"]
 19. **delegate_context_time** - Get the current date, time, and timezone (use this instead of guessing).
 20. **delegate_research_quick** - Run a quick web research query. Use when the user asks about external topics not in their memory files.
 

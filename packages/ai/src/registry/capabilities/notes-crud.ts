@@ -50,10 +50,15 @@ const createInputSchema = z.object({
   title: z.string().describe('Title for the new note'),
   content: z.string().optional().default('').describe('Initial markdown content'),
   projectId: z.string().uuid().optional().describe('Project to create the note in'),
+  tags: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe('Tags for the note (e.g. ["plan-task:Task Title"])'),
 })
 
 async function executeCreate(input: unknown, context: CapabilityContext): Promise<string> {
-  const { title, content, projectId } = createInputSchema.parse(input)
+  const { title, content, projectId, tags } = createInputSchema.parse(input)
 
   const noteId = crypto.randomUUID()
   const now = new Date().toISOString()
@@ -70,6 +75,10 @@ async function executeCreate(input: unknown, context: CapabilityContext): Promis
 
   if (projectId) {
     insertData.project_id = projectId
+  }
+
+  if (tags && tags.length > 0) {
+    insertData.tags = tags
   }
 
   const { error } = await context.supabase.from('notes').insert(insertData)

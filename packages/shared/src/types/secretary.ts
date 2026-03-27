@@ -105,6 +105,7 @@ export interface TaskArtifactLink {
   missionId?: string
   createdByAgent: string
   createdAt: string
+  sourceTask?: string // Title of the task this artifact was created for
 }
 
 export interface ScheduledTask {
@@ -465,7 +466,7 @@ export interface PlanWorkspaceState {
   schedules: PlanScheduleItem[]
   artifacts: TaskArtifactLink[]
   projectId?: string
-  projectNotes?: Array<{ id: string; title: string; updatedAt: string }>
+  projectNotes?: Array<{ id: string; title: string; updatedAt: string; sourceTask?: string }>
 }
 
 // =============================================================================

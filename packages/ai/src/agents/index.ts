@@ -1,18 +1,15 @@
 /**
- * AI Agent exports — Inkdown AI SDK v6
+ * AI Agent exports — Unified Agent Mesh
  *
- * Active agents (all on AI SDK v6):
- * - EditorDeepAgent: Production editor AI with 12 tools (ToolLoopAgent)
- * - ChatAgent: Conversational AI with RAG and citations
- * - NoteAgent: Note manipulation (create, update, organize, summarize, expand)
- * - PlannerAgent: Goal decomposition and task planning
- * - SecretaryAgent: AI planner / roadmap manager
- * - ResearchAgent: Deep research workflow
- * - ExplainAgent: Course AI tutor
- * - CourseOrchestrator: AI course generation
- *
- * @deprecated EditorAgent, InkdownDeepAgent, AgenticAgent — scheduled for removal
+ * Active agents: EditorDeep, Secretary, Research (+ Explain, Course deferred)
+ * Deprecated: ChatAgent, NoteAgent (capabilities extracted to registry)
+ * PlannerAgent kept for planning.decompose capability
  */
+
+// CRITICAL: Register capabilities so generateDelegationTools() can find them.
+// Without this, all delegation tools silently resolve to empty when agents are
+// imported via @inkdown/ai/agents (which does NOT go through the root index.ts).
+import '../registry/capabilities'
 
 // ============================================================================
 // State Types
@@ -226,8 +223,8 @@ import { ExplainAgent } from './explain'
 /** Active agent types (Unified Agent Mesh) */
 export type AgentType = 'secretary' | 'research' | 'explain'
 
-/** @deprecated Legacy types kept for backwards compat */
-export type LegacyAgentType = 'chat' | 'note' | 'planner'
+/** Legacy types kept for backwards compat */
+type LegacyAgentType = 'chat' | 'note' | 'planner'
 
 export interface AgentConfig {
   supabase: SupabaseClient

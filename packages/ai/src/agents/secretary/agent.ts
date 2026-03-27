@@ -29,7 +29,6 @@ export interface SecretaryAgentConfig {
   model?: string
   timezone?: string
   sharedContextService?: SharedContextService
-  emitEvent?: (event: { type: string; data: unknown }) => void
 }
 
 // ============================================================================

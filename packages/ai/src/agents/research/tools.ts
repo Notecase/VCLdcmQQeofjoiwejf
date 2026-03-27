@@ -10,6 +10,7 @@ import { z } from 'zod'
 import type { VirtualFile, TodoItem, InterruptData, InterruptResponse } from '@inkdown/shared/types'
 import { createWebSearchTool } from '../../tools/web-search'
 import { generateDelegationTools } from '../../registry'
+import '../../registry/capabilities' // Ensure capabilities are registered
 import type { CapabilityContext } from '../../registry/types'
 
 // =============================================================================

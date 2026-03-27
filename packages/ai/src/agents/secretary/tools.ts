@@ -25,6 +25,7 @@ import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import { getGoogleProviderOptions } from '../../providers/safety'
 import { buildSystemPrompt } from '../../safety/content-policy'
 import { generateDelegationTools } from '../../registry'
+import '../../registry/capabilities' // Ensure capabilities are registered
 import type { CapabilityContext } from '../../registry/types'
 
 // ============================================================================

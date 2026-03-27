@@ -1,7 +1,7 @@
 /**
  * Mission Hub — Real Agent Adapters
  *
- * Each adapter wraps a real agent (ResearchAgent, CourseOrchestrator, SecretaryAgent, NoteAgent)
+ * Each adapter wraps a real agent (ResearchAgent, CourseOrchestrator, SecretaryAgent)
  * and consumes its streaming output to produce a structured { summary, payload } result
  * for the MissionOrchestrator.
  */
@@ -284,12 +284,7 @@ export async function runNotePackAdapter(
     sourcePlanId?: string | null
   }
 ): Promise<{ summary: string; payload: Record<string, unknown> }> {
-  const { NoteAgent } = await import('../agents/note.agent')
-
-  const noteAgent = new NoteAgent({
-    supabase: deps.supabase,
-    userId: deps.userId,
-  })
+  const { streamCreateNote } = await import('../utils/note-creator')
 
   // Load plan instructions if we have a sourcePlanId
   let planInstructions = ''
@@ -352,18 +347,18 @@ export async function runNotePackAdapter(
     let noteId: string | undefined
     let title: string | undefined
 
-    for await (const chunk of noteAgent.stream({
-      action: 'create',
-      input: def.input,
+    for await (const chunk of streamCreateNote({
+      prompt: def.input,
+      supabase: deps.supabase,
+      userId: deps.userId,
       projectId: input.sourceProjectId || undefined,
     })) {
-      if (chunk.type === 'title' && typeof chunk.data === 'string') {
+      if (chunk.type === 'title') {
         title = chunk.data
       } else if (chunk.type === 'finish') {
-        const finish = chunk.data as { success: boolean; noteId?: string; title?: string }
-        if (finish.success && finish.noteId) {
-          noteId = finish.noteId
-          title = finish.title || title
+        if (chunk.data.success && chunk.data.noteId) {
+          noteId = chunk.data.noteId
+          title = chunk.data.title || title
         }
       }
     }
@@ -388,7 +383,7 @@ export async function applyNotePack(
   _deps: MissionAdapterDeps,
   payload: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-  // Notes are already created by the NoteAgent during buildNotePack
+  // Notes are already created by streamCreateNote during buildNotePack
   const noteIds = Array.isArray(payload.noteIds) ? payload.noteIds : []
   return { noteIds }
 }

@@ -71,13 +71,7 @@ export { coreEditingTools, databaseTools, artifactTools, secretaryTools } from '
 // Agent Types (to be implemented in Phase D)
 // =============================================================================
 
-export type {
-  BaseAgentState,
-  ChatAgentState,
-  NoteAgentState,
-  PlannerAgentState,
-  CourseAgentState,
-} from './agents'
+export type { BaseAgentState, PlannerAgentState, CourseAgentState } from './agents'
 
 // =============================================================================
 // Service Types
@@ -235,5 +229,15 @@ export {
 
 export type { Capability, CapabilityContext, DelegationLog } from './registry/types'
 
+// =============================================================================
+// Note Creator Utility
+// =============================================================================
+
+export { createNoteFromPrompt, streamCreateNote } from './utils/note-creator'
+export type { CreateNoteOptions, CreateNoteResult, NoteStreamEvent } from './utils/note-creator'
+
+// =============================================================================
 // Register all built-in capabilities (side-effect import)
+// =============================================================================
+
 import './registry/capabilities'

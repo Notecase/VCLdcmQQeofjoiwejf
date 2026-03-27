@@ -189,28 +189,23 @@ export class ResearchAgent {
   }
 
   private async *streamNoteCreate(message: string): AsyncGenerator<ResearchStreamEvent> {
-    const { NoteAgent } = await import('../note.agent')
-
-    const noteAgent = new NoteAgent({
-      supabase: this.config.supabase,
-      userId: this.config.userId,
-      model: selectModel('research').id,
-    })
+    const { streamCreateNote } = await import('../../utils/note-creator')
 
     let createdNoteId: string | undefined
 
-    for await (const chunk of noteAgent.stream({
-      action: 'create',
-      input: message,
+    for await (const chunk of streamCreateNote({
+      prompt: message,
+      supabase: this.config.supabase,
+      userId: this.config.userId,
+      model: selectModel('research').id,
     })) {
       if (chunk.type === 'thinking') {
-        yield { event: 'thinking', data: chunk.data as string }
+        yield { event: 'thinking', data: chunk.data }
       } else if (chunk.type === 'text-delta') {
-        yield { event: 'text', data: chunk.data as string, isDelta: true }
+        yield { event: 'text', data: chunk.data, isDelta: true }
       } else if (chunk.type === 'finish') {
-        const finish = chunk.data as { success: boolean; noteId?: string }
-        if (finish.success && finish.noteId) {
-          createdNoteId = finish.noteId
+        if (chunk.data.success && chunk.data.noteId) {
+          createdNoteId = chunk.data.noteId
         }
       }
     }

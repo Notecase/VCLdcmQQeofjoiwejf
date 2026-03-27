@@ -66,6 +66,10 @@
       "import": "./dist/agents/inbox-categorizer.js",
       "types": "./dist/agents/inbox-categorizer.d.ts"
     },
+    "./utils/note-creator": {
+      "import": "./dist/utils/note-creator.js",
+      "types": "./dist/utils/note-creator.d.ts"
+    },
     "./safety": {
       "import": "./dist/safety/index.js",
       "types": "./dist/safety/index.d.ts"

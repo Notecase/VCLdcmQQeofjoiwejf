@@ -8,17 +8,15 @@ Quick-reference for every AI agent in the Inkdown/Noteshell system. Covers routi
 
 ## Agent Inventory
 
-| #   | Agent                  | Status   | AI SDK Pattern                                 | API Route                                       | UI Surface                          | File Path                                       |
-| --- | ---------------------- | -------- | ---------------------------------------------- | ----------------------------------------------- | ----------------------------------- | ----------------------------------------------- |
-| 1   | **EditorDeepAgent**    | ACTIVE   | `ToolLoopAgent` + stream adapter               | `POST /api/agent/secretary`                     | AISidebar (editor)                  | `packages/ai/src/agents/editor-deep/agent.ts`   |
-| 2   | **SecretaryAgent**     | ACTIVE   | `ToolLoopAgent`                                | `POST /api/secretary/chat`                      | SecretaryChat                       | `packages/ai/src/agents/secretary/agent.ts`     |
-| 3   | **NoteAgent**          | ACTIVE   | `streamText` / `generateText`                  | `POST /api/agent/note/action`                   | AISidebar (actions)                 | `packages/ai/src/agents/note.agent.ts`          |
-| 4   | **PlannerAgent**       | ACTIVE   | `generateText` (structured)                    | `POST /api/agent/planner/plan`                  | AISidebar (plan tab)                | `packages/ai/src/agents/planner.agent.ts`       |
-| 5   | **ResearchAgent**      | ACTIVE   | `ToolLoopAgent` (deep) / `streamText` (simple) | `POST /api/research/*`                          | ResearchView                        | `packages/ai/src/agents/research/agent.ts`      |
-| 6   | **ChatAgent**          | UNUSED   | `streamText` + RAG                             | `POST /api/agent/chat`                          | None (route exists, no UI calls it) | `packages/ai/src/agents/chat.agent.ts`          |
-| 7   | **ExplainAgent**       | DEFERRED | `streamText`                                   | `POST /api/course/explain`                      | —                                   | `packages/ai/src/agents/explain/index.ts`       |
-| 8   | **CourseOrchestrator** | DEFERRED | `ToolLoopAgent`                                | `POST /api/agent/course/generate` (placeholder) | —                                   | `packages/ai/src/agents/course/orchestrator.ts` |
-| 9   | **InboxAgent**         | INTERNAL | `ToolLoopAgent`                                | Heartbeat Edge Function                         | No direct UI                        | `supabase/functions/heartbeat/`                 |
+| #   | Agent                  | Status   | AI SDK Pattern                                 | API Route                                       | UI Surface           | File Path                                       |
+| --- | ---------------------- | -------- | ---------------------------------------------- | ----------------------------------------------- | -------------------- | ----------------------------------------------- |
+| 1   | **EditorDeepAgent**    | ACTIVE   | `ToolLoopAgent` + stream adapter               | `POST /api/agent/secretary`                     | AISidebar (editor)   | `packages/ai/src/agents/editor-deep/agent.ts`   |
+| 2   | **SecretaryAgent**     | ACTIVE   | `ToolLoopAgent`                                | `POST /api/secretary/chat`                      | SecretaryChat        | `packages/ai/src/agents/secretary/agent.ts`     |
+| 3   | **PlannerAgent**       | ACTIVE   | `generateText` (structured)                    | `POST /api/agent/planner/plan`                  | AISidebar (plan tab) | `packages/ai/src/agents/planner.agent.ts`       |
+| 4   | **ResearchAgent**      | ACTIVE   | `ToolLoopAgent` (deep) / `streamText` (simple) | `POST /api/research/*`                          | ResearchView         | `packages/ai/src/agents/research/agent.ts`      |
+| 7   | **ExplainAgent**       | DEFERRED | `streamText`                                   | `POST /api/course/explain`                      | —                    | `packages/ai/src/agents/explain/index.ts`       |
+| 8   | **CourseOrchestrator** | DEFERRED | `ToolLoopAgent`                                | `POST /api/agent/course/generate` (placeholder) | —                    | `packages/ai/src/agents/course/orchestrator.ts` |
+| 9   | **InboxAgent**         | INTERNAL | `ToolLoopAgent`                                | Heartbeat Edge Function                         | No direct UI         | `supabase/functions/heartbeat/`                 |
 
 ---
 
@@ -32,18 +30,6 @@ The route `POST /api/agent/secretary` goes to **EditorDeepAgent** (the main edit
 POST /api/agent/secretary  →  EditorDeepAgent   (editor AI, compound requests)
 POST /api/secretary/chat   →  SecretaryAgent     (daily planner, roadmap manager)
 ```
-
----
-
-## ChatAgent Status (Dead Code)
-
-ChatAgent (`chat.agent.ts`) has a working API route (`POST /api/agent/chat`) but **no frontend calls it**. The `sendToChat()` function exists in `ai.service.ts` but is never invoked from any Vue component. All chat goes through either EditorDeepAgent (editor sidebar) or SecretaryAgent (secretary panel).
-
-**Wiring that exists but is unused:**
-
-- `apps/api/src/routes/agent.ts` lines 562-638 — full route handler
-- `apps/web/src/services/ai.service.ts:179` — `sendToChat()` function
-- `packages/ai/src/agents/chat.agent.ts` — full agent class with RAG
 
 ---
 
@@ -68,17 +54,6 @@ User types in SecretaryChat
   → POST /api/secretary/chat
   → secretary.ts: SecretaryAgent.stream()
   → 15 tools + ToolLoopAgent
-  → SSE events back to frontend
-```
-
-### Note Actions (context menu)
-
-```
-User triggers note action (summarize, expand, etc.)
-  → ai.service.ts: sendToNoteAgent(action, input)
-  → POST /api/agent/note/action
-  → agent.ts: NoteAgent.stream()
-  → streamText / generateText
   → SSE events back to frontend
 ```
 
@@ -118,17 +93,7 @@ User submits research query
 
 **Model:** `gemini-2.5-pro` (fallback: `gemini-3-flash`)
 
-### 3. NoteAgent (0 tools — direct streamText)
-
-**Actions:** `create`, `update`, `organize`, `summarize`, `expand`
-
-**SSE Events:** `text-delta`, `edit-proposal`, `finish`, `error`
-
-**Memory:** None (stateless, operates on note content passed in)
-
-**Model:** `gemini-2.5-pro` (fallback: `gemini-3-flash`)
-
-### 4. PlannerAgent (0 tools — structured output)
+### 3. PlannerAgent (0 tools — structured output)
 
 **SSE Events:** `text-delta`, `finish`, `error`
 
@@ -136,21 +101,13 @@ User submits research query
 
 **Model:** `gemini-2.5-pro`
 
-### 5. ResearchAgent (tools in deep mode)
+### 4. ResearchAgent (tools in deep mode)
 
 **SSE Events:** `web-search-start`, `web-search-result`, `text-delta`, `citation`, `finish`, `error`
 
 **Memory:** Research sessions in `research_sessions` table
 
 **Model:** `gemini-2.5-pro` (simple), `deep-research-pro-preview` (deep mode)
-
-### 6. ChatAgent (UNUSED — RAG with embeddings)
-
-**SSE Events:** `text-delta`, `citation`, `finish`, `error`
-
-**Memory:** Chat sessions in `chat_sessions`, messages in `chat_messages`
-
-**Model:** `gemini-2.5-pro`
 
 ---
 
@@ -162,9 +119,9 @@ All active agents share these systems:
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------- |
 | **Model Routing** (`ai-sdk-factory.ts`)         | `getModelsForTask()` returns primary + fallback models; `isTransientError()` triggers retry | All agents                              |
 | **Usage Tracking** (`ai-sdk-usage.ts`)          | `trackAISDKUsage()` wraps streamText/generateText to record token counts + costs            | All agents                              |
-| **Input Guard** (`input-guard.ts`)              | `detectInjection()` checks for prompt injection patterns before agent execution             | EditorDeep, Chat, Note (at route level) |
-| **Output Guard** (`output-guard.ts`)            | `sanitizeOutput()` removes PII, harmful content from agent responses                        | EditorDeep, Chat                        |
-| **Content Policy** (`content-policy.ts`)        | `buildSystemPrompt()` wraps agent system prompts with safety preamble                       | EditorDeep, Chat, Secretary             |
+| **Input Guard** (`input-guard.ts`)              | `detectInjection()` checks for prompt injection patterns before agent execution             | EditorDeep (at route level)             |
+| **Output Guard** (`output-guard.ts`)            | `sanitizeOutput()` removes PII, harmful content from agent responses                        | EditorDeep                              |
+| **Content Policy** (`content-policy.ts`)        | `buildSystemPrompt()` wraps agent system prompts with safety preamble                       | EditorDeep, Secretary, note-creator     |
 | **SharedContext** (`shared-context.service.ts`) | Cross-agent context bus — reads/writes `user_context_entries` table                         | EditorDeep, Secretary, Research, Course |
 | **Credit Guard** (`credits.ts` middleware)      | Checks user credit balance before allowing agent execution                                  | All routes                              |
 | **Google Safety** (`safety.ts`)                 | `getGoogleProviderOptions()` sets Gemini safety settings (BLOCK_NONE for all categories)    | All Gemini-using agents                 |
@@ -187,29 +144,29 @@ All active agents share these systems:
 
 Which agent emits what, and what the frontend does with it:
 
-| Event                     | Emitted by                               | Frontend handler                                              |
-| ------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| `assistant-start`         | EditorDeep                               | Resets message state                                          |
-| `assistant-delta`         | EditorDeep                               | Appends to live message                                       |
-| `assistant-final`         | EditorDeep                               | Sets final message text                                       |
-| `text-delta`              | Secretary, Note, Planner, Chat, Research | Appends to live message                                       |
-| `text`                    | Secretary                                | Appends to secretary message                                  |
-| `thinking`                | EditorDeep, Secretary                    | Shows thinking accordion                                      |
-| `tool-call`               | EditorDeep                               | Shows tool call card                                          |
-| `tool-result`             | EditorDeep                               | Updates tool call card with result                            |
-| `tool_call`               | Secretary                                | Shows tool indicator in secretary                             |
-| `tool_result`             | Secretary                                | Updates tool indicator                                        |
-| `edit-proposal`           | EditorDeep, Note                         | Triggers `computeDiffHunks()` → `useDiffBlocks` DOM injection |
-| `artifact`                | EditorDeep                               | Adds to `pendingArtifacts` → EditorArea inserts block         |
-| `citation`                | Chat, Research                           | Adds source chip to message                                   |
-| `clarification-requested` | EditorDeep                               | Opens clarification dialog                                    |
-| `note-navigate`           | EditorDeep                               | Frontend navigates to newly created note                      |
-| `custom-progress`         | EditorDeep                               | Shows progress indicator                                      |
-| `web-search-start`        | EditorDeep, Research                     | Shows search indicator                                        |
-| `web-search-result`       | EditorDeep, Research                     | Shows search result chips                                     |
-| `roadmap_preview`         | Secretary                                | Opens roadmap approval modal                                  |
-| `done`                    | All                                      | Marks streaming complete, refreshes credits                   |
-| `error`                   | All                                      | Shows error notification                                      |
+| Event                     | Emitted by                   | Frontend handler                                              |
+| ------------------------- | ---------------------------- | ------------------------------------------------------------- |
+| `assistant-start`         | EditorDeep                   | Resets message state                                          |
+| `assistant-delta`         | EditorDeep                   | Appends to live message                                       |
+| `assistant-final`         | EditorDeep                   | Sets final message text                                       |
+| `text-delta`              | Secretary, Planner, Research | Appends to live message                                       |
+| `text`                    | Secretary                    | Appends to secretary message                                  |
+| `thinking`                | EditorDeep, Secretary        | Shows thinking accordion                                      |
+| `tool-call`               | EditorDeep                   | Shows tool call card                                          |
+| `tool-result`             | EditorDeep                   | Updates tool call card with result                            |
+| `tool_call`               | Secretary                    | Shows tool indicator in secretary                             |
+| `tool_result`             | Secretary                    | Updates tool indicator                                        |
+| `edit-proposal`           | EditorDeep                   | Triggers `computeDiffHunks()` → `useDiffBlocks` DOM injection |
+| `artifact`                | EditorDeep                   | Adds to `pendingArtifacts` → EditorArea inserts block         |
+| `citation`                | Research                     | Adds source chip to message                                   |
+| `clarification-requested` | EditorDeep                   | Opens clarification dialog                                    |
+| `note-navigate`           | EditorDeep                   | Frontend navigates to newly created note                      |
+| `custom-progress`         | EditorDeep                   | Shows progress indicator                                      |
+| `web-search-start`        | EditorDeep, Research         | Shows search indicator                                        |
+| `web-search-result`       | EditorDeep, Research         | Shows search result chips                                     |
+| `roadmap_preview`         | Secretary                    | Opens roadmap approval modal                                  |
+| `done`                    | All                          | Marks streaming complete, refreshes credits                   |
+| `error`                   | All                          | Shows error notification                                      |
 
 ---
 

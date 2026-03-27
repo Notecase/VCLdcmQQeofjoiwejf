@@ -2,7 +2,7 @@
  * AI Agent exports — Unified Agent Mesh
  *
  * Active agents: EditorDeep, Secretary, Research (+ Explain, Course deferred)
- * Deprecated: ChatAgent, NoteAgent (capabilities extracted to registry)
+ * ChatAgent and NoteAgent removed (capabilities extracted to registry + utils/note-creator)
  * PlannerAgent kept for planning.decompose capability
  */
 
@@ -20,32 +20,6 @@ export interface BaseAgentState {
     role: 'user' | 'assistant' | 'system' | 'tool'
     content: string
   }>
-}
-
-export interface ChatAgentState extends BaseAgentState {
-  context?: {
-    documentContent?: string
-    documentTitle?: string
-    noteIds?: string[]
-  }
-  retrievedChunks?: Array<{
-    noteId: string
-    title: string
-    chunkText: string
-    similarity: number
-  }>
-}
-
-export interface NoteAgentState extends BaseAgentState {
-  action: 'create' | 'update' | 'organize' | 'summarize' | 'expand'
-  noteId?: string
-  projectId?: string
-  result?: {
-    success: boolean
-    noteId?: string
-    content?: string
-    error?: string
-  }
 }
 
 export interface PlannerAgentState extends BaseAgentState {
@@ -82,26 +56,6 @@ export interface CourseAgentState extends BaseAgentState {
     content: string
   }>
 }
-
-// ============================================================================
-// Chat Agent (DEPRECATED — RAG pipeline extracted to notes.search capability)
-// ============================================================================
-
-// ChatAgent and NoteAgent classes are kept for backwards compatibility
-// but their routes have been removed. Use EditorDeep delegation tools instead.
-export {
-  ChatAgent,
-  createChatAgent,
-  type ChatAgentConfig,
-  type RetrievedChunk,
-  type Citation,
-} from './chat.agent'
-
-// ============================================================================
-// Note Agent (DEPRECATED — capabilities extracted to notes.read/notes.create)
-// ============================================================================
-
-export { NoteAgent, createNoteAgent, type NoteAgentConfig } from './note.agent'
 
 // ============================================================================
 // Editor Deep Agent (AI SDK v6 ToolLoopAgent)
@@ -183,13 +137,6 @@ export {
 // ============================================================================
 
 export {
-  // Note Subagent
-  NoteSubagent,
-  createNoteSubagent,
-  NOTE_SUBAGENT_PROMPT,
-  type NoteSubagentConfig,
-  type NoteSubagentContext,
-  type NoteSubagentResult,
   // Artifact Subagent
   ArtifactSubagent,
   createArtifactSubagent,
@@ -213,8 +160,6 @@ export {
 // ============================================================================
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { ChatAgent } from './chat.agent'
-import { NoteAgent } from './note.agent'
 import { PlannerAgent } from './planner.agent'
 import { SecretaryAgent } from './secretary'
 import { ResearchAgent } from './research'
@@ -224,7 +169,7 @@ import { ExplainAgent } from './explain'
 export type AgentType = 'secretary' | 'research' | 'explain'
 
 /** Legacy types kept for backwards compat */
-type LegacyAgentType = 'chat' | 'note' | 'planner'
+type LegacyAgentType = 'planner'
 
 export interface AgentConfig {
   supabase: SupabaseClient
@@ -238,7 +183,7 @@ export interface AgentConfig {
 export function createAgent(
   type: AgentType | LegacyAgentType,
   config: AgentConfig
-): SecretaryAgent | ResearchAgent | ExplainAgent | ChatAgent | NoteAgent | PlannerAgent {
+): SecretaryAgent | ResearchAgent | ExplainAgent | PlannerAgent {
   switch (type) {
     case 'secretary':
       return new SecretaryAgent(config)
@@ -246,11 +191,6 @@ export function createAgent(
       return new ResearchAgent(config)
     case 'explain':
       return new ExplainAgent({ model: config.model })
-    // Legacy agents — kept for backwards compat but no active routes
-    case 'chat':
-      return new ChatAgent(config)
-    case 'note':
-      return new NoteAgent(config)
     case 'planner':
       return new PlannerAgent(config)
     default:

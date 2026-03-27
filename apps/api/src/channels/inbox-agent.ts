@@ -61,24 +61,17 @@ function buildInboxTools(userId: string) {
       }),
       execute: async ({ title, content }) => {
         try {
-          const { createNoteAgent } = await import('@inkdown/ai/agents')
-          const agent = createNoteAgent({ supabase: db, userId })
-          const result = await agent.run({
-            action: 'create',
-            input: `Create a note titled "${title}":\n\n${content}`,
+          const { createNoteFromPrompt } = await import('@inkdown/ai/utils/note-creator')
+          const result = await createNoteFromPrompt({
+            prompt: `Create a note titled "${title}":\n\n${content}`,
+            supabase: db,
+            userId,
           })
 
-          if (result?.noteId) {
-            return {
-              success: true,
-              message: `✅ Created note '${result.title || title}'`,
-              noteId: result.noteId,
-            }
-          }
           return {
-            success: false,
-            message: `Failed to create note '${title}'`,
-            error: result?.error || 'NoteAgent returned no noteId',
+            success: true,
+            message: `✅ Created note '${result.title || title}'`,
+            noteId: result.noteId,
           }
         } catch (err) {
           return {

@@ -68,7 +68,14 @@ function extractDescription(): string {
     descLines.push(trimmed)
     if (descLines.length >= 3) break
   }
-  return descLines.join(' ') || props.plan.name
+  // Strip residual markdown bold/italic and list markers for plain-text display
+  const raw = descLines.join(' ')
+  return (
+    raw
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/^- /gm, '') || props.plan.name
+  )
 }
 </script>
 

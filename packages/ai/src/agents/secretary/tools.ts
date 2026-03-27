@@ -1102,7 +1102,7 @@ Output EXACTLY this format (for parsing):
     }
     delegationTools = generateDelegationTools(
       'secretary',
-      ['notes.search', 'notes.read', 'context.time', 'research.quick'],
+      ['notes.search', 'notes.read', 'notes.create', 'context.time', 'research.quick'],
       capCtx
     )
   }

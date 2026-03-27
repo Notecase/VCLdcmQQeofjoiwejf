@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ChevronDown, ChevronUp } from 'lucide-vue-next'
-import { renderMathContent } from '@/utils/mathRenderer'
+import { renderMathMarkdown } from '@/utils/mathRenderer'
 import type { LearningRoadmap } from '@inkdown/shared/types'
 
 const props = defineProps<{
@@ -14,7 +14,7 @@ const isExpanded = ref(false)
 
 const renderedRoadmap = computed(() => {
   if (!props.roadmapContent) return ''
-  return renderMathContent(props.roadmapContent)
+  return renderMathMarkdown(props.roadmapContent)
 })
 
 const emit = defineEmits<{
@@ -48,34 +48,47 @@ function onInstructionsBlur() {
   }
 }
 
-// Extract description from roadmap content (first meaningful content after headings/metadata)
+// Build a structured summary from roadmap metadata and phase headings
 function extractDescription(): string {
   if (!props.roadmapContent) return props.plan.name
   const lines = props.roadmapContent.split('\n')
-  const descLines: string[] = []
-  let pastTitle = false
+
+  const meta: Record<string, string> = {}
+  const phases: string[] = []
+
   for (const line of lines) {
     const trimmed = line.trim()
-    if (!trimmed) continue
-    // Skip all headings
-    if (trimmed.startsWith('#')) {
-      pastTitle = true
+    // Parse **Key:** Value metadata
+    const metaMatch = trimmed.match(/^\*\*(.+?):\*\*\s*(.+)/)
+    if (metaMatch) {
+      meta[metaMatch[1].toLowerCase()] = metaMatch[2].trim()
       continue
     }
-    if (!pastTitle) continue
-    // Skip metadata lines like **Duration:** 60 days
-    if (/^\*\*\w+.*:\*\*/.test(trimmed)) continue
-    descLines.push(trimmed)
-    if (descLines.length >= 3) break
+    // Collect phase names from ## headings (strip "Phase N:" prefix and day ranges)
+    const phaseMatch = trimmed.match(
+      /^##\s+(?:Phase\s+\d+:\s*)?(.+?)(?:\s*\(Days?\s+[\d–-]+\))?\s*$/
+    )
+    if (phaseMatch) {
+      phases.push(phaseMatch[1].trim())
+    }
   }
-  // Strip residual markdown bold/italic and list markers for plain-text display
-  const raw = descLines.join(' ')
-  return (
-    raw
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/^- /gm, '') || props.plan.name
-  )
+
+  const parts: string[] = []
+  const duration = meta['duration']
+  const hoursPerDay = meta['hours/day'] || meta['hours per day']
+  const schedule = meta['schedule']
+
+  if (duration) parts.push(duration)
+  if (hoursPerDay && schedule) parts.push(`${hoursPerDay}h/day, ${schedule.toLowerCase()}`)
+  else if (hoursPerDay) parts.push(`${hoursPerDay}h/day`)
+  else if (schedule) parts.push(schedule.toLowerCase())
+
+  let summary = parts.join('. ')
+  if (phases.length > 0) {
+    summary += `. Covers: ${phases.join(', ')}`
+  }
+
+  return summary || props.plan.name
 }
 </script>
 
@@ -198,6 +211,7 @@ function extractDescription(): string {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .roadmap-full {
@@ -206,6 +220,8 @@ function extractDescription(): string {
   color: var(--text-color, #e2e8f0);
   max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-word;
   padding-right: 8px;
 }
 

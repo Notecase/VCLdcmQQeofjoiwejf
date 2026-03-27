@@ -48,21 +48,24 @@ function onInstructionsBlur() {
   }
 }
 
-// Extract description from roadmap content (first paragraph after title)
+// Extract description from roadmap content (first meaningful content after headings/metadata)
 function extractDescription(): string {
   if (!props.roadmapContent) return props.plan.name
   const lines = props.roadmapContent.split('\n')
   const descLines: string[] = []
   let pastTitle = false
   for (const line of lines) {
-    if (line.startsWith('#')) {
-      if (pastTitle) break
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    // Skip all headings
+    if (trimmed.startsWith('#')) {
       pastTitle = true
       continue
     }
-    if (pastTitle && line.trim()) {
-      descLines.push(line.trim())
-    }
+    if (!pastTitle) continue
+    // Skip metadata lines like **Duration:** 60 days
+    if (/^\*\*\w+.*:\*\*/.test(trimmed)) continue
+    descLines.push(trimmed)
     if (descLines.length >= 3) break
   }
   return descLines.join(' ') || props.plan.name

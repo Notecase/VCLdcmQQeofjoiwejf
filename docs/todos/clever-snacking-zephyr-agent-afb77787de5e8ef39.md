@@ -280,7 +280,7 @@ Content outline:
 
 **Actual tool counts verified from source:**
 
-- `notes.ts`: 13 `server.tool()` calls = 11 notes*\* + 1 artifacts*_ + 1 projects\__
+- `notes.ts`: 13 `server.tool()` calls = 11 notes*\* + 1 artifacts*\_ + 1 projects\_\_
 - `secretary.ts`: 20 `server.tool()` calls
 - `context.ts`: 5 `server.tool()` calls
 - `calendar.ts`: 3 `server.tool()` calls

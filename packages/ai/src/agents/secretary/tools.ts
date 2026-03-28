@@ -19,6 +19,7 @@ import {
   formatDateHeading,
   computeLessonCount,
   computeCalendarSpan,
+  computeNextRunAt,
 } from '@inkdown/shared/secretary'
 import { MemoryService } from './memory'
 import { PLANNER_SUBAGENT_PROMPT } from './prompts'
@@ -404,7 +405,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full lesson-b
       // Clear pending roadmap
       clearPendingRoadmap(config.userId)
 
-      return `Roadmap saved: ${archiveFilename} and Plan.md updated with [${planId}] ${planName}`
+      return `Roadmap saved: ${archiveFilename} and Plan.md updated with [${planId}] ${planName}\n\nNext: Propose automation instructions for this plan (see POST-CREATION SETUP). Present instructions to user and STOP — wait for their confirmation before saving or creating a schedule.`
     },
   })
 
@@ -1112,6 +1113,59 @@ Output EXACTLY this format (for parsing):
     },
   })
 
+  // ---------------------------------------------------------------------------
+  // create_plan_schedule — Create a recurring automation schedule for a plan
+  // ---------------------------------------------------------------------------
+  const createPlanSchedule = tool({
+    description:
+      'Create a recurring automation schedule for a plan. The cron system will auto-run it at the specified time. ALWAYS provide the instructions parameter with a brief description of what the automation should do.',
+    inputSchema: z.object({
+      planId: z.string().describe('Plan ID (e.g., "ML", "QM")'),
+      title: z.string().describe('Schedule title (e.g., "Daily lesson generation")'),
+      workflow: z
+        .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+        .default('make_note_from_task')
+        .describe('Automation workflow type'),
+      frequency: z
+        .enum(['daily', 'weekly', 'custom'])
+        .default('daily')
+        .describe('How often the schedule runs'),
+      time: z.string().describe('Time in HH:MM 24-hour format (e.g., "07:00")'),
+      days: z
+        .array(z.string())
+        .optional()
+        .describe('For weekly: ["Mon","Wed","Fri"]. Omit for daily.'),
+      instructions: z
+        .string()
+        .optional()
+        .describe('Per-schedule automation instructions (overrides plan-level instructions)'),
+    }),
+    execute: async ({ planId, title, workflow, frequency, time, days, instructions }) => {
+      if (!config.supabase) return 'Error: Database not available'
+
+      const nextRunAt = computeNextRunAt(frequency, time, days || null)
+      const { data, error } = await config.supabase
+        .from('plan_schedules')
+        .insert({
+          user_id: config.userId,
+          plan_id: planId,
+          title,
+          instructions: instructions || null,
+          workflow,
+          frequency,
+          time,
+          days: days || null,
+          enabled: true,
+          next_run_at: nextRunAt,
+        })
+        .select('id')
+        .single()
+
+      if (error) return `Failed to create schedule: ${error.message}`
+      return `Schedule created: "${title}" for plan [${planId}] (${frequency} at ${time}). Next run: ${nextRunAt}. ID: ${data.id}`
+    },
+  })
+
   // Build delegation tools from capability registry
   let delegationTools: Record<string, unknown> = {}
   if (config.supabase) {
@@ -1144,6 +1198,7 @@ Output EXACTLY this format (for parsing):
     carry_over_tasks: carryOverTasks,
     manage_recurring_blocks: manageRecurringBlocks,
     log_activity: logActivity,
+    create_plan_schedule: createPlanSchedule,
     ...delegationTools,
   }
 }

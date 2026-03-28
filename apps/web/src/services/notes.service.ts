@@ -201,6 +201,24 @@ export async function deleteNote(noteId: string): Promise<DatabaseResult<Note | 
 }
 
 /**
+ * Soft delete all notes belonging to a project
+ */
+export async function deleteNotesByProject(
+  projectId: string
+): Promise<DatabaseResult<Note | Note[]>> {
+  const db = getDatabaseService()
+
+  return db
+    .from<Note>('notes')
+    .eq('project_id', projectId)
+    .eq('is_deleted', false)
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+    } as Partial<Note>)
+}
+
+/**
  * Restore a deleted note
  */
 export async function restoreNote(noteId: string): Promise<DatabaseResult<Note | Note[]>> {

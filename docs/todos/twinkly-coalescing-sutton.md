@@ -604,9 +604,192 @@ Extract from `supabase/functions/heartbeat/actions.ts:806-845` into a shared uti
 4. Verify: note created, schedule state updated, `next_run_at` advanced
 5. Run again → should find nothing due (0 processed)
 
-## Out of scope (Phase C)
+---
 
-- Secretary conversational flow for setting up instructions + automations
-- Adaptive content based on engagement metrics
-- Per-user spending caps for cron runs
-- BYOK (bring your own key) per user
+# Phase C: Secretary Conversational Setup
+
+## Context
+
+After Phase A (execution) and B (streaming + cron), users still need to manually fill instructions and create schedules via the UI. Phase C makes the secretary do this conversationally — after creating a plan, it proposes phase-aware instructions + automation schedule, then sets them up with user confirmation.
+
+## Design Principles
+
+1. **Smart defaults** — Secretary proposes a complete setup inferred from conversation context, not asks a series of questions
+2. **Phase-aware instructions** — Not just "use PyTorch" but rich, structured guidance per roadmap phase
+3. **Two-step confirmation** — Propose instructions → user confirms → propose schedule → user confirms (conversational, not one big wall)
+4. **Works for existing plans** — Can set up automation for plans created before Phase C
+
+## Conversation Flow
+
+```
+User: "Create a 2-month plan for ML fundamentals, I'm a backend dev"
+Secretary: [Creates roadmap → save_roadmap]
+         → Tool returns: "Roadmap saved... Next: Propose automation instructions..."
+
+Secretary: "Your ML plan is ready! Based on our conversation, here are
+            suggested instructions for content generation:
+
+            ## Content Style
+            - Practical code examples using PyTorch
+            - Include exercises with solutions
+            - Aimed at developers with backend experience
+
+            ## Phase-Specific Guidance
+            Foundations (Lessons 1-20): Step-by-step tutorials, simple examples
+            Core Concepts (Lessons 21-40): Implementation-focused, real datasets
+            Advanced (Lessons 41-60): Case studies, optimization, production patterns
+
+            Want me to save these? You can customize them too."
+
+User: "Add 'include math derivations' and save"
+
+Secretary: [write_memory_file → Plans/ml-instructions.md]
+         → "Instructions saved! Want me to set up daily auto-generation?
+            I can generate each lesson before your study time — say, 7:00 AM daily?"
+
+User: "Make it 8am"
+
+Secretary: [create_plan_schedule → DB insert]
+         → "Done! Every day at 8:00 AM, I'll auto-generate your next lesson.
+            First lesson generates tomorrow morning."
+```
+
+## Files to Modify (3 files, ~100 lines total)
+
+### 1. `packages/ai/src/agents/secretary/tools.ts`
+
+**Add `create_plan_schedule` tool** (~40 lines, before the return block at line 1131):
+
+```typescript
+const createPlanSchedule = tool({
+  description:
+    'Create a recurring automation schedule for a plan. The cron system will auto-run it.',
+  inputSchema: z.object({
+    planId: z.string().describe('Plan ID (e.g., "ML", "QM")'),
+    title: z.string().describe('Schedule title (e.g., "Daily lesson generation")'),
+    workflow: z
+      .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
+      .default('make_note_from_task'),
+    frequency: z.enum(['daily', 'weekly', 'custom']).default('daily'),
+    time: z.string().describe('Time in HH:MM format (e.g., "07:00")'),
+    days: z.array(z.string()).optional().describe('For weekly: ["Mon","Wed","Fri"]'),
+    instructions: z.string().optional().describe('Per-schedule automation instructions'),
+  }),
+  execute: async ({ planId, title, workflow, frequency, time, days, instructions }) => {
+    const nextRunAt = computeNextRunAt(frequency, time, days || null)
+    const { data, error } = await config.supabase
+      .from('plan_schedules')
+      .insert({
+        user_id: config.userId,
+        plan_id: planId,
+        title,
+        instructions: instructions || null,
+        workflow,
+        frequency,
+        time,
+        days: days || null,
+        enabled: true,
+        next_run_at: nextRunAt,
+      })
+      .select('id')
+      .single()
+    if (error) return `Failed to create schedule: ${error.message}`
+    return `Schedule created: "${title}" for plan [${planId}] (${frequency} at ${time}). Next run: ${nextRunAt}. ID: ${data.id}`
+  },
+})
+```
+
+**Add import** at line 22: `computeNextRunAt` from `@inkdown/shared/secretary`
+
+**Add to return block** at line 1146: `create_plan_schedule: createPlanSchedule,`
+
+**Update `save_roadmap` return** at line 407 — append hint:
+
+```
+`Roadmap saved: ... \n\nNext: Propose automation instructions and a schedule for this plan (see POST-CREATION SETUP instructions).`
+```
+
+### 2. `packages/ai/src/agents/secretary/prompts.ts`
+
+**Add tool description** in the tool list section (~line 54): add tool #16 `create_plan_schedule`
+
+**Add 2 new intents** in INTENT HANDLING section (~line 312):
+
+- `setup_instructions` — user wants to set/modify automation instructions
+- `setup_schedule` — user wants to create/modify an automation schedule
+
+**Add POST-CREATION SETUP section** (~45 lines) after "WORKFLOW FOR NEW PLANS" (line 389):
+
+```
+## POST-CREATION SETUP (AFTER SAVING A ROADMAP)
+
+When save_roadmap returns successfully, IMMEDIATELY offer to set up automation:
+
+**Step 1 — Instructions:**
+Generate rich, phase-aware instructions based on:
+- The conversation context (user's goals, experience, preferences)
+- The roadmap structure (phases, lesson count, topics)
+
+Format instructions like:
+## Content Style
+- [inferred from conversation]
+
+## Phase-Specific Guidance
+[Phase name] (Lessons X-Y): [phase-appropriate guidance]
+
+Present to user. On confirmation, call write_memory_file with
+filename: "Plans/{planId}-instructions.md"
+
+**Step 2 — Schedule:**
+Propose based on plan's study schedule:
+- Daily plan → daily automation at 07:00
+- MWF plan → weekly on Mon,Wed,Fri at 07:00
+
+On confirmation, call create_plan_schedule with the plan ID and proposed config.
+
+CRITICAL: Do BOTH steps conversationally. Do NOT skip to creating the schedule
+without asking about instructions first.
+```
+
+### 3. `apps/api/src/routes/secretary.ts`
+
+**Update `inferUpdatedFiles`** at line 44 — add case:
+
+```typescript
+case 'create_plan_schedule':
+  return ['plan_schedule']
+```
+
+**Update tool-name check** at line 264 — add `create_plan` to the includes check so `memory_updated` is emitted:
+
+```typescript
+toolName.includes('create_plan')
+```
+
+## What Gets Reused (no new code needed)
+
+| What                                     | From                                              | How                                                     |
+| ---------------------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| `write_memory_file`                      | Already exists in secretary tools                 | Writes instructions to `Plans/{planId}-instructions.md` |
+| `computeNextRunAt()`                     | `packages/shared/src/secretary/schedule-utils.ts` | Computes initial `next_run_at` for new schedule         |
+| `config.supabase`                        | Secretary tool context                            | Already available, used for DB insert                   |
+| `plan_schedules` API                     | Already exists (CRUD at lines 878-1001)           | Cron + Run Now already consume these                    |
+| Roadmap preview → confirm → save pattern | Existing `create_roadmap` → `save_roadmap` flow   | Same 2-step conversational pattern                      |
+
+## Verification
+
+1. `pnpm typecheck && pnpm build` — compiles
+2. Open secretary chat, ask: "Create a 1-month plan for learning Rust"
+3. Secretary creates roadmap → after save, proposes instructions
+4. Confirm instructions → secretary writes to `Plans/rust-instructions.md`
+5. Secretary proposes daily automation → confirm with custom time
+6. Secretary creates schedule → verify in plan workspace Repeats section
+7. Click ▶ "Run now" on the new schedule → verify instructions are used in generated note
+8. Test with existing plan: "Set up automation for my ML plan" → should work without creating a new roadmap
+
+## Out of scope
+
+- Modifying existing schedules via chat (update/delete tools)
+- Adaptive content based on engagement
+- Per-user spending caps
+- BYOK (bring your own key)

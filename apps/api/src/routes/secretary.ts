@@ -60,6 +60,8 @@ function inferUpdatedFiles(toolName: string, args?: Record<string, unknown>): st
       return ['Today.md']
     case 'activate_roadmap':
       return ['Plan.md']
+    case 'create_plan_schedule':
+      return ['plan_schedule']
     default:
       return []
   }
@@ -266,7 +268,8 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
               toolName.includes('save') ||
               toolName.includes('generate') ||
               toolName.includes('activate') ||
-              toolName.includes('modify'))
+              toolName.includes('modify') ||
+              toolName.includes('create_plan'))
           ) {
             let updatedFiles: string[] = []
             if (hardeningEnabled) {
@@ -628,7 +631,8 @@ secretary.post('/prepare-tomorrow', async (c) => {
               toolName.includes('save') ||
               toolName.includes('generate') ||
               toolName.includes('activate') ||
-              toolName.includes('modify'))
+              toolName.includes('modify') ||
+              toolName.includes('create_plan'))
           ) {
             let updatedFiles: string[] = []
             if (hardeningEnabled) {

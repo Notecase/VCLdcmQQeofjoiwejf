@@ -854,6 +854,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
 
     isChatStreaming.value = true
     streamingContent.value = ''
+    lastStreamEventType = ''
     streamingToolCalls.value = []
     streamingThinkingSteps.value = []
     seenStreamingToolCallSignatures.value.clear()
@@ -969,6 +970,8 @@ export const useSecretaryStore = defineStore('secretary', () => {
     return `{${entries.join(',')}}`
   }
 
+  let lastStreamEventType = ''
+
   function handleStreamEvent(event: SecretaryStreamEvent) {
     if (SECRETARY_HARDENING_ENABLED && typeof event.seq === 'number' && event.seq > 0) {
       if (event.seq <= lastStreamSeq.value) return
@@ -976,19 +979,27 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }
 
     switch (event.event) {
-      case 'text':
+      case 'text': {
+        // Insert paragraph break when text resumes after a tool call/result
+        const needsSeparator =
+          streamingContent.value &&
+          (lastStreamEventType === 'tool_call' || lastStreamEventType === 'tool_result')
+        const separator = needsSeparator ? '\n\n' : ''
+
         if (SECRETARY_HARDENING_ENABLED && event.isDelta === false) {
           if (!streamingContent.value) {
             streamingContent.value = event.data
           } else if (!streamingContent.value.endsWith(event.data)) {
-            streamingContent.value += event.data
+            streamingContent.value += separator + event.data
           }
         } else {
-          streamingContent.value += event.data
+          streamingContent.value += separator + event.data
         }
         // Sync to live message for in-place rendering
         if (liveAssistantMsg) liveAssistantMsg.content = streamingContent.value
+        lastStreamEventType = event.event
         break
+      }
 
       case 'tool_call': {
         let toolData: Record<string, unknown>
@@ -1033,6 +1044,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
         })
         // Sync to live message
         if (liveAssistantMsg) liveAssistantMsg.toolCalls = [...streamingToolCalls.value]
+        lastStreamEventType = event.event
         break
       }
 
@@ -1071,6 +1083,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
           // Sync to live message
           if (liveAssistantMsg) liveAssistantMsg.toolCalls = [...streamingToolCalls.value]
         }
+        lastStreamEventType = event.event
         break
       }
 

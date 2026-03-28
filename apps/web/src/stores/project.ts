@@ -165,6 +165,9 @@ export const useProjectStore = defineStore('project', () => {
 
   async function deleteFolder(id: string) {
     try {
+      // Cascade: soft-delete notes inside this project first
+      await notesService.deleteNotesByProject(id)
+
       const result = await projectsService.deleteProject(id)
 
       if (result.error) {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import * as notesService from '@/services/notes.service'
+import * as projectsService from '@/services/projects.service'
 import * as subscriptionsService from '@/services/subscriptions.service'
 import { isServicesInitialized } from '@/services'
 import { useAuthStore } from './auth'
@@ -117,14 +118,20 @@ export const useEditorStore = defineStore('editor', {
           return
         }
 
-        // Load notes from IndexedDB (or Supabase)
-        const result = await notesService.getNotes(userId)
+        // Load notes and projects in parallel
+        const [notesResult, projectsResult] = await Promise.all([
+          notesService.getNotes(userId),
+          projectsService.getProjects(userId),
+        ])
 
-        if (result.error) {
-          console.error('Failed to load notes:', result.error)
+        if (notesResult.error) {
+          console.error('Failed to load notes:', notesResult.error)
           this.documents = []
         } else {
-          this.documents = result.data || []
+          const notes = notesResult.data || []
+          // Filter out orphaned notes (project_id set but project doesn't exist)
+          const projectIds = new Set((projectsResult.data || []).map((p) => p.id))
+          this.documents = notes.filter((n) => !n.project_id || projectIds.has(n.project_id))
           this.startRealtimeSync()
         }
       } catch (error) {
@@ -517,7 +524,7 @@ export const useEditorStore = defineStore('editor', {
     handleNoteChange(event: NoteChangeEvent) {
       switch (event.type) {
         case 'INSERT':
-          if (event.new) {
+          if (event.new && !event.new.is_deleted) {
             // Add to documents list if not already there
             const exists = this.documents.find((d) => d.id === event.new!.id)
             if (!exists) {
@@ -528,6 +535,16 @@ export const useEditorStore = defineStore('editor', {
 
         case 'UPDATE':
           if (event.new) {
+            // Handle soft-deleted notes: remove from list and close tab
+            if (event.new.is_deleted) {
+              this.documents = this.documents.filter((d) => d.id !== event.new!.id)
+              const tab = this.tabs.find((t) => t.document.id === event.new!.id)
+              if (tab) {
+                this.closeTab(tab.id)
+              }
+              break
+            }
+
             // Update in documents list
             const docIndex = this.documents.findIndex((d) => d.id === event.new!.id)
             if (docIndex !== -1) {

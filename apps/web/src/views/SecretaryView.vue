@@ -17,6 +17,7 @@ import FloatingChatFab from '@/components/secretary/FloatingChatFab.vue'
 import ChatDrawer from '@/components/secretary/ChatDrawer.vue'
 import SecretaryActionSheet from '@/components/secretary/SecretaryActionSheet.vue'
 import InboxProposals from '@/components/secretary/InboxProposals.vue'
+import UserProfile from '@/components/layout/UserProfile.vue'
 import type { ScheduledTask } from '@inkdown/shared/types'
 const secretaryStore = useSecretaryStore()
 const layoutStore = useLayoutStore()
@@ -159,6 +160,7 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
       <template v-else>
         <aside class="file-sidebar">
           <MemoryFileList />
+          <UserProfile />
         </aside>
 
         <main class="main-content">
@@ -222,8 +224,8 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   height: 100dvh;
   width: 100vw;
   background:
-    radial-gradient(circle at top, rgba(16, 185, 129, 0.05), transparent 26%),
-    radial-gradient(circle at right, rgba(245, 158, 11, 0.04), transparent 20%),
+    radial-gradient(circle at top, rgba(59, 125, 104, 0.05), transparent 26%),
+    radial-gradient(circle at right, rgba(180, 136, 58, 0.04), transparent 20%),
     var(--app-bg, #010409);
   font-family:
     'Inter',
@@ -237,9 +239,9 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
 .secretary-header {
   display: flex;
   align-items: center;
-  height: 62px;
+  height: 56px;
   flex-shrink: 0;
-  padding: 10px 18px 10px 0;
+  padding: 8px 16px 8px 0;
   gap: 16px;
 }
 
@@ -293,9 +295,9 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
 }
 
 .section-chip.active {
-  border-color: rgba(16, 185, 129, 0.28);
-  background: rgba(16, 185, 129, 0.13);
-  color: #aaf2d2;
+  border-color: var(--sec-primary-border, rgba(59, 125, 104, 0.25));
+  background: var(--sec-primary-bg, rgba(59, 125, 104, 0.1));
+  color: var(--sec-primary-light, #4e9a82);
 }
 
 .secretary-body {
@@ -303,13 +305,20 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   flex: 1;
   min-height: 0;
   gap: 18px;
-  padding: 0 20px 20px 0;
+  padding: 0 20px 0 0;
   overflow: hidden;
 }
 
 .file-sidebar {
-  width: 200px;
+  width: var(--sidebar-width, 260px);
   flex-shrink: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-sidebar :deep(.memory-file-list) {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
@@ -319,7 +328,7 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 16px;
+  padding: 0 16px 20px;
 }
 
 .main-content::-webkit-scrollbar,
@@ -343,8 +352,8 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.25);
-  color: #6ee7b7;
+  background: var(--sec-primary-border, rgba(59, 125, 104, 0.25));
+  color: var(--sec-primary-light, #4e9a82);
   font-size: 10px;
   font-weight: 700;
   display: inline-flex;
@@ -356,6 +365,7 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
 .calendar-main,
 .inbox-main {
   max-width: 100%;
+  padding-bottom: 20px;
 }
 
 .right-panel {
@@ -363,7 +373,7 @@ function navigateSection(section: 'dashboard' | 'history' | 'plans' | 'calendar'
   flex-shrink: 0;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 0 8px 20px 0;
 }
 
 .loading-state {

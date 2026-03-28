@@ -24,6 +24,10 @@ const layoutStore = useLayoutStore()
 const explainStore = useCourseExplainStore()
 const contentAreaRef = ref<HTMLElement>()
 const { selection } = useTextSelection(contentAreaRef)
+const progressColor = computed(
+  () =>
+    getComputedStyle(document.documentElement).getPropertyValue('--sec-accent').trim() || '#b4883a'
+)
 
 const sidebarWidthStyle = computed(() => ({
   '--sidebar-width': `${layoutStore.sidebarWidth}px`,
@@ -94,7 +98,7 @@ function capitalize(s: string): string {
         <div class="top-progress">
           <ProgressBar
             :value="store.courseProgress"
-            color="#f59e0b"
+            :color="progressColor"
             :height="4"
           />
           <span class="progress-text">{{ store.courseProgress }}%</span>
@@ -390,7 +394,7 @@ function capitalize(s: string): string {
   gap: 4px;
   padding: 3px 10px;
   border-radius: var(--radius-full, 9999px);
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--sec-accent-bg, rgba(180, 136, 58, 0.1));
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   color: var(--sec-accent, #f59e0b);
   font-size: 12px;
@@ -411,9 +415,9 @@ function capitalize(s: string): string {
   gap: 5px;
   padding: 6px 14px;
   border-radius: var(--radius-sm, 6px);
-  border: 1px solid #10b981;
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  border: 1px solid var(--sec-primary, #3b7d68);
+  background: var(--sec-primary-bg, rgba(59, 125, 104, 0.1));
+  color: var(--sec-primary, #3b7d68);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -421,7 +425,7 @@ function capitalize(s: string): string {
 }
 
 .complete-btn:hover {
-  background: #10b981;
+  background: var(--sec-primary, #3b7d68);
   color: white;
 }
 
@@ -431,7 +435,7 @@ function capitalize(s: string): string {
   gap: 4px;
   font-size: 13px;
   font-weight: 500;
-  color: #10b981;
+  color: var(--sec-primary, #3b7d68);
 }
 
 /* ============================================

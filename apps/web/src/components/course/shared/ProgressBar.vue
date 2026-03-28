@@ -12,7 +12,7 @@ const props = withDefaults(
   {
     max: 100,
     height: 6,
-    color: '#f59e0b',
+    color: '#b4883a',
     showLabel: false,
   }
 )

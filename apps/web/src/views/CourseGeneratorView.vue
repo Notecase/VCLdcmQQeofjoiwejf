@@ -573,22 +573,22 @@ onMounted(() => {
 
 /* Step states */
 .timeline-step.done .step-dot {
-  background: #10b981;
-  border-color: #10b981;
+  background: var(--sec-primary, #3b7d68);
+  border-color: var(--sec-primary, #3b7d68);
 }
 
 .timeline-step.done .step-line {
-  background: #10b981;
+  background: var(--sec-primary, #3b7d68);
 }
 
 .timeline-step.active .step-dot {
-  background: #f59e0b;
-  border-color: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  background: var(--sec-accent, #b4883a);
+  border-color: var(--sec-accent, #b4883a);
+  box-shadow: 0 0 8px rgba(180, 136, 58, 0.4);
 }
 
 .timeline-step.active .step-line {
-  background: linear-gradient(to bottom, #f59e0b, var(--border-color, #333338));
+  background: linear-gradient(to bottom, var(--sec-accent, #b4883a), var(--border-color, #333338));
 }
 
 .step-content {
@@ -606,11 +606,11 @@ onMounted(() => {
 }
 
 .timeline-step.done .step-label {
-  color: #10b981;
+  color: var(--sec-primary, #3b7d68);
 }
 
 .timeline-step.active .step-label {
-  color: #f59e0b;
+  color: var(--sec-accent, #b4883a);
 }
 
 .step-description {
@@ -644,7 +644,7 @@ onMounted(() => {
 .progress-bar-fill {
   height: 100%;
   border-radius: 3px;
-  background: #f59e0b;
+  background: var(--sec-accent, #b4883a);
   transition: width 0.5s ease;
 }
 
@@ -783,7 +783,7 @@ onMounted(() => {
 }
 
 .todo-item.done .todo-check {
-  color: #10b981;
+  color: var(--sec-primary, #3b7d68);
 }
 
 /* ============================================

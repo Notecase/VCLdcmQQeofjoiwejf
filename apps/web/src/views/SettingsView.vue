@@ -1115,11 +1115,11 @@ onMounted(async () => {
 }
 
 .status-dot.active {
-  background: #22c55e;
+  background: var(--sec-primary, #3b7d68);
 }
 
 .status-dot.pending {
-  background: #f59e0b;
+  background: var(--sec-accent, #b4883a);
 }
 
 .status-dot.error {

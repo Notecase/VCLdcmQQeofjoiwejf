@@ -211,7 +211,7 @@ onMounted(() => {
   padding: 8px 16px;
   border-radius: 8px;
   border: none;
-  background: #f59e0b;
+  background: var(--sec-accent, #b4883a);
   color: #1a1a1a;
   font-size: 13px;
   font-weight: 600;
@@ -220,7 +220,7 @@ onMounted(() => {
 }
 
 .create-btn:hover {
-  background: #fbbf24;
+  background: var(--sec-accent-light, #c9a04e);
 }
 
 .create-btn.large {

@@ -20,7 +20,7 @@
   --editorColor30: rgba(150, 150, 150, 0.8);
   --editorColor10: rgba(43, 48, 50, 0.1);
   --editorColor04: rgba(43, 48, 50, 0.04);
-  --editorBgColor: #f7f7f7;
+  --editorBgColor: #f5f3f0;
   --deleteColor: #ff6969;
   --iconColor: rgba(150, 150, 150, 0.8);
   --codeBgColor: #d8d8d869;
@@ -72,13 +72,13 @@
 }
 
 .editor-tabs {
-  background: #f3f3f3 !important;
+  background: #f5f3f0 !important;
   box-shadow: none !important;
 }
 .editor-tabs:after {
   position: absolute;
   content: '';
-  border-bottom: 1px solid #dddddd;
+  border-bottom: 1px solid #ddd9d4;
   bottom: 0;
   left: 0;
   right: 0;
@@ -87,21 +87,21 @@
 .editor-tabs ul.tabs-container:after {
   position: absolute;
   content: '';
-  border-bottom: 1px solid #dddddd;
+  border-bottom: 1px solid #ddd9d4;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 2;
 }
 .title-bar-editor-bg.tabs-visible {
-  background: #f3f3f3 !important;
+  background: #f5f3f0 !important;
 }
 
 .tabs-container > li {
   background: none !important;
 }
 .tabs-container > li.active {
-  border: 1px solid #dddddd;
+  border: 1px solid #ddd9d4;
   border-top: none;
   border-bottom: none;
   background: var(--floatBgColor) !important;

@@ -184,7 +184,7 @@ function handleGenerate(workflow: string) {
   width: 24px;
   height: 24px;
   border: 2px solid var(--sec-glass-border);
-  border-top-color: var(--sec-primary, #10b981);
+  border-top-color: var(--sec-primary, #3b7d68);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

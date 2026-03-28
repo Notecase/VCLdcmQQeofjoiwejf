@@ -229,6 +229,7 @@
   --sec-primary-border: rgba(16, 185, 129, 0.3);
   --sec-accent: #f59e0b;
   --sec-accent-dark: #d97706;
+  --sec-accent-light: #fbbf24;
   --sec-accent-bg: rgba(245, 158, 11, 0.12);
   --sec-accent-border: rgba(245, 158, 11, 0.3);
   --sec-urgent: #f97316;
@@ -323,16 +324,16 @@
 :root[data-theme='graphite-light'],
 :root[data-theme='cadmium-light'] {
   /* New design colors */
-  --app-bg: #f8fafc;
+  --app-bg: #faf9f7;
   --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --bg-color: #f5f5f5;
-  --primary-color: #2563eb;
-  --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  --hover-bg: #f1f5f9;
-  --text-color: #334155;
-  --text-color-secondary: #64748b;
-  --border-color: #e2e8f0;
+  --sidebar-bg: #faf9f7;
+  --bg-color: #faf9f7;
+  --primary-color: #3b7d68;
+  --primary-gradient: linear-gradient(135deg, #3b7d68 0%, #2d6353 100%);
+  --hover-bg: #f0eeeb;
+  --text-color: #44403c;
+  --text-color-secondary: #78716c;
+  --border-color: #eae8e4;
 
   /* ============================================
    * TS MUYA CSS VARIABLE MAPPINGS (kebab-case)
@@ -350,9 +351,9 @@
   --editor-bg-color: #ffffff;
   --delete-color: #f44336;
   --icon-color: rgba(0, 0, 0, 0.54);
-  --code-block-bg-color: #f5f5f5;
-  --table-border-color: #e0e0e0;
-  --input-bg-color: #fafafa;
+  --code-block-bg-color: #f5f3f0;
+  --table-border-color: #eae8e4;
+  --input-bg-color: #faf9f7;
   --button-font-color: rgba(0, 0, 0, 0.7);
   --button-bg-color: #ffffff;
   --button-border: 1px solid #dcdfe6;
@@ -394,10 +395,10 @@
   --iconColor: rgba(0, 0, 0, 0.54);
 
   /* Code block colors */
-  --codeBgColor: #f5f5f5;
-  --codeBlockBgColor: #f5f5f5;
+  --codeBgColor: #f5f3f0;
+  --codeBlockBgColor: #f5f3f0;
   --footnoteBgColor: rgba(0, 0, 0, 0.05);
-  --inputBgColor: #fafafa;
+  --inputBgColor: #faf9f7;
 
   /* UI colors */
   --focusColor: var(--themeColor);
@@ -406,13 +407,13 @@
   --floatHoverColor: rgba(0, 0, 0, 0.04);
   --floatBorderColor: rgba(0, 0, 0, 0.12);
   --floatShadow: rgba(0, 0, 0, 0.2);
-  --tableBorderColor: #e0e0e0;
+  --tableBorderColor: #eae8e4;
 
   /* Glassmorphism - Light */
   --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-light: rgba(245, 248, 250, 0.7);
-  --glass-bg-hover: rgba(241, 245, 249, 0.8);
-  --glass-bg-active: rgba(226, 232, 240, 0.7);
+  --glass-bg-light: rgba(250, 249, 247, 0.7);
+  --glass-bg-hover: rgba(240, 238, 235, 0.8);
+  --glass-bg-active: rgba(234, 232, 228, 0.7);
   --glass-border: rgba(0, 0, 0, 0.08);
   --glass-border-hover: rgba(0, 0, 0, 0.15);
   --glass-shadow: rgba(0, 0, 0, 0.08);
@@ -425,22 +426,22 @@
   --glass-divider: rgba(0, 0, 0, 0.1);
 
   /* AI Sidebar - Light */
-  --ai-sidebar-bg: #f8fafc;
+  --ai-sidebar-bg: #faf9f7;
   --ai-header-bg: rgba(255, 255, 255, 0.85);
-  --ai-tab-color: #64748b;
-  --ai-tab-active: #334155;
+  --ai-tab-color: #78716c;
+  --ai-tab-active: #44403c;
   --ai-card-bg: #ffffff;
-  --ai-card-border: #e2e8f0;
+  --ai-card-border: #eae8e4;
   --ai-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   --ai-input-bg: #ffffff;
-  --ai-input-border: #e2e8f0;
+  --ai-input-border: #eae8e4;
   --ai-input-focus: rgba(0, 0, 0, 0.1);
   --ai-cmd-header: #1a1a1a;
-  --ai-cmd-bg: #f1f5f9;
-  --ai-send-bg: #e2e8f0;
-  --ai-send-active-bg: #238636;
+  --ai-cmd-bg: #f0eeeb;
+  --ai-send-bg: #eae8e4;
+  --ai-send-active-bg: #3b7d68;
   --ai-send-active-color: #ffffff;
-  --ai-scrollbar-thumb: #cbd5e1;
+  --ai-scrollbar-thumb: #d6d3ce;
 
   /* AI Sidebar - Ultra-minimal design tokens */
   --ai-subtle-bg: rgba(0, 0, 0, 0.015);
@@ -471,27 +472,27 @@
   --stream-glow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 
   /* Task Checklist */
-  --task-pending-color: #94a3b8;
-  --task-running-color: #d97706;
-  --task-complete-color: #16a34a;
+  --task-pending-color: #a8a29e;
+  --task-running-color: #b4883a;
+  --task-complete-color: #3b7d68;
   --task-failed-color: #dc2626;
   --task-progress-track: rgba(0, 0, 0, 0.08);
 
   /* Role Badges */
   --role-user-bg: rgba(0, 0, 0, 0.06);
-  --role-user-color: #334155;
-  --role-assistant-bg: rgba(34, 197, 94, 0.15);
-  --role-assistant-color: #16a34a;
+  --role-user-color: #44403c;
+  --role-assistant-bg: rgba(59, 125, 104, 0.15);
+  --role-assistant-color: #3b7d68;
 
   /* GitHub Unified Diff */
   --diff-line-height: 20px;
   --diff-line-num-width: 40px;
   --diff-line-num-bg: rgba(0, 0, 0, 0.04);
-  --diff-add-bg: rgba(34, 197, 94, 0.12);
-  --diff-add-line-bg: rgba(34, 197, 94, 0.2);
-  --diff-add-word-bg: rgba(34, 197, 94, 0.35);
-  --diff-add-border: #16a34a;
-  --diff-add-text: #166534;
+  --diff-add-bg: rgba(59, 125, 104, 0.12);
+  --diff-add-line-bg: rgba(59, 125, 104, 0.2);
+  --diff-add-word-bg: rgba(59, 125, 104, 0.35);
+  --diff-add-border: #3b7d68;
+  --diff-add-text: #2d5a49;
   --diff-remove-bg: rgba(239, 68, 68, 0.12);
   --diff-remove-line-bg: rgba(239, 68, 68, 0.2);
   --diff-remove-word-bg: rgba(239, 68, 68, 0.35);
@@ -501,11 +502,11 @@
   /* Inline Diff - Reference Design (Light Theme) */
   --diff-inline-deletion-bg: #f8d7d5;
   --diff-inline-deletion-text: #5c4444;
-  --diff-inline-addition-bg: #d4edda;
-  --diff-inline-addition-text: #3d5c45;
+  --diff-inline-addition-bg: #d5e8e1;
+  --diff-inline-addition-text: #2d5a49;
   --diff-inline-minus-color: #c9726a;
-  --diff-inline-plus-color: #5a9e6f;
-  --diff-inline-accept-btn: #5a9e6f;
+  --diff-inline-plus-color: #3b7d68;
+  --diff-inline-accept-btn: #3b7d68;
   --diff-inline-deny-btn: #d46a6a;
 
   /* Timeline Thinking Steps */
@@ -528,41 +529,42 @@
 
   /* Surface Colors */
   --surface-0: #ffffff;
-  --surface-1: #f8fafc;
-  --surface-2: #f1f5f9;
-  --surface-3: #e2e8f0;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
+  --surface-1: #faf9f7;
+  --surface-2: #f5f3f0;
+  --surface-3: #eae8e4;
+  --text-primary: #1c1917;
+  --text-secondary: #78716c;
+  --text-muted: #a8a29e;
   --border-subtle: rgba(0, 0, 0, 0.08);
 
   /* Artifact Block - Light */
-  --artifact-bg: #f6f8fa;
-  --artifact-border: #d0d7de;
+  --artifact-bg: #f5f3f0;
+  --artifact-border: #ddd9d4;
 
   /* Secretary Dashboard - Warm Green + Amber (Light) */
-  --sec-primary: #059669;
-  --sec-primary-light: #10b981;
-  --sec-primary-bg: rgba(5, 150, 105, 0.1);
-  --sec-primary-border: rgba(5, 150, 105, 0.25);
-  --sec-accent: #d97706;
-  --sec-accent-dark: #b45309;
-  --sec-accent-bg: rgba(217, 119, 6, 0.1);
-  --sec-accent-border: rgba(217, 119, 6, 0.25);
-  --sec-urgent: #ea580c;
-  --sec-task-learn: #d97706;
-  --sec-task-practice: #059669;
-  --sec-task-review: #0d9488;
-  --sec-task-break: #9ca3af;
+  --sec-primary: #3b7d68;
+  --sec-primary-light: #4e9a82;
+  --sec-primary-bg: rgba(59, 125, 104, 0.1);
+  --sec-primary-border: rgba(59, 125, 104, 0.25);
+  --sec-accent: #b4883a;
+  --sec-accent-dark: #96702e;
+  --sec-accent-light: #c9a04e;
+  --sec-accent-bg: rgba(180, 136, 58, 0.1);
+  --sec-accent-border: rgba(180, 136, 58, 0.25);
+  --sec-urgent: #c4693a;
+  --sec-task-learn: #b4883a;
+  --sec-task-practice: #3b7d68;
+  --sec-task-review: #478f85;
+  --sec-task-break: #a8a29e;
   --sec-task-project: #7c3aed;
-  --sec-fab-bg: linear-gradient(135deg, #059669, #10b981);
-  --sec-fab-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
+  --sec-fab-bg: linear-gradient(135deg, #3b7d68, #4e9a82);
+  --sec-fab-shadow: 0 4px 20px rgba(59, 125, 104, 0.3);
   --sec-drawer-bg: #ffffff;
   --sec-drawer-handle: rgba(0, 0, 0, 0.15);
   --sec-drawer-backdrop: rgba(0, 0, 0, 0.3);
 
   /* Secretary Layout — Surface Levels (Light) */
-  --sec-surface-0: #f8fafc;
+  --sec-surface-0: #faf9f7;
   --sec-surface-1: rgba(255, 255, 255, 0.7);
   --sec-surface-2: rgba(255, 255, 255, 0.9);
   --sec-surface-card: rgba(0, 0, 0, 0.02);
@@ -593,13 +595,13 @@
   --sec-ticker-border: rgba(0, 0, 0, 0.06);
   --sec-ticker-blur: 12px;
   --sec-ticker-speed: 28s;
-  --sec-ticker-fade: rgba(248, 250, 252, 0.9);
+  --sec-ticker-fade: rgba(250, 249, 247, 0.9);
   --sec-ticker-item-hover: rgba(0, 0, 0, 0.03);
   --sec-ticker-divider: rgba(0, 0, 0, 0.06);
-  --sec-ticker-live-bg: rgba(5, 150, 105, 0.12);
-  --sec-ticker-live-color: #059669;
-  --sec-ticker-next-bg: rgba(217, 119, 6, 0.1);
-  --sec-ticker-next-color: #d97706;
+  --sec-ticker-live-bg: rgba(59, 125, 104, 0.12);
+  --sec-ticker-live-color: #3b7d68;
+  --sec-ticker-next-bg: rgba(180, 136, 58, 0.1);
+  --sec-ticker-next-color: #b4883a;
 
   /* Plan Workspace (Light) */
   --pw-max-width: 800px;
@@ -610,7 +612,7 @@
   --pw-instructions-border: var(--sec-glass-border);
 
   /* Chat popup — lighter surface hierarchy */
-  --chat-popup-bg: #f5f5f5;
+  --chat-popup-bg: #f5f3f0;
   --chat-composer-bg: #ffffff;
   --chat-composer-border: rgba(0, 0, 0, 0.08);
   --chat-composer-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);

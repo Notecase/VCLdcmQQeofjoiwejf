@@ -512,8 +512,8 @@ onMounted(async () => {
 }
 
 .status-chip.live {
-  color: #3fb950;
-  background: rgba(63, 185, 80, 0.1);
+  color: var(--sec-primary, #3fb950);
+  background: var(--sec-primary-bg, rgba(63, 185, 80, 0.1));
 }
 
 .status-chip.interrupted {
@@ -570,12 +570,12 @@ onMounted(async () => {
 }
 
 .mode-toggle.active {
-  border-color: rgba(251, 191, 36, 0.3);
-  color: #fbbf24;
+  border-color: var(--sec-accent-border, rgba(251, 191, 36, 0.3));
+  color: var(--sec-accent, #fbbf24);
 }
 
 .mode-toggle.active:hover {
-  background: rgba(251, 191, 36, 0.08);
+  background: var(--sec-accent-bg, rgba(251, 191, 36, 0.08));
 }
 
 .home-body {

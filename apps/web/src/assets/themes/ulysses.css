@@ -20,7 +20,7 @@
   --editorColor30: rgba(101, 101, 101, 0.3);
   --editorColor10: rgba(101, 101, 101, 0.1);
   --editorColor04: rgba(101, 101, 101, 0.04);
-  --editorBgColor: #f3f3f3;
+  --editorBgColor: #f5f3f0;
   --deleteColor: #ff6969;
   --iconColor: rgba(101, 101, 101, 0.8);
   --codeBgColor: #d8d8d869;
@@ -59,7 +59,7 @@
   --sideBarIconColor: var(--iconColor);
   --sideBarTitleColor: rgba(101, 101, 101, 1);
   --sideBarTextColor: rgba(101, 101, 101, 0.4);
-  --sideBarBgColor: rgba(248, 248, 248, 0.9);
+  --sideBarBgColor: rgba(245, 243, 240, 0.9);
   --sideBarItemHoverBgColor: rgba(101, 101, 101, 0.03);
   --itemBgColor: rgba(245, 245, 245, 0.6);
 
@@ -108,7 +108,7 @@ li.ag-bullet-list-item::before {
 }
 
 blockquote.ag-paragraph {
-  background: rgb(233, 233, 233);
+  background: rgb(234, 232, 228);
 }
 blockquote.ag-paragraph::before {
   content: none;

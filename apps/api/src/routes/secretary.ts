@@ -872,7 +872,29 @@ secretary.get('/plan/:planId', async (c) => {
   ])
 
   const schedules = schedulesResult.data || []
-  const projectId = linkResult.data?.project_id || undefined
+  let projectId: string | undefined = linkResult.data?.project_id || undefined
+
+  // Fallback: Plan.md may have a projectId from a previous codename
+  // (DB link lost after a codename rename + partial migration).
+  if (!projectId && plan.projectId) {
+    const { data: existingProject } = await auth.supabase
+      .from('projects')
+      .select('id')
+      .eq('id', plan.projectId)
+      .eq('user_id', auth.userId)
+      .maybeSingle()
+
+    if (existingProject) {
+      projectId = plan.projectId
+      // Re-create the missing DB link for the current codename
+      await auth.supabase
+        .from('plan_project_links')
+        .upsert(
+          { user_id: auth.userId, plan_id: planId, project_id: projectId },
+          { onConflict: 'user_id,plan_id' }
+        )
+    }
+  }
 
   // If linked, load notes from the project folder
   let projectNotes: Array<{ id: string; title: string; updatedAt: string; sourceTask?: string }> =
@@ -1473,6 +1495,27 @@ secretary.post('/plan/:planId/link-project', async (c) => {
   const parsed = parsePlanMarkdown(planMd?.content || '')
   const plan = parsed.plans.find((p) => p.id === planId)
   const folderName = plan?.name || `Plan: ${planId}`
+
+  // Reuse existing project if Plan.md already has a projectId
+  // (handles codename renames where the DB link was lost)
+  if (plan?.projectId) {
+    const { data: existingProject } = await auth.supabase
+      .from('projects')
+      .select('id')
+      .eq('id', plan.projectId)
+      .eq('user_id', auth.userId)
+      .maybeSingle()
+
+    if (existingProject) {
+      await auth.supabase
+        .from('plan_project_links')
+        .upsert(
+          { user_id: auth.userId, plan_id: planId, project_id: plan.projectId },
+          { onConflict: 'user_id,plan_id' }
+        )
+      return c.json({ projectId: plan.projectId })
+    }
+  }
 
   // Create project folder
   const { data: project, error: projError } = await auth.supabase

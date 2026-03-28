@@ -551,28 +551,29 @@ export const PLANNER_SUBAGENT_PROMPT = `You are a Learning Plan Specialist. Your
 
 When given a subject/topic, create a comprehensive study plan that includes:
 1. A unique short ID (2-4 uppercase letters, e.g., OPT for Optics, AWS for AWS)
-2. A descriptive name (e.g., "11-Day Optics Roadmap")
+2. A descriptive name (e.g., "12-Lesson Optics Roadmap")
 3. Logical phase breakdown (foundations → intermediate → advanced → practice)
-4. Day-by-day schedule with specific topics
-5. Estimated hours per day
+4. Lesson-by-lesson schedule with specific topics (each lesson = one study session)
+5. Estimated hours per lesson
 6. Review and practice sessions interspersed
 
 Output format (raw markdown, do NOT wrap in code fences):
 
 # [ID] Plan Name
-**Duration:** X days
-**Hours/day:** Y
+**Lessons:** N
+**Hours/lesson:** Y
 **Schedule:** Daily | Mon/Wed/Fri | etc.
 
-## Phase 1: Foundations (Days 1-3)
-- **Day 1:** Topic A — subtopic details (Yh)
-- **Day 2:** Topic B — subtopic details (Yh)
-- **Day 3:** Review + Practice (Yh)
+## Phase 1: Foundations (Lessons 1-3)
+- **Lesson 1:** Topic A — subtopic details (Yh)
+- **Lesson 2:** Topic B — subtopic details (Yh)
+- **Lesson 3:** Review + Practice (Yh)
 
-## Phase 2: Intermediate (Days 4-7)
+## Phase 2: Intermediate (Lessons 4-7)
 ...
 
-Be specific about topics — not just "learn X" but "X: specific subtopic with practical exercises".`
+Be specific about topics — not just "learn X" but "X: specific subtopic with practical exercises".
+Each lesson represents one study session on a scheduled study day. Generate exactly the number of lessons requested.`
 
 export const RESEARCHER_SUBAGENT_PROMPT = `You are a Curriculum Researcher. Your job is to research a subject and identify:
 1. Prerequisites needed before starting

@@ -1,10 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-
-interface EditorMessageRow {
-  role: string
-  content: string
-  created_at: string
-}
+import { windowMessages, type ThreadMessage } from '../../utils/conversation-history'
 
 export interface EditorThreadMessage {
   role: 'user' | 'assistant'
@@ -36,48 +31,16 @@ export class EditorConversationHistoryService {
 
     if (error || !data) return []
 
-    const validMessages = (data as EditorMessageRow[])
-      .slice(0, limit)
+    const mapped: ThreadMessage[] = (
+      data as Array<{ role: string; content: string; created_at: string }>
+    )
       .filter((row) => row.role === 'user' || row.role === 'assistant')
       .map((row) => ({
         role: row.role as 'user' | 'assistant',
-        content: (row.content || '').trim(),
+        content: row.content || '',
         createdAt: row.created_at,
       }))
-      .filter((row) => row.content.length > 0)
 
-    if (validMessages.length === 0) return []
-
-    const chronological = validMessages
-      .slice()
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-      .map(({ role, content }) => ({ role, content }))
-
-    // Deterministic newest-first windowing: keep newest messages that fit budget.
-    const newestFirstKept: EditorThreadMessage[] = []
-    let usedChars = 0
-
-    for (let index = chronological.length - 1; index >= 0; index -= 1) {
-      const message = chronological[index]
-      const messageChars = message.content.length
-
-      if (newestFirstKept.length > 0 && usedChars + messageChars > maxChars) {
-        break
-      }
-
-      if (newestFirstKept.length === 0 && messageChars > maxChars) {
-        newestFirstKept.push({
-          role: message.role,
-          content: message.content.slice(messageChars - maxChars),
-        })
-        usedChars = maxChars
-        break
-      }
-
-      newestFirstKept.push(message)
-      usedChars += messageChars
-    }
-
-    return newestFirstKept.reverse()
+    return windowMessages(mapped, { maxTurns: windowTurns, maxChars })
   }
 }

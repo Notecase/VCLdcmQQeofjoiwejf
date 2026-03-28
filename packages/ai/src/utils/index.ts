@@ -66,3 +66,11 @@ export type { InsertionPosition } from './insertionInferrer'
 
 // Intent Detection
 export { isCreateOperation } from './intentDetection'
+
+// Conversation History
+export {
+  windowMessages,
+  buildInvocationMessages,
+  type ThreadMessage,
+  type WindowOptions,
+} from './conversation-history'

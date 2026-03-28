@@ -55,7 +55,7 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
         <div class="progress-header">
           <span>Progress</span>
           <span class="progress-value"
-            >{{ roadmap.progress.currentDay }}/{{ roadmap.progress.totalDays }} days ({{
+            >{{ roadmap.progress.completedLessons }}/{{ roadmap.progress.totalLessons }} lessons ({{
               progressPercent
             }}%)</span
           >

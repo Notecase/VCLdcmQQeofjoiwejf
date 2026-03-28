@@ -24,7 +24,7 @@ describe('parsePlanMarkdown', () => {
 
     expect(result.activePlans).toHaveLength(1)
     expect(result.activePlans[0].id).toBe('RL')
-    expect(result.activePlans[0].progress.totalDays).toBe(120)
+    expect(result.activePlans[0].progress.totalLessons).toBe(120)
     expect(result.thisWeekSection).toContain('**Mon:** RL - Intro to RL')
     expect(result.warnings.some((w) => w.severity === 'error')).toBe(false)
   })

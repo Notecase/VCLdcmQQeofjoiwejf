@@ -305,15 +305,8 @@ export const useSecretaryStore = defineStore('secretary', () => {
     error.value = null
 
     try {
-      // Run day transition on mount
-      try {
-        await authFetch(`${SECRETARY_API}/day-transition`, {
-          method: 'POST',
-          headers: TIMEZONE_HEADERS,
-        })
-      } catch {
-        // Non-critical — don't block initialization
-      }
+      // Day transition is handled by App.vue on every page load (fire-and-forget).
+      // No need to duplicate it here.
 
       const res = await authFetch(`${SECRETARY_API}/memory`)
       if (!res.ok) {
@@ -356,7 +349,20 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }
   }
 
+  let refreshMemoryPromise: Promise<void> | null = null
+
   async function refreshMemoryFiles() {
+    // Deduplicate: if a refresh is already in-flight, reuse it
+    if (refreshMemoryPromise) return refreshMemoryPromise
+    refreshMemoryPromise = refreshMemoryFilesImpl()
+    try {
+      await refreshMemoryPromise
+    } finally {
+      refreshMemoryPromise = null
+    }
+  }
+
+  async function refreshMemoryFilesImpl() {
     try {
       const res = await authFetch(`${SECRETARY_API}/memory`)
       if (!res.ok) {
@@ -367,7 +373,6 @@ export const useSecretaryStore = defineStore('secretary', () => {
       const data = await res.json()
       memoryFiles.value = data.files || []
       parsePlanData()
-      await loadHeartbeatState()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to refresh memory files'
       console.warn(`[Secretary] ${msg}`)
@@ -416,7 +421,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
       } else {
         await refreshMemoryFiles()
       }
-    }, 120)
+    }, 800)
   }
 
   async function updateMemoryFile(
@@ -942,7 +947,8 @@ export const useSecretaryStore = defineStore('secretary', () => {
         }
       }
 
-      await refreshMemoryFiles()
+      // Memory refresh is handled by SSE memory_updated events via scheduleMemoryRefresh().
+      // No need for an explicit full refresh here.
     } catch (err) {
       notifications.error(err instanceof Error ? err.message : 'Failed to send chat message')
     } finally {
@@ -1237,10 +1243,10 @@ export const useSecretaryStore = defineStore('secretary', () => {
   // ---------- Reflection submission (B1) ----------
 
   async function submitReflection(mood: ReflectionMood, text: string) {
+    // sendChatMessage triggers SSE memory_updated events which handle refresh via scheduleMemoryRefresh.
     await sendChatMessage(
       `Save my daily reflection. My mood is "${mood}". ${text ? `Notes: ${text}` : 'No additional notes.'}`
     )
-    await refreshMemoryFiles()
   }
 
   // ---- Plan-Project Link Actions ----
@@ -1439,6 +1445,90 @@ export const useSecretaryStore = defineStore('secretary', () => {
     }
   }
 
+  // --- Streaming schedule execution state ---
+  const runningScheduleId = ref<string | null>(null)
+  const runningScheduleSteps = ref<Array<{ text: string; status: 'active' | 'done' }>>([])
+
+  function _addRunStep(text: string) {
+    // Mark previous active step as done
+    const steps = runningScheduleSteps.value
+    if (steps.length > 0 && steps[steps.length - 1].status === 'active') {
+      steps[steps.length - 1].status = 'done'
+    }
+    steps.push({ text, status: 'active' })
+  }
+
+  function _friendlyToolName(name: string): string {
+    switch (name) {
+      case 'web_search':
+        return 'Searching web'
+      case 'save_note':
+        return 'Saving note'
+      case 'advance_progress':
+        return 'Updating progress'
+      default:
+        return name
+    }
+  }
+
+  async function runScheduleNow(planId: string, scheduleId: string) {
+    runningScheduleId.value = scheduleId
+    runningScheduleSteps.value = []
+
+    try {
+      const res = await authFetchSSE(
+        `${API_URL}/api/secretary/plan/${planId}/schedules/${scheduleId}/run`,
+        { method: 'POST' }
+      )
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error || `Request failed (${res.status})`)
+      }
+
+      await parseSSEStream(res, {
+        onEvent: (sseEvent) => {
+          const eventType = sseEvent.event
+          const data = sseEvent.data as Record<string, unknown>
+
+          switch (eventType) {
+            case 'status':
+              _addRunStep(data.step as string)
+              break
+            case 'tool-call': {
+              const name = _friendlyToolName(data.name as string)
+              const query = data.query as string | undefined
+              _addRunStep(query ? `${name}: "${query}"` : name)
+              break
+            }
+            case 'tool-result': {
+              // Mark current step as done
+              const steps = runningScheduleSteps.value
+              if (steps.length > 0) steps[steps.length - 1].status = 'done'
+              break
+            }
+            case 'done':
+              notifications.success(`Note created: ${(data.noteTitle as string) || 'Untitled'}`)
+              break
+            case 'error':
+              notifications.error((data.message as string) || 'Automation failed')
+              break
+          }
+        },
+        onError: (err) => {
+          notifications.error(err.message || 'Stream error')
+        },
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Automation failed'
+      notifications.error(msg)
+    } finally {
+      runningScheduleId.value = null
+      runningScheduleSteps.value = []
+      await loadPlanWorkspace(planId)
+    }
+  }
+
   return {
     memoryFiles,
     rootMemoryFiles,
@@ -1481,6 +1571,7 @@ export const useSecretaryStore = defineStore('secretary', () => {
     attentionItems,
     initialize,
     refreshMemoryFiles,
+    scheduleMemoryRefresh,
     updateMemoryFile,
     updateTaskStatus,
     prepareTomorrow,
@@ -1514,5 +1605,8 @@ export const useSecretaryStore = defineStore('secretary', () => {
     deletePlanSchedule,
     togglePlanSchedule,
     runPlanNow,
+    runScheduleNow,
+    runningScheduleId,
+    runningScheduleSteps,
   }
 })

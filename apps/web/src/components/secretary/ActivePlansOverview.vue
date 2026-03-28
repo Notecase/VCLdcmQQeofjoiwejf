@@ -12,7 +12,7 @@ function formatDateRange(plan: LearningRoadmap): string {
 }
 
 function progressLabel(plan: LearningRoadmap): string {
-  return `${plan.progress.currentDay}/${plan.progress.totalDays} days (${plan.progress.percentComplete}%)`
+  return `${plan.progress.completedLessons}/${plan.progress.totalLessons} lessons (${plan.progress.percentComplete}%)`
 }
 
 function openPlanWorkspace(plan: LearningRoadmap) {
@@ -152,6 +152,8 @@ function viewDetails(event: Event, plan: LearningRoadmap) {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .plan-name {

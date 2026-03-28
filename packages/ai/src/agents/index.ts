@@ -101,6 +101,7 @@ export {
   createSecretaryAgent,
   MemoryService,
   ChatPersistenceService,
+  SecretaryHistoryService,
   type SecretaryAgentConfig,
   type MemoryContext,
 } from './secretary'
@@ -131,6 +132,20 @@ export {
   createCourseOrchestrator,
   type CourseOrchestratorConfig,
 } from './course'
+
+// ============================================================================
+// Automation Agent (Scheduled Content Generation)
+// ============================================================================
+
+export {
+  runAutomation,
+  streamAutomation,
+  buildAutomationContext,
+  type AutomationInput,
+  type AutomationResult,
+  type AutomationEvent,
+  type AutomationContextInput,
+} from './automation'
 
 // ============================================================================
 // Subagents (Specialized Task Execution)

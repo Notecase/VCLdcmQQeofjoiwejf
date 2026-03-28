@@ -13,6 +13,8 @@ import { MemoryService, type MemoryContext } from './memory'
 import { createSecretaryTools, getPendingRoadmap } from './tools'
 import { getSecretarySystemPrompt } from './prompts'
 import { adaptSecretaryStream } from './ai-sdk-stream-adapter'
+import { SecretaryHistoryService } from './history'
+import { buildInvocationMessages } from '../../utils/conversation-history'
 import { getModelsForTask } from '../../providers/ai-sdk-factory'
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import { getGoogleProviderOptions } from '../../providers/safety'
@@ -57,6 +59,16 @@ export class SecretaryAgent {
     const context = await this.memoryService.getFullContext()
     const tz = this.config.timezone || context.preferences?.timezone || undefined
 
+    // Load conversation history for multi-turn context
+    const historyService = new SecretaryHistoryService(this.config.supabase, this.config.userId)
+    const historyMessages = input.threadId
+      ? await historyService.loadThreadMessages({
+          threadId: input.threadId,
+          windowTurns: 20,
+          maxChars: 16000,
+        })
+      : []
+
     // pendingEvents buffer — delegation tools push progress events here,
     // adaptSecretaryStream drains them into the SSE output.
     const pendingEvents: SecretaryStreamEvent[] = []
@@ -88,7 +100,7 @@ export class SecretaryAgent {
     // Include pending roadmap info if any
     const pending = getPendingRoadmap(this.config.userId)
     const pendingInfo = pending
-      ? `\n\n### Pending Roadmap\nThere is a pending roadmap: [${pending.id}] ${pending.name} (${pending.durationDays} days). If the user confirms, call save_roadmap.`
+      ? `\n\n### Pending Roadmap (ACTION REQUIRED)\nThere is a pending roadmap that has NOT been saved yet: [${pending.id}] ${pending.name} (${pending.totalLessons} lessons).\n⚠️ CRITICAL: If the user's message is a confirmation (e.g. "yes", "save it", "looks good", "go ahead"), you MUST call the \`save_roadmap\` tool. Do NOT just say you saved it — actually call the tool. The roadmap is NOT saved until save_roadmap is called.`
       : ''
 
     // Read cross-agent context (research, courses, notes)
@@ -105,6 +117,7 @@ export class SecretaryAgent {
         `${context.activePlans.length} active plan${context.activePlans.length > 1 ? 's' : ''}`
       )
     if (context.calendarContent?.trim()) contextParts.push('calendar events')
+    if (historyMessages.length > 0) contextParts.push(`${historyMessages.length} prior messages`)
     yield {
       event: 'thinking',
       data: contextParts.length ? `Found ${contextParts.join(', ')}` : 'Ready',
@@ -146,7 +159,7 @@ export class SecretaryAgent {
 
         try {
           const result = await agent.stream({
-            messages: [{ role: 'user', content: input.message }],
+            messages: buildInvocationMessages(historyMessages, input.message),
           })
 
           for await (const event of adaptSecretaryStream(result.fullStream, pendingEvents)) {
@@ -250,7 +263,7 @@ export class SecretaryAgent {
       parts.push('\n### Active Plans')
       for (const plan of context.activePlans) {
         parts.push(
-          `- [${plan.id}] ${plan.name} — Progress: ${plan.progress.currentDay}/${plan.progress.totalDays} days (${plan.progress.percentComplete}%)`
+          `- [${plan.id}] ${plan.name} — Progress: ${plan.progress.completedLessons}/${plan.progress.totalLessons} lessons (${plan.progress.percentComplete}%)`
         )
         if (plan.currentTopic) {
           parts.push(`  Current: ${plan.currentTopic}`)

@@ -133,7 +133,7 @@ function goBack() {
       </div>
       <div class="progress-meta">
         <span class="progress-label"
-          >{{ plan.progress.currentDay }}/{{ plan.progress.totalDays }} days ·
+          >{{ plan.progress.completedLessons }}/{{ plan.progress.totalLessons }} lessons ·
           {{ plan.progress.percentComplete }}%</span
         >
         <span class="date-range">{{ formatDateRange(plan) }}</span>

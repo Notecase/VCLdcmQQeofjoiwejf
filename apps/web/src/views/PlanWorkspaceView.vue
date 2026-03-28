@@ -66,6 +66,10 @@ function handleToggleSchedule(id: string, enabled: boolean) {
   store.togglePlanSchedule(planId.value, id, enabled)
 }
 
+async function handleRunSchedule(scheduleId: string) {
+  await store.runScheduleNow(planId.value, scheduleId)
+}
+
 function handleGenerate(workflow: string) {
   store.runPlanNow(
     planId.value,
@@ -121,10 +125,13 @@ function handleGenerate(workflow: string) {
       <PlanSchedule
         :schedules="store.currentWorkspace.schedules"
         :plan-id="planId"
+        :running-schedule-id="store.runningScheduleId"
+        :running-steps="store.runningScheduleSteps"
         @create="handleCreateSchedule"
         @update="handleUpdateSchedule"
         @delete="handleDeleteSchedule"
         @toggle="handleToggleSchedule"
+        @run="handleRunSchedule"
       />
 
       <PlanArtifacts

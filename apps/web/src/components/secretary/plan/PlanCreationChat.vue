@@ -169,8 +169,8 @@ function handleStreamEvent(event: SecretaryStreamEvent) {
 
     case 'memory_updated':
       planCreated.value = true
-      // Refresh secretary store memory
-      store.refreshMemoryFiles()
+      // Refresh secretary store memory (debounced to coalesce bursts)
+      store.scheduleMemoryRefresh()
       scrollToBottom()
       break
 

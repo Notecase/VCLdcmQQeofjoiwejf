@@ -4,8 +4,9 @@ import { getEditorDeepSystemPrompt } from './prompts'
 import { createEditorDeepTools } from './tools'
 import { adaptAISDKStream } from './ai-sdk-stream-adapter'
 import { EditorLongTermMemory } from './memory'
-import { EditorConversationHistoryService, type EditorThreadMessage } from './history'
+import { EditorConversationHistoryService } from './history'
 import type { EditorDeepAgentEvent, EditorDeepAgentRequest, EditorRunState } from './types'
+import { buildInvocationMessages } from '../../utils/conversation-history'
 import { executeTool } from '../../tools'
 import { getModelsForTask, isTransientError } from '../../providers/ai-sdk-factory'
 import { getGoogleProviderOptions } from '../../providers/safety'
@@ -151,7 +152,7 @@ export class EditorDeepAgent {
     )
 
     // Build messages from conversation history (structured, preserves turn roles)
-    const invocationMessages = this.buildInvocationMessages(historyMessages, input.message)
+    const invocationMessages = buildInvocationMessages(historyMessages, input.message)
 
     // Create ToolLoopAgent with AI SDK v6 — try primary, fall back on transient errors
     const { primary, fallback } = getModelsForTask('editor-deep')
@@ -275,31 +276,6 @@ export class EditorDeepAgent {
       lines.push(`- Selected blocks: ${context.selectedBlockIds.join(', ')}`)
     }
     return lines.join('\n')
-  }
-
-  private buildInvocationMessages(
-    historyMessages: EditorThreadMessage[],
-    currentMessage: string
-  ): Array<{ role: 'user' | 'assistant'; content: string }> {
-    const cleanedHistory = historyMessages
-      .map((message) => ({
-        role: message.role,
-        content: message.content.trim(),
-      }))
-      .filter((message) => message.content.length > 0)
-
-    const currentNormalized = currentMessage.trim()
-    const lastMessage = cleanedHistory[cleanedHistory.length - 1]
-    const hasCurrentAlready =
-      Boolean(lastMessage) &&
-      lastMessage.role === 'user' &&
-      lastMessage.content === currentNormalized
-
-    if (hasCurrentAlready) {
-      return cleanedHistory
-    }
-
-    return [...cleanedHistory, { role: 'user', content: currentNormalized }]
   }
 
   private async *streamDeterministicNoteSummary(

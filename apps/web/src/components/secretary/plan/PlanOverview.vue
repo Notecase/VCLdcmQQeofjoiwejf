@@ -55,29 +55,49 @@ function onInstructionsBlur() {
   }
 }
 
-// Build structured summary pieces from typed plan fields + phase headings
-const metaParts = computed(() => {
-  const p = props.plan
-  const parts: string[] = []
-  if (p.progress?.totalDays) parts.push(`${p.progress.totalDays} days`)
-  if (p.schedule?.hoursPerDay) parts.push(`${p.schedule.hoursPerDay}h/day`)
-  if (p.schedule?.studyDays?.length) {
-    const days = p.schedule.studyDays
-    parts.push(days.length === 1 ? days[0] : days.join(', '))
-  }
-  return parts
-})
+interface PhaseInfo {
+  name: string
+  lessonStart: number
+  lessonEnd: number
+  status: 'completed' | 'active' | 'upcoming'
+}
 
-const phaseSummary = computed(() => {
+const phases = computed<PhaseInfo[]>(() => {
   const content = props.roadmapContent ? stripOuterCodeFence(props.roadmapContent) : ''
-  const phases: string[] = []
-  if (content) {
-    for (const line of content.split('\n')) {
-      const m = line.trim().match(/^##\s+(?:Phase\s+\d+:\s*)?(.+?)(?:\s*\(Days?\s+[\d–-]+\))?\s*$/)
-      if (m) phases.push(m[1].trim())
+  if (!content) return []
+
+  const result: PhaseInfo[] = []
+  const completed = props.plan.progress?.completedLessons ?? 0
+
+  for (const line of content.split('\n')) {
+    const m = line
+      .trim()
+      .match(/^##\s+(?:Phase\s+\d+:\s*)?(.+?)\s*\((?:Lessons?|Days?)\s+(\d+)\s*[-–]\s*(\d+)\)\s*$/)
+    if (m) {
+      const lessonStart = parseInt(m[2], 10)
+      const lessonEnd = parseInt(m[3], 10)
+      let status: PhaseInfo['status'] = 'upcoming'
+      if (completed >= lessonEnd) status = 'completed'
+      else if (completed >= lessonStart - 1) status = 'active'
+      result.push({ name: m[1].trim(), lessonStart, lessonEnd, status })
     }
   }
-  return phases.length > 0 ? `Covers: ${phases.join(', ')}` : ''
+  return result
+})
+
+const scheduleLine = computed(() => {
+  const parts: string[] = []
+  const days = props.plan.schedule?.studyDays
+  if (days?.length) {
+    parts.push(days.includes('Daily') ? 'Daily' : days.join(', '))
+  }
+  if (props.plan.schedule?.hoursPerDay) {
+    parts.push(`${props.plan.schedule.hoursPerDay}h/lesson`)
+  }
+  if (phases.value.length) {
+    parts.push(`${phases.value.length} phases`)
+  }
+  return parts.join(' · ')
 })
 </script>
 
@@ -104,29 +124,44 @@ const phaseSummary = computed(() => {
           v-if="!isExpanded"
           class="description-summary"
         >
-          <div
-            v-if="metaParts.length"
-            class="meta-pills"
+          <span
+            v-if="scheduleLine"
+            class="schedule-line"
+            >{{ scheduleLine }}</span
           >
-            <span
-              v-for="part in metaParts"
-              :key="part"
-              class="meta-pill"
-              >{{ part }}</span
+
+          <div
+            v-if="phases.length"
+            class="phase-map"
+          >
+            <div
+              v-for="(phase, i) in phases"
+              :key="i"
+              class="phase-row"
+              :class="'phase-' + phase.status"
             >
+              <span class="phase-index">{{ i + 1 }}</span>
+              <span class="phase-name">{{ phase.name }}</span>
+              <span class="phase-indicator">
+                {{ phase.status === 'completed' ? '✓' : phase.status === 'active' ? '●' : '' }}
+              </span>
+              <span class="phase-range">Lessons {{ phase.lessonStart }}–{{ phase.lessonEnd }}</span>
+            </div>
           </div>
           <p
-            v-if="phaseSummary"
-            class="phase-summary"
-          >
-            {{ phaseSummary }}
-          </p>
-          <p
-            v-if="!metaParts.length && !phaseSummary"
-            class="phase-summary"
+            v-else
+            class="phase-fallback"
           >
             {{ plan.name }}
           </p>
+
+          <div
+            v-if="plan.currentTopic"
+            class="current-now"
+          >
+            <span class="now-label">Now:</span>
+            <span class="now-value">{{ plan.currentTopic }}</span>
+          </div>
         </div>
 
         <div
@@ -134,14 +169,6 @@ const phaseSummary = computed(() => {
           class="roadmap-full"
           v-html="renderedRoadmap"
         />
-
-        <div
-          v-if="plan.currentTopic && !isExpanded"
-          class="current-topic-block"
-        >
-          <span class="topic-label">Current topic</span>
-          <span class="topic-value">{{ plan.currentTopic }}</span>
-        </div>
       </div>
 
       <div class="overview-right">
@@ -284,47 +311,128 @@ const phaseSummary = computed(() => {
 .description-summary {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
-.meta-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.meta-pill {
+.schedule-line {
   font-size: 12px;
-  padding: 2px 10px;
-  border-radius: 12px;
+  color: var(--text-color-secondary, #94a3b8);
+  letter-spacing: 0.01em;
+}
+
+.phase-map {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.phase-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.phase-index {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
   background: var(--sec-surface-1, rgba(255, 255, 255, 0.05));
   color: var(--text-color-secondary, #94a3b8);
-  border: 1px solid var(--sec-glass-border, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
 }
 
-.phase-summary {
+.phase-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phase-indicator {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.phase-range {
+  font-size: 11px;
+  color: var(--text-color-secondary, #94a3b8);
+  white-space: nowrap;
+}
+
+/* Phase status styles */
+.phase-completed {
+  color: var(--text-color-secondary, #94a3b8);
+  opacity: 0.7;
+}
+
+.phase-completed .phase-indicator {
+  color: var(--sec-primary, #10b981);
+  opacity: 1;
+}
+
+.phase-completed .phase-index {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--sec-primary, #10b981);
+}
+
+.phase-active {
+  color: var(--text-color, #e2e8f0);
+  border-left: 2px solid var(--sec-primary, #10b981);
+  padding-left: 8px;
+  margin-left: -10px;
+}
+
+.phase-active .phase-indicator {
+  color: var(--sec-primary, #10b981);
+}
+
+.phase-active .phase-index {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--sec-primary, #10b981);
+}
+
+.phase-active .phase-name {
+  font-weight: 600;
+}
+
+.phase-upcoming {
+  color: var(--text-color-secondary, #94a3b8);
+  opacity: 0.5;
+}
+
+.phase-fallback {
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-color, #e2e8f0);
   margin: 0;
 }
 
-.current-topic-block {
+.current-now {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
 }
 
-.topic-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.now-label {
+  font-weight: 700;
   color: var(--sec-accent, #f59e0b);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
-.topic-value {
-  font-size: 14px;
+.now-value {
   color: var(--text-color, #e2e8f0);
   font-weight: 500;
 }

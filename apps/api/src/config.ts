@@ -79,7 +79,7 @@ export const config = {
   // Rate Limiting
   rateLimit: {
     get requestsPerMinute() {
-      return parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '150', 10)
+      return parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '200', 10)
     },
     get tokensPerDay() {
       return parseInt(process.env.RATE_LIMIT_TOKENS_PER_DAY || '100000', 10)

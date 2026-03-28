@@ -8,10 +8,12 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import {
   parsePlanMarkdown,
+  parseStudyDays,
   renderPlanEntryMarkdown,
   getTodayDate,
   addDays,
   getCurrentWeekMonday,
+  computeCalendarSpan,
 } from '@inkdown/shared/secretary'
 import type {
   ActivationSuggestion,
@@ -565,26 +567,34 @@ export class MemoryService {
   private buildAutoActivationEntry(candidate: ParsedRoadmapCandidate): string {
     const start = getTodayDate(this.timezone)
     const roadmapContent = candidate.content || ''
-    const durationMatch = roadmapContent.match(/\*\*Duration:\*\*\s*(\d+)\s*days?/i)
-    const durationDays = durationMatch ? parseInt(durationMatch[1], 10) : 14
-    const end = addDays(start, Math.max(durationDays - 1, 0))
+
+    // Try new format first: **Lessons:** N, then fallback to counting lesson lines
+    const lessonsMatch = roadmapContent.match(/\*\*Lessons:\*\*\s*(\d+)/i)
+    let totalLessons = lessonsMatch ? parseInt(lessonsMatch[1], 10) : NaN
+    if (!Number.isFinite(totalLessons) || totalLessons <= 0) {
+      const lessonLines = roadmapContent.match(/\*\*Lesson\s+\d+:\*\*/g)
+      totalLessons = lessonLines ? lessonLines.length : 14
+    }
 
     const scheduleMatch = roadmapContent.match(/\*\*Schedule:\*\*\s*(.+)/i)
-    const hoursMatch = roadmapContent.match(/\*\*Hours\/day:\*\*\s*(\d+(?:\.\d+)?)/i)
+    const hoursMatch = roadmapContent.match(/\*\*Hours\/(?:day|lesson):\*\*\s*(\d+(?:\.\d+)?)/i)
     const hours = hoursMatch ? parseFloat(hoursMatch[1]) : 2
     const schedule =
       scheduleMatch?.[1]?.trim() || `Daily ${Number.isFinite(hours) ? hours : 2}h/day`
+    const studyDays = parseStudyDays(schedule)
+    const calendarSpan = computeCalendarSpan(totalLessons, studyDays)
+    const end = addDays(start, Math.max(calendarSpan - 1, 0))
 
     return renderPlanEntryMarkdown({
       planId: candidate.id,
       planName: candidate.name,
       status: 'active',
-      progressCurrent: 0,
-      progressTotal: durationDays,
+      completedLessons: 0,
+      totalLessons,
       startDate: start,
       endDate: end,
       schedule,
-      currentTopic: 'Week 1 - Getting started',
+      currentTopic: 'Lesson 1 - Getting started',
     })
   }
 
@@ -871,7 +881,7 @@ export class MemoryService {
 
     for (const plan of toArchive) {
       const newStatus =
-        plan.progress.currentDay >= plan.progress.totalDays ? 'completed' : 'expired'
+        plan.progress.completedLessons >= plan.progress.totalLessons ? 'completed' : 'expired'
 
       // Match the full heading line for this plan in the Active Plans section
       // e.g.: ### [QUA] Quantum Computing Roadmap (active)

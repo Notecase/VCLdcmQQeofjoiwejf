@@ -152,7 +152,7 @@ describe('secretary roadmap activation tools', () => {
       {
         filename: 'Plans/rl-roadmap.md',
         content:
-          '# [RL] Reinforcement Learning\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** Daily 2h/day\n',
+          '# [RL] Reinforcement Learning\n**Lessons:** 120\n**Hours/day:** 2\n**Schedule:** Daily 2h/day\n',
       },
     ])
 
@@ -188,7 +188,7 @@ describe('secretary roadmap activation tools', () => {
       { filename: 'Plan.md', content: '# Learning Plans\n\n## Active Plans\n\n' },
       {
         filename: 'Plans/reinforcement-learning-roadmap.md',
-        content: '# Reinforcement Learning Roadmap\n\n**Duration:** 120 days\n**Hours/day:** 2\n',
+        content: '# Reinforcement Learning Roadmap\n\n**Lessons:** 120\n**Hours/day:** 2\n',
       },
     ])
 
@@ -244,7 +244,7 @@ describe('save_roadmap normalization', () => {
       planName: 'Reinforcement Learning',
       startDate: '2026-02-06',
       roadmapContent:
-        '# [RL] Reinforcement Learning\n\n**Duration:** 120 days\n**Hours/day:** 2\n**Schedule:** MWF 2h/day\n',
+        '# [RL] Reinforcement Learning\n\n**Lessons:** 120\n**Hours/day:** 2\n**Schedule:** MWF 2h/day\n',
     })
 
     const plan = await mem.readFile('Plan.md')

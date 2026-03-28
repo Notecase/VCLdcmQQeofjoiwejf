@@ -268,11 +268,11 @@ export const DEMO_ACTIVE_PLANS: LearningRoadmap[] = [
     progress: {
       currentWeek: 2,
       totalWeeks: 4,
-      currentDay: 5,
-      totalDays: 12,
+      completedLessons: 5,
+      totalLessons: 12,
       percentComplete: 35,
     },
-    currentTopic: 'Day 5: Policy Gradient Methods',
+    currentTopic: 'Lesson 5: Policy Gradient Methods',
     archiveFilename: 'Plans/rl-fundamentals.md',
   },
   {
@@ -287,11 +287,11 @@ export const DEMO_ACTIVE_PLANS: LearningRoadmap[] = [
     progress: {
       currentWeek: 1,
       totalWeeks: 2,
-      currentDay: 1,
-      totalDays: 4,
+      completedLessons: 1,
+      totalLessons: 4,
       percentComplete: 10,
     },
-    currentTopic: 'Day 1: REST API design & rate limiting',
+    currentTopic: 'Lesson 1: REST API design & rate limiting',
     archiveFilename: 'Plans/openclaw-gateway.md',
   },
 ]

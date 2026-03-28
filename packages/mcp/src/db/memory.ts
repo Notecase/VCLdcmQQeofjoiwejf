@@ -110,7 +110,7 @@ export class MemoryDb {
 
     const escapedId = planId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const entryPattern = new RegExp(
-      `###\\s*\\[${escapedId}\\]\\s*([^\\n]+)[\\s\\S]*?Progress:\\s*(\\d+)/(\\d+)[\\s\\S]*?Current:\\s*Day\\s*\\d+\\s*[—–-]\\s*(.+?)(?:\\n|$)`,
+      `###\\s*\\[${escapedId}\\]\\s*([^\\n]+)[\\s\\S]*?Progress:\\s*(\\d+)/(\\d+)[\\s\\S]*?Current:\\s*(.+?)(?:\\n|$)`,
       'i'
     )
     const match = planFile.content.match(entryPattern)

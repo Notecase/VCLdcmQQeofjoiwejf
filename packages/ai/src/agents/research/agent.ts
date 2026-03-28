@@ -46,6 +46,8 @@ import {
 import { trackAISDKUsage } from '../../providers/ai-sdk-usage'
 import { getGoogleProviderOptions } from '../../providers/safety'
 import { buildSystemPrompt } from '../../safety/content-policy'
+import { ResearchHistoryService } from './history'
+import { buildInvocationMessages } from '../../utils/conversation-history'
 
 // =============================================================================
 // Types
@@ -108,10 +110,16 @@ export class ResearchAgent {
     const threadId = input.threadId || crypto.randomUUID()
     const mode = classifyResearchRequest(input.message, input.outputPreference)
 
+    // Load conversation history for multi-turn context
+    const historyService = new ResearchHistoryService(this.config.supabase)
+    const historyMessages = input.threadId
+      ? await historyService.loadThreadMessages({ threadId: input.threadId })
+      : []
+
     try {
       if (mode === 'chat') {
         yield { event: 'thinking', data: 'Using chat mode for a direct response...' }
-        yield* this.streamSimpleChat(input.message)
+        yield* this.streamSimpleChat(input.message, historyMessages)
         yield { event: 'thread-status', data: JSON.stringify({ status: 'idle' }) }
         yield { event: 'thread-id', data: JSON.stringify({ threadId }) }
         yield { event: 'done', data: '' }
@@ -143,7 +151,12 @@ export class ResearchAgent {
       }
 
       yield { event: 'thinking', data: 'Using deep research mode...' }
-      yield* this.streamResearchMode(input.message, threadId, input.outputPreference)
+      yield* this.streamResearchMode(
+        input.message,
+        threadId,
+        input.outputPreference,
+        historyMessages
+      )
     } catch (error) {
       yield {
         event: 'thread-status',
@@ -154,8 +167,12 @@ export class ResearchAgent {
     }
   }
 
-  private async *streamSimpleChat(message: string): AsyncGenerator<ResearchStreamEvent> {
+  private async *streamSimpleChat(
+    message: string,
+    historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  ): AsyncGenerator<ResearchStreamEvent> {
     const { primary, fallback } = resolveModelsForTask('research')
+    const messages = buildInvocationMessages(historyMessages, message)
 
     for (const modelOption of [primary, fallback]) {
       if (!modelOption) continue
@@ -165,7 +182,7 @@ export class ResearchAgent {
           system: buildSystemPrompt(
             'You are a concise and helpful assistant for note-taking and learning.'
           ),
-          prompt: message,
+          messages,
           temperature: 0.5,
           maxOutputTokens: 4000,
           providerOptions: getGoogleProviderOptions(),
@@ -503,7 +520,8 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
   private async *streamResearchMode(
     message: string,
     threadId: string,
-    outputPreference?: ResearchOutputPreference
+    outputPreference?: ResearchOutputPreference,
+    historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
   ): AsyncGenerator<ResearchStreamEvent> {
     const allowFileWrites = shouldEnableResearchFiles(message, outputPreference)
     const sharedCtx = this.config.sharedContextService
@@ -556,7 +574,7 @@ Create a complete, polished component with rich HTML structure, beautiful CSS st
           onFinish: trackAISDKUsage({ model: modelOption.entry.id, taskType: 'research' }),
         })
         result = await agent.stream({
-          messages: [{ role: 'user', content: message }],
+          messages: buildInvocationMessages(historyMessages, message),
         })
         break
       } catch (err) {

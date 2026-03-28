@@ -11,11 +11,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LearningRoadmap, RoadmapCandidate } from '@inkdown/shared/types'
 import {
   parsePlanMarkdown,
+  parseStudyDays,
   renderPlanEntryMarkdown,
   getTodayDate,
   addDays,
   getDayNameForDate,
   formatDateHeading,
+  computeLessonCount,
+  computeCalendarSpan,
 } from '@inkdown/shared/secretary'
 import { MemoryService } from './memory'
 import { PLANNER_SUBAGENT_PROMPT } from './prompts'
@@ -36,7 +39,7 @@ export interface RoadmapPreview {
   id: string
   name: string
   content: string
-  durationDays: number
+  totalLessons: number
   hoursPerDay: number
 }
 
@@ -95,31 +98,28 @@ const TASK_LINE_RE =
 
 function extractRoadmapMeta(
   content: string,
-  fallbackDays: number,
+  fallbackLessons: number,
   fallbackHours: number
 ): {
-  durationDays: number
+  totalLessons: number
   hoursPerDay: number
   schedule: string
 } {
-  const durationMatch = content.match(
-    /\*\*Duration:\*\*\s*(\d+(?:\.\d+)?)\s*(day|days|week|weeks|month|months)?/i
-  )
-  const rawDuration = durationMatch ? parseFloat(durationMatch[1]) : NaN
-  const durationUnit = durationMatch?.[2]?.toLowerCase() || 'days'
+  // Try new format: **Lessons:** N
+  const lessonsMatch = content.match(/\*\*Lessons:\*\*\s*(\d+)/i)
+  let totalLessons = lessonsMatch ? parseInt(lessonsMatch[1], 10) : NaN
 
-  let durationDays = fallbackDays
-  if (Number.isFinite(rawDuration) && rawDuration > 0) {
-    if (durationUnit.startsWith('week')) {
-      durationDays = Math.max(1, Math.round(rawDuration * 7))
-    } else if (durationUnit.startsWith('month')) {
-      durationDays = Math.max(1, Math.round(rawDuration * 30))
+  // Fallback: count **Lesson N:** occurrences in the content
+  if (!Number.isFinite(totalLessons) || totalLessons <= 0) {
+    const lessonLines = content.match(/\*\*Lesson\s+\d+:\*\*/g)
+    if (lessonLines && lessonLines.length > 0) {
+      totalLessons = lessonLines.length
     } else {
-      durationDays = Math.max(1, Math.round(rawDuration))
+      totalLessons = fallbackLessons
     }
   }
 
-  const hoursMatch = content.match(/\*\*Hours\/day:\*\*\s*(\d+(?:\.\d+)?)/i)
+  const hoursMatch = content.match(/\*\*Hours\/(?:day|lesson):\*\*\s*(\d+(?:\.\d+)?)/i)
   const parsedHours = hoursMatch ? parseFloat(hoursMatch[1]) : NaN
   const hoursPerDay = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : fallbackHours
 
@@ -127,7 +127,7 @@ function extractRoadmapMeta(
   const schedule = scheduleMatch?.[1]?.trim() || `Daily ${hoursPerDay}h/day`
 
   return {
-    durationDays,
+    totalLessons,
     hoursPerDay,
     schedule,
   }
@@ -140,20 +140,20 @@ function buildPlanEntryFromRoadmap(
 ): string {
   const start = startDate || getTodayDate(timezone)
   const meta = extractRoadmapMeta(candidate.content, 14, 2)
-  const durationDays = meta.durationDays
-  const schedule = meta.schedule
-  const end = addDays(start, Math.max(durationDays - 1, 0))
+  const studyDays = parseStudyDays(meta.schedule)
+  const calendarSpan = computeCalendarSpan(meta.totalLessons, studyDays)
+  const end = addDays(start, Math.max(calendarSpan - 1, 0))
 
   return renderPlanEntryMarkdown({
     planId: candidate.id,
     planName: candidate.name,
     status: 'active',
-    progressCurrent: 0,
-    progressTotal: durationDays,
+    completedLessons: 0,
+    totalLessons: meta.totalLessons,
     startDate: start,
     endDate: end,
-    schedule,
-    currentTopic: 'Week 1 - Getting started',
+    schedule: meta.schedule,
+    currentTopic: 'Lesson 1 - Getting started',
   })
 }
 
@@ -238,20 +238,33 @@ export function createSecretaryTools(memoryService: MemoryService, config: Secre
       'Generate a structured learning roadmap preview using AI. Returns a preview that must be confirmed before saving via save_roadmap.',
     inputSchema: z.object({
       subject: z.string().describe('The subject/topic for the roadmap'),
-      durationDays: z.number().optional().describe('Duration in days (default: 14)'),
-      hoursPerDay: z.number().optional().describe('Study hours per day (default: 2)'),
+      calendarDays: z
+        .number()
+        .optional()
+        .describe('Calendar span in days (e.g., 60 for "2 months"). Default: 14'),
+      hoursPerDay: z.number().optional().describe('Study hours per lesson (default: 2)'),
+      schedule: z
+        .string()
+        .optional()
+        .describe(
+          'Study schedule, e.g. "Daily", "MWF", "Mon,Wed,Fri", "Mondays only". Default: "Daily"'
+        ),
     }),
-    execute: async ({ subject, durationDays, hoursPerDay }) => {
-      const duration = durationDays || 14
+    execute: async ({ subject, calendarDays, hoursPerDay, schedule }) => {
+      const span = calendarDays || 14
       const hours = hoursPerDay || 2
+      const sched = schedule || 'Daily'
+      const studyDays = parseStudyDays(sched)
+      const totalLessons = computeLessonCount(span, studyDays)
 
       // Generate a real roadmap using AI SDK generateText (was planner subagent)
       const { model, entry } = resolveModel('secretary')
       const userPrompt = `Create a detailed learning roadmap for: "${subject}"
-Duration: ${duration} days
-Hours per day: ${hours}
+Total lessons: ${totalLessons}
+Hours per lesson: ${hours}
+Schedule: ${sched}
 
-Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-day plan.`
+Generate a unique short ID (2-4 uppercase letters) and provide the full lesson-by-lesson plan.`
 
       const { text: content } = await generateText({
         model,
@@ -270,7 +283,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
         id: idMatch?.[1] || subject.slice(0, 3).toUpperCase(),
         name: nameMatch?.[1]?.trim() || `${subject} Roadmap`,
         content,
-        durationDays: duration,
+        totalLessons,
         hoursPerDay: hours,
       }
 
@@ -324,10 +337,12 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
       await memoryService.writeFile(archiveFilename, content)
 
       const start = startDate || getTodayDate(config.timezone)
-      const fallbackDays = pending?.durationDays || 14
+      const fallbackLessons = pending?.totalLessons || 14
       const fallbackHours = pending?.hoursPerDay || 2
-      const meta = extractRoadmapMeta(content, fallbackDays, fallbackHours)
-      const end = addDays(start, meta.durationDays - 1)
+      const meta = extractRoadmapMeta(content, fallbackLessons, fallbackHours)
+      const studyDays = parseStudyDays(meta.schedule)
+      const calendarSpan = computeCalendarSpan(meta.totalLessons, studyDays)
+      const end = addDays(start, calendarSpan - 1)
       const currentTopic =
         planMdEntry?.match(/-\s*Current:\s*(.+)/i)?.[1]?.trim() || 'Week 1 - Getting started'
 
@@ -371,8 +386,8 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
         planId,
         planName,
         status: 'active',
-        progressCurrent: 0,
-        progressTotal: meta.durationDays,
+        completedLessons: 0,
+        totalLessons: meta.totalLessons,
         startDate: start,
         endDate: end,
         schedule: meta.schedule,
@@ -472,7 +487,7 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
       const planSummaries = context.activePlans
         .map(
           (p) =>
-            `- [${p.id}] ${p.name} (${p.progress.currentDay}/${p.progress.totalDays} days, ${p.progress.percentComplete}% complete)\n  Current: ${p.currentTopic || 'N/A'}`
+            `- [${p.id}] ${p.name} (${p.progress.completedLessons}/${p.progress.totalLessons} lessons, ${p.progress.percentComplete}% complete)\n  Current: ${p.currentTopic || 'N/A'}`
         )
         .join('\n')
 
@@ -481,15 +496,16 @@ Generate a unique short ID (2-4 uppercase letters) and provide the full day-by-d
       for (const plan of context.activePlans) {
         const archive = await memoryService.readFile(plan.archiveFilename)
         if (archive) {
-          // Extract only the relevant day section (next ~500 chars)
-          const dayPattern = new RegExp(
-            `##\\s*Day\\s+${plan.progress.currentDay + 1}[\\s\\S]*?(?=##\\s*Day|$)`,
+          // Extract only the relevant lesson section (next ~500 chars)
+          const nextLesson = plan.progress.completedLessons + 1
+          const lessonPattern = new RegExp(
+            `##\\s*(?:Day|Lesson)\\s+${nextLesson}[\\s\\S]*?(?=##\\s*(?:Day|Lesson)|$)`,
             'i'
           )
-          const dayMatch = archive.content.match(dayPattern)
-          if (dayMatch) {
+          const lessonMatch = archive.content.match(lessonPattern)
+          if (lessonMatch) {
             archiveDetails.push(
-              `### ${plan.id} - Day ${plan.progress.currentDay + 1}\n${dayMatch[0].trim().slice(0, 500)}`
+              `### ${plan.id} - Lesson ${nextLesson}\n${lessonMatch[0].trim().slice(0, 500)}`
             )
           }
         }

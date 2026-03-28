@@ -9,8 +9,8 @@ export interface RenderPlanEntryInput {
   planId: string
   planName: string
   status?: 'active' | 'paused' | 'completed' | 'archived'
-  progressCurrent?: number
-  progressTotal?: number
+  completedLessons?: number
+  totalLessons?: number
   startDate: string
   endDate: string
   schedule: string
@@ -101,8 +101,8 @@ export function renderDailyPlanMarkdown(
 
 export function renderPlanEntryMarkdown(input: RenderPlanEntryInput): string {
   const status = input.status || 'active'
-  const current = input.progressCurrent ?? 0
-  const total = input.progressTotal ?? 14
+  const current = input.completedLessons ?? 0
+  const total = input.totalLessons ?? 14
   const topic = input.currentTopic || 'Week 1 - Getting started'
 
   const lines = [

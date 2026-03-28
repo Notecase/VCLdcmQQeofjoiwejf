@@ -9,6 +9,12 @@ import { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { getServiceClient } from '../lib/supabase'
 
+declare module 'hono' {
+  interface ContextVariableMap {
+    creditDecrement?: () => void
+  }
+}
+
 /**
  * Per-user concurrent AI request counter.
  * Prevents credit race conditions: without this, two concurrent requests
@@ -110,16 +116,18 @@ export async function creditGuard(c: Context, next: Next) {
 
     // After next() returns, check if the response is SSE (streaming).
     // For SSE: streamSSE() returns a Response immediately but the stream
-    // continues in the background. Decrement via abort signal when the
-    // connection actually closes (stream ends or client disconnects).
-    // For non-SSE: the request is fully done — decrement immediately.
+    // continues in the background. The route handler MUST call the
+    // creditDecrement function (stored on context) when the stream ends.
+    // The abort signal and timeout are kept as safety nets only.
     const isSSE = c.res?.headers?.get('content-type')?.includes('text/event-stream')
     if (isSSE) {
-      // Primary: abort signal fires when client disconnects or connection closes
+      // Store decrementer on context so the route handler can call it
+      // explicitly when the SSE stream completes. This is the PRIMARY
+      // decrement path — abort signal alone is unreliable because Node.js
+      // doesn't fire it on normal server-side stream completion.
+      c.set('creditDecrement', decrement)
+      // Safety nets (double-decrement prevented by createDecrementer flag):
       c.req.raw.signal.addEventListener('abort', decrement, { once: true })
-      // Safety net: auto-decrement after 10 minutes to prevent counter leaks
-      // if the abort signal doesn't fire on normal stream completion.
-      // The once-flag in createDecrementer prevents double-decrement.
       const timer = setTimeout(decrement, 10 * 60 * 1000)
       if (typeof timer.unref === 'function') timer.unref()
     } else {

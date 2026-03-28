@@ -65,11 +65,31 @@ function inferUpdatedFiles(toolName: string, args?: Record<string, unknown>): st
   }
 }
 
-// Apply auth middleware
-secretary.use('*', authMiddleware)
-secretary.use('*', creditGuard)
-secretary.use('*', requestContextMiddleware)
-secretary.use('*', rateLimitMiddleware())
+// Apply auth middleware (skip cron routes — those use CRON_SECRET instead)
+secretary.use('*', async (c, next) => {
+  if (c.req.path.includes('/cron/')) return next()
+  return authMiddleware(c, next)
+})
+
+// creditGuard only on AI routes that consume credits.
+// Non-AI routes (threads, memory reads, history) must NOT be gated —
+// otherwise a single in-flight SSE stream blocks the entire Secretary UI.
+const AI_ROUTE_PATTERNS = ['/chat', '/prepare-tomorrow', '/run']
+secretary.use('*', async (c, next) => {
+  if (c.req.path.includes('/cron/')) return next()
+  const isAIRoute = AI_ROUTE_PATTERNS.some((p) => c.req.path.endsWith(p))
+  if (!isAIRoute) return next()
+  return creditGuard(c, next)
+})
+
+secretary.use('*', async (c, next) => {
+  if (c.req.path.includes('/cron/')) return next()
+  return requestContextMiddleware(c, next)
+})
+secretary.use('*', async (c, next) => {
+  if (c.req.path.includes('/cron/')) return next()
+  return rateLimitMiddleware()(c, next)
+})
 
 // ============================================================================
 // Chat (Streaming SSE)
@@ -124,6 +144,7 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
   })
 
   if (!openaiApiKey) {
+    c.get('creditDecrement')?.()
     return c.json({ error: 'OpenAI API key not configured' }, 500)
   }
 
@@ -330,6 +351,12 @@ secretary.post('/chat', zValidator('json', ChatSchema), async (c) => {
         event: 'error',
         data: JSON.stringify({ event: 'error', data: appError.userMessage }),
       })
+    } finally {
+      // Explicitly release the concurrent request slot.
+      // The abort signal alone is unreliable — Node.js doesn't fire it
+      // on normal server-side stream completion, only on client disconnect.
+      const creditDecrement = c.get('creditDecrement') as (() => void) | undefined
+      if (creditDecrement) creditDecrement()
     }
   })
 })
@@ -541,6 +568,7 @@ secretary.post('/prepare-tomorrow', async (c) => {
   const hardeningEnabled = isHardeningEnabled()
 
   if (!openaiApiKey) {
+    c.get('creditDecrement')?.()
     return c.json({ error: 'OpenAI API key not configured' }, 500)
   }
 
@@ -643,6 +671,9 @@ secretary.post('/prepare-tomorrow', async (c) => {
         event: 'error',
         data: JSON.stringify({ event: 'error', data: appError.userMessage }),
       })
+    } finally {
+      const creditDecrement = c.get('creditDecrement')
+      if (creditDecrement) creditDecrement()
     }
   })
 })
@@ -754,24 +785,74 @@ secretary.get('/plan/:planId', async (c) => {
     return c.json({ error: 'Plan not found' }, 404)
   }
 
-  // Try the canonical archive path first, then search Plans/ for a matching file
+  // Try the canonical archive path first, then search Plans/ for a matching file.
+  // When a user renames a plan codename in Plan.md (e.g. [A-L] → [MATH]),
+  // the roadmap file is still at the old path (Plans/a-l-roadmap.md).
+  // The fallback search handles this by checking all roadmap files.
   const canonicalPath = plan.archiveFilename || `Plans/${planId.toLowerCase()}-roadmap.md`
   let roadmapFile = await memService.readFile(canonicalPath)
+  let resolvedRoadmapPath = canonicalPath
 
-  // Fallback: search Plans/ folder for any file containing the planId
   if (!roadmapFile?.content) {
     const planFiles = await memService.listFiles('Plans/')
-    const match = planFiles.find(
-      (f) =>
-        f.filename.toLowerCase().includes(planId.toLowerCase()) &&
-        f.filename.endsWith('-roadmap.md')
-    )
+    const roadmapFiles = planFiles.filter((f) => f.filename.endsWith('-roadmap.md'))
+
+    // 1. Match by plan ID substring in filename
+    let match = roadmapFiles.find((f) => f.filename.toLowerCase().includes(planId.toLowerCase()))
+
+    // 2. Match by plan name in file content (handles codename renames)
+    if (!match && plan.name) {
+      const nameLower = plan.name.toLowerCase()
+      match = roadmapFiles.find((f) => (f.content || '').toLowerCase().includes(nameLower))
+    }
+
     if (match) {
       roadmapFile = { content: match.content } as typeof roadmapFile
+      resolvedRoadmapPath = match.filename
+
+      // Auto-migrate: rename files + update DB records so future lookups are instant
+      if (match.filename !== canonicalPath) {
+        // Extract old plan ID from the filename (e.g. "Plans/a-l-roadmap.md" → "A-L")
+        const oldIdMatch = match.filename.match(/Plans\/(.+)-roadmap\.md$/i)
+        const oldPlanId = oldIdMatch?.[1]?.toUpperCase()
+
+        try {
+          await memService.writeFile(canonicalPath, match.content)
+          await memService.deleteFile(match.filename)
+          resolvedRoadmapPath = canonicalPath
+
+          // Also migrate instructions file if it exists
+          const oldInstructionsPath = match.filename.replace('-roadmap.md', '-instructions.md')
+          const newInstructionsPath = canonicalPath.replace('-roadmap.md', '-instructions.md')
+          const oldInstructions = await memService.readFile(oldInstructionsPath)
+          if (oldInstructions?.content) {
+            await memService.writeFile(newInstructionsPath, oldInstructions.content)
+            await memService.deleteFile(oldInstructionsPath)
+          }
+
+          // Update DB records that reference the old plan ID
+          if (oldPlanId && oldPlanId !== planId) {
+            await Promise.allSettled([
+              auth.supabase
+                .from('plan_project_links')
+                .update({ plan_id: planId })
+                .eq('user_id', auth.userId)
+                .eq('plan_id', oldPlanId),
+              auth.supabase
+                .from('plan_schedules')
+                .update({ plan_id: planId })
+                .eq('user_id', auth.userId)
+                .eq('plan_id', oldPlanId),
+            ])
+          }
+        } catch {
+          // Migration failed silently — the fallback still served the content
+        }
+      }
     }
   }
 
-  const instructionsPath = canonicalPath.replace('-roadmap.md', '-instructions.md')
+  const instructionsPath = resolvedRoadmapPath.replace('-roadmap.md', '-instructions.md')
   const instructionsFile = await memService.readFile(instructionsPath)
 
   // Load schedules and plan-project link in parallel
@@ -1001,72 +1082,342 @@ secretary.delete('/plan/:planId/schedules/:id', async (c) => {
 })
 
 /**
- * POST /api/secretary/plan/:planId/run
- * Trigger immediate content generation for the plan's current topic
+ * POST /api/secretary/plan/:planId/schedules/:id/run
+ * Execute a specific schedule automation now (Run Now button).
+ * Streams progress events via SSE as the agent works.
  */
-secretary.post(
-  '/plan/:planId/run',
-  zValidator(
-    'json',
-    z
-      .object({
-        workflow: z
-          .enum(['make_note_from_task', 'research_topic_from_task', 'make_course_from_plan'])
-          .optional(),
-      })
-      .optional()
-  ),
-  async (c) => {
-    const auth = requireAuth(c)
-    const planId = c.req.param('planId')
-    const body = c.req.valid('json') || {}
-    const workflow = body.workflow || 'make_note_from_task'
+secretary.post('/plan/:planId/schedules/:id/run', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+  const scheduleId = c.req.param('id')
 
-    // Read plan data to build goal
-    const { MemoryService } = await import('@inkdown/ai/agents')
-    const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
-    const planMd = await memService.readFile('Plan.md')
+  // 1. Load schedule
+  const { data: schedule, error: schedErr } = await auth.supabase
+    .from('plan_schedules')
+    .select('*')
+    .eq('id', scheduleId)
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+    .single()
 
-    const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
-    const parsed = parsePlanMarkdown(planMd?.content || '')
-    const plan = parsed.plans.find((p) => p.id === planId)
-
-    if (!plan) {
-      return c.json({ error: 'Plan not found' }, 404)
-    }
-
-    // Read plan instructions for context
-    const instructionsFile = await memService.readFile(
-      `Plans/${planId.toLowerCase()}-instructions.md`
-    )
-    const instructions = instructionsFile?.content || ''
-
-    // Build goal with instructions context
-    let goal: string
-    switch (workflow) {
-      case 'make_course_from_plan':
-        goal = `Turn the active plan "${plan.name}"${plan.currentTopic ? ` on ${plan.currentTopic}` : ''} into a structured course outline.`
-        break
-      case 'research_topic_from_task':
-        goal = `Research the active plan "${plan.name}"${plan.currentTopic ? ` focused on ${plan.currentTopic}` : ''} and capture the highest-value insights.`
-        break
-      default:
-        goal = `Create a note for the active plan "${plan.name}"${plan.currentTopic ? ` focused on ${plan.currentTopic}` : ''}.`
-    }
-
-    if (instructions) {
-      goal += `\n\nPlan instructions:\n${instructions}`
-    }
-
-    return c.json({
-      goal,
-      workflow,
-      planId: plan.id,
-      planName: plan.name,
-      currentTopic: plan.currentTopic,
-    })
+  if (schedErr || !schedule) {
+    return c.json({ error: 'Schedule not found' }, 404)
   }
-)
+
+  // 2. Load plan + instructions + roadmap
+  const { MemoryService } = await import('@inkdown/ai/agents')
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+  const planMd = await memService.readFile('Plan.md')
+
+  const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+  const parsed = parsePlanMarkdown(planMd?.content || '')
+  const plan = parsed.plans.find((p) => p.id === planId)
+
+  if (!plan) {
+    return c.json({ error: 'Plan not found' }, 404)
+  }
+
+  const instructionsFile = await memService.readFile(
+    `Plans/${planId.toLowerCase()}-instructions.md`
+  )
+  const instructions = instructionsFile?.content || ''
+
+  const roadmapFile = await memService.readFile(`Plans/${planId.toLowerCase()}-roadmap.md`)
+  const roadmapContent = roadmapFile?.content || ''
+
+  // 3. Load project ID and recent notes for continuity
+  const { data: linkRow } = await auth.supabase
+    .from('plan_project_links')
+    .select('project_id')
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+    .single()
+
+  const projectId = linkRow?.project_id || undefined
+
+  let previousNotes: Array<{ title: string; updatedAt: string }> = []
+  if (projectId) {
+    const { data: recentNotes } = await auth.supabase
+      .from('notes')
+      .select('title, updated_at')
+      .eq('user_id', auth.userId)
+      .eq('project_id', projectId)
+      .order('updated_at', { ascending: false })
+      .limit(3)
+    if (recentNotes) {
+      previousNotes = recentNotes.map((n) => ({
+        title: n.title,
+        updatedAt: n.updated_at,
+      }))
+    }
+  }
+
+  // 4. Stream AutomationAgent events via SSE
+  return streamSSE(c, async (stream) => {
+    const { streamAutomation } = await import('@inkdown/ai/agents')
+    const { computeNextRunAt } = await import('@inkdown/shared/secretary')
+
+    let lastError: string | undefined
+
+    try {
+      for await (const event of streamAutomation({
+        plan,
+        instructions,
+        roadmapContent,
+        previousNotes,
+        scheduleTitle: schedule.title,
+        scheduleInstructions: schedule.instructions || undefined,
+        projectId,
+        supabase: auth.supabase,
+        userId: auth.userId,
+      })) {
+        await stream.writeSSE({
+          event: event.type,
+          data: JSON.stringify(event.data),
+        })
+        if (event.type === 'error') lastError = event.data.message
+      }
+
+      // 5. Update schedule state after stream completes
+      const now = new Date().toISOString()
+      const nextRunAt = computeNextRunAt(schedule.frequency, schedule.time, schedule.days)
+
+      await auth.supabase
+        .from('plan_schedules')
+        .update({
+          last_run_at: now,
+          next_run_at: nextRunAt,
+          run_count: (schedule.run_count || 0) + 1,
+          last_run_status: lastError ? 'error' : 'success',
+          last_run_error: lastError || null,
+          updated_at: now,
+        })
+        .eq('id', scheduleId)
+    } finally {
+      const creditDecrement = c.get('creditDecrement')
+      if (creditDecrement) creditDecrement()
+    }
+  })
+})
+
+/**
+ * POST /api/secretary/plan/:planId/run
+ * Trigger immediate content generation for the plan (no specific schedule).
+ * Used by PlanHeader ▶ button.
+ */
+secretary.post('/plan/:planId/run', async (c) => {
+  const auth = requireAuth(c)
+  const planId = c.req.param('planId')
+
+  const { MemoryService } = await import('@inkdown/ai/agents')
+  const memService = new MemoryService(auth.supabase, auth.userId, getTimezone(c))
+  const planMd = await memService.readFile('Plan.md')
+
+  const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+  const parsed = parsePlanMarkdown(planMd?.content || '')
+  const plan = parsed.plans.find((p) => p.id === planId)
+
+  if (!plan) {
+    return c.json({ error: 'Plan not found' }, 404)
+  }
+
+  const instructionsFile = await memService.readFile(
+    `Plans/${planId.toLowerCase()}-instructions.md`
+  )
+  const instructions = instructionsFile?.content || ''
+
+  const roadmapFile = await memService.readFile(`Plans/${planId.toLowerCase()}-roadmap.md`)
+  const roadmapContent = roadmapFile?.content || ''
+
+  const { data: linkRow } = await auth.supabase
+    .from('plan_project_links')
+    .select('project_id')
+    .eq('user_id', auth.userId)
+    .eq('plan_id', planId)
+    .single()
+
+  const projectId = linkRow?.project_id || undefined
+
+  let previousNotes: Array<{ title: string; updatedAt: string }> = []
+  if (projectId) {
+    const { data: recentNotes } = await auth.supabase
+      .from('notes')
+      .select('title, updated_at')
+      .eq('user_id', auth.userId)
+      .eq('project_id', projectId)
+      .order('updated_at', { ascending: false })
+      .limit(3)
+    if (recentNotes) {
+      previousNotes = recentNotes.map((n) => ({
+        title: n.title,
+        updatedAt: n.updated_at,
+      }))
+    }
+  }
+
+  const { runAutomation } = await import('@inkdown/ai/agents')
+  const result = await runAutomation({
+    plan,
+    instructions,
+    roadmapContent,
+    previousNotes,
+    scheduleTitle: `Generate lesson for ${plan.name}`,
+    projectId,
+    supabase: auth.supabase,
+    userId: auth.userId,
+  })
+
+  if (result.error) {
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json({
+    noteId: result.noteId,
+    title: result.noteTitle,
+    advancedProgress: result.advancedProgress,
+    status: 'success',
+  })
+})
+
+// ============================================================================
+// Cron: Automated Schedule Execution
+// ============================================================================
+
+/**
+ * GET /api/secretary/cron/automations
+ * Called by Railway cron every 5 minutes. Processes due plan schedules across all users.
+ * Auth: CRON_SECRET header (not user auth).
+ */
+secretary.get('/cron/automations', async (c) => {
+  const secret = c.req.header('x-cron-secret') || c.req.query('secret')
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  const { createClient } = await import('@supabase/supabase-js')
+  const adminSupabase = createClient(
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_KEY || ''
+  )
+
+  const now = new Date().toISOString()
+  const { data: dueSchedules } = await adminSupabase
+    .from('plan_schedules')
+    .select('*')
+    .eq('enabled', true)
+    .lte('next_run_at', now)
+    .order('next_run_at', { ascending: true })
+    .limit(3)
+
+  if (!dueSchedules?.length) {
+    return c.json({ processed: 0 })
+  }
+
+  const { runAutomation, MemoryService } = await import('@inkdown/ai/agents')
+  const { parsePlanMarkdown } = await import('@inkdown/shared/secretary')
+  const { computeNextRunAt } = await import('@inkdown/shared/secretary')
+
+  const results: Array<{ scheduleId: string; status: string; noteTitle?: string; error?: string }> =
+    []
+
+  for (const schedule of dueSchedules) {
+    try {
+      // Immediately advance next_run_at to prevent re-pick by concurrent cron
+      const nextRunAt = computeNextRunAt(schedule.frequency, schedule.time, schedule.days)
+      await adminSupabase
+        .from('plan_schedules')
+        .update({ next_run_at: nextRunAt, updated_at: now })
+        .eq('id', schedule.id)
+
+      const userId = schedule.user_id
+      const planId = schedule.plan_id
+
+      const memService = new MemoryService(adminSupabase, userId)
+      const planMd = await memService.readFile('Plan.md')
+      const parsed = parsePlanMarkdown(planMd?.content || '')
+      const plan = parsed.plans.find((p: { id: string }) => p.id === planId)
+
+      if (!plan) {
+        results.push({ scheduleId: schedule.id, status: 'error', error: 'Plan not found' })
+        continue
+      }
+
+      const instrFile = await memService.readFile(`Plans/${planId.toLowerCase()}-instructions.md`)
+      const roadmapFile = await memService.readFile(`Plans/${planId.toLowerCase()}-roadmap.md`)
+
+      const { data: linkRow } = await adminSupabase
+        .from('plan_project_links')
+        .select('project_id')
+        .eq('user_id', userId)
+        .eq('plan_id', planId)
+        .single()
+
+      let previousNotes: Array<{ title: string; updatedAt: string }> = []
+      if (linkRow?.project_id) {
+        const { data: recentNotes } = await adminSupabase
+          .from('notes')
+          .select('title, updated_at')
+          .eq('user_id', userId)
+          .eq('project_id', linkRow.project_id)
+          .order('updated_at', { ascending: false })
+          .limit(3)
+        if (recentNotes) {
+          previousNotes = recentNotes.map((n: { title: string; updated_at: string }) => ({
+            title: n.title,
+            updatedAt: n.updated_at,
+          }))
+        }
+      }
+
+      const result = await runAutomation({
+        plan,
+        instructions: instrFile?.content || '',
+        roadmapContent: roadmapFile?.content || '',
+        previousNotes,
+        scheduleTitle: schedule.title,
+        scheduleInstructions: schedule.instructions || undefined,
+        projectId: linkRow?.project_id || undefined,
+        supabase: adminSupabase,
+        userId,
+      })
+
+      await adminSupabase
+        .from('plan_schedules')
+        .update({
+          last_run_at: now,
+          run_count: (schedule.run_count || 0) + 1,
+          last_run_status: result.error ? 'error' : 'success',
+          last_run_error: result.error || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', schedule.id)
+
+      results.push({
+        scheduleId: schedule.id,
+        status: result.error ? 'error' : 'success',
+        noteTitle: result.noteTitle,
+        error: result.error,
+      })
+    } catch (err) {
+      await adminSupabase
+        .from('plan_schedules')
+        .update({
+          last_run_status: 'error',
+          last_run_error: (err as Error).message,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', schedule.id)
+
+      results.push({
+        scheduleId: schedule.id,
+        status: 'error',
+        error: (err as Error).message,
+      })
+    }
+  }
+
+  return c.json({ processed: results.length, results })
+})
 
 // ============================================================================
 // Plan-Project Links

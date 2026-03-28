@@ -8,7 +8,7 @@ import type {
   TaskArtifactLink,
 } from '../types/secretary'
 
-function parseStudyDays(scheduleStr: string): string[] {
+export function parseStudyDays(scheduleStr: string): string[] {
   if (!scheduleStr) return ['Daily']
   const lower = scheduleStr.toLowerCase()
   if (lower.includes('daily')) return ['Daily']
@@ -200,9 +200,10 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
     const topicMatch = detail.match(/-\s*current:\s*(.+)/i)
     const projectIdMatch = detail.match(/-\s*projectid:\s*([0-9a-f-]{36})/i)
 
-    const currentDay = progressMatch ? parseInt(progressMatch[1], 10) : 0
-    const totalDays = progressMatch ? parseInt(progressMatch[2], 10) : 0
-    const percentComplete = totalDays > 0 ? Math.round((currentDay / totalDays) * 100) : 0
+    const completedLessons = progressMatch ? parseInt(progressMatch[1], 10) : 0
+    const totalLessons = progressMatch ? parseInt(progressMatch[2], 10) : 0
+    const percentComplete =
+      totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
     const scheduleText = scheduleMatch?.[1]?.trim() || ''
 
     plans.push({
@@ -220,8 +221,8 @@ export function parsePlanMarkdown(content: string): PlanParseResult {
       progress: {
         currentWeek: 1,
         totalWeeks: 1,
-        currentDay,
-        totalDays,
+        completedLessons,
+        totalLessons,
         percentComplete,
       },
       currentTopic: topicMatch?.[1]?.trim() || '',

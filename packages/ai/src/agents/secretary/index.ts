@@ -11,4 +11,5 @@ export {
   RESEARCHER_SUBAGENT_PROMPT,
 } from './prompts'
 export { ChatPersistenceService } from './chat-persistence'
+export { SecretaryHistoryService } from './history'
 export { lintSecretaryMemoryFiles, type SecretaryMemoryLintResult } from './memory-lint'

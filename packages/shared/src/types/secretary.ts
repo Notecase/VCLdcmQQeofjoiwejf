@@ -72,8 +72,8 @@ export interface LearningRoadmap {
   progress: {
     currentWeek: number
     totalWeeks: number
-    currentDay: number
-    totalDays: number
+    completedLessons: number
+    totalLessons: number
     percentComplete: number
   }
   currentTopic: string // "Day 4: Lens combinations + magnification"
@@ -383,7 +383,7 @@ export interface PendingRoadmap {
   id: string
   name: string
   content: string
-  durationDays: number
+  totalLessons: number
   hoursPerDay: number
   createdAt: string
 }

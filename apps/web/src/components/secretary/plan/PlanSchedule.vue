@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Plus, Trash2, Clock, FileText, Search, GraduationCap } from 'lucide-vue-next'
+import {
+  Plus,
+  Trash2,
+  Clock,
+  FileText,
+  Search,
+  GraduationCap,
+  Play,
+  Loader2,
+} from 'lucide-vue-next'
 import { ElSwitch } from 'element-plus'
 import type {
   PlanScheduleItem,
@@ -8,9 +17,11 @@ import type {
   PlanScheduleFrequency,
 } from '@inkdown/shared/types'
 
-defineProps<{
+const props = defineProps<{
   schedules: PlanScheduleItem[]
   planId: string
+  runningScheduleId?: string | null
+  runningSteps?: Array<{ text: string; status: 'active' | 'done' }>
 }>()
 
 const emit = defineEmits<{
@@ -18,7 +29,13 @@ const emit = defineEmits<{
   update: [id: string, updates: Partial<PlanScheduleItem>]
   delete: [id: string]
   toggle: [id: string, enabled: boolean]
+  run: [scheduleId: string]
 }>()
+
+function handleRun(scheduleId: string) {
+  if (props.runningScheduleId) return
+  emit('run', scheduleId)
+}
 
 const expandedId = ref<string | null>(null)
 const showAddForm = ref(false)
@@ -190,6 +207,19 @@ function handleDelete(id: string) {
           <span class="card-schedule-text"
             >{{ formatScheduleText(schedule) }} · {{ formatTime(schedule.time) }}</span
           >
+          <button
+            class="run-now-btn"
+            :class="{ running: runningScheduleId === schedule.id }"
+            :disabled="!!runningScheduleId"
+            title="Run now"
+            @click.stop="handleRun(schedule.id)"
+          >
+            <component
+              :is="runningScheduleId === schedule.id ? Loader2 : Play"
+              :size="12"
+              :class="{ spinning: runningScheduleId === schedule.id }"
+            />
+          </button>
         </div>
 
         <!-- Row 2: Workflow badge + Run stats -->
@@ -228,6 +258,22 @@ function handleDelete(id: string) {
               >
             </template>
           </span>
+        </div>
+
+        <!-- Inline progress (during Run Now) -->
+        <div
+          v-if="runningScheduleId === schedule.id && runningSteps?.length"
+          class="run-progress"
+        >
+          <div
+            v-for="(step, i) in runningSteps"
+            :key="i"
+            class="progress-step"
+            :class="'step-' + step.status"
+          >
+            <span class="step-icon">{{ step.status === 'done' ? '✓' : '●' }}</span>
+            <span class="step-text">{{ step.text }}</span>
+          </div>
         </div>
 
         <!-- Expanded area -->
@@ -500,6 +546,108 @@ function handleDelete(id: string) {
   gap: 10px;
   padding: 10px 14px 0 14px;
   cursor: pointer;
+}
+
+.run-now-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--sec-glass-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-color-secondary, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.run-now-btn:hover:not(:disabled) {
+  border-color: var(--sec-primary, #10b981);
+  color: var(--sec-primary, #10b981);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.run-now-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.run-now-btn.running {
+  border-color: var(--sec-primary, #10b981);
+  color: var(--sec-primary, #10b981);
+  opacity: 1;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Inline progress (Run Now) ───────────────────────────── */
+.run-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--sec-glass-border, rgba(255, 255, 255, 0.06));
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.step-icon {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.step-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-done {
+  color: var(--text-color-secondary, #94a3b8);
+  opacity: 0.7;
+}
+
+.step-done .step-icon {
+  color: var(--sec-primary, #10b981);
+}
+
+.step-active {
+  color: var(--text-color, #e2e8f0);
+}
+
+.step-active .step-icon {
+  color: var(--sec-primary, #10b981);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .card-title {

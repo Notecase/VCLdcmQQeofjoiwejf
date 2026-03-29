@@ -212,7 +212,7 @@ const allAnswered = computed(() => {
 }
 
 .problem-card.correct {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.4));
 }
 
 .problem-card.incorrect {
@@ -231,7 +231,7 @@ const allAnswered = computed(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .result-badge {
@@ -245,8 +245,8 @@ const allAnswered = computed(() => {
 }
 
 .result-badge.correct {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
 }
 
 .result-badge.incorrect {
@@ -287,13 +287,13 @@ const allAnswered = computed(() => {
 }
 
 .option-btn.selected {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
+  border-color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.08));
 }
 
 .option-btn.correct-answer {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.08));
 }
 
 .option-btn.wrong-answer {
@@ -343,7 +343,7 @@ const allAnswered = computed(() => {
 }
 
 .answer-textarea:focus {
-  border-color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
 }
 
 .answer-textarea:disabled {
@@ -374,8 +374,8 @@ const allAnswered = computed(() => {
   margin-top: 8px;
   padding: 12px;
   border-radius: 8px;
-  background: rgba(16, 185, 129, 0.06);
-  border-left: 3px solid rgba(16, 185, 129, 0.4);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.06));
+  border-left: 3px solid var(--sec-primary-border, rgba(16, 185, 129, 0.4));
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-color-secondary, #94a3b8);
@@ -383,7 +383,7 @@ const allAnswered = computed(() => {
 
 .sample-label {
   font-weight: 700;
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .submit-area {
@@ -396,7 +396,7 @@ const allAnswered = computed(() => {
   padding: 10px 24px;
   border-radius: var(--radius-md, 10px);
   border: none;
-  background: #f59e0b;
+  background: var(--sec-accent, #f59e0b);
   color: #1a1a1a;
   font-size: 14px;
   font-weight: 600;
@@ -405,7 +405,7 @@ const allAnswered = computed(() => {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #fbbf24;
+  background: var(--sec-accent-light, #fbbf24);
 }
 
 .submit-btn:disabled {
@@ -435,7 +435,7 @@ const allAnswered = computed(() => {
 }
 
 .reset-btn:hover {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  color: var(--sec-accent, #f59e0b);
 }
 </style>

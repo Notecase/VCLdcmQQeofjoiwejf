@@ -220,8 +220,8 @@ function goToSlide(idx: number) {
   margin-top: 12px;
   padding: 16px;
   border-radius: 8px;
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px dashed rgba(245, 158, 11, 0.3);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.06));
+  border: 1px dashed var(--sec-accent-border, rgba(245, 158, 11, 0.3));
   font-size: 14px;
   color: var(--text-color-secondary, #94a3b8);
   text-align: center;
@@ -253,8 +253,8 @@ function goToSlide(idx: number) {
 }
 
 .nav-btn:hover:not(:disabled) {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  color: var(--sec-accent, #f59e0b);
 }
 
 .nav-btn:disabled {
@@ -307,9 +307,9 @@ function goToSlide(idx: number) {
 }
 
 .thumbnail.active {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.1));
+  color: var(--sec-accent, #f59e0b);
 }
 
 .thumb-num {

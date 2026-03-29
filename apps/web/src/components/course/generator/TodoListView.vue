@@ -108,7 +108,7 @@ defineProps<{
 
 .todo-text.completed {
   text-decoration: line-through;
-  text-decoration-color: rgba(34, 197, 94, 0.4);
+  text-decoration-color: var(--sec-primary-border, rgba(34, 197, 94, 0.4));
   color: var(--text-color-secondary, #94a3b8);
 }
 

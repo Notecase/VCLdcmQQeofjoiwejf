@@ -1409,13 +1409,13 @@ const tabs = [
 }
 
 .action-btn.primary {
-  background: #238636;
-  border-color: #238636;
+  background: var(--sec-primary, #238636);
+  border-color: var(--sec-primary, #238636);
   color: white;
 }
 
 .action-btn.primary:hover {
-  background: #2ea043;
+  background: var(--sec-primary-light, #2ea043);
 }
 
 /* Tree View */

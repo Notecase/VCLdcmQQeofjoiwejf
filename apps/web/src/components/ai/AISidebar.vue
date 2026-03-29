@@ -500,8 +500,8 @@ function handleClarificationCancel() {
   height: 100%;
   position: relative;
   background: var(--ai-sidebar-bg);
-  border-left: none;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid var(--border-color, #333338);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -902,8 +902,8 @@ function handleClarificationCancel() {
 }
 
 .card-badge.new {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  background: var(--sec-primary-bg, rgba(34, 197, 94, 0.15));
+  color: var(--sec-primary, #16a34a);
 }
 
 .card-badge.update {
@@ -1075,9 +1075,9 @@ function handleClarificationCancel() {
 }
 
 .research-toggle-btn.active {
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.08);
+  color: var(--sec-accent-light, #fbbf24);
+  border-color: var(--sec-accent-border, rgba(251, 191, 36, 0.3));
+  background: var(--sec-accent-bg, rgba(251, 191, 36, 0.08));
 }
 
 /* Send Button - GREEN when active */
@@ -1099,12 +1099,12 @@ function handleClarificationCancel() {
   background: var(--primary-gradient);
   color: white;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: var(--shadow-glow-green, 0 2px 8px rgba(16, 185, 129, 0.3));
 }
 
 .send-cirle-btn.active:hover {
   opacity: 0.95;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  box-shadow: var(--shadow-glow-green, 0 4px 12px rgba(16, 185, 129, 0.4));
 }
 
 /* Loading indicator */

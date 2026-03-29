@@ -65,7 +65,7 @@ function moduleProgress(mod: CourseModule): number {
         <div class="module-progress">
           <ProgressBar
             :value="moduleProgress(mod)"
-            color="#10b981"
+            color="var(--sec-primary, #10b981)"
             :height="3"
           />
         </div>
@@ -206,17 +206,17 @@ function moduleProgress(mod: CourseModule): number {
 }
 
 .lesson-btn.selected {
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
   color: var(--sec-accent, #f59e0b);
 }
 
 .lesson-btn.completed {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .lesson-btn.completed .lesson-name {
   text-decoration: line-through;
-  text-decoration-color: rgba(16, 185, 129, 0.4);
+  text-decoration-color: var(--sec-primary-border, rgba(16, 185, 129, 0.4));
 }
 
 .lesson-icon {
@@ -226,7 +226,7 @@ function moduleProgress(mod: CourseModule): number {
 }
 
 .check-icon {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .lesson-name {

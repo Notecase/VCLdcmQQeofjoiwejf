@@ -195,7 +195,7 @@ function toggleStep(id: string) {
 
 .timeline-dot.running {
   color: var(--status-running, #f59e0b);
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.1));
   animation: pulse-glow 2s ease-in-out infinite;
 }
 

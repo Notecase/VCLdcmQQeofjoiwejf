@@ -16,9 +16,9 @@ const emit = defineEmits<{
 const difficultyColor = computed(() => {
   switch (props.course.difficulty) {
     case 'beginner':
-      return '#10b981'
+      return 'var(--sec-primary, #10b981)'
     case 'intermediate':
-      return '#f59e0b'
+      return 'var(--sec-accent, #f59e0b)'
     case 'advanced':
       return '#f85149'
     default:
@@ -103,7 +103,7 @@ const isReady = computed(() => props.course.status === 'ready')
         v-if="isReady"
         :value="course.progress"
         :show-label="true"
-        color="#f59e0b"
+        color="var(--sec-accent, #f59e0b)"
         :height="5"
       />
     </div>
@@ -165,8 +165,8 @@ const isReady = computed(() => props.course.status === 'ready')
 }
 
 .status-badge.ready {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
 }
 
 .status-badge.generating {
@@ -189,7 +189,7 @@ const isReady = computed(() => props.course.status === 'ready')
 
 .card-topic {
   font-size: 12px;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   margin: -4px 0 0;
   font-weight: 500;
 }

@@ -375,13 +375,13 @@ watch(
 }
 
 .difficulty-badge.beginner {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
 }
 
 .difficulty-badge.intermediate {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
 }
 
 .difficulty-badge.advanced {
@@ -565,7 +565,7 @@ watch(
   padding: 10px 20px;
   border-radius: var(--radius-md, 10px);
   border: none;
-  background: #10b981;
+  background: var(--sec-primary, #10b981);
   color: white;
   font-size: 14px;
   font-weight: 600;

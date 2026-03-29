@@ -75,7 +75,13 @@ function addToNote() {
 
 // Render node tree recursively
 function getBranchColor(index: number): string {
-  const colors = ['#58a6ff', '#3fb950', '#a371f7', '#f78166', '#d29922']
+  const colors = [
+    '#58a6ff',
+    'var(--sec-primary-light, #3fb950)',
+    '#a371f7',
+    '#f78166',
+    'var(--sec-accent-dark, #d29922)',
+  ]
   return colors[index % colors.length]
 }
 
@@ -370,7 +376,7 @@ function renderContent(text: string | undefined): string {
 }
 
 .copy-btn.copied {
-  color: #3fb950;
+  color: var(--sec-primary-light, #3fb950);
 }
 
 /* Footer buttons */
@@ -387,14 +393,14 @@ function renderContent(text: string | undefined): string {
 }
 
 .footer-btn.primary {
-  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #238636 0%, #2ea043 100%));
   border: none;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+  box-shadow: var(--shadow-glow-green, 0 2px 8px rgba(35, 134, 54, 0.3));
 }
 
 .footer-btn.primary:hover {
-  background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #2ea043 0%, #3fb950 100%));
+  box-shadow: var(--shadow-glow-green, 0 4px 12px rgba(35, 134, 54, 0.4));
 }
 </style>

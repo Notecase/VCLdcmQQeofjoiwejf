@@ -119,7 +119,7 @@ const practiceProblems = computed(() => props.lesson.content.practiceProblems ??
 .term-word {
   font-size: 14px;
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   margin-bottom: 4px;
 }
 
@@ -153,7 +153,7 @@ const practiceProblems = computed(() => props.lesson.content.practiceProblems ??
 
 .practice-num {
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   margin-right: 4px;
 }
 
@@ -168,6 +168,6 @@ const practiceProblems = computed(() => props.lesson.content.practiceProblems ??
 
 .answer-label {
   font-weight: 600;
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 </style>

@@ -52,9 +52,9 @@ const isComplete = computed(() => currentIndex.value >= cards.value.length)
 
 const difficultyColor = computed(() => {
   const difficulty = currentCard.value?.difficulty
-  if (difficulty === 'easy') return '#10b981'
+  if (difficulty === 'easy') return 'var(--sec-primary, #10b981)'
   if (difficulty === 'hard') return '#ef4444'
-  return '#f59e0b'
+  return 'var(--sec-accent, #f59e0b)'
 })
 
 // Methods
@@ -434,12 +434,12 @@ function restart() {
 }
 
 .action-btn.review {
-  background: #f59e0b;
+  background: var(--sec-accent, #f59e0b);
   color: #000;
 }
 
 .action-btn.known {
-  background: #10b981;
+  background: var(--sec-primary, #10b981);
   color: #fff;
 }
 
@@ -480,10 +480,10 @@ function restart() {
 }
 
 .stat.known .value {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 .stat.review .value {
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .stat .label {

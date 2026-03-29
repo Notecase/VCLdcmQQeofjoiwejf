@@ -49,7 +49,7 @@ const truncated = computed(() => {
 
 .pill-icon {
   flex-shrink: 0;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .pill-text {

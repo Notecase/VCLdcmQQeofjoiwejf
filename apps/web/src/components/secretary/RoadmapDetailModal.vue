@@ -142,7 +142,7 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
 
 .progress-value {
   font-weight: 600;
-  color: #34d399;
+  color: var(--sec-primary-light, #34d399);
 }
 
 .progress-bar {
@@ -155,7 +155,11 @@ const progressPercent = computed(() => props.roadmap.progress.percentComplete)
 .progress-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #34d399, #3fb950);
+  background: linear-gradient(
+    90deg,
+    var(--sec-primary, #34d399),
+    var(--sec-primary-light, #3fb950)
+  );
   transition: width 0.3s ease;
 }
 

@@ -90,7 +90,7 @@ function stageStatus(idx: number): 'done' | 'active' | 'pending' {
       <ProgressBar
         :value="progress"
         :show-label="true"
-        color="#f59e0b"
+        color="var(--sec-accent, #f59e0b)"
         :height="8"
       />
     </div>
@@ -165,7 +165,7 @@ function stageStatus(idx: number): 'done' | 'active' | 'pending' {
 
 .stage-item.active {
   color: var(--status-running, #f59e0b);
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.1));
 }
 
 .stage-item.pending {

@@ -282,7 +282,7 @@ function handleDelete(e: Event, threadId: string) {
 }
 
 .group-label.attention {
-  color: #d29922;
+  color: var(--sec-accent-dark, #d29922);
 }
 
 /* Thread items */
@@ -347,7 +347,7 @@ function handleDelete(e: Event, threadId: string) {
 }
 
 .dot-idle {
-  background: #3fb950;
+  background: var(--sec-primary-light, #3fb950);
 }
 
 .dot-busy {
@@ -355,7 +355,7 @@ function handleDelete(e: Event, threadId: string) {
 }
 
 .dot-interrupted {
-  background: #d29922;
+  background: var(--sec-accent-dark, #d29922);
 }
 
 .dot-error {

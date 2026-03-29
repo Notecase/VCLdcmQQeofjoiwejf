@@ -381,8 +381,8 @@ function switchTab(tab: TabType) {
 }
 
 .drop-zone.has-file {
-  border-color: #3fb950;
-  background: rgba(63, 185, 80, 0.05);
+  border-color: var(--sec-primary-light, #3fb950);
+  background: var(--sec-primary-bg, rgba(63, 185, 80, 0.05));
 }
 
 .upload-icon {
@@ -390,7 +390,7 @@ function switchTab(tab: TabType) {
 }
 
 .file-icon {
-  color: #3fb950;
+  color: var(--sec-primary-light, #3fb950);
 }
 
 .drop-text {
@@ -542,18 +542,18 @@ function switchTab(tab: TabType) {
   padding: 10px 20px;
   border: none;
   border-radius: var(--modal-radius-sm);
-  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #238636 0%, #2ea043 100%));
   color: #ffffff;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+  box-shadow: var(--shadow-glow-green, 0 2px 8px rgba(35, 134, 54, 0.3));
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #2ea043 0%, #3fb950 100%));
+  box-shadow: var(--shadow-glow-green, 0 4px 12px rgba(35, 134, 54, 0.4));
 }
 
 .btn-primary:disabled {

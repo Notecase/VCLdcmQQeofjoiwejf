@@ -96,11 +96,11 @@ const elapsed = computed(() => {
 }
 
 .subagent-card.running {
-  border-color: rgba(245, 158, 11, 0.25);
+  border-color: var(--sec-accent-border, rgba(245, 158, 11, 0.25));
 }
 
 .subagent-card.completed {
-  border-color: rgba(34, 197, 94, 0.2);
+  border-color: var(--sec-primary-border, rgba(34, 197, 94, 0.2));
 }
 
 .subagent-card.error {
@@ -161,12 +161,12 @@ const elapsed = computed(() => {
 
 .agent-status-badge.running {
   color: var(--status-running, #f59e0b);
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
 }
 
 .agent-status-badge.completed {
   color: var(--status-completed, #22c55e);
-  background: rgba(34, 197, 94, 0.12);
+  background: var(--sec-primary-bg, rgba(34, 197, 94, 0.12));
 }
 
 .agent-status-badge.error {

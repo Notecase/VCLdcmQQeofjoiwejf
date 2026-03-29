@@ -147,13 +147,13 @@ const isActive = computed(
 }
 
 .research-status.writing {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
 }
 
 .research-status.complete {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.12));
 }
 
 .research-status.failed {
@@ -194,7 +194,7 @@ const isActive = computed(
 }
 
 .source-item.done {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .source-item.failed {

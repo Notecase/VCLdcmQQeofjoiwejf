@@ -436,7 +436,7 @@ const lessonTypes: LessonType[] = ['lecture', 'video', 'slides', 'practice', 'qu
 
 .add-lesson-btn:hover,
 .add-module-btn:hover {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  color: var(--sec-accent, #f59e0b);
 }
 </style>

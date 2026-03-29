@@ -245,12 +245,12 @@ onUnmounted(() => {
 }
 
 .action-btn.save {
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--sec-primary-light, #34d399);
+  border-color: var(--sec-primary-border, rgba(52, 211, 153, 0.3));
 }
 
 .action-btn.save:hover:not(:disabled) {
-  background: rgba(52, 211, 153, 0.1);
+  background: var(--sec-primary-bg, rgba(52, 211, 153, 0.1));
 }
 
 .action-btn.save:disabled {

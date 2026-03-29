@@ -244,7 +244,7 @@ function viewDetails(event: Event, plan: LearningRoadmap) {
 
 .create-plan-card:hover {
   border-color: var(--sec-primary, #10b981) !important;
-  background: rgba(16, 185, 129, 0.04) !important;
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.04)) !important;
 }
 
 .create-plan-content {

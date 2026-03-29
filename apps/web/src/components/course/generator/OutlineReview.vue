@@ -358,7 +358,7 @@ function handleReject() {
   padding: 10px 20px;
   border-radius: var(--radius-md, 10px);
   border: none;
-  background: #10b981;
+  background: var(--sec-primary, #10b981);
   color: white;
   font-size: 14px;
   font-weight: 600;

@@ -117,8 +117,8 @@ const renderedContent = computed(() => {
 .highlight-quote {
   margin: 0 0 10px;
   padding: 6px 10px;
-  border-left: 3px solid #f59e0b;
-  background: rgba(245, 158, 11, 0.06);
+  border-left: 3px solid var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.06));
   border-radius: 0 4px 4px 0;
   font-size: 12px;
   color: var(--text-color-secondary, #94a3b8);

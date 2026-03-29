@@ -97,9 +97,9 @@ function getTypeColor(type: string): string {
     case 'title':
       return '#58a6ff'
     case 'content':
-      return '#3fb950'
+      return 'var(--sec-primary-light, #3fb950)'
     case 'conclusion':
-      return '#d29922'
+      return 'var(--sec-accent-dark, #d29922)'
     default:
       return '#8b949e'
   }
@@ -415,15 +415,15 @@ function renderContent(text: string | undefined): string {
 }
 
 .footer-btn.primary {
-  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #238636 0%, #2ea043 100%));
   border: none;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+  box-shadow: var(--shadow-glow-green, 0 2px 8px rgba(35, 134, 54, 0.3));
 }
 
 .footer-btn.primary:hover {
-  background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-  box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+  background: var(--sec-fab-bg, linear-gradient(135deg, #2ea043 0%, #3fb950 100%));
+  box-shadow: var(--shadow-glow-green, 0 4px 12px rgba(35, 134, 54, 0.4));
 }
 
 .footer-btn.secondary {

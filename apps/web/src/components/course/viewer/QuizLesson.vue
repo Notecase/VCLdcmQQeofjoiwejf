@@ -248,8 +248,8 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .score-banner.passed {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.08));
+  border: 1px solid var(--sec-primary-border, rgba(16, 185, 129, 0.3));
 }
 
 .score-banner.failed {
@@ -269,7 +269,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .passed .score-value {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .failed .score-value {
@@ -285,7 +285,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .passed .score-label {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 
 .failed .score-label {
@@ -308,8 +308,8 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .retry-btn:hover {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  color: var(--sec-accent, #f59e0b);
 }
 
 .questions-list {
@@ -329,7 +329,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .question-card.correct {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.4));
 }
 
 .question-card.incorrect {
@@ -350,7 +350,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .result-icon.correct {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
 }
 .result-icon.incorrect {
   color: #f85149;
@@ -389,13 +389,13 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .option-btn.selected {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
+  border-color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.08));
 }
 
 .option-btn.correct-answer {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--sec-primary, #10b981);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.08));
 }
 
 .option-btn.wrong-answer {
@@ -445,7 +445,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .answer-textarea:focus {
-  border-color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
 }
 
 .answer-textarea:disabled {
@@ -482,7 +482,7 @@ function isCorrect(problemId: string): boolean | null {
   padding: 10px 24px;
   border-radius: var(--radius-md, 10px);
   border: none;
-  background: #f59e0b;
+  background: var(--sec-accent, #f59e0b);
   color: #1a1a1a;
   font-size: 14px;
   font-weight: 600;
@@ -491,7 +491,7 @@ function isCorrect(problemId: string): boolean | null {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #fbbf24;
+  background: var(--sec-accent-light, #fbbf24);
 }
 
 .submit-btn:disabled {

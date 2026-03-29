@@ -138,7 +138,7 @@ function handleSave() {
 }
 
 .notes-textarea:focus {
-  border-color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
 }
 
 .notes-textarea::placeholder {
@@ -159,7 +159,7 @@ function handleSave() {
   padding: 8px;
   border-radius: 8px;
   border: none;
-  background: #f59e0b;
+  background: var(--sec-accent, #f59e0b);
   color: #1a1a1a;
   font-size: 13px;
   font-weight: 600;
@@ -168,7 +168,7 @@ function handleSave() {
 }
 
 .save-btn:hover:not(:disabled) {
-  background: #fbbf24;
+  background: var(--sec-accent-light, #fbbf24);
 }
 
 .save-btn:disabled {

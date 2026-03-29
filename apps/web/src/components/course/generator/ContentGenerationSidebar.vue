@@ -299,12 +299,12 @@ function handleLessonClick(title: string) {
 }
 
 .lesson-row.selected {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.1));
+  color: var(--sec-accent, #f59e0b);
 }
 
 .lesson-row.generating {
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
 }
 
 .lesson-row:disabled {
@@ -324,12 +324,12 @@ function handleLessonClick(title: string) {
 }
 
 .status-done {
-  color: #10b981;
+  color: var(--sec-primary, #10b981);
   flex-shrink: 0;
 }
 
 .status-generating {
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   flex-shrink: 0;
 }
 

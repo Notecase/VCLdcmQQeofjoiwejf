@@ -54,11 +54,11 @@ const uncategorizedCount = computed(
 
 const categories: { value: ProposalCategory | 'all'; label: string; color: string }[] = [
   { value: 'all', label: 'All', color: '' },
-  { value: 'task', label: 'Tasks', color: '#f59e0b' },
+  { value: 'task', label: 'Tasks', color: 'var(--sec-accent, #f59e0b)' },
   { value: 'vocabulary', label: 'Vocabulary', color: '#a78bfa' },
   { value: 'calendar', label: 'Calendar', color: '#4285f4' },
-  { value: 'note', label: 'Notes', color: '#10b981' },
-  { value: 'reading', label: 'Reading', color: '#f97316' },
+  { value: 'note', label: 'Notes', color: 'var(--sec-primary, #10b981)' },
+  { value: 'reading', label: 'Reading', color: 'var(--sec-urgent, #f97316)' },
   { value: 'thought', label: 'Thoughts', color: '#94a3b8' },
 ]
 
@@ -579,8 +579,8 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
+  background: var(--sec-primary-border, rgba(16, 185, 129, 0.2));
+  color: var(--sec-primary-light, #6ee7b7);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -629,9 +629,9 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 }
 
 .filter-pill.active {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.08);
-  color: #aaf2d2;
+  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.3));
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.08));
+  color: var(--sec-primary-light, #aaf2d2);
 }
 
 /* ── Proposals ────────────────────────────────────────────────────── */
@@ -658,7 +658,7 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 }
 
 .proposal-card.applied {
-  border-color: rgba(34, 197, 94, 0.15);
+  border-color: var(--sec-primary-bg, rgba(34, 197, 94, 0.15));
 }
 
 .proposal-card.failed {
@@ -666,7 +666,7 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 }
 
 .proposal-card.executing {
-  border-color: rgba(245, 158, 11, 0.2);
+  border-color: var(--sec-accent-border, rgba(245, 158, 11, 0.2));
 }
 
 .proposal-card.awaiting_clarification {
@@ -886,11 +886,11 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 
 .bot-reply {
   font-size: 12px;
-  color: #6ee7b7;
+  color: var(--sec-primary-light, #6ee7b7);
   padding: 4px 8px;
   border-radius: var(--radius-sm, 6px);
-  background: rgba(16, 185, 129, 0.06);
-  border-left: 2px solid rgba(16, 185, 129, 0.3);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.06));
+  border-left: 2px solid var(--sec-primary-border, rgba(16, 185, 129, 0.3));
 }
 
 /* ── Status badge ──────────────────────────────────────────────── */
@@ -908,8 +908,8 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 }
 
 .proposal-status-badge.applied {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+  color: var(--status-completed, #22c55e);
+  background: var(--sec-primary-bg, rgba(34, 197, 94, 0.1));
 }
 
 .proposal-status-badge.failed {
@@ -918,8 +918,8 @@ defineExpose({ totalCount, pendingCount: uncategorizedCount, loadProposals })
 }
 
 .proposal-status-badge.executing {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
+  color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.1));
 }
 
 .proposal-status-badge.awaiting_clarification {

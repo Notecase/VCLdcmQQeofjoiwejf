@@ -94,9 +94,9 @@ const difficulties: Array<{ value: CourseDifficulty | 'all'; label: string }> = 
 }
 
 .filter-pill.active {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
+  color: var(--sec-accent, #f59e0b);
 }
 
 .filter-pill:hover:not(.active) {

@@ -402,7 +402,7 @@ async function runTaskAction(actionId: string) {
 }
 
 .task-item.current {
-  background: rgba(16, 185, 129, 0.07);
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.07));
   border-left: 3px solid var(--sec-primary, #10b981);
   padding-left: 9px;
 }
@@ -524,7 +524,7 @@ async function runTaskAction(actionId: string) {
 }
 
 .task-plan-tag:hover {
-  background: rgba(16, 185, 129, 0.2);
+  background: var(--sec-primary-border, rgba(16, 185, 129, 0.2));
 }
 
 /* ── Start button (hover only) ── */
@@ -533,8 +533,8 @@ async function runTaskAction(actionId: string) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--sec-primary-border, rgba(16, 185, 129, 0.35));
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.1));
   color: var(--sec-primary, #10b981);
   cursor: pointer;
   padding: 3px 10px;
@@ -549,8 +549,8 @@ async function runTaskAction(actionId: string) {
 }
 
 .task-start-btn:hover {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.5);
+  background: var(--sec-primary-border, rgba(16, 185, 129, 0.2));
+  border-color: var(--sec-primary, rgba(16, 185, 129, 0.5));
 }
 
 /* ── Menu button (hover only) ── */
@@ -602,15 +602,15 @@ async function runTaskAction(actionId: string) {
 }
 
 .artifact-pill.pending {
-  border-color: rgba(245, 158, 11, 0.32);
-  background: rgba(245, 158, 11, 0.14);
-  color: #f5c56b;
+  border-color: var(--sec-accent-border, rgba(245, 158, 11, 0.32));
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.14));
+  color: var(--sec-accent-light, #f5c56b);
 }
 
 .artifact-pill.ready {
-  border-color: rgba(16, 185, 129, 0.32);
-  background: rgba(16, 185, 129, 0.16);
-  color: #aaf2d2;
+  border-color: var(--sec-primary-border, rgba(16, 185, 129, 0.32));
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.16));
+  color: var(--sec-primary-light, #aaf2d2);
 }
 
 .artifact-pill.blocked {
@@ -626,8 +626,8 @@ async function runTaskAction(actionId: string) {
 }
 
 .artifact-link:hover {
-  background: rgba(16, 185, 129, 0.22);
-  border-color: rgba(16, 185, 129, 0.5);
+  background: var(--sec-primary-border, rgba(16, 185, 129, 0.22));
+  border-color: var(--sec-primary, rgba(16, 185, 129, 0.5));
 }
 
 /* ── Empty state ── */

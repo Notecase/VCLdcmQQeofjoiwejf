@@ -402,8 +402,8 @@ onUnmounted(() => {
 
     <div class="card-footer">
       <div
-        class="diff-actions"
         v-if="pendingDiffCount > 0"
+        class="diff-actions"
       >
         <button
           class="action-button accept"
@@ -497,8 +497,8 @@ onUnmounted(() => {
 }
 
 .status-badge.saved {
-  background: rgba(16, 185, 129, 0.18);
-  color: #34d399;
+  background: var(--sec-primary-bg, rgba(16, 185, 129, 0.18));
+  color: var(--sec-primary-light, #34d399);
 }
 
 .word-count {
@@ -576,8 +576,8 @@ onUnmounted(() => {
 }
 
 .action-button.accept {
-  border-color: rgba(52, 211, 153, 0.45);
-  color: #34d399;
+  border-color: var(--sec-primary-border, rgba(52, 211, 153, 0.45));
+  color: var(--sec-primary-light, #34d399);
 }
 
 .action-button.reject {

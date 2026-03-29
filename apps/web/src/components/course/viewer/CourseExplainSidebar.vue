@@ -348,7 +348,7 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 .context-icon {
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   flex-shrink: 0;
 }
 
@@ -430,10 +430,10 @@ const canSend = computed(() => inputValue.value.trim().length > 0 && !explainSto
 }
 
 .send-circle-btn.active {
-  background: var(--primary-gradient, linear-gradient(135deg, #10b981, #059669));
+  background: var(--sec-fab-bg, linear-gradient(135deg, #10b981, #059669));
   color: white;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: var(--shadow-glow-green, 0 2px 8px rgba(16, 185, 129, 0.3));
 }
 
 .send-circle-btn.active:hover {

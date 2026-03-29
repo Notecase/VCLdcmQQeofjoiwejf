@@ -292,7 +292,7 @@ function handleSubmit() {
 }
 
 .form-input:focus {
-  border-color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
 }
 
 .form-input::placeholder {
@@ -318,9 +318,9 @@ function handleSubmit() {
 }
 
 .difficulty-btn.active {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
+  color: var(--sec-accent, #f59e0b);
 }
 
 .difficulty-btn:hover:not(.active) {
@@ -351,8 +351,8 @@ function handleSubmit() {
 }
 
 .add-btn:hover:not(:disabled) {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--sec-accent, #f59e0b);
+  color: var(--sec-accent, #f59e0b);
 }
 
 .add-btn:disabled {
@@ -373,10 +373,10 @@ function handleSubmit() {
   gap: 4px;
   padding: 4px 10px;
   border-radius: var(--radius-full, 9999px);
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
   backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   font-size: 12px;
   font-weight: 500;
 }
@@ -389,7 +389,7 @@ function handleSubmit() {
   height: 16px;
   border: none;
   background: transparent;
-  color: #f59e0b;
+  color: var(--sec-accent, #f59e0b);
   cursor: pointer;
   border-radius: 50%;
   padding: 0;
@@ -397,7 +397,7 @@ function handleSubmit() {
 }
 
 .remove-tag:hover {
-  background: rgba(245, 158, 11, 0.2);
+  background: var(--sec-accent-border, rgba(245, 158, 11, 0.2));
 }
 
 .toggle-advanced {
@@ -444,7 +444,7 @@ function handleSubmit() {
 }
 
 .checkbox-label input[type='checkbox'] {
-  accent-color: #f59e0b;
+  accent-color: var(--sec-accent, #f59e0b);
 }
 
 .quick-test-label {
@@ -473,7 +473,7 @@ function handleSubmit() {
 
 .range-row input[type='range'] {
   flex: 1;
-  accent-color: #f59e0b;
+  accent-color: var(--sec-accent, #f59e0b);
 }
 
 .range-value {
@@ -492,7 +492,7 @@ function handleSubmit() {
   padding: 12px 24px;
   border-radius: var(--radius-md, 10px);
   border: none;
-  background: #f59e0b;
+  background: var(--sec-accent, #f59e0b);
   color: #1a1a1a;
   font-size: 15px;
   font-weight: 600;
@@ -501,7 +501,7 @@ function handleSubmit() {
 }
 
 .generate-btn:hover:not(:disabled) {
-  background: #fbbf24;
+  background: var(--sec-accent-light, #fbbf24);
 }
 
 .generate-btn:disabled {

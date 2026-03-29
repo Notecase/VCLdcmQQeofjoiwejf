@@ -99,8 +99,8 @@ function typeIcon(type: LessonType) {
   gap: 4px;
   padding: 3px 10px;
   border-radius: 12px;
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+  background: var(--sec-accent-bg, rgba(245, 158, 11, 0.12));
+  color: var(--sec-accent, #f59e0b);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;

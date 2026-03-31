@@ -82,7 +82,9 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval": "tsx src/evals/cli.ts",
+    "eval:single": "tsx src/evals/cli.ts --case"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.0",

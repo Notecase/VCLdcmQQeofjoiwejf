@@ -112,6 +112,28 @@ export const config = {
     },
   },
 
+  // Claude Code Integration
+  claudeCode: {
+    get path() {
+      return process.env.CLAUDE_CODE_PATH || 'claude'
+    },
+    get maxSessions() {
+      return parseInt(process.env.CLAUDE_CODE_MAX_SESSIONS || '50', 10)
+    },
+    get idleTimeout() {
+      return parseInt(process.env.CLAUDE_CODE_IDLE_TIMEOUT || '300000', 10)
+    },
+    get permissionMode() {
+      return process.env.CLAUDE_CODE_PERMISSION_MODE || 'auto'
+    },
+    get mcpServerPath() {
+      return (
+        process.env.CLAUDE_CODE_MCP_SERVER_PATH ||
+        new URL('../../../packages/mcp/dist/index.js', import.meta.url).pathname
+      )
+    },
+  },
+
   // Feature flags
   flags: {
     get missionHubV1() {

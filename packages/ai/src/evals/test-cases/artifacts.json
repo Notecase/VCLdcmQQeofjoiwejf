@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ar-001",
+    "category": "artifacts",
+    "difficulty": "intermediate",
+    "title": "Interactive calculator widget",
+    "prompt": "Create an interactive calculator artifact. It should support basic arithmetic operations (addition, subtraction, multiplication, division), have a clean button layout resembling a real calculator, display the current expression and result, and handle edge cases like division by zero.",
+    "context": {
+      "currentNoteId": "eval-note-003"
+    },
+    "expectations": {
+      "expectedArtifactType": "calculator"
+    },
+    "tags": ["interactive", "math", "widget"]
+  },
+  {
+    "id": "ar-002",
+    "category": "artifacts",
+    "difficulty": "intermediate",
+    "title": "Unit converter widget",
+    "prompt": "Create a unit converter artifact that supports at least three categories: length (meters, feet, inches, kilometers, miles), weight (kilograms, pounds, ounces, grams), and temperature (Celsius, Fahrenheit, Kelvin). Users should be able to select a category, choose input and output units, and see the conversion update in real time as they type.",
+    "context": {
+      "currentNoteId": "eval-note-003"
+    },
+    "expectations": {
+      "expectedArtifactType": "converter"
+    },
+    "tags": ["interactive", "conversion", "widget"]
+  },
+  {
+    "id": "ar-003",
+    "category": "artifacts",
+    "difficulty": "intermediate",
+    "title": "Interactive history timeline",
+    "prompt": "Create an interactive timeline artifact showing major events in the history of computing, from Charles Babbage's Analytical Engine (1837) through the invention of the transistor, the first microprocessor, the personal computer revolution, the internet, and up to the rise of AI. Each event should be clickable to reveal a short description. The timeline should be scrollable and visually appealing.",
+    "context": {
+      "currentNoteId": "eval-note-003"
+    },
+    "expectations": {
+      "expectedArtifactType": "timeline"
+    },
+    "tags": ["interactive", "history", "visualization"]
+  },
+  {
+    "id": "ar-004",
+    "category": "artifacts",
+    "difficulty": "intermediate",
+    "title": "Multiple-choice quiz widget",
+    "prompt": "Create a quiz artifact with 5 multiple-choice questions about JavaScript fundamentals (closures, prototypes, event loop, promises, and scope). Each question should have 4 options. Show immediate feedback on whether the answer is correct or incorrect, display an explanation for each answer, and show a final score summary at the end.",
+    "context": {
+      "currentNoteId": "eval-note-003"
+    },
+    "expectations": {
+      "expectedArtifactType": "quiz"
+    },
+    "tags": ["interactive", "education", "javascript"]
+  },
+  {
+    "id": "ar-005",
+    "category": "artifacts",
+    "difficulty": "intermediate",
+    "title": "Data visualization chart",
+    "prompt": "Create a data chart artifact showing the global market share of the top 5 programming languages over the past 5 years (2021-2025). Use realistic approximate data. Include a bar chart or line chart visualization, a legend, axis labels, and the ability to hover over data points to see exact values. Use clean, modern styling.",
+    "context": {
+      "currentNoteId": "eval-note-003"
+    },
+    "expectations": {
+      "expectedArtifactType": "chart"
+    },
+    "tags": ["visualization", "data", "programming"]
+  }
+]

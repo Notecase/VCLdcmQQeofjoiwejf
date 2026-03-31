@@ -1,0 +1,146 @@
+[
+  {
+    "id": "ep-001",
+    "category": "edit-proposals",
+    "difficulty": "basic",
+    "title": "Fix typo in paragraph",
+    "prompt": "Fix the typo in this note where 'recieve' should be 'receive'.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Understanding HTTP Methods\n\nHTTP methods define the type of action a client wants to perform on a server resource. The most common methods are GET, POST, PUT, and DELETE, each serving a distinct purpose in RESTful API design.\n\nWhen a client sends a request, the server will recieve it and determine the appropriate response based on the method used. GET requests are idempotent, meaning they can be repeated without side effects. POST requests, on the other hand, typically create new resources and are not idempotent.\n\n## Common Status Codes\n\nServers respond with status codes to indicate the outcome. A 200 means success, 404 means the resource was not found, and 500 indicates an internal server error. Understanding these codes is essential for debugging API integrations."
+    },
+    "expectations": {
+      "editMinimality": "small",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["typo", "minimal-edit"]
+  },
+  {
+    "id": "ep-002",
+    "category": "edit-proposals",
+    "difficulty": "basic",
+    "title": "Add missing period at end of paragraph",
+    "prompt": "The second paragraph is missing a period at the end. Please fix it.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Git Branching Strategies\n\nGit branching allows developers to work on features in isolation without affecting the main codebase. A well-chosen branching strategy helps teams collaborate efficiently and reduces merge conflicts.\n\nThe most popular strategies include Git Flow, GitHub Flow, and trunk-based development. Git Flow uses long-lived feature and release branches, while GitHub Flow keeps things simpler with short-lived feature branches that merge directly into main. Trunk-based development takes simplicity even further by having developers commit directly to the main branch with feature flags\n\n## Choosing the Right Strategy\n\nThe best strategy depends on your team size, release cadence, and deployment pipeline. Smaller teams with continuous deployment often prefer trunk-based development, while larger teams with scheduled releases may benefit from Git Flow's structure."
+    },
+    "expectations": {
+      "editMinimality": "small",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["punctuation", "minimal-edit"]
+  },
+  {
+    "id": "ep-003",
+    "category": "edit-proposals",
+    "difficulty": "basic",
+    "title": "Fix broken markdown link",
+    "prompt": "There's a broken link in this note. The markdown link syntax is malformed. Please fix it.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Useful Developer Resources\n\nKeeping up with the latest tools and best practices is essential for any software developer. Here are some areas worth exploring.\n\n## Documentation\n\nGood documentation is the backbone of any successful project. The [MDN Web Docs(https://developer.mozilla.org) is an excellent reference for web technologies including HTML, CSS, and JavaScript. For TypeScript specifically, the official handbook provides comprehensive guidance.\n\n## Community\n\nEngaging with developer communities on platforms like Stack Overflow, GitHub Discussions, and Discord servers can accelerate your learning. Many open-source projects welcome contributions from developers at all skill levels."
+    },
+    "expectations": {
+      "editMinimality": "small",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["markdown", "link", "minimal-edit"]
+  },
+  {
+    "id": "ep-004",
+    "category": "edit-proposals",
+    "difficulty": "intermediate",
+    "title": "Rewrite introduction for clarity",
+    "prompt": "The introduction is too vague and doesn't set up the topic well. Rewrite it to be more specific and engaging while keeping the same general message.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Database Indexing\n\nDatabases are important and indexing is a thing that makes them work better. It's something you should know about if you work with data.\n\n## How Indexes Work\n\nA database index is a data structure that improves the speed of data retrieval operations. Similar to a book's index, it allows the database engine to find rows without scanning every record in the table. Most indexes use B-tree structures, which maintain sorted data and allow searches, insertions, and deletions in logarithmic time.\n\n## Types of Indexes\n\nPrimary indexes are created automatically on primary key columns. Secondary indexes can be added to any column that is frequently queried. Composite indexes span multiple columns and are useful for queries that filter on several fields simultaneously. Each index type has trade-offs between read performance gains and write performance costs."
+    },
+    "expectations": {
+      "editMinimality": "medium",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["rewrite", "clarity", "introduction"]
+  },
+  {
+    "id": "ep-005",
+    "category": "edit-proposals",
+    "difficulty": "intermediate",
+    "title": "Add limitations section",
+    "prompt": "This note presents microservices in a very positive light without discussing downsides. Add a 'Limitations and Challenges' section after the benefits section that covers operational complexity, network latency, data consistency challenges, and debugging difficulty.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Microservices Architecture\n\nMicroservices architecture structures an application as a collection of loosely coupled, independently deployable services. Each service owns its own data and communicates with others through well-defined APIs.\n\n## Benefits\n\nThe primary advantage of microservices is independent deployability. Teams can update, scale, and deploy individual services without coordinating with every other team. This autonomy accelerates development cycles and allows each service to use the technology stack best suited to its requirements.\n\nScalability is another key benefit. Rather than scaling an entire monolith, teams can scale only the services experiencing high load. A payment processing service under heavy traffic can be scaled independently from a user profile service with minimal load.\n\n## When to Use Microservices\n\nMicroservices are best suited for large, complex applications maintained by multiple teams. For small applications or small teams, a well-structured monolith is often simpler and more practical."
+    },
+    "expectations": {
+      "editMinimality": "medium",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["add-section", "balance", "architecture"]
+  },
+  {
+    "id": "ep-006",
+    "category": "edit-proposals",
+    "difficulty": "advanced",
+    "title": "Restructure note for logical flow",
+    "prompt": "This note jumps between topics without a logical progression. Restructure it so the concepts flow naturally: start with what containers are, then explain images, then Dockerfiles, then orchestration. Keep all the existing content but reorganize it.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# Docker and Containerization\n\n## Orchestration with Kubernetes\n\nKubernetes is the industry standard for container orchestration. It manages the deployment, scaling, and networking of containerized applications across clusters of machines. Key concepts include pods, services, deployments, and namespaces.\n\n## Writing Dockerfiles\n\nA Dockerfile is a text file containing instructions to build a Docker image. Each instruction creates a layer in the image. Common instructions include FROM (base image), COPY (add files), RUN (execute commands), and CMD (default command). Multi-stage builds help reduce final image size by separating build dependencies from runtime.\n\n## What Are Containers?\n\nContainers are lightweight, isolated environments that package an application with all its dependencies. Unlike virtual machines, containers share the host OS kernel, making them faster to start and more resource-efficient. They solve the classic \"works on my machine\" problem by ensuring consistent environments across development, staging, and production.\n\n## Docker Images\n\nA Docker image is a read-only template used to create containers. Images are built in layers, where each layer represents a change from the previous one. This layered approach enables efficient storage and fast distribution. Images are stored in registries like Docker Hub or private registries."
+    },
+    "expectations": {
+      "editMinimality": "large",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["restructure", "organization", "docker"]
+  },
+  {
+    "id": "ep-007",
+    "category": "edit-proposals",
+    "difficulty": "intermediate",
+    "title": "Change tone to formal academic style",
+    "prompt": "This note is too casual and conversational. Rewrite it in a formal, academic tone suitable for a technical report. Remove colloquialisms, use passive voice where appropriate, and maintain precision.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# How Hash Tables Actually Work\n\nSo hash tables are basically the coolest data structure ever. They let you look stuff up super fast - like O(1) fast, which is pretty wild when you think about it.\n\n## The Basic Idea\n\nHere's the deal: you take a key, run it through a hash function (which is basically a magic math blender), and it spits out an index into an array. You store your value at that index. When you want to find it later, you just hash the key again and boom - you know exactly where to look.\n\n## Dealing with Collisions\n\nThe tricky part is when two different keys hash to the same index. That's called a collision and it happens more often than you'd think. There are a couple ways to handle it. Chaining just throws a linked list at the problem - all values at the same index go into a list. Open addressing is fancier - if your spot is taken, you probe around until you find an empty one."
+    },
+    "expectations": {
+      "editMinimality": "large",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["tone", "formal", "academic"]
+  },
+  {
+    "id": "ep-008",
+    "category": "edit-proposals",
+    "difficulty": "advanced",
+    "title": "Expand conclusion with future outlook",
+    "prompt": "The conclusion is too abrupt and doesn't provide any forward-looking perspective. Expand it into a full section that discusses emerging trends in WebAssembly adoption, potential impact on server-side computing, and what developers should watch for in the next few years.",
+    "context": {
+      "currentNoteId": "eval-note-002",
+      "preloadedContent": "# WebAssembly: Beyond the Browser\n\nWebAssembly (Wasm) was originally designed as a compilation target for running high-performance code in web browsers. However, its scope has expanded dramatically beyond the browser environment.\n\n## Core Design Principles\n\nWasm provides a portable binary format with near-native execution speed. Its sandboxed execution model ensures memory safety without relying on a garbage collector. The stack-based virtual machine design keeps the specification simple and allows for efficient just-in-time and ahead-of-time compilation.\n\n## Server-Side Applications\n\nThe WebAssembly System Interface (WASI) enables Wasm modules to run outside the browser with controlled access to system resources. This has opened doors for server-side applications, edge computing, and plugin systems. Companies like Fastly, Cloudflare, and Fermyon have built platforms around Wasm-based serverless computing.\n\n## Conclusion\n\nWebAssembly is an exciting technology that continues to grow."
+    },
+    "expectations": {
+      "editMinimality": "medium",
+      "behavior": {
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["expand", "conclusion", "future-outlook"]
+  }
+]

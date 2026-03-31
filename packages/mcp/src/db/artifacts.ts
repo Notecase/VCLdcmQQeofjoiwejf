@@ -22,6 +22,18 @@ export class ArtifactsDb {
     private userId: string
   ) {}
 
+  async listAll(): Promise<ArtifactRow[]> {
+    const { data, error } = await this.supabase
+      .from('artifacts')
+      .select('id, note_id, title, html, css, javascript, status, created_at, updated_at')
+      .eq('user_id', this.userId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) throw new Error(`artifacts.listAll failed: ${error.message}`)
+    return (data ?? []) as ArtifactRow[]
+  }
+
   async listByNote(noteId: string): Promise<ArtifactRow[]> {
     const { data, error } = await this.supabase
       .from('artifacts')

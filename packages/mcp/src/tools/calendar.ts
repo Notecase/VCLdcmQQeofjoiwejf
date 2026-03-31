@@ -58,15 +58,16 @@ export function registerCalendarTools(server: McpServer, db: DbClient): void {
     'Add an event to Calendar.md.',
     {
       date: z.string().describe('Date (YYYY-MM-DD)'),
-      time: z.string().optional().describe('Time (HH:MM)'),
+      time: z.string().optional().describe('Start time (HH:MM)'),
+      end_time: z.string().optional().describe('End time (HH:MM)'),
       title: z.string().describe('Event title'),
       description: z.string().optional().describe('Event details'),
     },
-    async ({ date, time, title, description }) => {
+    async ({ date, time, end_time, title, description }) => {
       try {
         const file = await memory.read(CALENDAR_FILE)
         const content = file?.content ?? '# Calendar\n'
-        const timeStr = time ? ` ${time}` : ''
+        const timeStr = time ? (end_time ? ` ${time} - ${end_time}` : ` ${time}`) : ''
         const descStr = description ? `\n  ${description}` : ''
         const entry = `\n- **${date}${timeStr}** — ${title}${descStr}`
         await memory.write(CALENDAR_FILE, content + entry)

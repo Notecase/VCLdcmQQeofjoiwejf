@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import type { ServerType } from '@hono/node-server'
+import { createNodeWebSocket } from '@hono/node-ws'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
@@ -11,11 +12,16 @@ import { errorHandler, notFoundHandler } from './middleware/error'
 import { requestIdMiddleware } from './middleware/request-id'
 import routes from './routes'
 import { getServiceClient } from './lib/supabase'
+import { createClaudeCodeRoute } from './routes/claude-code'
+import { processManager } from './services/claude-process'
 
 let server: ServerType | undefined
 
 // Create Hono app
 const app = new Hono()
+
+// WebSocket support for Claude Code integration
+const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
 
 // =============================================================================
 // Global Middleware
@@ -45,6 +51,12 @@ app.use(
     maxAge: 86400, // 24 hours
   })
 )
+
+// =============================================================================
+// WebSocket Routes (mounted before CORS middleware to avoid header conflicts)
+// =============================================================================
+
+app.route('/ws/claude-code', createClaudeCodeRoute(upgradeWebSocket))
 
 // =============================================================================
 // Routes
@@ -141,9 +153,13 @@ async function startServer() {
       console.log(`\n🚀 Server running at http://localhost:${info.port}`)
       console.log(`   Health: http://localhost:${info.port}/health`)
       console.log(`   API: http://localhost:${info.port}/api`)
+      console.log(`   WS: ws://localhost:${info.port}/ws/claude-code`)
       console.log('\n' + '='.repeat(60) + '\n')
     }
   )
+
+  // Inject WebSocket support into the HTTP server
+  injectWebSocket(server)
 }
 
 // Start the server
@@ -151,6 +167,8 @@ startServer()
 
 function gracefulShutdown(signal: string) {
   console.log(`\n${signal} received — shutting down gracefully...`)
+  // Kill all Claude Code sessions
+  processManager.destroyAllSessions()
   if (server) {
     server.close(() => {
       console.log('All connections closed. Exiting.')

@@ -1,0 +1,237 @@
+[
+  {
+    "id": "nc-001",
+    "category": "note-creation",
+    "difficulty": "basic",
+    "title": "Photosynthesis overview",
+    "prompt": "Write a note about photosynthesis. Cover the light-dependent and light-independent reactions, the role of chlorophyll, and why photosynthesis matters for life on Earth.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 300,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["biology", "science", "basic"]
+  },
+  {
+    "id": "nc-002",
+    "category": "note-creation",
+    "difficulty": "basic",
+    "title": "French Revolution overview",
+    "prompt": "Write about the French Revolution. Include the causes, major events like the storming of the Bastille, key figures such as Robespierre and Louis XVI, and the lasting impact on modern democracy.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 300,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["history", "politics", "basic"]
+  },
+  {
+    "id": "nc-003",
+    "category": "note-creation",
+    "difficulty": "basic",
+    "title": "TCP/IP networking explained",
+    "prompt": "Explain how TCP/IP works. Cover the four layers of the TCP/IP model, how data is encapsulated and transmitted, the difference between TCP and UDP, and how IP addressing enables routing across networks.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 300,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["networking", "computer-science", "basic"]
+  },
+  {
+    "id": "nc-004",
+    "category": "note-creation",
+    "difficulty": "basic",
+    "title": "Water cycle explanation",
+    "prompt": "Write about the water cycle. Explain evaporation, condensation, precipitation, and collection. Describe how energy from the sun drives the cycle and why it is essential for sustaining ecosystems.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 300,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["earth-science", "environment", "basic"]
+  },
+  {
+    "id": "nc-005",
+    "category": "note-creation",
+    "difficulty": "basic",
+    "title": "Introduction to machine learning",
+    "prompt": "Write an introductory note about machine learning. Cover what machine learning is, the difference between supervised and unsupervised learning, common algorithms like linear regression and decision trees, and real-world applications.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 300,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["ai", "computer-science", "basic"]
+  },
+  {
+    "id": "nc-006",
+    "category": "note-creation",
+    "difficulty": "intermediate",
+    "title": "Latest nuclear fusion developments",
+    "prompt": "Research and write about the latest developments in nuclear fusion energy. Include recent breakthroughs at facilities like NIF, ITER progress, and private-sector efforts from companies like Commonwealth Fusion Systems and Helion Energy.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 500,
+      "maxBulletRatio": 0.4,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true
+    },
+    "tags": ["energy", "physics", "research", "time-sensitive"]
+  },
+  {
+    "id": "nc-007",
+    "category": "note-creation",
+    "difficulty": "intermediate",
+    "title": "AI regulation landscape in 2026",
+    "prompt": "Research and write about the current state of AI regulation in 2026. Cover the EU AI Act implementation, US executive orders and proposed legislation, China's regulatory approach, and how these frameworks differ in their treatment of foundation models.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 500,
+      "maxBulletRatio": 0.4,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true
+    },
+    "tags": ["policy", "ai", "regulation", "time-sensitive"]
+  },
+  {
+    "id": "nc-008",
+    "category": "note-creation",
+    "difficulty": "intermediate",
+    "title": "Recent SpaceX milestones",
+    "prompt": "Research and write about recent SpaceX milestones. Include Starship test flights, Falcon 9 reusability records, Starlink constellation progress, and any crewed missions. Provide specific dates and outcomes where possible.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 500,
+      "maxBulletRatio": 0.4,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true
+    },
+    "tags": ["space", "engineering", "research", "time-sensitive"]
+  },
+  {
+    "id": "nc-009",
+    "category": "note-creation",
+    "difficulty": "intermediate",
+    "title": "Current state of quantum computing",
+    "prompt": "Research and write about the current state of quantum computing. Cover recent advances from IBM, Google, and other key players, the qubit count race, error correction breakthroughs, and realistic timelines for practical quantum advantage.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 500,
+      "maxBulletRatio": 0.4,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true
+    },
+    "tags": ["quantum", "computer-science", "research", "time-sensitive"]
+  },
+  {
+    "id": "nc-010",
+    "category": "note-creation",
+    "difficulty": "intermediate",
+    "title": "New findings in Alzheimer's research",
+    "prompt": "Research and write about new findings in Alzheimer's disease research. Cover the latest on amyloid-targeting therapies like lecanemab and donanemab, alternative hypotheses beyond amyloid, biomarker-based early detection, and any promising clinical trial results.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 500,
+      "maxBulletRatio": 0.4,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true
+    },
+    "tags": ["medicine", "neuroscience", "research", "time-sensitive"]
+  },
+  {
+    "id": "nc-011",
+    "category": "note-creation",
+    "difficulty": "advanced",
+    "title": "Fourier Transform with mathematical formulas",
+    "prompt": "Write a detailed note about the Fourier Transform. Include the continuous and discrete formulas, explain the intuition behind decomposing signals into frequency components, cover the Fast Fourier Transform algorithm, and provide examples of applications in signal processing and image compression.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["mathematics", "signal-processing", "advanced"]
+  },
+  {
+    "id": "nc-012",
+    "category": "note-creation",
+    "difficulty": "advanced",
+    "title": "React Server Components architecture",
+    "prompt": "Write a deep-dive note on React Server Components architecture. Explain the server/client component boundary, how RSC differs from SSR, the streaming and suspense model, the wire format (RSC payload), bundler integration requirements, and trade-offs compared to traditional client-side React.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["react", "frontend", "architecture", "advanced"]
+  },
+  {
+    "id": "nc-013",
+    "category": "note-creation",
+    "difficulty": "advanced",
+    "title": "B-tree data structure with code",
+    "prompt": "Write a comprehensive note on how B-trees work. Cover the properties and invariants of B-trees, insertion with node splitting, deletion with rebalancing, search complexity, and why B-trees are the dominant data structure for databases and file systems. Include pseudocode or code snippets for key operations.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["data-structures", "algorithms", "databases", "advanced"]
+  },
+  {
+    "id": "nc-014",
+    "category": "note-creation",
+    "difficulty": "advanced",
+    "title": "TLS handshake protocol",
+    "prompt": "Write a detailed note on the TLS handshake protocol. Cover TLS 1.2 vs TLS 1.3 differences, the full handshake flow including ClientHello, ServerHello, key exchange, and Finished messages, how perfect forward secrecy works with ephemeral keys, certificate validation, and the role of cipher suites.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["security", "cryptography", "networking", "advanced"]
+  },
+  {
+    "id": "nc-015",
+    "category": "note-creation",
+    "difficulty": "advanced",
+    "title": "CRISPR gene editing mechanism",
+    "prompt": "Write a detailed note on the CRISPR-Cas9 gene editing mechanism. Explain the biological origin in bacterial immune systems, how guide RNA directs Cas9 to target DNA, the double-strand break and repair pathways (NHEJ vs HDR), off-target effects and mitigation strategies, and current therapeutic applications including sickle cell disease treatment.",
+    "context": {
+      "currentNoteId": "eval-note-001"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["biology", "genetics", "medicine", "advanced"]
+  }
+]

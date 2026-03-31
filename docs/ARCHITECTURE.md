@@ -749,6 +749,42 @@ Cross-agent context sharing via a Supabase-backed logbook. Every agent reads rec
 | Chat | `active_plan`, `soul_updated`, `research_done` | None (read-only) |
 | Heartbeat | All types | `active_plan` (after morning/evening/weekly routines) |
 
+### AI Eval Framework
+
+Evaluation framework for testing EditorDeep agent output quality. Lives in `packages/ai/src/evals/`.
+
+**Structure:**
+
+```
+evals/
+├── types.ts              — Type definitions (TestCase, DimensionResult, EvalSuiteReport, etc.)
+├── capture.ts            — OutputCapture: runs agent in isolation, collects all SSE events
+├── runner.ts             — EvalRunner: orchestrates capture → evaluators → reporting
+├── cli.ts                — CLI entry point (pnpm eval)
+├── index.ts              — Public API
+├── evaluators/
+│   ├── structural.ts     — 7 deterministic checks (bullet ratio, citations, formatting, etc.)
+│   ├── llm-judge.ts      — LLM-as-judge with rubric scoring + fix signal generation
+│   └── functional.ts     — Artifact sandbox compliance + table validity
+├── judge/
+│   ├── prompts.ts        — Rubric definitions for 7 dimensions (depth, structure, etc.)
+│   └── calibration.ts    — 14 golden examples + calibration validation
+├── reporting/
+│   ├── reporter.ts       — Aggregates results → EvalSuiteReport with top issues
+│   └── formatter.ts      — CLI scorecard output
+└── test-cases/           — 40 test cases across 6 JSON files
+```
+
+**Evaluator types:**
+
+- **Structural** (instant, zero cost): bullet ratio, citation placement, formatting, word count, edit minimality, content preservation, tool behavior
+- **LLM Judge** (uses gemini-3-flash): depth, structure, citation-integrity, synthesis, intent-alignment, voice-preservation, design-quality
+- **Functional** (static analysis): artifact rendering/sandbox compliance, table validity
+
+**Commands:** `pnpm eval` (full suite), `pnpm eval --case nc-001` (single case), `pnpm eval --category note-creation`
+
+**Launch threshold:** Composite average >= 3.5/5.0. Evals excluded from normal test runs via vitest config.
+
 ### Autonomous Heartbeat System
 
 A Supabase Edge Function (`supabase/functions/heartbeat/`) invoked by pg_cron every 30 minutes. Processes users with heartbeat enabled using cheap-first checks:

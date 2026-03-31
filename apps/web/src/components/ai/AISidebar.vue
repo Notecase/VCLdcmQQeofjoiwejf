@@ -31,7 +31,20 @@ import ExercisesModal from './modals/ExercisesModal.vue'
 import ResourcesModal from './modals/ResourcesModal.vue'
 import SlidesModal from './modals/SlidesModal.vue'
 
-import { Search, Minimize2, Plus, Loader2, ArrowUp, FileText, FlaskConical } from 'lucide-vue-next'
+import ClaudeCodePanel from '../claude-code/ClaudeCodePanel.vue'
+import { useClaudeCodeStore } from '@/stores/claudeCode'
+import { claudeCodeService } from '@/services/claude-code.service'
+import {
+  Search,
+  Minimize2,
+  Plus,
+  Loader2,
+  ArrowUp,
+  FileText,
+  FlaskConical,
+  Terminal,
+  Square,
+} from 'lucide-vue-next'
 
 // Props
 defineProps<{
@@ -51,6 +64,27 @@ const { sendMessage, isProcessing } = useAIChat()
 
 // Research mode — shared state from deepAgent store
 const sidebarResearchMode = computed(() => deepAgent.activeMode === 'research')
+
+// Claude Code mode
+const claudeCodeStore = useClaudeCodeStore()
+const claudeMode = ref(false)
+
+async function toggleClaudeMode() {
+  claudeMode.value = !claudeMode.value
+  if (claudeMode.value && !claudeCodeService.isConnected) {
+    // Auto-connect when first activated — get session token from Supabase
+    try {
+      const { getAuthService } = await import('@/services')
+      const auth = getAuthService()
+      const result = await auth.getSession()
+      if (result.data?.access_token) {
+        claudeCodeService.connect(result.data.access_token)
+      }
+    } catch {
+      // Auth not available
+    }
+  }
+}
 
 // Tab state
 type TabId = 'agent' | 'recommend' | 'workflows' | 'resources'
@@ -117,12 +151,23 @@ const quickCommands = [
 
 // Handle submit
 async function handleSubmit() {
-  if (!inputValue.value.trim() || isProcessing) return
+  if (!inputValue.value.trim()) return
+  if (!claudeMode.value && isProcessing) return
+  if (claudeMode.value && claudeCodeStore.isStreaming) return
 
   const msg = inputValue.value
   inputValue.value = ''
 
-  if (sidebarResearchMode.value) {
+  if (claudeMode.value) {
+    // Route to Claude Code via WebSocket
+    const context = activeNote.value
+      ? {
+          noteId: activeNote.value.id,
+          noteTitle: activeNote.value.title,
+        }
+      : undefined
+    claudeCodeService.sendMessage(msg, context)
+  } else if (sidebarResearchMode.value) {
     // Route to research agent via deepAgent store
     await deepAgent.sendChatMessage(msg)
   } else {
@@ -305,8 +350,14 @@ function handleClarificationCancel() {
         </button>
       </div>
 
-      <!-- Messages or welcome -->
-      <div class="messages-area">
+      <!-- Claude Code Panel (replaces default messages when active) -->
+      <ClaudeCodePanel v-if="claudeMode" />
+
+      <!-- Messages or welcome (default mode) -->
+      <div
+        v-else
+        class="messages-area"
+      >
         <template v-if="messages.length === 0">
           <!-- Welcome message - simplified -->
           <div class="welcome-section">
@@ -424,6 +475,22 @@ function handleClarificationCancel() {
               @click="deepAgent.setActiveMode(sidebarResearchMode ? 'default' : 'research')"
             >
               <FlaskConical :size="12" />
+            </button>
+            <button
+              class="claude-toggle-btn"
+              :class="{ active: claudeMode }"
+              title="Toggle Claude Code mode"
+              @click="toggleClaudeMode"
+            >
+              <Terminal :size="12" />
+            </button>
+            <button
+              v-if="claudeMode && claudeCodeStore.isStreaming"
+              class="interrupt-btn"
+              title="Interrupt Claude"
+              @click="claudeCodeService.interrupt()"
+            >
+              <Square :size="10" />
             </button>
           </div>
 
@@ -1078,6 +1145,49 @@ function handleClarificationCancel() {
   color: var(--sec-accent-light, #fbbf24);
   border-color: var(--sec-accent-border, rgba(251, 191, 36, 0.3));
   background: var(--sec-accent-bg, rgba(251, 191, 36, 0.08));
+}
+
+.claude-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color-secondary, #6e7681);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.claude-toggle-btn:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--text-color, #e6edf3);
+}
+
+.claude-toggle-btn.active {
+  color: var(--accent-green, #4ade80);
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.interrupt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  background: rgba(248, 81, 73, 0.08);
+  color: #f85149;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.interrupt-btn:hover {
+  background: rgba(248, 81, 73, 0.15);
 }
 
 /* Send Button - GREEN when active */

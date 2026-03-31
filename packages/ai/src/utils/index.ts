@@ -4,7 +4,7 @@
  * Utilities for section-aware editing pipeline.
  */
 
-// Structure Parser
+// Structure Parser (canonical source: @inkdown/shared)
 export {
   parseMarkdownStructure,
   getBlockById,
@@ -14,6 +14,8 @@ export {
   findBlocksByContent,
   getBlockByPosition,
   getParagraphsInSection,
+  spliceAtBlockIndex,
+  resolveAfterHeadingIndex,
 } from './structureParser'
 
 export type { BlockType, BlockNode, OutlineItem, ParsedNote } from './structureParser'

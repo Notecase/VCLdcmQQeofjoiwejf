@@ -1,5 +1,5 @@
 /**
- * Tool Registration Orchestrator — Registers all 40 tools across 5 groups.
+ * Tool Registration Orchestrator — Registers all 44 tools across 5 groups.
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'

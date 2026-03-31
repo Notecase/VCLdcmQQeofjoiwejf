@@ -18,6 +18,7 @@ export default defineConfig({
       '**/dist/**',
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
+      '**/evals/**',
     ],
 
     // Coverage configuration

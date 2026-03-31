@@ -1,5 +1,7 @@
 /**
- * Notes Tools — 12 tools for note and project management
+ * Notes Tools — 15 tools for note and project management
+ *
+ * Includes 3 surgical editing tools: edit_note, append_to_note, remove_from_note
  */
 
 import { z } from 'zod'
@@ -7,7 +9,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { DbClient } from '../db/client.js'
 import { NotesDb } from '../db/notes.js'
 import { ArtifactsDb } from '../db/artifacts.js'
-import { SearchDb } from '../db/search.js'
 import { ok, err } from '../format/index.js'
 import {
   formatNoteList,
@@ -19,6 +20,11 @@ import {
 } from '../format/notes.js'
 import { markdownTable } from '../format/tables.js'
 import { relativeTime } from '../format/index.js'
+import {
+  parseMarkdownStructure,
+  findBlocksByHeading,
+  spliceAtBlockIndex,
+} from '@inkdown/shared/utils'
 
 export function registerNoteTools(server: McpServer, db: DbClient): void {
   const notes = new NotesDb(db.supabase, db.userId)
@@ -48,13 +54,33 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
 
   server.tool(
     'notes_get',
-    'Get a note by ID with full markdown content.',
-    { note_id: z.string().uuid().describe('Note UUID') },
-    async ({ note_id }) => {
+    'Get a note by ID with full markdown content and optional block structure.',
+    {
+      note_id: z.string().uuid().describe('Note UUID'),
+      include_structure: z
+        .boolean()
+        .optional()
+        .describe('Include numbered block index table (default true)'),
+    },
+    async ({ note_id, include_structure }) => {
       try {
         const note = await notes.get(note_id)
         if (!note) return err('Note not found')
-        return ok(formatNote(note))
+
+        let output = formatNote(note)
+
+        if (include_structure !== false && note.content.trim()) {
+          const parsed = parseMarkdownStructure(note.content)
+          const blockTable = parsed.blocks
+            .map(
+              (b, i) =>
+                `[${i}] ${b.type}${b.metadata?.heading ? `: ${b.metadata.heading}` : ''} (lines ${b.startLine}-${b.endLine})`
+            )
+            .join('\n')
+          output += `\n\n---\n## Block Structure\n\`\`\`\n${blockTable}\n\`\`\``
+        }
+
+        return ok(output)
       } catch (e) {
         return err((e as Error).message)
       }
@@ -128,27 +154,7 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
     }
   )
 
-  server.tool(
-    'notes_search',
-    'Full-text search across note titles and content.',
-    {
-      query: z.string().describe('Search query'),
-      project_id: z.string().uuid().optional().describe('Filter by project'),
-      limit: z.number().int().min(1).max(50).optional().describe('Max results'),
-    },
-    async ({ query, project_id, limit }) => {
-      try {
-        const search = new SearchDb(db.supabase, db.userId)
-        const hits = await search.searchNotes(query, { projectId: project_id, limit })
-        if (hits.length === 0) return ok(`No notes found for "${query}"`)
-        const header = `## Search Results for "${query}" (${hits.length})\n\n`
-        const rows = hits.map((h) => [h.title, h.id, h.snippet.slice(0, 60)])
-        return ok(header + markdownTable(['Title', 'ID', 'Snippet'], rows))
-      } catch (e) {
-        return err((e as Error).message)
-      }
-    }
-  )
+  // notes_search removed — duplicated by search_notes in search.ts
 
   server.tool(
     'notes_organize',
@@ -203,7 +209,7 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
       html: z.string().describe('Inner HTML markup (no <html>/<body> tags)'),
       css: z.string().optional().describe('CSS styles'),
       javascript: z.string().optional().describe('Vanilla JavaScript'),
-      note_id: z.string().uuid().optional().describe('Note UUID to attach artifact to'),
+      note_id: z.string().uuid().describe('Note UUID to attach artifact to'),
     },
     async ({ title, html, css, javascript, note_id }) => {
       try {
@@ -219,12 +225,13 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
 
   server.tool(
     'notes_get_artifacts',
-    'List artifacts (HTML/CSS/JS widgets) attached to a note.',
-    { note_id: z.string().uuid().describe('Note UUID') },
+    'List artifacts (HTML/CSS/JS widgets). Pass note_id to filter by note, or omit to list all.',
+    { note_id: z.string().uuid().optional().describe('Note UUID (omit to list all artifacts)') },
     async ({ note_id }) => {
       try {
-        const result = await artifacts.listByNote(note_id)
-        if (result.length === 0) return ok('No artifacts attached to this note.')
+        const result = note_id ? await artifacts.listByNote(note_id) : await artifacts.listAll()
+        if (result.length === 0)
+          return ok(note_id ? 'No artifacts attached to this note.' : 'No artifacts found.')
         const header = `## Artifacts (${result.length})\n\n`
         const rows = result.map((a) => [a.title, a.id, a.status, relativeTime(a.created_at)])
         return ok(header + markdownTable(['Title', 'ID', 'Status', 'Created'], rows))
@@ -233,6 +240,156 @@ export function registerNoteTools(server: McpServer, db: DbClient): void {
       }
     }
   )
+
+  // =========================================================================
+  // Surgical Editing Tools
+  // =========================================================================
+
+  server.tool(
+    'edit_note',
+    'Surgically replace text in a note. Finds the exact oldText and replaces with newText. Returns original and proposed content for diff display.',
+    {
+      note_id: z.string().uuid().describe('Note UUID'),
+      old_text: z.string().min(1).describe('Exact text to find and replace'),
+      new_text: z.string().describe('Replacement text (empty string to delete)'),
+    },
+    async ({ note_id, old_text, new_text }) => {
+      try {
+        const note = await notes.get(note_id)
+        if (!note) return err('Note not found')
+
+        const original = note.content
+        const occurrences = original.split(old_text).length - 1
+
+        if (occurrences === 0) {
+          return err(`Text not found in note. First 200 chars of note:\n${original.slice(0, 200)}`)
+        }
+        if (occurrences > 1) {
+          return err(
+            `Found ${occurrences} occurrences of the text. Provide more surrounding context to make the match unique.`
+          )
+        }
+
+        const proposed = original.replace(old_text, new_text)
+        await notes.update(note_id, { content: proposed })
+
+        const editId = crypto.randomUUID()
+        return ok(
+          JSON.stringify({
+            success: true,
+            editId,
+            noteId: note_id,
+            oldText: old_text,
+            newText: new_text,
+            original,
+            proposed,
+          })
+        )
+      } catch (e) {
+        return err((e as Error).message)
+      }
+    }
+  )
+
+  server.tool(
+    'append_to_note',
+    'Append content to a note. Can insert after a heading, after a block index, or at the end.',
+    {
+      note_id: z.string().uuid().describe('Note UUID'),
+      content: z.string().min(1).describe('Markdown content to insert'),
+      after_heading: z
+        .string()
+        .optional()
+        .describe('Insert after the section with this heading text'),
+      after_block_index: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe(
+          'Insert after this block index (0-based). Call notes_get with include_structure first'
+        ),
+    },
+    async ({ note_id, content: newContent, after_heading, after_block_index }) => {
+      try {
+        const note = await notes.get(note_id)
+        if (!note) return err('Note not found')
+
+        const original = note.content
+
+        let targetIndex: number | undefined = after_block_index
+
+        if (after_heading && targetIndex === undefined) {
+          const parsed = parseMarkdownStructure(original)
+          const matches = findBlocksByHeading(parsed, after_heading)
+          if (matches.length > 0) {
+            targetIndex = parsed.blocks.indexOf(matches[0])
+          }
+        }
+
+        const proposed = spliceAtBlockIndex(
+          original,
+          targetIndex,
+          'insert-after',
+          newContent.trim()
+        )
+        await notes.update(note_id, { content: proposed })
+
+        return ok(
+          JSON.stringify({
+            success: true,
+            noteId: note_id,
+            original,
+            proposed,
+          })
+        )
+      } catch (e) {
+        return err((e as Error).message)
+      }
+    }
+  )
+
+  server.tool(
+    'remove_from_note',
+    'Remove text from a note. Finds exact match and removes it, cleaning up double blank lines.',
+    {
+      note_id: z.string().uuid().describe('Note UUID'),
+      text_to_remove: z.string().min(1).describe('Exact text to remove from the note'),
+    },
+    async ({ note_id, text_to_remove }) => {
+      try {
+        const note = await notes.get(note_id)
+        if (!note) return err('Note not found')
+
+        const original = note.content
+
+        if (!original.includes(text_to_remove)) {
+          return err(`Text not found in note. First 200 chars of note:\n${original.slice(0, 200)}`)
+        }
+
+        let proposed = original.replace(text_to_remove, '')
+        // Clean up double blank lines left by removal
+        proposed = proposed.replace(/\n{3,}/g, '\n\n')
+
+        await notes.update(note_id, { content: proposed })
+
+        return ok(
+          JSON.stringify({
+            success: true,
+            noteId: note_id,
+            original,
+            proposed,
+          })
+        )
+      } catch (e) {
+        return err((e as Error).message)
+      }
+    }
+  )
+
+  // =========================================================================
+  // Project Tools
+  // =========================================================================
 
   server.tool(
     'projects_list',

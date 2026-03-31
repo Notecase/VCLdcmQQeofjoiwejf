@@ -1,0 +1,65 @@
+[
+  {
+    "id": "ch-001",
+    "category": "citation-heavy",
+    "difficulty": "advanced",
+    "title": "Renewable energy latest developments",
+    "prompt": "Research and write a comprehensive note about the latest developments in renewable energy. Cover recent advances in solar panel efficiency, offshore wind farm projects, grid-scale battery storage breakthroughs, and green hydrogen production. Include specific data points, name the research institutions or companies involved, and cite your sources.",
+    "context": {
+      "currentNoteId": "eval-note-006"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.3,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true,
+      "behavior": {
+        "mustCallTools": ["web_search"],
+        "mustSearchWhenTimeSensitive": true
+      }
+    },
+    "tags": ["research", "energy", "citations", "time-sensitive"]
+  },
+  {
+    "id": "ch-002",
+    "category": "citation-heavy",
+    "difficulty": "advanced",
+    "title": "Microplastics in ocean research",
+    "prompt": "Compile recent findings on microplastics in the ocean. Cover the latest research on sources and pathways of microplastic pollution, concentrations found in different ocean regions, effects on marine food chains and human health, and current mitigation strategies being tested. Reference specific studies, journals, and research teams.",
+    "context": {
+      "currentNoteId": "eval-note-006"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.3,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true,
+      "behavior": {
+        "mustCallTools": ["web_search"],
+        "mustSearchWhenTimeSensitive": true
+      }
+    },
+    "tags": ["research", "environment", "ocean", "citations", "time-sensitive"]
+  },
+  {
+    "id": "ch-003",
+    "category": "citation-heavy",
+    "difficulty": "advanced",
+    "title": "mRNA technology recent advances",
+    "prompt": "Write a comprehensive overview of recent advances in mRNA technology. Go beyond COVID-19 vaccines to cover mRNA-based cancer therapeutics and personalized tumor vaccines, mRNA treatments for rare genetic diseases, self-amplifying mRNA platforms, advances in lipid nanoparticle delivery systems, and ongoing clinical trials. Cite specific companies (Moderna, BioNTech, CureVac, etc.), trial phases, and published results.",
+    "context": {
+      "currentNoteId": "eval-note-006"
+    },
+    "expectations": {
+      "minWordCount": 600,
+      "maxBulletRatio": 0.3,
+      "requiresWebSearch": true,
+      "requireSourcesSection": true,
+      "behavior": {
+        "mustCallTools": ["web_search"],
+        "mustSearchWhenTimeSensitive": true
+      }
+    },
+    "tags": ["research", "medicine", "biotech", "citations", "time-sensitive"]
+  }
+]

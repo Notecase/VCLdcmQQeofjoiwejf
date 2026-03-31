@@ -1,7 +1,12 @@
 import { tool, type ToolSet } from 'ai'
 import { z } from 'zod'
 import { executeTool, type ToolContext } from '../../tools'
-import { parseMarkdownStructure, findBlocksByHeading } from '../../utils/structureParser'
+import {
+  parseMarkdownStructure,
+  findBlocksByHeading,
+  spliceAtBlockIndex,
+  resolveAfterHeadingIndex,
+} from '../../utils/structureParser'
 import { createWebSearchTool } from '../../tools/web-search'
 import { generateDelegationTools } from '../../registry'
 import '../../registry/capabilities' // Ensure capabilities are registered
@@ -59,75 +64,9 @@ function emitClarification(ctx: EditorToolContext, reason: string): void {
   })
 }
 
-/**
- * Splice content at a specific block index using character offsets from the parser.
- * This preserves original whitespace (unlike the old splitToStructuralBlocks + join approach
- * which normalized all inter-block spacing to \n\n, causing diff mismatches).
- */
-/** @internal Exported for testing */
-export function spliceAtBlockIndex(
-  original: string,
-  blockIndex: number | undefined,
-  operation: 'insert-after' | 'replace' | 'remove',
-  newContent?: string
-): string {
-  if (!original.trim()) {
-    return newContent?.trim() || ''
-  }
-  const parsed = parseMarkdownStructure(original)
-  const blocks = parsed.blocks
-
-  if (operation === 'insert-after') {
-    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) {
-      // Append at end
-      const suffix = original.endsWith('\n') ? '\n' : '\n\n'
-      return original + suffix + (newContent?.trim() || '')
-    }
-    const target = blocks[blockIndex]
-    const insertPos = target.endChar
-    return (
-      original.slice(0, insertPos) +
-      '\n\n' +
-      (newContent?.trim() || '') +
-      (insertPos < original.length ? original.slice(insertPos) : '')
-    )
-  }
-
-  if (operation === 'replace') {
-    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) return original
-    const target = blocks[blockIndex]
-    return (
-      original.slice(0, target.startChar) +
-      (newContent?.trim() || '') +
-      original.slice(target.endChar)
-    )
-  }
-
-  if (operation === 'remove') {
-    if (blockIndex === undefined || blockIndex < 0 || blockIndex >= blocks.length) return original
-    const target = blocks[blockIndex]
-    let removeEnd = target.endChar
-    // Consume trailing newlines so we don't leave double blank lines
-    while (removeEnd < original.length && original[removeEnd] === '\n') removeEnd++
-    return original.slice(0, target.startChar) + original.slice(removeEnd)
-  }
-
-  return original
-}
-
-/**
- * Resolve afterHeading to a block index for insertion.
- */
-/** @internal Exported for testing */
-export function resolveAfterHeadingIndex(
-  content: string,
-  afterHeading: string
-): number | undefined {
-  const parsed = parseMarkdownStructure(content)
-  const matches = findBlocksByHeading(parsed, afterHeading)
-  if (matches.length > 0) return parsed.blocks.indexOf(matches[0])
-  return undefined
-}
+// spliceAtBlockIndex and resolveAfterHeadingIndex are now imported from @inkdown/shared
+// Re-export for any test files that import from this module
+export { spliceAtBlockIndex, resolveAfterHeadingIndex } from '../../utils/structureParser'
 
 async function proposeNoteEdit(
   ctx: EditorToolContext,

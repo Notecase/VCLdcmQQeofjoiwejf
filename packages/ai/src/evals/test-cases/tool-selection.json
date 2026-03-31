@@ -1,0 +1,76 @@
+[
+  {
+    "id": "ts-001",
+    "category": "tool-selection",
+    "difficulty": "basic",
+    "title": "Ambiguous request requiring note read first",
+    "prompt": "Help me with this note.",
+    "context": {
+      "currentNoteId": "eval-note-005",
+      "preloadedContent": "# Project Planning\n\nThis document outlines the Q2 roadmap for our mobile app. We need to finalize the feature list by next week.\n\n## Priority Features\n\n- User authentication with OAuth\n- Push notification system\n- Offline mode with data sync"
+    },
+    "expectations": {
+      "behavior": {
+        "mustCallTools": ["read_note"],
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["ambiguous", "read-first"]
+  },
+  {
+    "id": "ts-002",
+    "category": "tool-selection",
+    "difficulty": "intermediate",
+    "title": "Add content should use add_paragraph not edit",
+    "prompt": "Add a paragraph about quantum entanglement and its applications in quantum computing to my note.",
+    "context": {
+      "currentNoteId": "eval-note-005",
+      "preloadedContent": "# Quantum Mechanics Fundamentals\n\nQuantum mechanics is the branch of physics that describes nature at the smallest scales of energy levels of atoms and subatomic particles. It differs fundamentally from classical mechanics in several key ways.\n\n## Wave-Particle Duality\n\nOne of the most striking features of quantum mechanics is wave-particle duality. Particles like electrons and photons exhibit both wave-like and particle-like behavior depending on how they are observed."
+    },
+    "expectations": {
+      "behavior": {
+        "mustCallTools": ["add_paragraph"],
+        "mustNotCallTools": ["replace_paragraph"],
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["add-content", "tool-choice"]
+  },
+  {
+    "id": "ts-003",
+    "category": "tool-selection",
+    "difficulty": "intermediate",
+    "title": "Time-sensitive query must trigger web search",
+    "prompt": "What happened recently with AI regulation? Add a section about it to my note.",
+    "context": {
+      "currentNoteId": "eval-note-005",
+      "preloadedContent": "# AI Policy Tracker\n\nThis note tracks important developments in artificial intelligence policy and governance.\n\n## EU AI Act\n\nThe European Union's AI Act was formally adopted in 2024, establishing a risk-based framework for AI regulation. It categorizes AI systems into risk tiers with corresponding compliance requirements."
+    },
+    "expectations": {
+      "behavior": {
+        "mustCallTools": ["web_search"],
+        "mustSearchWhenTimeSensitive": true,
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["time-sensitive", "web-search", "current-events"]
+  },
+  {
+    "id": "ts-004",
+    "category": "tool-selection",
+    "difficulty": "basic",
+    "title": "Vague improvement request must read first",
+    "prompt": "Make this better.",
+    "context": {
+      "currentNoteId": "eval-note-005",
+      "preloadedContent": "# My Notes on CSS Grid\n\nCSS Grid is a layout system. It has rows and columns. You can put things in the grid. It is different from flexbox.\n\n## How to Use It\n\nYou set display grid on a container. Then you define the columns and rows. Items go into the grid cells automatically or you can place them manually."
+    },
+    "expectations": {
+      "behavior": {
+        "mustCallTools": ["read_note"],
+        "mustReadBeforeEdit": true
+      }
+    },
+    "tags": ["vague", "read-first", "improvement"]
+  }
+]

@@ -1,0 +1,77 @@
+[
+  {
+    "id": "tb-001",
+    "category": "tables",
+    "difficulty": "basic",
+    "title": "Programming language comparison table",
+    "prompt": "Create a comparison table of five popular programming languages: Python, JavaScript, Rust, Go, and Java. Compare them across these dimensions: typing system (static/dynamic), primary use case, performance characteristics, learning curve, and package ecosystem maturity.",
+    "context": {
+      "currentNoteId": "eval-note-004"
+    },
+    "expectations": {
+      "expectedTableCount": 1,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["comparison", "programming", "languages"]
+  },
+  {
+    "id": "tb-002",
+    "category": "tables",
+    "difficulty": "intermediate",
+    "title": "Historical events timeline table",
+    "prompt": "Create a timeline table of 10 pivotal events in the history of the internet, from ARPANET (1969) through the invention of the World Wide Web, the dot-com bubble, social media emergence, and up to the AI boom. Include columns for year, event name, key people or organizations involved, and a brief description of its significance.",
+    "context": {
+      "currentNoteId": "eval-note-004"
+    },
+    "expectations": {
+      "expectedTableCount": 1,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["timeline", "history", "internet"]
+  },
+  {
+    "id": "tb-003",
+    "category": "tables",
+    "difficulty": "basic",
+    "title": "Nutrient comparison table",
+    "prompt": "Create a nutrient comparison table for common breakfast foods: oatmeal, eggs, Greek yogurt, whole wheat toast, and a banana. Include columns for calories per serving, protein (g), carbohydrates (g), fat (g), fiber (g), and key vitamins or minerals. Use realistic nutritional data.",
+    "context": {
+      "currentNoteId": "eval-note-004"
+    },
+    "expectations": {
+      "expectedTableCount": 1,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["nutrition", "health", "comparison"]
+  },
+  {
+    "id": "tb-004",
+    "category": "tables",
+    "difficulty": "intermediate",
+    "title": "REST API endpoint reference table",
+    "prompt": "Create an API endpoint reference table for a hypothetical task management API. Include endpoints for CRUD operations on tasks, projects, and users. Columns should be: HTTP method, endpoint path, description, request body (brief), and response status codes. Include at least 8 endpoints covering GET, POST, PUT, and DELETE operations.",
+    "context": {
+      "currentNoteId": "eval-note-004"
+    },
+    "expectations": {
+      "expectedTableCount": 1,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["api", "reference", "rest"]
+  },
+  {
+    "id": "tb-005",
+    "category": "tables",
+    "difficulty": "basic",
+    "title": "Pros and cons analysis table",
+    "prompt": "Create a pros and cons comparison table for three common state management solutions in React applications: React Context API, Redux Toolkit, and Zustand. Include columns for the solution name, key advantages (2-3 each), key disadvantages (2-3 each), best suited for, and bundle size impact.",
+    "context": {
+      "currentNoteId": "eval-note-004"
+    },
+    "expectations": {
+      "expectedTableCount": 1,
+      "maxBulletRatio": 0.4
+    },
+    "tags": ["pros-cons", "react", "state-management"]
+  }
+]
